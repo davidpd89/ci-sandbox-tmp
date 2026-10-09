@@ -14,6 +14,8 @@ import urllib.parse
 
 sys.path.insert(0, os.path.dirname(__file__))
 from playwright.sync_api import sync_playwright
+from pinterest_media_guard import (PinPreflightError, validate_web_pin_fields,
+                                  validate_web_pin_image)
 
 CDP_URL = "http://127.0.0.1:9223"
 CREATE_URL = "https://es.pinterest.com/pin-creation-tool/"
@@ -177,10 +179,18 @@ def publish_pin(image, title, description, link, alt, board, apply=False, log=pr
     board = resolve_board(board)
     if len(title) > TITLE_MAX or len(description) > DESC_MAX:
         raise PinterestPublishError(f"titulo/descripcion demasiado largos ({len(title)}/{len(description)})")
-    if not os.path.exists(image):
-        raise PinterestPublishError(f"no existe la imagen {image}")
+    try:
+        validate_web_pin_fields(title, description, link, alt)
+        image_info = validate_web_pin_image(image)
+    except PinPreflightError as exc:
+        raise PinterestPublishError(str(exc)) from exc
     if not apply:
-        log("  ensayo offline: imagen, tablero y longitudes validables; no se crea borrador")
+        log(f"  ensayo offline: imagen {image_info['format']} "
+            f"{image_info['width']}x{image_info['height']} "
+            f"({image_info['bytes']} bytes), metadatos válidos; "
+            "no se crea borrador ni se confirma enlace remoto")
+        if not image_info["aspect_2_3"]:
+            log("  aviso: imagen no tiene proporción recomendada 2:3")
         return "ensayo"
     p = sync_playwright().start()
     try:
@@ -193,6 +203,12 @@ def publish_pin(image, title, description, link, alt, board, apply=False, log=pr
             _check(pg)
             _assert_account(pg)
             # No eliminar borradores preexistentes: pueden ser trabajo humano.
+            # Revalidar justo antes de cargar: el archivo pudo cambiar mientras
+            # se obtenía el turno exclusivo del navegador.
+            try:
+                validate_web_pin_image(image)
+            except PinPreflightError as exc:
+                raise PinterestPublishError(str(exc)) from exc
             pg.set_input_files("#storyboard-upload-input", image)
             pg.wait_for_selector('text="¡Cambios guardados!"', timeout=30000)
             _fill(pg, title, description, link, alt, board, log)
