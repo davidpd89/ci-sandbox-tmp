@@ -88,3 +88,86 @@ Retirada reversible: revertir los commits de esta rama que añaden `pinterest_me
 **Estado del gate de campaña verificado y persistente a 09-10-2026 (run 37979411549):** [traza de referencia 37978617623](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37978617623), jobs Ubuntu y Windows finalizados con `failure`. En ambos `python -m unittest discover -s tests -p test_open_source_campaign.py -v` pasó, pero el paso `python tools/validate_open_source_campaign.py` falló: `campaign: 76 children; 3 errors`, `expected 46 children, got 76`, `missing, extra or duplicate PR numbers`, `protocol index is incomplete or duplicated`. Es drift de la rama padre #10: el índice/manifiesto ahora contienen 76 hijas, pero el script de validación tiene `RANGE = set(range(11, 57))` y comprueba `len(children) == 46`. **No alterar el padre desde la hija #17.** Tras corregir la validación en la PR padre, volver a comprobar el workflow en la rama hija. El éxito de los tests del protocolo no significa ejecución de los tests nuevos de Pinterest.
 
 **Veredicto: BLOQUEADA para merge**, aunque los cambios específicos de Pinterest quedan preparados para revisión: corregir puerta común en #10, ejecutar tests del nuevo guard con checkout real y validar contra repositorio oficial privado.
+
+
+## Ampliación adversarial: orientación EXIF y tipos de ficha (09-10-2026)
+
+**Hueco adicional reproducido:** el preflight anterior evaluaba `aspect_2_3` con
+`Image.size` sin interpretar la orientación EXIF. Un JPEG almacenado como
+150×100 con orientación 6 (giro 90°) se muestra 100×150, pero se clasificaba
+incorrectamente como paisaje, generando un aviso de proporción falso. No se
+bloqueaba la subida, pero se degradaba el diagnóstico de SEO visual.
+
+**Solución:** el guard conserva `pixel_width/pixel_height` de la matriz original
+y devuelve `width/height` de la orientación visible; los códigos EXIF 5, 6, 7
+y 8 intercambian ejes, mientras 1–4 no lo hacen. `aspect_2_3` sigue siendo
+informativo y no restrictivo. No se gira ni reescribe la imagen, no cambia el
+payload enviado a Pinterest y no se añade dependencia. Comparativa del
+componente: **A)** `ImageOps.exif_transpose` (implementación mantenida de
+Pillow, que transpone píxeles y devuelve una imagen nueva) frente a **B)**
+leer EXIF y ajustar solo las dimensiones para informar. Se adopta B:
+menos copias y memoria, mismo resultado geométrico para la comprobación
+informativa. No se ha copiado código de Pillow.
+
+**Procedencia verificada:** [Pillow 11.3.0, ImageOps](https://github.com/python-pillow/Pillow/blob/11.3.0/src/PIL/ImageOps.py)
+y [LICENSE de ese tag](https://github.com/python-pillow/Pillow/blob/11.3.0/LICENSE)
+(MIT-CMU); [documentación de orientación](https://pillow.readthedocs.io/en/stable/handbook/concepts.html).
+Pillow 11.3.0 queda dentro de `Pillow>=10,<12` declarado en
+`requirements-ci.txt`; hay wheels para Python 3.11 y Windows.
+No se modifica ninguna dependencia, se conserva el transporte web propio
+y se evita instalar SDK completo o Postiz para este cálculo.
+
+**Primera regresión adversarial encontrada y corregida:** leer
+`source.getexif()` *antes* de `source.verify()` en el primer handle hace
+fallar un PNG válido con `RuntimeError: verify must be called directly after open`
+(en entorno local Pillow 12.3.0). Se trasladó la lectura de EXIF al segundo
+handle, **después de `decoded.load()`**, manteniendo intacta la verificación
+estructural. Los tests sintéticos incluyen JPEG con orientaciones 1, 3, 5,
+6, 7 y 8 y PNG sin EXIF. Resultado local ejecutado: **2 tests OK,
+0 fallos** (`python -m unittest discover -s /mnt/data/pr17/tests
+-p test_pinterest_exif_pr17.py -v`, ejecutando la versión de dos
+pruebas de orientación/PNG; Python 3.13.5, Pillow 12.3.0).
+`python -m compileall -q /mnt/data/pr17/tools /mnt/data/pr17/tests`
+pasó sobre esa copia de guard y pruebas. Esto **no** demuestra por sí solo
+la integración completa con `pinterest_publish.py`.
+
+**Segunda revisión de contrato:** `publish_pin` realizaba
+`len(title)`/`len(description)` antes de la validación de tipos y
+`resolve_board` asumía `str`. Una ficha incompleta podía escapar
+como `TypeError`/`AttributeError` en vez de `PinterestPublishError`.
+Se suprime el prechequeo duplicado de longitudes (ya lo realiza
+`validate_web_pin_fields`) y se tipa explícitamente el tablero. El
+test `PinterestMetadataTypeTests` ensaya ocho valores incorrectos,
+con `apply=True` y `sync_playwright` sustituido por un guard que fallaría
+si se intentase abrir CDP. **Su ejecución en el checkout real queda
+pendiente de CI; no se confunde el mock con un envío real.**
+
+**Comando de verificación en GitHub / Windows y Ubuntu:**
+
+```sh
+python -m pip install -r requirements-ci.txt
+python -m compileall -q tools tests
+python -m pytest tests/test_pinterest_media_guard.py tests/test_pinterest_exif_pr17.py tests/test_web_publish.py tests/test_r7_pinterest_post_wait_revalidation.py -q -p no:cacheprovider
+```
+
+La suite general se ejecuta con `.github/workflows/validate-social-tools.yml`
+en cada push. Para el **último SHA**, comprobar los jobs Ubuntu y Windows
+antes de considerar la rama revisable. El gate de la campaña (#10; 76
+hijas frente a 46 reconocidas) permanece fuera del alcance de esta
+PR y bloquea su merge aunque las pruebas funcionales resulten verdes.
+
+**Aplicación transversal:** otras redes pueden consumir dimensiones
+visuales EXIF en el inventario de assets (#28), con requisitos propios:
+no copiar aquí los límites de Pinterest ni abrir una PR que duplique #28.
+La corrección de tipos también es un patrón para los adaptadores de colas,
+pero aquí solo se modifica el publicador Pinterest.
+
+**Rollback/limitaciones:** revertir los commits de ampliación para
+recuperar la semántica anterior de `width/height` y el precheck antiguo.
+El valor retornado `width/height` pasa a significar **tamaño visual**
+(no tamaño físico); se preserva el original en `pixel_width/pixel_height`
+para consumidores futuros. Persisten diferencias entre navegador real
+y simulación y la ventana de modificación del archivo antes de
+`set_input_files`; las pruebas no certifican ni publicación ni tráfico
+reales. No se accedió a cuentas, ni se abrió navegador de producción,
+ni se modificó estado de la red.
