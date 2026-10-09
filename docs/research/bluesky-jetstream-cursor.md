@@ -300,3 +300,45 @@ archive→live corresponden a #94. La reversión de estos commits no
 requiere migración, pero reintroduce pérdidas silenciosas. Los CI
 anteriores no acreditan esta nueva cobertura: revisar el HEAD
 final en ambos workflows, Linux y Windows.
+
+## Quinta revisión independiente: salud de reconexión y commits incompletos (10-10-2026)
+
+**Fallo detectado:** al recibir un `asyncio.TimeoutError` de lectura, el collector
+ponía `unrecovered_stream_error=False` aunque el WebSocket reconectado
+no hubiera entregado ni un frame. Secuencia reproducible sin red:
+primera conexión → `OSError`; segunda conexión → abierta pero sin frames
+hasta acabar la ventana. Antes informaba éxito; ahora termina con
+`ingesta incompleta` y checkpoint conservado. Un stream que nace y
+permanece silencioso sin caída previa sigue siendo válido: no se exige
+actividad artificial si no existe evidencia de fallo.
+
+**Segundo fallo:** la envoltura v2 de tipo `#commit` se comprobaba, pero
+`_normalize_frame` permitía suplir un `payload.seq` ausente con
+`message.cursor` y avanzar aunque faltasen DID, tiempo, operación,
+colección, rkey o registro necesario. Se validan ahora los campos
+esenciales de procesamiento antes de invocar `store_event`, usando
+`StreamProtocolError` sin imprimir datos del evento. El contrato
+público v2 exige estos campos:
+https://github.com/bluesky-social/jetstream/blob/f42df08ba0ca9e4287020139aefbcfe24506d1ef/lexicons/network/bsky/jetstream/subscribeEvents.json.
+La validación no pretende sustituir un validador completo del lexicon.
+
+**Nuevas pruebas:** `test_v2_reconnect_without_any_frame_is_not_successful_recovery`
+y `test_v2_malformed_commits_never_advance_checkpoint`, además de
+ajustar `test_v2_recovery_after_drop_does_not_fail_window` para que
+la recuperación emita realmente un commit. Todas usan WebSocket/SQLite
+sintéticos; no representan prueba viva del servidor ni de un cliente
+de Bluesky autenticado.
+
+**Regla reutilizable:** en cualquier red, distinguir `CONNECTED` de
+`RECOVERED` o `STREAM_CAUGHT_UP`; ni un timeout de lectura ni una
+respuesta parcial justifican que el planificador marque completa una
+fuente previamente interrumpida. Implementar esa semántica en el
+contrato común de observabilidad y adaptar cada fuente a su mecanismo
+de confirmación. No copiar el parser AT Protocol a otras redes.
+
+**Despliegue:** sin esquema nuevo, paquetes nuevos, secretos ni escrituras
+sociales. Reversión mediante revert de código/tests/documentación,
+sabiendo que ello reintroduce el falso éxito. Comprobar los checks
+del SHA final antes de autorizar merge; comparar contra la rama
+privada oficial inmediatamente antes de portar. Las PR #94 (backfill)
+y #95 (taste) siguen separadas; no abrir derivadas duplicadas.
