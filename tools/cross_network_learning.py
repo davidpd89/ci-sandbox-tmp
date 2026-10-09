@@ -161,7 +161,9 @@ def review(data, *, today=None, trusted_verifications=None, trusted_registry=Non
     if not isinstance(data, dict) or type(data.get("schema")) is not int or data["schema"] not in (1, 2):
         raise ValueError("contrato de evidencias no compatible")
     schema = data["schema"]
-    if trusted_registry is not None and not isinstance(trusted_registry, TrustedRegistry):
+    # Exigir la clase exacta evita que una subclase sustituya approves()
+    # y presente aprobaciones sintéticas como si fueran un registro revisado.
+    if trusted_registry is not None and type(trusted_registry) is not TrustedRegistry:
         raise ValueError("registro independiente inválido")
     items, history = data.get("observations"), data.get("history", [])
     if not isinstance(items, list) or len(items) > 100 or not isinstance(history, list) or len(history) > 500:
