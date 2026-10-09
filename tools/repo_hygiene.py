@@ -74,7 +74,7 @@ def changed_paths(base: str, *, root: pathlib.Path = ROOT) -> list[str]:
         raise ValueError("Se necesita un commit base comprobable")
     completed = subprocess.run(
         ["git", "-C", str(root), "diff", "--name-only", "-z",
-         "--diff-filter=AM", "--no-renames", base, "HEAD"],
+         "--diff-filter=AM", "--no-renames", base, "HEAD", "--"],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
     )
     if completed.returncode:
