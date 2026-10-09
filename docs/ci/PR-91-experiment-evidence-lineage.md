@@ -131,7 +131,10 @@ una defensa frente a `object.__setattr__` ejecutado por código privilegiado.
 Regresiones nuevas: identidad incoherente con cambio de manifiesto, diseño,
 recuento, red origen y táctica; reutilización legítima del mismo ensayo entre
 colas con aprobaciones independientes; prohibición de reasignar/eliminar el
-mapa del registro. La validación definitiva debe referirse a los checks
+mapa del registro. En una tercera pasada se detectó eludir `approves()`
+mediante una subclase inyectada al controlador; ahora la API solo acepta el tipo
+exacto `TrustedRegistry` y hay una prueba con una subclase falsa.
+La validación definitiva debe referirse a los checks
 Windows/Ubuntu del **nuevo HEAD** tras estos commits. La integración con #3
 sigue requiriendo reconciliar sus archivos compartidos antes del merge.
 
