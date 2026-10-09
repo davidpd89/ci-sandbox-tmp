@@ -295,3 +295,73 @@ datos arbitrarios que Git pudiera incluir en un mensaje.
 No se han realizado operaciones de publicación ni de interacción sobre
 X, Threads, Facebook, Pinterest, Reddit, Bluesky, Mastodon, TikTok o Instagram.
 La revisión se limita al contrato del mirror y a fixtures sintéticos.
+
+## Sexta revisión adversarial: componentes de rutas y UTF-8 (09/10/2026)
+
+### Defectos reproducidos
+
+El analizador evaluaba el **último componente** del archivo y una pequeña
+lista de nombres de directorio. Aceptaba, entre otros:
+
+- `.env.local/settings.py`, porque `.env.local` no estaba en la lista de
+  directorios aunque fuese un nombre de entorno secreto prohibido como archivo;
+- `credentials.json/sessions.py` y `metricas.csv/one.py`, porque no evaluaba
+  los nombres prohibidos de archivo si se utilizaban como carpetas;
+- `.env.example ` (con espacio final), porque el `strip()` global convertía
+  este **nombre diferente** en el único nombre autorizado `.env.example`.
+
+Además, `git diff --name-only -z` devuelve nombres delimitados por NUL como
+**bytes**. La decodificación anterior `decode("utf-8", "replace")` sustituía
+bytes inválidos por U+FFFD y validaba un nombre distinto del original.
+
+### Correcciones comprobables
+
+1. Cada segmento ancestro se compara con nombres de carpetas de ejecución y
+   también con la política de nombres sensibles de archivo. Se bloquea un
+   directorio que empiece por `.env`, incluso si el último componente dentro
+   se llama `README.md`. Las plantillas `.env.example/.sample/.template`
+   solo se exceptúan cuando son archivos independientes.
+2. Se evalúan componentes con espacios circundantes para impedir eludir un
+   nombre sensible y **se deniega** presentar una plantilla con espacios en
+   su propio componente. Siguen permitidos nombres seguros y los espacios
+   interiores habituales.
+3. El lector Git conserva `-z`, pero decodifica UTF-8 en modo estricto. Si
+   una ruta tiene bytes inválidos, se devuelve **error 2** sin aprobar un
+   nombre reconstruido ni imprimir sus bytes originales.
+4. Regresiones nuevas para diez rutas protegidas anidadas, tres variantes
+   con espacios, cinco rutas seguras, un merge sintético real de PR que
+   añade `.env.local/settings.py`, un `git diff` simulado con bytes
+   inválidos y un merge real cuyo nombre contiene las letras españolas
+   `ñ` y `ó`. Todos los fixtures son ficticios.
+
+### Reutilización de código público examinada
+
+- [Git `git-diff`](https://git-scm.com/docs/git-diff): `-z` devuelve
+  nombres sin escapes y separados por NUL; los nombres están **a menudo**,
+  no necesariamente siempre, codificados en UTF-8. Se mantiene Git nativo.
+- [`cpburnz/python-pathspec`](https://github.com/cpburnz/python-pathspec):
+  MPL-2.0, activo el **09/10/2026**, soporta Python 3.11 y Windows; implementa
+  patrones tipo `gitignore`. Es útil para glob/wildmatch, pero aquí ya se
+  reciben rutas exactas del `git diff` y se comparan componentes literales.
+  Integrarlo supondría una dependencia y complejidad nuevas sin demostrar
+  una ventaja para esta regla. Por eso se mantiene la biblioteca estándar.
+- La PR de investigación transversal
+  [#50](https://github.com/davidpd89/ci-sandbox-tmp/pull/50)
+  ya contempla Unicode/locale/codificación. La corrección local del defecto
+  demostrado queda en #2, sin crear otra PR duplicada.
+
+### Matriz de revisión e integración
+
+Se preservaron los tests anteriores de cambios A/M/T, borrado histórico,
+renombrados, espacios/controles en logs y contrato de eventos. Hay
+casos positivos y negativos para evitar bloquear documentación o código
+legítimo. El guard de `pull_request` permanece igual: los cambios de `push`
+y el historial intermedio corresponden a #88/#89. No se modifican colas
+WEB/API/MOBILE ni operaciones reales en redes.
+
+El run iniciado sobre el código es
+[37986301973](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37986301973).
+Su conclusión y la del HEAD definitivo deben comprobarse en GitHub antes de
+fusionar. Claude debe trasladar también estos tests al repositorio privado,
+sin copiar las siete exclusiones del mirror. Los cambios solo protegen rutas
+del árbol final y no sustituyen #87 (contenido) ni #92 (verificador independiente).
