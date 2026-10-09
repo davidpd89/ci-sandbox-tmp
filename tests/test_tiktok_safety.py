@@ -1,5 +1,6 @@
 """Barrera de paradas TikTok: pruebas sin red, cuentas ni dispositivo."""
 import datetime as dt
+import inspect
 import json
 import pathlib
 import sys
@@ -21,6 +22,39 @@ class TikTokSafetyTests(unittest.TestCase):
             with self.assertRaises(safety.SafetyBlocked):
                 safety.require_writable(str(path), now=now + dt.timedelta(days=2))
             self.assertTrue(json.loads(path.read_text())["manual_review"])
+
+    def test_follow_limit_cannot_downgrade_manual_review_after_cooldown(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = pathlib.Path(folder) / "pause.json"
+            now = dt.datetime(2026, 10, 9, tzinfo=dt.timezone.utc)
+            safety.restrict("challenge", str(path), now=now)
+            before = path.read_bytes()
+
+            self.assertEqual(
+                safety.restrict("follow_limit", str(path), now=now + dt.timedelta(days=2)),
+                float("inf"),
+            )
+            self.assertEqual(path.read_bytes(), before)
+            with self.assertRaises(safety.SafetyBlocked):
+                safety.require_writable(str(path), now=now + dt.timedelta(days=2))
+
+    def test_invalid_manual_review_is_corrupt_state_and_is_preserved(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = pathlib.Path(folder) / "pause.json"
+            payload = {
+                "until": "2026-10-10T09:00:00+00:00",
+                "manual_review": "yes",
+            }
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            before = path.read_bytes()
+
+            with self.assertRaises(safety.SafetyStateError):
+                safety.restrict(
+                    "follow_limit",
+                    str(path),
+                    now=dt.datetime(2026, 10, 9, tzinfo=dt.timezone.utc),
+                )
+            self.assertEqual(path.read_bytes(), before)
 
     def test_corrupt_state_fails_closed(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -51,26 +85,100 @@ class TikTokSafetyTests(unittest.TestCase):
             with self.assertRaises(safety.SafetyBlocked):
                 safety.require_writable(str(path))
 
-    def test_pending_follow_is_not_reattempted(self):
+    def test_cooldown_wrapper_propagates_corrupt_state(self):
         with tempfile.TemporaryDirectory() as folder:
-            path = str(pathlib.Path(folder) / "registro.csv")
-            with mock.patch.object(bulk, "REGISTRO_CSV", path):
-                bulk.record_follow("lectora", "test", "pendiente_verificacion")
-                bulk.record_follow("lectora", "test", "confirmado")
-                already, total = bulk.followed_before()
+            path = pathlib.Path(folder) / "pause.json"
+            path.write_text("{", encoding="utf-8")
+            with mock.patch.object(bulk, "COOLDOWN_PATH", str(path)):
+                with self.assertRaises(safety.SafetyStateError):
+                    bulk.cooldown_left()
+
+    def test_tap_reserved_follow_survives_tap_crash_and_blocks_retry(self):
+        class DummySession:
+            def __init__(self):
+                self.done = set()
+
+        with tempfile.TemporaryDirectory() as folder:
+            path = pathlib.Path(folder) / "registro.csv"
+            session = DummySession()
+
+            def crash():
+                raise RuntimeError("tap crashed")
+
+            with mock.patch.object(bulk, "REGISTRO_CSV", str(path)):
+                with self.assertRaises(RuntimeError):
+                    bulk.tap_reserved_follow(session, "lectora", "test", crash)
+                already, _ = bulk.followed_before()
+
+            event_day = dt.date.fromisoformat(path.read_text(encoding="utf-8").splitlines()[1].split(",", 1)[0])
+            used, pending = safety.recorded_actions(str(path), today=event_day)
+            self.assertIn("lectora", session.done)
             self.assertIn("lectora", already)
-            self.assertIn(total, (0, 1))
+            self.assertEqual(used["follow"], 1)
+            self.assertIn(("follow", "lectora"), pending)
+
+    def test_confirmed_reserved_follow_closes_intent_without_double_quota(self):
+        class Rng:
+            def randint(self, a, b):
+                return a
+
+        with tempfile.TemporaryDirectory() as folder:
+            path = pathlib.Path(folder) / "registro.csv"
+            session = bulk.Session(
+                None,
+                None,
+                Rng(),
+                max_follows=2,
+                deadline=bulk.time.time() + 300,
+                done=set(),
+            )
+            with mock.patch.object(bulk, "REGISTRO_CSV", str(path)):
+                intent_id = bulk.tap_reserved_follow(session, "lectora", "test", lambda: None)
+                session.ok("lectora", "test", intent_id=intent_id)
+
+            event_day = dt.date.fromisoformat(path.read_text(encoding="utf-8").splitlines()[1].split(",", 1)[0])
+            used, pending = safety.recorded_actions(str(path), today=event_day)
+            self.assertEqual(used["follow"], 1)
+            self.assertNotIn(("follow", "lectora"), pending)
+            self.assertEqual(session.followed, 1)
+
+    def test_ack_write_failure_does_not_mark_session_success(self):
+        class Rng:
+            def randint(self, a, b):
+                return a
+
+        session = bulk.Session(
+            None,
+            None,
+            Rng(),
+            max_follows=2,
+            deadline=bulk.time.time() + 300,
+            done=set(),
+        )
+        with mock.patch.object(bulk, "record_follow", side_effect=OSError("disk full")):
+            with self.assertRaises(OSError):
+                session.ok("lectora", "test", intent_id="a" * 32)
+        self.assertEqual(session.followed, 0)
+        self.assertNotIn("lectora", session.done)
+
+    def test_all_bulk_follow_routes_use_write_ahead_helper(self):
+        for func in (bulk.mine_followers, bulk.mine_mutual, bulk.followback_own):
+            with self.subTest(func=func.__name__):
+                self.assertIn("tap_reserved_follow(", inspect.getsource(func))
 
     def test_no_progress_alert_does_not_change_deadline(self):
         class Rng:
             def randint(self, a, b):
                 return a
+
+        deadline = bulk.time.time() + 3000
         with mock.patch.object(bulk.time, "monotonic", side_effect=[0, 901, 902]):
-            session = bulk.Session(None, None, Rng(), max_follows=20, deadline=bulk.time.time() + 3000, done=set())
+            session = bulk.Session(None, None, Rng(), max_follows=20, deadline=deadline, done=set())
             with mock.patch("builtins.print") as logged:
                 self.assertFalse(session.over)
                 self.assertFalse(session.over)
             logged.assert_called_once()
+            self.assertEqual(session.deadline, deadline)
 
 
     def test_unique_daily_usage_and_pending_counted_across_paths(self):
@@ -87,6 +195,20 @@ class TikTokSafetyTests(unittest.TestCase):
             used, pending = safety.recorded_actions(str(path), today=dt.date(2026, 10, 9))
             self.assertEqual(used, {"follow": 1, "like": 1, "comment": 0})
             self.assertIn(("follow", "lectora"), pending)
+
+    def test_pending_approval_closes_intent_and_counts_once(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = pathlib.Path(folder) / "registro.csv"
+            intent_id = "b" * 32
+            lines = [
+                "fecha,cuenta,tipo,post_resumen,texto_usado,resultado,notas",
+                f"2026-10-09,@privada,follow,,,pendiente_verificacion,x | intent_id={intent_id}",
+                f"2026-10-09,@privada,follow,,,pendiente_aprobacion,x | intent_id={intent_id}",
+            ]
+            path.write_text("\n".join(lines) + "\n", encoding="utf-8-sig")
+            used, pending = safety.recorded_actions(str(path), today=dt.date(2026, 10, 9))
+            self.assertEqual(used["follow"], 1)
+            self.assertNotIn(("follow", "privada"), pending)
 
     def test_csv_bad_header_fails_closed(self):
         with tempfile.TemporaryDirectory() as folder:
