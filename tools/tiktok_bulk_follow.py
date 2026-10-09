@@ -48,7 +48,7 @@ except Exception:
 MUTUAL_CARD = re.compile(r"apoy|sigue|sigo|follow|mutu|comunidad|presenta|emergente|escrit|autor|lector|novel|libro|booktok|lectur", re.I)
 
 
-COOLDOWN_PATH = os.path.join(ROOT, "bulk_cooldown.json")
+COOLDOWN_PATH = safety.COOLDOWN_PATH
 
 
 class StopSession(RuntimeError):
@@ -115,6 +115,7 @@ def tap_reserved_follow(sess, handle, note, tap):
     intent_id = uuid.uuid4().hex
     record_follow(handle, note, "pendiente_verificacion", intent_id=intent_id)
     sess.done.add(handle.casefold())
+    sess.attempted += 1  # toda intención duradera consume cupo, incluso si el tap queda incierto
     tap()
     return intent_id
 
@@ -172,6 +173,7 @@ class Session:
         self.nav, self.pace, self.rng = nav, pace, rng
         self.max_follows, self.deadline, self.done = max_follows, deadline, done
         self.followed = 0
+        self.attempted = 0
         self.fails = 0
         self.started = time.monotonic()
         self.progress_alarm = False
@@ -183,7 +185,7 @@ class Session:
         if not self.progress_alarm and not self.followed and time.monotonic() - self.started >= 15 * 60:
             self.progress_alarm = True
             print("[TIKTOK_NO_PROGRESS] bulk 15 min sin follows confirmados; diagnostico, sin retry", flush=True)
-        return self.followed >= self.max_follows or time.time() >= self.deadline
+        return self.attempted >= self.max_follows or self.followed >= self.max_follows or time.time() >= self.deadline
 
     def gap(self):
         time.sleep(max(4.0, self.rng.lognormvariate(2.45, 0.4)))       # mediana ~11,5 s (a 5,7 s TikTok avisaba de «demasiada frecuencia» a los ~35 follows)
