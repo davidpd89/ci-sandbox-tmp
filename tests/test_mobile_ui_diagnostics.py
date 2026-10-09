@@ -80,6 +80,11 @@ class DiagnosticsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             diag.diagnose(sample)
 
+    def test_overflow_in_geometry_is_rejected(self):
+        sample = {"elements": [node("X", y=1e308, h=1e308)]}
+        with self.assertRaisesRegex(ValueError, "no valid geometry"):
+            diag.diagnose(sample)
+
     def test_rejects_tampered_result(self):
         first = diag.diagnose(ui())
         first["features"]["button:0:usuarios"] = 100
