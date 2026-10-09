@@ -1,7 +1,7 @@
 """Politica comun anti-necroposting (09/10/2026): nunca actuar sobre un post ajeno antiguo, en ninguna red.
 
 Un solo criterio para los nueve ejecutores: `conversation_turn_policy.check_execution` (que todos llaman antes de cada accion) delega aqui.
-La edad sale, por orden, de (1) una fecha explicita del plan (`created_at`, `post_created_at`, `target_created_at`) o (2) el instante embebido en el
+La edad sale, por orden, de (1) una fecha inequívoca del destino (`post_created_at`, `target_created_at` o un post anidado) o (2) el instante embebido en el
 ID del post cuando la red lo codifica (X: snowflake; Bluesky: TID del rkey). En Mastodon
 los IDs son opacos: no se interpreta como fecha el ID local de un estado federado.
 Las respuestas, comentarios y citas sin fecha de destino verificable se omiten antes de
@@ -45,16 +45,6 @@ def _parse(value):
         return parsed if parsed.tzinfo is not None and parsed.utcoffset() is not None else None
     except (ValueError, TypeError):
         return None
-
-
-def _snowflake_mastodon(sid):
-    sid = str(sid or "")
-    if sid.isdigit() and len(sid) >= 17:
-        try:
-            return dt.datetime.fromtimestamp((int(sid) >> 16) / 1000, dt.timezone.utc)
-        except (OverflowError, OSError, ValueError):
-            return None
-    return None
 
 
 def _snowflake_x(sid):
@@ -109,7 +99,7 @@ def _target_ref(item, network=None):
     # notificación/conversación. No convertir la fecha de otro objeto en la
     # fecha del post que se va a comentar.
     if network == "x":
-        keys = ("target_post_id", "url", "post_url", "permalink", "status_id", "_target_uri", "post_uri")
+        keys = ("url", "post_url", "permalink", "target_post_id", "status_id", "_target_uri", "post_uri")
     elif network == "bluesky":
         keys = ("_target_uri", "post_uri", "url", "post_url", "permalink", "target_post_id", "status_id")
     elif network == "threads":
