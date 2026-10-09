@@ -105,6 +105,7 @@ def build(scan, decisions):
                 "lane": candidate.get("lane", "unknown"),
                 "url": post["url"],
                 "status_id": str(post["status_id"]),
+                "post_created_at": post.get("created_at") or None,
                 "motivo": f"growth:{pid}:" + ",".join(post.get("sources") or []) + (f":src={candidate['first_source']}" if candidate.get("first_source") else ""),
             }
             key = row["status_id"]
