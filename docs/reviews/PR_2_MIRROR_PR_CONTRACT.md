@@ -22,7 +22,7 @@ completa sin las exclusiones que el mirror aún necesita.
 
 ## Diagnóstico inicial
 
-1. El workflow original ya usaba `pull_request`, permisos `contents: read`,
+1. Al comenzar la primera revisión ampliada, la PR ya incorporaba `pull_request`, permisos `contents: read`,
    credenciales de checkout no persistentes, Python 3.11 y acciones fijadas por
    SHA. El run 37971377243 había terminado correctamente en
    `ubuntu-latest` y `windows-latest`.
@@ -142,3 +142,77 @@ https://github.com/actions/checkout/blob/main/README.md
 Revisión cruzada: esto es un contrato de infraestructura reutilizable por
 todas las redes (WEB/API/MOBILE), no se necesitan excepciones por plataforma.
 No añade restricciones a frecuencia, descubrimiento o contenido social.
+
+
+## Cuarta revisión adversarial: cambios de tipo y alcance del historial (09/10/2026)
+
+La documentación de Git [diff-options](https://git-scm.com/docs/diff-options)
+distingue explícitamente `A` (añadido), `M` (modificado) y `T` (cambio de
+tipo: archivo, enlace simbólico, submódulo). El comparador anterior filtraba
+solo `AM`, por lo que **omitía un cambio de tipo de una ruta sensible**.
+
+Reproducción local con Git real y archivos **completamente sintéticos**:
+
+1. Crear y confirmar `credentials.json` como archivo normal.
+2. Crear un blob sintético con `git hash-object -w` y cambiar el modo
+   del path existente mediante
+   `git update-index --cacheinfo 120000,<blob>,credentials.json`.
+3. Confirmar el cambio. `git diff --name-status HEAD^1 HEAD` devuelve
+   `T credentials.json`.
+4. `git diff --name-only --diff-filter=AM HEAD^1 HEAD` devuelve una lista
+   vacía; con `--diff-filter=AMT`, vuelve `credentials.json`.
+
+**Corrección implementada:** `repo_hygiene.changed_paths` filtra `AMT`,
+sin detectar renombrados como una sola operación (`--no-renames` conserva
+el destino como `A`). Se añaden regresiones con Git temporal para:
+
+- Cambio de tipo de un nombre sensible (sin crear enlaces del SO: compatible
+  con Windows sin privilegios adicionales).
+- Renombrado de un archivo permitido hacia `credentials.json`.
+- Borrado de `secrets.json` heredado: no reabre deuda histórica.
+- Las pruebas existentes continúan cubriendo merges de PR y rutas nuevas.
+
+### Evidencia del último HEAD de código
+
+GitHub Actions run
+[37980990016](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37980990016),
+`ubuntu-latest` y `windows-latest` concluyeron **success**. El paso de
+higiene también pasó en ambos runners:
+
+- Ubuntu: **1700 passed, 8 skipped, 7 deselected, 665 subtests passed**.
+- Windows: **1703 passed, 5 skipped, 7 deselected, 665 subtests passed**.
+- Dos advertencias existentes por secuencias de escape de Android, no
+  relacionadas con esta modificación.
+- Los siete casos excluidos permanecen segregados de esta PR; requieren
+  validación independiente de su contexto real antes de reducir las exclusiones.
+
+### Limitaciones encontradas con una perspectiva transversal
+
+1. El diff del **árbol final** no detecta rutas sensibles añadidas en un
+   commit intermedio y eliminadas antes de abrir la PR. El objeto puede
+   permanecer en Git. Se abrió la PR de **implementación**
+   [#89](https://github.com/davidpd89/ci-sandbox-tmp/pull/89) para comprobar
+   todos los commits relevantes sin falsos positivos sobre la base histórica.
+   No se confunde protección de merge con prevención de exposición previa.
+2. Los contratos textuales de YAML no sustituyen un parser de workflows.
+   Comparativa actual: [actionlint](https://github.com/rhysd/actionlint)
+   (MIT, Go, release v1.7.12 de marzo de 2026, binarios para Windows/Linux)
+   y [zizmor](https://github.com/zizmorcore/zizmor) (MIT, Rust, modo offline,
+   activo en octubre de 2026). Se abre [#90](https://github.com/davidpd89/ci-sandbox-tmp/pull/90),
+   **implementación**, para añadir validación estructural mantenida, con
+   verificación de integridad y CI sin autenticación.
+3. Sigue vigente [#87](https://github.com/davidpd89/ci-sandbox-tmp/pull/87)
+   para escaneo de contenido de archivos permitidos y
+   [#88](https://github.com/davidpd89/ci-sandbox-tmp/pull/88) para rangos
+   de `push` multicommits. No se han confundido ni mezclado con #2.
+4. Esto refuerza por igual las tres colas WEB/API/MOBILE y todas las redes:
+   es un contrato de **repositorio y CI**, sin excepciones particulares ni
+   cambios de comportamiento en redes sociales.
+
+### Recomendación para el integrador
+
+Integrar la #2 solo tras revisar la CI del último HEAD y contrastar la rama
+`ci/test-campaign-parent`. El uso de `HEAD^1` depende de mantener el
+checkout del merge sintético de `pull_request`, no del head de la rama.
+No afirmar garantías absolutas: el pipeline de #2 protege rutas del árbol
+final, mientras #87, #88, #89 y #90 cubren responsabilidades adicionales.
