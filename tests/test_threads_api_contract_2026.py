@@ -265,5 +265,20 @@ class ThreadsTransportTests(unittest.TestCase):
         self.assertEqual(metrics, {"followers": "17"})
         self.assertEqual(getter.call_args.args[0], "me/threads_insights")
 
+    def test_unknown_followers_do_not_erase_last_verified_value(self):
+        with patch.object(executor, "_append_metricas") as append, \
+             patch.object(executor, "_update_estado") as update:
+            executor._persist_metrics_without_erasing_known_followers([], {"followers": "?"})
+            append.assert_called_once()
+            update.assert_not_called()
+
+    def test_verified_followers_update_dashboard(self):
+        with patch.object(executor, "_append_metricas") as append, \
+             patch.object(executor, "_update_estado") as update:
+            executor._persist_metrics_without_erasing_known_followers([], {"followers": "17"})
+            append.assert_called_once()
+            update.assert_called_once()
+
+
 if __name__ == "__main__":
     unittest.main()
