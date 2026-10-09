@@ -316,9 +316,16 @@ def recorded_actions(path, *, today=None):
                     continue
                 if result == "pendiente_aprobacion" and kind != "follow":
                     raise SafetyStateError("aprobación pendiente incompatible con acción")
+                # Una fecha legacy inválida no puede interpretarse como
+                # actividad de otro día: infracontaría el cupo actual.
+                raw_date = (row.get("fecha") or "").strip()
+                try:
+                    legacy_day = dt.date.fromisoformat(raw_date[:10])
+                except (TypeError, ValueError) as exc:
+                    raise SafetyStateError("fecha de acción legacy inválida") from exc
                 if result == "pendiente_verificacion":
                     pending.add(key)
-                if (row.get("fecha") or "")[:10] == today.isoformat():
+                if legacy_day == today:
                     daily[kind].add(key)
         except (csv.Error, UnicodeError) as exc:
             raise SafetyStateError("registro CSV corrupto") from exc
