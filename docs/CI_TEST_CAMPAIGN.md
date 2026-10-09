@@ -41,6 +41,23 @@ un cambio, la propia PR incluye la correccion y una prueba de regresion.
 | Arquitectura y rendimiento | Copias divergentes y rutas lentas | Presupuestos y duplicacion visibles en CI |
 | Publicacion y contenido | Formatos, limites y enlaces distintos por red | Contratos de payload por plataforma |
 
+## PR abiertas
+
+| PR | Bloque | Resultado de la primera ronda |
+| --- | --- | --- |
+| [#2](https://github.com/davidpd89/ci-sandbox-tmp/pull/2) | Contrato del mirror | Reactiva higiene con `fetch-depth: 2` y valida PR en Windows/Ubuntu |
+| [#3](https://github.com/davidpd89/ci-sandbox-tmp/pull/3) | Aprendizaje entre redes | Exige control, madurez, procedencia y verificacion externa |
+| [#4](https://github.com/davidpd89/ci-sandbox-tmp/pull/4) | Ranking de descubrimiento | 23 tests y 2315 subtests contra muestras pequenas y datos incompletos |
+| [#5](https://github.com/davidpd89/ci-sandbox-tmp/pull/5) | CSV multiproceso | Corrige cinco fallos: lock, cabecera, recuperacion y handle abierto |
+| [#6](https://github.com/davidpd89/ci-sandbox-tmp/pull/6) | KPI y anomalias | Conecta la alerta de caida sostenida con el panel de canarios |
+| [#7](https://github.com/davidpd89/ci-sandbox-tmp/pull/7) | Seguridad TikTok | Evita reintentar follows pendientes y alerta sesiones sin progreso |
+| [#8](https://github.com/davidpd89/ci-sandbox-tmp/pull/8) | Antiguedad comun | Aplica una politica a todas las rutas, incluida Instagram y Reddit secundario |
+| [#9](https://github.com/davidpd89/ci-sandbox-tmp/pull/9) | Duplicacion AST | Localiza seis copias exactas e impide que la deuda aumente |
+
+Todas las ramas anteriores han terminado en verde tanto en `ubuntu-latest`
+como en `windows-latest`. La PR #8 ejecuto ademas la suite local completa:
+1702 passed, 5 skipped y las 8 exclusiones conocidas del mirror.
+
 ## Regla sobre el repositorio oficial
 
 El mirror es un entorno de CI, no la unica fuente de codigo. Si una prueba
