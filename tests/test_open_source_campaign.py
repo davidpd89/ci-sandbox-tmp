@@ -1,6 +1,7 @@
 """No-network, synthetic tests for the campaign contract."""
 import copy
 import importlib.util
+import io
 import json
 from pathlib import Path
 import tempfile
@@ -77,6 +78,20 @@ class CampaignMetadataTests(unittest.TestCase):
         self.doc['children'][1]['objective'] = 'Tarea 11'
         self.doc['children'][1]['related_prs'] = [12]
         self.assertTrue(len(v.check_metadata(self.doc, self.protocol)) >= 2)
+
+    def test_live_pagination_keeps_page_size_stable(self):
+        urls = []
+        def opener(req, timeout):
+            urls.append(req.full_url)
+            page = 1 if req.full_url.endswith('page=1') else 2
+            start = 1 if page == 1 else 101
+            count = 100 if page == 1 else 1
+            return io.BytesIO(json.dumps([{'number': n} for n in range(start, start + count)]).encode())
+        loaded = v.fetch_live(opener=opener)
+        self.assertEqual(len(loaded), 101)
+        self.assertEqual(len(urls), 2)
+        self.assertTrue(all('per_page=100&' in url for url in urls))
+        self.assertTrue(urls[-1].endswith('page=2'))
 
     def test_live_missing_link_and_drift(self):
         live = {10: {'base': {'ref': 'main'}, 'head': {'ref': v.PARENT}, 'state': 'open'}}
