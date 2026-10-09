@@ -83,7 +83,7 @@ python -m compileall -q tools/validate_open_source_campaign.py tests/test_open_s
 En las hijas (con ref base de Git disponible):
 
 ```sh
-GITHUB_BASE_REF=research/public-reuse-parent python tools/validate_open_source_campaign.py --changed-base <SHA_BASE>
+GITHUB_BASE_REF=research/public-reuse-parent python tools/validate_open_source_campaign.py --changed-base <SHA_BASE> --child-head <SHA_HEAD_HIJA>
 ```
 
 Si el SHA de base ya ha cambiado, NO inventar uno: consultar
@@ -113,6 +113,15 @@ Si el SHA de base ya ha cambiado, NO inventar uno: consultar
    el verde de la PR padre como prueba de hijas.
 7. No fusionar padre, hijas ni main automáticamente. No publicar
    contenido ni interactuar con cuentas.
+
+## Revisión de aislamiento de diff
+
+La rama base puede avanzar mientras una hija trabaja. La CI recibe
+\`github.event.pull_request.head.sha\` y compara ese head contra el ancestro
+común con la base, no contra el merge artificial del checkout. Comprobar
+el test \`test_child_diff_uses_merge_base_not_merge_commit\`: el padre
+NO puede satisfacer por sí solo las pruebas y el informe requeridos
+para una hija. Revalidar siempre los checks tras cambiar el base/head.
 
 ## Incidencias abiertas
 
