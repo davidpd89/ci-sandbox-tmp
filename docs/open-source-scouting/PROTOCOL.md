@@ -112,3 +112,33 @@ resuelvan el mismo problema.
 | [#54](https://github.com/davidpd89/ci-sandbox-tmp/pull/54) | Optimizacion de tokens, llamadas y coste |
 | [#55](https://github.com/davidpd89/ci-sandbox-tmp/pull/55) | Dependencias, releases y rollback |
 | [#56](https://github.com/davidpd89/ci-sandbox-tmp/pull/56) | Documentacion ejecutable y runbooks |
+| [#57](https://github.com/davidpd89/ci-sandbox-tmp/pull/57) | Ciclo de followback en todas las redes |
+| [#58](https://github.com/davidpd89/ci-sandbox-tmp/pull/58) | Reconciliacion diaria de unfollow |
+| [#59](https://github.com/davidpd89/ci-sandbox-tmp/pull/59) | Memoria de reciprocidad repetida |
+| [#60](https://github.com/davidpd89/ci-sandbox-tmp/pull/60) | Maquina de estados de relaciones |
+| [#61](https://github.com/davidpd89/ci-sandbox-tmp/pull/61) | Antiguedad de posts en todas las redes |
+| [#62](https://github.com/davidpd89/ci-sandbox-tmp/pull/62) | Fuente fiable de fecha de publicacion |
+| [#63](https://github.com/davidpd89/ci-sandbox-tmp/pull/63) | Expansion inteligente de hashtags |
+| [#64](https://github.com/davidpd89/ci-sandbox-tmp/pull/64) | Grupos, comunidades y nichos |
+| [#65](https://github.com/davidpd89/ci-sandbox-tmp/pull/65) | Senales explicitas de reciprocidad |
+| [#66](https://github.com/davidpd89/ci-sandbox-tmp/pull/66) | Ranking de cuentas y posts candidatos |
+| [#67](https://github.com/davidpd89/ci-sandbox-tmp/pull/67) | Persistencia de notificaciones de repost |
+| [#68](https://github.com/davidpd89/ci-sandbox-tmp/pull/68) | Ciclo de interacciones reversibles |
+| [#69](https://github.com/davidpd89/ci-sandbox-tmp/pull/69) | Fidelizacion desde engagement entrante |
+| [#70](https://github.com/davidpd89/ci-sandbox-tmp/pull/70) | Discovery desde likes y comentarios |
+| [#71](https://github.com/davidpd89/ci-sandbox-tmp/pull/71) | Priorizacion diaria de relaciones |
+| [#72](https://github.com/davidpd89/ci-sandbox-tmp/pull/72) | Benchmark de comentarios por red |
+| [#73](https://github.com/davidpd89/ci-sandbox-tmp/pull/73) | Corpus de escritura humana propia |
+| [#74](https://github.com/davidpd89/ci-sandbox-tmp/pull/74) | Comentarios anclados al contexto |
+| [#75](https://github.com/davidpd89/ci-sandbox-tmp/pull/75) | Repeticion y frases prefabricadas |
+| [#76](https://github.com/davidpd89/ci-sandbox-tmp/pull/76) | Lenguaje nativo de cada plataforma |
+| [#77](https://github.com/davidpd89/ci-sandbox-tmp/pull/77) | Continuidad de conversaciones |
+| [#78](https://github.com/davidpd89/ci-sandbox-tmp/pull/78) | Momento y cadencia de respuestas |
+| [#79](https://github.com/davidpd89/ci-sandbox-tmp/pull/79) | Calidad de voz y espanol |
+| [#80](https://github.com/davidpd89/ci-sandbox-tmp/pull/80) | Experimentos de contenido y comentarios |
+| [#81](https://github.com/davidpd89/ci-sandbox-tmp/pull/81) | Matriz ejecutable de paridad |
+| [#82](https://github.com/davidpd89/ci-sandbox-tmp/pull/82) | Drift de capacidades y configuracion |
+| [#83](https://github.com/davidpd89/ci-sandbox-tmp/pull/83) | Orquestacion de crecimiento diario |
+| [#84](https://github.com/davidpd89/ci-sandbox-tmp/pull/84) | Ledger comun de relaciones |
+| [#85](https://github.com/davidpd89/ci-sandbox-tmp/pull/85) | Identidad entre redes |
+| [#86](https://github.com/davidpd89/ci-sandbox-tmp/pull/86) | Embudo de comunidad y trafico |
