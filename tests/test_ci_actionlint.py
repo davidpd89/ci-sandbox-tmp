@@ -101,5 +101,32 @@ class ActionlintInstallerTests(unittest.TestCase):
         self.assertFalse(lint.CASES["invalid_expression"][1])
 
 
+    def test_untrusted_names_are_arguments_not_shell_commands(self):
+        malicious = Path("workflow; echo HACKED.yml")
+        with mock.patch.object(lint.subprocess, "run", return_value=mock.Mock(returncode=0)) as run:
+            lint.run_lint(Path("actionlint"), [malicious])
+        self.assertEqual(run.call_args.args[0][-1], str(malicious))
+        self.assertNotIn("shell", run.call_args.kwargs)
+        self.assertNotIn("HACKED", " ".join(run.call_args.args[0][:-1]))
+
+    def test_does_not_mutate_operational_fixtures(self):
+        with tempfile.TemporaryDirectory() as temp:
+            operational = Path(temp) / "state.sqlite"
+            operational.write_bytes(b"synthetic-state-untouched")
+            before = hashlib.sha256(operational.read_bytes()).digest()
+            with mock.patch.object(lint.subprocess, "run", return_value=mock.Mock(returncode=0)):
+                lint.run_lint(Path("actionlint"), [Path(temp) / "workflow.yml"])
+            self.assertEqual(before, hashlib.sha256(operational.read_bytes()).digest())
+
+    def test_download_or_integrity_failure_cannot_be_suppressed(self):
+        with mock.patch.object(lint, "install", side_effect=ValueError("synthetic SHA256 mismatch")):
+            self.assertEqual(lint.main([]), 2)
+
+    def test_synthetic_fixtures_have_no_secrets(self):
+        for body, _ in lint.CASES.values():
+            self.assertNotIn("secrets.", body)
+            self.assertNotIn("TOKEN=", body)
+
+
 if __name__ == "__main__":
     unittest.main()
