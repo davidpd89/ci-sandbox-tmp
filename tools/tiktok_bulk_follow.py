@@ -22,6 +22,8 @@ import re
 import sys
 import time
 
+import tiktok_safety as safety
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "SISTEMA_DIARIO_TIKTOK")
@@ -87,28 +89,32 @@ def load_config():
 
 def followed_before():
     """Handles que el sistema ya siguio alguna vez (nunca se vuelve a seguir a quien se dejo de seguir) y follows de hoy."""
-    done, today_n = set(), 0
-    today = datetime.date.today().isoformat()
+    done = set()
     try:
         with open(REGISTRO_CSV, encoding="utf-8", newline="") as stream:
             for row in csv.DictReader(stream):
-                if (row.get("tipo") or "").strip().casefold() == "follow" and (row.get("resultado") or "").strip().casefold() in ("confirmado", "saltado_ya_seguido"):
-                    done.add((row.get("cuenta") or "").strip().lstrip("@").casefold())
-                    if (row.get("fecha") or "")[:10] == today and row.get("resultado") == "confirmado":
-                        today_n += 1
+                if (row.get("tipo") or "").strip().casefold() == "follow" and (row.get("resultado") or "").strip().casefold() in ("confirmado", "saltado_ya_seguido", "pendiente_verificacion"):
+                    handle = (row.get("cuenta") or "").strip().lstrip("@").casefold()
+                    if handle:
+                        done.add(handle)
     except OSError:
         pass
-    return done, today_n
+    used, _ = safety.recorded_actions(REGISTRO_CSV)
+    return done, used["follow"]
 
 
-def record_follow(handle, note):
-    new = not os.path.exists(REGISTRO_CSV)
+def record_follow(handle, note, result="confirmado"):
+    if result not in ("confirmado", "pendiente_verificacion"):
+        raise ValueError("resultado invalido")
+    new = not os.path.exists(REGISTRO_CSV) or os.path.getsize(REGISTRO_CSV) == 0
     with open(REGISTRO_CSV, "a", newline="", encoding="utf-8") as stream:
         writer = csv.writer(stream)
         if new:
             writer.writerow(["fecha", "cuenta", "tipo", "post_resumen", "texto_usado", "resultado", "notas"])
-        writer.writerow([datetime.date.today().isoformat(), "@" + handle.lstrip("@"), "follow", "", "", "confirmado", f"{note} | transporte=android_native"])
-    print(f"{'confirmado':<35} follow   @{handle}", flush=True)
+        writer.writerow([datetime.date.today().isoformat(), "@" + handle.lstrip("@"), "follow", "", "", result, f"{note} | transporte=android_native"])
+        stream.flush()
+        os.fsync(stream.fileno())
+    print(f"{result:<35} follow   @{handle}", flush=True)
 
 
 def vet_name(name, handle):
@@ -162,11 +168,16 @@ class Session:
         self.max_follows, self.deadline, self.done = max_follows, deadline, done
         self.followed = 0
         self.fails = 0
+        self.started = time.monotonic()
+        self.progress_alarm = False
         self.count = 0
         self.next_break = rng.randint(12, 20)
 
     @property
     def over(self):
+        if not self.progress_alarm and not self.followed and time.monotonic() - self.started >= 15 * 60:
+            self.progress_alarm = True
+            print("[TIKTOK_NO_PROGRESS] bulk 15 min sin follows confirmados; diagnostico, sin retry", flush=True)
         return self.followed >= self.max_follows or time.time() >= self.deadline
 
     def gap(self):
