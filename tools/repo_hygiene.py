@@ -36,8 +36,12 @@ def forbidden_path(path: str) -> bool:
     """No se basan las decisiones en Gitignore: un fichero ya stageado cuenta."""
     if not isinstance(path, str) or not path.strip():
         return True
-    normalized = path.replace("\\", "/").strip().lstrip("/")
-    parts = [p.strip().casefold() for p in normalized.split("/") if p != ""]
+    normalized = path.replace("\\", "/").lstrip("/")
+    raw_parts = [p for p in normalized.split("/") if p != ""]
+    # No permitir que espacios conviertan un nombre distinto en una plantilla autorizada.
+    if any(p != p.strip() and p.strip().casefold() in ENV_TEMPLATES for p in raw_parts):
+        return True
+    parts = [p.strip().casefold() for p in raw_parts]
     if not parts or any(p in {"", ".", ".."} for p in parts):
         return True
     name = parts[-1]
