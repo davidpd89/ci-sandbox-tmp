@@ -89,6 +89,49 @@ class DurableIntentTests(unittest.TestCase):
         self.assertEqual(sorted([out1.strip(), out2.strip()]), ["HELD", "SENT"])
 
 
+    def test_checkpoint_update_affecting_zero_rows_never_posts(self):
+        # ActionLedger.settle hace UPDATE ... WHERE status=RESERVED sin
+        # comprobar rowcount. Simular actualizacion silenciosa de 0 filas.
+        sent = []
+        original = guard.ActionLedger.settle
+
+        def no_checkpoint(ledger, kind, target, status, detail=""):
+            if status == guard.UNCERTAIN:
+                return None
+            return original(ledger, kind, target, status, detail)
+
+        def submit(checkpoint):
+            checkpoint("C-SYNTH")
+            sent.append("POST /media_publish")
+            return "MEDIA"
+
+        with patch.object(guard.ActionLedger, "settle", no_checkpoint):
+            with self.assertRaisesRegex(guard.InstagramPublicationHeld, "checkpoint"):
+                guard.publish_guarded(self.item, "IG-SYNTH", submit, db_path=self.db)
+        self.assertEqual(sent, [])
+
+    def test_checkpoint_row_deleted_before_post_never_posts(self):
+        # Una herramienta administrativa externa puede borrar una reserva
+        # sin respetar el candado de publicacion. El callback debe verificar
+        # que la fila sigue existiendo antes de permitir el POST.
+        sent = []
+        original = guard.ActionLedger.settle
+
+        def deleted(ledger, kind, target, status, detail=""):
+            if status == guard.UNCERTAIN:
+                return ledger.release(kind, target)
+            return original(ledger, kind, target, status, detail)
+
+        def submit(checkpoint):
+            checkpoint("C-SYNTH")
+            sent.append("POST /media_publish")
+            return "MEDIA"
+
+        with patch.object(guard.ActionLedger, "settle", deleted):
+            with self.assertRaisesRegex(guard.InstagramPublicationHeld, "checkpoint"):
+                guard.publish_guarded(self.item, "IG-SYNTH", submit, db_path=self.db)
+        self.assertEqual(sent, [])
+
     def test_same_fixture_baseline_two_posts_guard_one(self):
         # Reproduce el protocolo: status FINISHED y timeout DESPUÉS del POST.
         # Baseline (dos ejecuciones sin journal) = 2 envíos; guard = 1.
