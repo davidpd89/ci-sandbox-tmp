@@ -77,6 +77,7 @@ class RoundCsvAtomicity(unittest.TestCase):
         self.assertEqual(self.path.read_bytes(), before)
 
     def test_writer_guard_is_released_when_holder_process_is_killed(self):
+        ready = Path(self.temp.name) / "writer-ready.txt"
         script = (
             "import sys,time;"
             "sys.path.insert(0,sys.argv[1]);"
@@ -84,18 +85,25 @@ class RoundCsvAtomicity(unittest.TestCase):
             "q.LOG=sys.argv[2];"
             "ctx=q._recovery_guard(q.LOG+'.writer');"
             "held=ctx.__enter__();"
-            "print('HELD' if held else 'BLOCKED',flush=True);"
+            "f=open(sys.argv[3],'w',encoding='ascii');"
+            "f.write('HELD' if held else 'BLOCKED');f.close();"
             "time.sleep(60)"
         )
         proc = subprocess.Popen(
-            [sys.executable, "-c", script, str(ROOT / "tools"), str(self.path)],
+            [sys.executable, "-c", script, str(ROOT / "tools"),
+             str(self.path), str(ready)],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             text=True, encoding="utf-8",
         )
         try:
-            self.assertEqual(proc.stdout.readline().strip(), "HELD")
+            deadline = time.monotonic() + 5
+            while not ready.exists() and proc.poll() is None and time.monotonic() < deadline:
+                time.sleep(0.05)
+            self.assertTrue(ready.exists(), "el hijo no alcanzó el lock en 5 s")
+            self.assertEqual(ready.read_text(encoding="ascii"), "HELD")
         finally:
-            proc.kill()
+            if proc.poll() is None:
+                proc.kill()
             proc.communicate(timeout=5)
 
         q._append_round_csv(self.row("mastodon"))
