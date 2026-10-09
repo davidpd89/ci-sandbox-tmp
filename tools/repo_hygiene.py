@@ -3,7 +3,7 @@
 Ejemplo para el checkout de una PR que apunta al merge commit de GitHub:
     python tools/repo_hygiene.py --base HEAD^1
 
-Usar solo sobre rutas A/M respecto a la base, NO sobre todos los ficheros
+Usar solo sobre rutas A/M/T respecto a la base, NO sobre todos los ficheros
 históricos ya presentes en el repositorio. El código no lee archivos privados.
 No sustituye un escáner de secretos dentro de ficheros permitidos.
 """
@@ -74,7 +74,7 @@ def changed_paths(base: str, *, root: pathlib.Path = ROOT) -> list[str]:
         raise ValueError("Se necesita un commit base comprobable")
     completed = subprocess.run(
         ["git", "-C", str(root), "diff", "--name-only", "-z",
-         "--diff-filter=AM", "--no-renames", base, "HEAD", "--"],
+         "--diff-filter=AMT", "--no-renames", base, "HEAD", "--"],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
     )
     if completed.returncode:
@@ -97,7 +97,7 @@ def main(argv=None) -> int:
         for path in offenders:
             print(f"  - {path}", file=sys.stderr)
         return 1
-    print("HIGIENE OK: cambios A/M sin ficheros operativos prohibidos.")
+    print("HIGIENE OK: cambios A/M/T sin ficheros operativos prohibidos.")
     return 0
 
 
