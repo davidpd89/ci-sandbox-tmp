@@ -1,6 +1,7 @@
 """Check every PR commit for sensitive paths; no file content access."""
 from __future__ import annotations
 import argparse
+import os
 import pathlib
 import subprocess
 import sys
@@ -9,8 +10,11 @@ from repo_hygiene import ROOT, forbidden_path
 
 
 def git(root: pathlib.Path, *argv: str) -> bytes:
+    env = os.environ.copy()
+    env.update({"GIT_NO_LAZY_FETCH": "1", "GIT_NO_REPLACE_OBJECTS": "1",
+                "GIT_TERMINAL_PROMPT": "0"})
     proc = subprocess.run(["git", "-C", str(root), *argv],
-                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     if proc.returncode:
         raise RuntimeError(f"Git failed: {argv[0]} ({proc.returncode})")
     return proc.stdout
@@ -42,10 +46,12 @@ def changes(root: pathlib.Path, parent: str | None, commit: str) -> set[str]:
 
 
 def scan_pr(base: str, head: str, *, root: pathlib.Path = ROOT) -> list[tuple[str, int]]:
+    if git(root, "rev-parse", "--is-shallow-repository").strip() != b"false":
+        raise ValueError("Shallow history: full checkout required")
     base, head = oid(root, base), oid(root, head)
     if not git(root, "merge-base", base, head).strip():
         raise ValueError("Unrelated PR history")
-    rows = git(root, "rev-list", "--parents", "--topo-order", "--reverse", f"{base}..{head}").splitlines()
+    rows = git(root, "rev-list", "--missing=error", "--parents", "--topo-order", "--reverse", f"{base}..{head}").splitlines()
     if not rows:
         raise ValueError("No PR commits; check checkout/history")
     findings = []
