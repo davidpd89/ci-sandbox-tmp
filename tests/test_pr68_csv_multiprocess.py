@@ -32,6 +32,14 @@ class RoundCsvAtomicity(unittest.TestCase):
         with self.path.open(encoding="utf-8", newline="") as stream:
             return list(csv.reader(stream))
 
+    def test_first_boot_with_absent_parent_directory(self):
+        import datetime as dt
+        self.path = Path(self.temp.name) / "new" / "nested" / "tiempos_rondas.csv"
+        q.LOG = str(self.path)
+        self.assertEqual(q.done_today(dt.date(2026, 10, 9)), {})
+        q._append_round_csv(self.row("mastodon"))
+        self.assertEqual(len(self.read_rows()), 2)
+
     def test_missing_or_empty_csv_has_one_header(self):
         q._append_round_csv(self.row())
         q._append_round_csv(self.row("api"))
