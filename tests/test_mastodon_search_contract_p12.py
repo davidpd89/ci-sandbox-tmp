@@ -66,6 +66,43 @@ class MastodonAccountSearchContractTests(unittest.TestCase):
                 self.assertEqual(len({str(row["id"]) for row in rows}), len(rows))
                 self.assertTrue(all("@" + instance["hostname"] in row["acct"] for row in rows))
 
+    def test_before_after_on_identical_indexed_fixture(self):
+        """Control negativo: el algoritmo anterior se detenía al recibir 40 < 80."""
+        fixture = FIXTURES["instances"][0]
+        offsets = []
+
+        def search_v2(_path, params):
+            offsets.append(params["offset"])
+            page = next(
+                (p for p in fixture["pages"] if p["offset"] == params["offset"]), None
+            )
+            accounts = ([] if page is None else [
+                {"id": str(page["first_id"] + j),
+                 "acct": f"lectora{page['first_id'] + j}@{fixture['hostname']}"}
+                for j in range(page["count"])
+            ])
+            return {"accounts": accounts, "statuses": [], "hashtags": []}
+
+        def baseline_as_found_in_mirror():
+            rows = []
+            page_size = max(1, min(int(80), 80))
+            for page in range(8):
+                data = m.search("fantasía", "accounts", page_size,
+                                offset=page * page_size)
+                accounts = data.get("accounts") or []
+                rows.extend(accounts)
+                if len(accounts) < page_size:
+                    break
+            return rows
+
+        with patch.object(m, "_get_v2", side_effect=search_v2):
+            before = baseline_as_found_in_mirror()
+            offsets_before = offsets[:]
+            offsets.clear()
+            after = m.search_accounts_pages("fantasía", limit=80, max_pages=8)
+        self.assertEqual((len(before), offsets_before), (40, [0]))
+        self.assertEqual((len(after), offsets), (82, [0, 40, 80]))
+
     def test_without_fulltext_index_search_for_accounts_still_works(self):
         server = FIXTURES["instances"][1]
         self.assertFalse(server["statuses_search"])
