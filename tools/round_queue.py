@@ -339,8 +339,10 @@ def relaunch(script_args, log_name):
         log = open(path, "a", encoding="utf-8")
     except OSError:                          # 08/10: la tarea programada (cmd >>) o PowerShell pueden tener el log abierto en exclusiva: la recarga NUNCA debe morir por eso
         log = open(path[:-4] + f"_{os.getpid()}.log", "a", encoding="utf-8")
-    subprocess.Popen([PY, "-u"] + list(script_args), cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, creationflags=flags,
-                     env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+    with log:
+        subprocess.Popen([PY, "-u"] + list(script_args), cwd=ROOT, stdout=log,
+                         stderr=subprocess.STDOUT, creationflags=flags,
+                         env={**os.environ, "PYTHONIOENCODING": "utf-8"})
 
 
 WEB = ("x", "threads", "facebook", "pinterest")
@@ -348,6 +350,35 @@ API = ("bluesky", "mastodon")
 PHONE = ("tiktok",)
 SUMMARY = re.compile(r"\[(\w+)\] (\d+) confirmadas (\{.*?\}), (\d+) saltadas, (\d+) fallos")
 _write_lock = threading.Lock()
+
+ROUND_CSV_COLUMNS = (
+    "fecha", "red", "inicio", "fin", "minutos", "estado",
+    "confirmadas", "saltadas", "fallos", "codigo",
+)
+
+
+def _append_round_csv(row):
+    """Append one complete row while excluding other worker processes."""
+    directory = os.path.dirname(LOG)
+    os.makedirs(directory, exist_ok=True)
+    deadline = time.monotonic() + 15
+    with _write_lock:
+        while True:
+            with _recovery_guard(LOG + ".writer") as locked:
+                if locked:
+                    with open(LOG, "a+", encoding="utf-8", newline="") as stream:
+                        stream.seek(0, os.SEEK_END)
+                        empty = stream.tell() == 0
+                        writer = csv.writer(stream)
+                        if empty:
+                            writer.writerow(ROUND_CSV_COLUMNS)
+                        writer.writerow(row)
+                        stream.flush()
+                        os.fsync(stream.fileno())
+                    return
+            if time.monotonic() >= deadline:
+                raise OSError("No se pudo adquirir la exclusion de tiempos_rondas.csv")
+            time.sleep(0.02 + random.random() * 0.05)
 
 
 def rounds_target(network):
@@ -418,13 +449,7 @@ def run_round(network):
     else:
         state = "saltada"             # solo saltos, sin una accion confirmada
     row = [start.date().isoformat(), network, start.strftime("%H:%M:%S"), end.strftime("%H:%M:%S"), round((end - start).total_seconds() / 60, 1), state, confirmed, skipped, failed, proc.returncode]
-    with _write_lock:
-        new = not os.path.exists(LOG)
-        with open(LOG, "a", newline="", encoding="utf-8") as stream:
-            w = csv.writer(stream)
-            if new:
-                w.writerow(["fecha", "red", "inicio", "fin", "minutos", "estado", "confirmadas", "saltadas", "fallos", "codigo"])
-            w.writerow(row)
+    _append_round_csv(row)
     print(f"[cola] {network}: {state} en {row[4]} min {confirmed} saltadas={skipped} fallos={failed}", flush=True)
     return state
 
@@ -626,13 +651,7 @@ def run_bulk():
     else:
         state = "saltada"
     row = [start.date().isoformat(), "tiktok_bulk", start.strftime("%H:%M:%S"), end.strftime("%H:%M:%S"), round((end - start).total_seconds() / 60, 1), state, "{'follow': %d}" % follows, 0, len(re.findall(r"^(FALLO|PARADA)", out, re.MULTILINE)), proc.returncode]
-    with _write_lock:
-        new = not os.path.exists(LOG)
-        with open(LOG, "a", newline="", encoding="utf-8") as stream:
-            w = csv.writer(stream)
-            if new:
-                w.writerow(["fecha", "red", "inicio", "fin", "minutos", "estado", "confirmadas", "saltadas", "fallos", "codigo"])
-            w.writerow(row)
+    _append_round_csv(row)
     print(f"[cola] tiktok_bulk: {state} en {row[4]} min follows={follows}", flush=True)
     return state, out
 
