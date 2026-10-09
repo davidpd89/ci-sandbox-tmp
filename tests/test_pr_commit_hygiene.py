@@ -158,6 +158,25 @@ class PRHistoryTests(unittest.TestCase):
         self.git("merge", "--no-ff", "-qm", "PR synthetic merge", "topic")
         self.assertEqual(h.pr_parents(self.root), (self.initial, head))
 
+    def test_cli_failure_reports_only_commit_and_count(self):
+        import contextlib
+        import io
+        from unittest import mock
+
+        out = io.StringIO()
+        with mock.patch.object(h, "pr_parents", return_value=(self.initial, self.initial)):
+            with mock.patch.object(h, "scan_pr", return_value=[("a" * 40, 2)]):
+                with contextlib.redirect_stderr(out):
+                    code = h.main([])
+        self.assertEqual(code, 1)
+        self.assertIn("aaaaaaaaaaaa", out.getvalue())
+        self.assertIn("2 forbidden paths", out.getvalue())
+        self.assertNotIn("credentials.json", out.getvalue())
+
+    def test_empty_commit_range_is_not_silently_approved(self):
+        with self.assertRaises(ValueError):
+            h.scan_pr(self.initial, self.initial, root=self.root)
+
     def test_bad_ref_and_missing_history_fail_closed(self):
         with self.assertRaises(ValueError):
             h.scan_pr("-danger", self.initial, root=self.root)
