@@ -168,6 +168,24 @@ class CrossNetworkTests(unittest.TestCase):
                 out = run(api, web, history=[{**decision, "queue": bad}])
                 self.assertEqual(len(out["proposals"]), 2)
 
+    def test_invalid_observations_cannot_poison_valid_evidence(self):
+        valid = positive()
+        invalid_rows = [
+            positive(control=None),
+            positive(outcome_link="legacy"),
+            positive(targets={**valid["targets"], **{
+                "bluesky": {}, "reddit": {}, "x": {}, "facebook": {},
+                "threads": {}, "pinterest": {}, "tiktok": {}, "instagram": {}}),
+        ]
+        for bad in invalid_rows:
+            for rows in ((valid, bad), (bad, valid)):
+                with self.subTest(row=bad, order=rows[0] is valid):
+                    out = run(*rows)
+                    self.assertEqual(out["invalid_or_unproven"], 1)
+                    self.assertEqual(out["duplicate_evidence"], 0)
+                    self.assertEqual(len(out["proposals"]), 1)
+                    self.assertEqual(out["proposals"][0]["queue"], "API")
+
     def test_unknown_queue_conflict_does_not_approve_specific_queue(self):
         api = positive()
         unknown = positive(targets={"mastodon": {
