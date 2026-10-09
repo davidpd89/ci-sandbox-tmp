@@ -160,6 +160,25 @@
           }
         }
       ]
+    },
+    "automod_notice": {
+      "comments": [
+        {
+          "kind": "t1",
+          "data": {
+            "id": "c001",
+            "parent_id": "t3_abc123",
+            "author": "AutoModerator",
+            "body": "Your submission has been removed due to subreddit rules.",
+            "replies": ""
+          }
+        }
+      ]
+    },
+    "partial_tree_count": {
+      "post": {
+        "num_comments": 12
+      }
     }
   }
 }
