@@ -73,6 +73,8 @@ def parse_workflow(raw, path):
 def could_be(display, required):
     if not isinstance(display, str):
         raise AuditError("non-string job name")
+    display = display.strip().casefold()
+    required = required.strip().casefold()
     chunks = EXPR.split(display)
     if len(chunks) == 1:
         if "$" + "{{" in display:
@@ -163,6 +165,9 @@ class Reader:
 def repo_endpoint(repo):
     if not isinstance(repo, str) or not REPO.fullmatch(repo):
         raise AuditError("invalid repository name")
+    owner, name = repo.split("/", 1)
+    if owner in {".", ".."} or name in {".", ".."}:
+        raise AuditError("invalid repository path segment")
     return "/repos/" + repo
 
 
