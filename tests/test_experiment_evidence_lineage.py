@@ -251,6 +251,8 @@ class VersionedEvidenceTests(unittest.TestCase):
             registry._entries[key]["evidence_sha256"] = "0" * 64
         with self.assertRaises(AttributeError):
             registry._entries = {}
+        with self.assertRaises(AttributeError):
+            del registry._entries
 
     def test_unhashable_queue_or_malformed_targets_never_crashes(self):
         for invalid_queue in ([], {}, ["API"], None, 42):
