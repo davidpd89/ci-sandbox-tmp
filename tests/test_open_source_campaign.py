@@ -93,6 +93,12 @@ class CampaignMetadataTests(unittest.TestCase):
         self.assertTrue(all('per_page=100&' in url for url in urls))
         self.assertTrue(urls[-1].endswith('page=2'))
 
+    def test_live_unindexed_extra_pr_fails(self):
+        live = {10: {'base': {'ref': 'main'}, 'head': {'ref': v.PARENT}, 'state': 'open'},
+                87: {'base': {'ref': v.PARENT}, 'head': {'ref': 'research/77-new'}, 'state': 'open'}}
+        errors, _ = v.check_live(self.doc, live)
+        self.assertTrue(any('unindexed live child' in e for e in errors))
+
     def test_live_missing_link_and_drift(self):
         live = {10: {'base': {'ref': 'main'}, 'head': {'ref': v.PARENT}, 'state': 'open'}}
         errs, _ = v.check_live(self.doc, live)
