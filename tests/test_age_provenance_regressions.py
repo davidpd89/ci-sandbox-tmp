@@ -48,6 +48,16 @@ class UncoveredExecutionPaths(unittest.TestCase):
                 self.assertEqual(age.check("pinterest", item, now=NOW),
                                  (False, "post_antiguo"))
 
+    def test_x_permalink_overrides_conflicting_newer_queue_target_date(self):
+        old = NOW - dt.timedelta(days=60)
+        status_id = str((int(old.timestamp() * 1000) - 1288834974657) << 22)
+        url = "https://x.com/lectora/status/" + status_id
+        for kind in ("reply", "repost", "like"):
+            with self.subTest(kind=kind):
+                item = {"kind": kind, "url": url, "post_created_at": before(0)}
+                self.assertEqual(age.check("x", item, now=NOW),
+                                 (False, "post_antiguo"))
+
     def test_pinterest_unknown_remains_labeled_and_text_is_blocked(self):
         for kind in ("react", "save", "comment"):
             item = {"kind": kind, "post_created_at": ""}
