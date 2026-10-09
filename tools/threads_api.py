@@ -175,33 +175,100 @@ def build_plan(items, decisions):
         if "?" in text and not decision.get("allow_question"):
             raise ValueError(f"decision {index}: un seguimiento no termina con pregunta (se alargaria el hilo)")
         plan.append({"handle": item["username"], "kind": "reply", "text": text, "reply_to_id": item["id"],
-                     "post_text": item.get("text", ""), "motivo": "followup API Threads"})
+                     "post_text": item.get("text", ""), "motivo": "followup API Threads",
+                     "reply_to_us": True, "target_created_at": item.get("timestamp"),
+                     "url": item.get("permalink"), "thread_turns": item.get("thread_turns", [])})
     return plan
 
 
+def _reply_parent_id(item):
+    """Read the Graph parent reference; a missing one cannot prove ancestry."""
+    parent = item.get("replied_to")
+    if not isinstance(parent, dict):
+        return None
+    value = parent.get("id")
+    return str(value) if isinstance(value, (str, int)) and not isinstance(value, bool) and str(value).strip() else None
+
+
+def _thread_path(nodes, root_id, reply_id, owned_ids, *, max_turns=20):
+    """Reconstruct an exact root-to-reply path without inventing missing turns."""
+    path, seen, current_id = [], set(), str(reply_id)
+    while current_id not in seen and len(path) < max_turns:
+        seen.add(current_id)
+        node = nodes.get(current_id)
+        if not isinstance(node, dict) or not isinstance(node.get("text"), str) or not node["text"].strip():
+            return []
+        path.append({
+            "role": "ours" if current_id in owned_ids else "theirs",
+            "text": node["text"], "post_id": current_id,
+        })
+        if current_id == root_id:
+            return list(reversed(path))
+        current_id = _reply_parent_id(node)
+        if not current_id:
+            return []
+    return []
+
+
 def followups(token, my_username, limit_posts=25):
-    """Reconciliacion solo lectura: nunca confundir primera pagina con historial completo."""
+    """Read complete root conversations and select fresh questions addressed to us.
+
+    Only replies to an owned post/reply qualify. Never interpret a missing
+    ancestor or incomplete pagination as proof that a question was unanswered.
+    """
     posts = paginated("me/threads", token, fields="id,text,timestamp,is_reply,has_replies", limit=limit_posts)
     own_replies = paginated("me/replies", token, fields="id,replied_to", limit=100)
-    answered = {
-        str(parent["id"]) for item in own_replies
-        for parent in [item.get("replied_to")]
-        if isinstance(parent, dict) and parent.get("id")
-    }
+    answered = set()
+    own_ids = set()
+    for own in own_replies:
+        parent = _reply_parent_id(own)
+        if parent is None:
+            raise RuntimeError("Threads: una respuesta propia carece de replied_to; no se puede reconciliar")
+        own_ids.add(str(own["id"]))
+        answered.add(parent)
+
+    mine = str(my_username).casefold().lstrip("@")
     pending, seen = [], set()
     for post in posts:
         if post.get("is_reply") or not post.get("has_replies"):
             continue
-        replies = paginated(
-            f"{post['id']}/replies", token,
-            fields="id,text,username,timestamp,permalink,replied_to", limit=100
+        root_id = str(post["id"])
+        conversation = paginated(
+            f"{root_id}/conversation", token,
+            fields="id,text,username,timestamp,permalink,replied_to,is_reply_owned_by_me,root_post",
+            limit=100,
         )
-        for reply in unanswered(replies, my_username, answered):
-            if reply["id"] in seen:
+        nodes = {root_id: post}
+        for reply in conversation:
+            rid = str(reply["id"])
+            if rid != root_id:
+                nodes[rid] = reply
+        owned = {root_id} | own_ids | {
+            str(reply["id"]) for reply in conversation
+            if reply.get("is_reply_owned_by_me") is True
+            or str(reply.get("username") or "").casefold().lstrip("@") == mine
+        }
+        for reply in unanswered(conversation, my_username, answered):
+            rid = str(reply["id"])
+            if rid == root_id or rid in seen:
                 continue
-            seen.add(reply["id"])
-            reply["a_nuestro"] = (post.get("text") or "")[:100]
-            pending.append(reply)
+            # Conversations include user-to-user debates: only reply when
+            # the immediate recipient is one of our own posts or replies.
+            parent_id = _reply_parent_id(reply)
+            if parent_id is None:
+                raise RuntimeError("Threads: respuesta recibida sin replied_to; no se puede validar destino")
+            if parent_id not in owned:
+                continue
+            turns = _thread_path(nodes, root_id, rid, owned)
+            if not turns:
+                raise RuntimeError("Threads: cadena de respuestas incompleta; no ofrecer un contexto inventado")
+            seen.add(rid)
+            candidate = dict(reply)
+            candidate["id"] = rid
+            candidate["a_nuestro"] = nodes[parent_id]["text"][:100]
+            candidate["thread_turns"] = turns
+            candidate["reply_to_us"] = True
+            pending.append(candidate)
     return sorted(pending, key=lambda x: x.get("timestamp") or "", reverse=True)
 
 
