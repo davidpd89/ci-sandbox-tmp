@@ -85,6 +85,14 @@ class VersionedEvidenceTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             run(row, registry={"entries": [audited(row)]})
 
+    def test_registry_subclass_cannot_override_approval(self):
+        class ForgedRegistry(TrustedRegistry):
+            def approves(self, row, target):
+                return True
+
+        with self.assertRaisesRegex(ValueError, "registro independiente inválido"):
+            run(trial(), registry=ForgedRegistry([]))
+
     def test_legacy_inputs_readable_but_no_legacy_approval(self):
         row = trial()
         original = gate._evidence_digest(row, "mastodon")
