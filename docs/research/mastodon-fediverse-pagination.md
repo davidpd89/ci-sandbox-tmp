@@ -6,7 +6,7 @@ Consulta: **2026-10-09 (Europe/Madrid)**. Alcance: solo `tools/mastodon_interact
 
 Fuente de trabajo: espejo `davidpd89/ci-sandbox-tmp`, rama `research/02-mastodon-fediverse`, head inicial `0077e868ddc99ad927fa9add359a07f363c0fd36`. Código comparable del privado `davidpd89/rrss-davidporto-CODE`, `main` en `db0edb9328358e0181e67573fa1bd71c55b04fec` al consultar; **no son snapshots idénticos**.
 
-La función anterior calculaba `page_size=min(limit,80)`, mientras `search()` reduce `limit` a 40. En una petición de 80, Mastodon entrega como máximo 40 y el paginador interpreta `40 < 80` como fin: no solicita el siguiente `offset`. El problema no aparece cuando se llama con el valor por defecto 40, de ahí que la regresión existente con `limit=1` no lo descubriera.
+La función anterior calculaba `page_size=min(limit,80)`, mientras `search()` reduce `limit` a 40. En una petición de 80, Mastodon entrega como máximo 40 y el paginador interpreta `40 < 80` como fin: no solicita el siguiente `offset`. El problema no aparece cuando se llama con el valor por defecto 40. **El consumidor principal actual**, `mastodon_growth_scan.py` (cerca de la línea 1270 del mirror), llama expresamente con `limit=40`: el fallo es **latente** para futuras rutas o llamadas con `limit>40`, y no explica una pérdida observada en rondas actuales. La regresión anterior con `limit=1` no cubría ese caso.
 
 Evidencia de contrato: [GET /api/v2/search](https://docs.joinmastodon.org/methods/search/) admite **hasta 40 por categoría**, `offset` requiere autenticación y los estados textuales dependen del índice instalado; no promete búsqueda global del Fediverse. El código propio ya permite `resolve=true` para URL remota y rechaza conversiones automáticas del ID numérico de otra instancia.
 
@@ -17,7 +17,7 @@ Caso sintético determinista en `tests/fixtures/mastodon_search_capabilities.jso
 | `indexada.example` (búsqueda full-text disponible) | 40, 40 (una cuenta solapada), 3; offsets 0/40/80 | 40 cuentas; offset [0] | 82 cuentas únicas; offsets [0,40,80] |
 | `sinindice.example` (sin full-text; backend ignora offset) | 40, repetición 40; offsets 0/40 | 40, offset [0] | 40 sin duplicados, parada tras offset [0,40] |
 
-**Advertencia:** son *perfiles contractuales sintéticos*, no resultados capturados de dos servidores disponibles públicamente. No demuestran comportamiento en vivo ni compatibilidad general con forks ActivityPub.
+El test `test_before_after_on_identical_indexed_fixture` ejecuta la implementación antigua reproducida con el mismo fixture que el código corregido: **40 → 82 IDs únicos**, **1 → 3 páginas**; esto mide cobertura sintética, no rendimiento temporal.\n\n**Advertencia:** son *perfiles contractuales sintéticos*, no resultados capturados de dos servidores disponibles públicamente. No demuestran comportamiento en vivo ni compatibilidad general con forks ActivityPub.
 
 ## Flujo real y quién consume este resultado
 
@@ -54,7 +54,7 @@ Archivos de pruebas:
 - `tests/test_mastodon_search_contract_p12.py`: offsets exactos y truncamiento, cuenta repetida por backend que ignora offset, ausencia de índice textual, JSON ausente/malformado, timeout de segunda página, URLs remotas con misma cola numérica e ID local distinto, y dos alias remotos para el mismo ID local (rechazo en preflight).
 - `tests/fixtures/mastodon_search_capabilities.json`: dos capacidades sintéticas; generan el JSON de `/api/v2/search` durante la prueba.
 
-Comandos **existentes** en el workflow del espejo: `python -m pip install --disable-pip-version-check -r requirements-ci.txt`, `python -m compileall -q tools tests`, `python -m pytest tests -q -p no:cacheprovider` con exclusiones documentadas en `.github/workflows/validate-social-tools.yml`. Windows y Ubuntu. No se ha lanzado publicación, ronda real ni autenticación. Las comprobaciones de CI se informarán según sus resultados, no por asumirlos.
+Comandos **existentes** en el workflow del espejo: `python -m pip install --disable-pip-version-check -r requirements-ci.txt`, `python -m compileall -q tools tests`, `python -m pytest tests -q -p no:cacheprovider` con exclusiones documentadas en `.github/workflows/validate-social-tools.yml`. Windows y Ubuntu. No se ha lanzado publicación, ronda real ni autenticación. **CI comprobado para el commit previo `9f96f82` (código y tests, antes de añadir medición y documentación):** [run #37978224024](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37978224024), Ubuntu **1694 passed, 8 skipped, 8 deselected, 671 subtests passed**, Windows **1697 passed, 5 skipped, 8 deselected, 671 subtests passed**. La ejecución del HEAD final debe revalidarse; no extrapolar esos números a un commit distinto.
 
 Dos pasadas de revisión del diff:
 1. Corrección e integridad: se evitó mantener `limit=80` tras el clamp; se añadieron cuentas únicas por ID local y excepciones por forma de respuesta inesperada; se acotó a `max_pages`.
