@@ -14,15 +14,12 @@ from unittest.mock import patch
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
-requests_stub = types.ModuleType("requests")
-requests_stub.get = lambda *a, **k: (_ for _ in ()).throw(AssertionError("HTTP prohibido"))
-requests_stub.post = lambda *a, **k: (_ for _ in ()).throw(AssertionError("escritura prohibida"))
-requests_stub.delete = lambda *a, **k: (_ for _ in ()).throw(AssertionError("escritura prohibida"))
+# Requests permanece real: los tests sustituyen los puntos de entrada HTTP.
+# Un doble en sys.modules puede quedar retenido por http_retry y contaminar
+# otras suites aunque se restituya sys.modules tras importar.
 x_stub = types.ModuleType("x_interact")
 x_stub._check_spanish_orthography = lambda _text: None
-# Scope import doubles to this test module's imports. Leaving them in
-# sys.modules would corrupt unrelated tests according to collection order.
-with patch.dict(sys.modules, {"requests": requests_stub, "x_interact": x_stub}):
+with patch.dict(sys.modules, {"x_interact": x_stub}):
     import mastodon_interact as m
     import mastodon_execute as execute
 
@@ -130,7 +127,8 @@ class MastodonAccountSearchContractTests(unittest.TestCase):
 
     def test_collection_imports_do_not_leave_global_request_doubles(self):
         # El conjunto completo de tests debe poder importar requests real.
-        self.assertIsNot(sys.modules.get("requests"), requests_stub)
+        import requests
+        self.assertIs(m.requests, requests)
         self.assertIsNot(sys.modules.get("x_interact"), x_stub)
 
     def test_local_id_deduplication_accepts_string_and_integer_equivalents(self):
