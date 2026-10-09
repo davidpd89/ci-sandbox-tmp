@@ -129,15 +129,19 @@ def commented_today(registro=REGISTRO, today=None):
 
 
 def _age_hours(stamp, now=None):
-    if not stamp:
+    if not isinstance(stamp, str) or not stamp:
         return None
     try:
-        when = datetime.datetime.fromisoformat(re.sub(r"([+-]\d\d)(\d\d)$", r"\1:\2", stamp.replace("Z", "+00:00")))
-    except ValueError:
+        when = datetime.datetime.fromisoformat(re.sub(r"([+-]\\d\\d)(\\d\\d)$", r"\\1:\\2", stamp.replace("Z", "+00:00")))
+        # Las horas locales sin zona no certifican fecha del post.
+        if when.tzinfo is None or when.utcoffset() is None:
+            return None
+        now = now or datetime.datetime.now(datetime.timezone.utc)
+        if now.tzinfo is None or now.utcoffset() is None:
+            return None
+        return (now - when).total_seconds() / 3600
+    except (ValueError, TypeError, OverflowError):
         return None
-    now = now or datetime.datetime.now(datetime.timezone.utc)
-    return (now - when).total_seconds() / 3600
-
 
 def build_plan(threads, *, max_comments, per_sub=2, used=frozenset(), done_keys=frozenset(), rng=None, now=None, my_user="AutoraDemoEscritor", checker=None):
     """threads: dicts con subreddit, title, url, author, comment_count, post_type, created. Devuelve acciones `comment` de frase corta del banco."""
