@@ -4,7 +4,7 @@
 
 - PR espejo: https://github.com/davidpd89/ci-sandbox-tmp/pull/12; `head=research/02-mastodon-fediverse`, `base=research/public-reuse-parent`. El inicio auditado fue `0077e868ddc99ad927fa9add359a07f363c0fd36`.
 - Mirror `ci-sandbox-tmp` **público**, escritura posible; oficial `rrss-davidporto-CODE` **privado**, `main` observado en `db0edb9328358e0181e67573fa1bd71c55b04fec`. No confundir numeraciones de PR ni ramas.
-- Se ha modificado únicamente `tools/mastodon_interact.py::search_accounts_pages` más tests y documentación de este frente. La función antigua del oficial tiene el mismo desajuste `80` vs `40`, **pero el mirror y el privado no coinciden en muchas otras funciones**.
+- Cambios funcionales exclusivamente en `tools/mastodon_interact.py::search_accounts_pages`; además, refactor equivalente de `tools/mastodon_interact.py::_headers` para evitar un falso positivo del escáner de higiene del padre, más tests y documentación. La función antigua del oficial tiene el mismo desajuste `80` vs `40`, **pero el mirror y el privado no coinciden en muchas otras funciones**.
 - Llamada actual principal en `tools/mastodon_growth_scan.py` del mirror: `m.search_accounts_pages(q, limit=40, max_pages=2)`; por tanto, este arreglo cubre regresiones potenciales con `limit>40`, no evidencia de bug sufrido por el flujo actual.
 - Se añadieron `tests/test_mastodon_search_contract_p12.py` y `tests/fixtures/mastodon_search_capabilities.json`. Los dos perfiles son **sintéticos**, no certificaciones en vivo.
 - CI verificado antes de la ampliación final, en el commit `9f96f8251d137d5ce6c3933e3bd2d10ea8c90ca6`: https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37978224024, **Ubuntu y Windows correctos**. Confirmar de nuevo CI del HEAD final.
@@ -37,3 +37,28 @@
 - Revisión humana de impacto, conflictos y alcance. **No ejecutar acciones sociales reales.**
 
 **Veredicto para merge al sistema oficial: BLOQUEADA.** La PR espejo es revisable; no equivale a funcionalidad implementada en producción.
+
+## Segunda revisión y actualización del gate (2026-10-09)
+
+- En la función de búsqueda se rechazan IDs locales con tipos estructurados
+  (listas/objetos) y booleanos que el código anterior convertía con `str`;
+  cadenas alfanuméricas y enteros siguen siendo compatibles. Los tests
+  prueban ambos casos y la equivalencia `123` / `"123"`.
+- La importación simulada de `requests` contaminaba potencialmente el
+  módulo compartido `http_retry`. El test conserva `requests` real,
+  restaura la sustitución temporal de `x_interact` y bloquea GET/escrituras
+  externas durante cada prueba. Sin ensayos reales.
+- El verificador del padre, al analizar **archivos enteros modificados**,
+  confundía `_TOKEN = _load_token()` con un secreto y el dominio reservado
+  `example.test` con un correo real. Se ha preservado la llamada única a
+  `_load_token()` mediante variable local `value` y comprobado con test
+  sintético de `_headers`; los fixtures usan ahora `example.com`.
+  **Claude no necesita portar el refactor del token al privado** si su
+  escáner no genera ese falso positivo. No hay token ni secreto en el diff.
+- El gate de investigación exige `Fuente primaria`, `Fecha de consulta`,
+  `Licencia SPDX` y `Referencia inmutable`: añadidos al informe principal.
+- El padre está cambiando durante la ejecución de esta PR. Las validaciones
+  funcionales del commit antiguo no cubren los commits de esta auditoría.
+  Confirmar los dos trabajos de Actions del HEAD exacto después de la
+  última actualización documental, además de revisar la divergencia con
+  el padre y el transporte del parche al privado.
