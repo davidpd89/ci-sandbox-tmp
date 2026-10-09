@@ -43,7 +43,7 @@ class RedditSnapshotPreflightTests(unittest.TestCase):
 
     def test_safety_cases_block_inappropriate_comment(self):
         for name in (
-            "restricted_subreddit", "automod_removed", "own_reply_removed",
+            "restricted_subreddit", "automod_removed", "automod_notice", "partial_tree_count", "own_reply_removed",
             "http_429", "closed_thread", "quoted_message_missing",
             "stale_thread", "unexpanded_children", "wrong_thread",
             "uncertain_history", "stale_snapshot", "rules_undocumented",
