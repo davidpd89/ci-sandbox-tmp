@@ -16,6 +16,7 @@ from __future__ import annotations
 import csv
 import contextlib
 import datetime
+import io
 import os
 import random
 import re
@@ -355,24 +356,58 @@ ROUND_CSV_COLUMNS = (
     "fecha", "red", "inicio", "fin", "minutos", "estado",
     "confirmadas", "saltadas", "fallos", "codigo",
 )
+ROUND_CSV_LOCK_TIMEOUT_SECONDS = 15.0
+
+
+def _recover_incomplete_csv_tail(stream):
+    """Discard only the unterminated tail left by a crashed writer."""
+    stream.seek(0, os.SEEK_END)
+    size = stream.tell()
+    if not size:
+        return False
+    stream.seek(size - 1)
+    if stream.read(1) == b"\n":
+        stream.seek(0, os.SEEK_END)
+        return False
+
+    position = size
+    while position:
+        start = max(0, position - 4096)
+        stream.seek(start)
+        block = stream.read(position - start)
+        newline = block.rfind(b"\n")
+        if newline >= 0:
+            stream.truncate(start + newline + 1)
+            stream.seek(0, os.SEEK_END)
+            return True
+        position = start
+
+    stream.truncate(0)
+    stream.seek(0)
+    return True
 
 
 def _append_round_csv(row):
-    """Append one complete row while excluding other worker processes."""
+    """Append one durable row, recovering a crashed writer's partial tail."""
+    if len(row) != len(ROUND_CSV_COLUMNS):
+        raise ValueError("Fila de tiempos_rondas.csv con columnas incorrectas")
     directory = os.path.dirname(LOG)
     os.makedirs(directory, exist_ok=True)
-    deadline = time.monotonic() + 15
+    deadline = time.monotonic() + ROUND_CSV_LOCK_TIMEOUT_SECONDS
     with _write_lock:
         while True:
             with _recovery_guard(LOG + ".writer") as locked:
                 if locked:
-                    with open(LOG, "a+", encoding="utf-8", newline="") as stream:
+                    with open(LOG, "a+b") as stream:
+                        _recover_incomplete_csv_tail(stream)
                         stream.seek(0, os.SEEK_END)
                         empty = stream.tell() == 0
-                        writer = csv.writer(stream)
+                        buffer = io.StringIO(newline="")
+                        writer = csv.writer(buffer)
                         if empty:
                             writer.writerow(ROUND_CSV_COLUMNS)
                         writer.writerow(row)
+                        stream.write(buffer.getvalue().encode("utf-8"))
                         stream.flush()
                         os.fsync(stream.fileno())
                     return
