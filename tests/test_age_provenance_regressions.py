@@ -58,6 +58,27 @@ class UncoveredExecutionPaths(unittest.TestCase):
                 self.assertEqual(age.check("x", item, now=NOW),
                                  (False, "post_antiguo"))
 
+    def test_threads_shortcode_only_vetoes_old_text_without_original_timestamp(self):
+        alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+
+        def shortcode(days):
+            instant_ms = int((NOW - dt.timedelta(days=days)).timestamp() * 1000)
+            num = (instant_ms - 1314220021721) << 23
+            chars = []
+            while num:
+                num, residue = divmod(num, 64)
+                chars.append(alphabet[residue])
+            return "".join(reversed(chars))
+
+        for days, expected in ((1, (False, "edad_desconocida")),
+                               (15, (False, "post_antiguo"))):
+            item = {"kind": "reply", "url": "https://www.threads.com/@lectora/post/" + shortcode(days)}
+            with self.subTest(days=days):
+                self.assertEqual(age.check("threads", item, now=NOW), expected)
+        fresh = {"kind": "reply", "url": "https://www.threads.com/@lectora/post/" + shortcode(1),
+                 "post_created_at": before(1)}
+        self.assertEqual(age.check("threads", fresh, now=NOW), (True, "edad_ok"))
+
     def test_pinterest_unknown_remains_labeled_and_text_is_blocked(self):
         for kind in ("react", "save", "comment"):
             item = {"kind": kind, "post_created_at": ""}
