@@ -221,8 +221,10 @@ def review(data, *, today=None, trusted_verifications=None):
             report["invalid_or_unproven"] += 1
             continue
         if effect is None:
-            # Un ensayo válido sin efecto favorable no promueve resultados;
-            # sí participa en los conflictos del recuento anterior.
+            # Compatibilidad de schema=1: este contador incluía resultados
+            # no demostrados, no solo entradas estructuralmente inválidas.
+            report["invalid_or_unproven"] += 1
+            # Desglose aditivo, útil para distinguir réplicas inconclusas.
             report["non_positive_trials"] += 1
             continue
         origin, feature = row["origin"], row["feature"]
