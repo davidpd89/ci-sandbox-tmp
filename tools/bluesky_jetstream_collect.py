@@ -412,6 +412,36 @@ def _iso_to_time_us(value):
     return int(parsed.timestamp() * 1_000_000)
 
 
+def _validate_v2_frame_shape(message):
+    """No ocultar avisos de pérdida ni errores terminales del stream v2.
+
+    El contrato xrpc.v1.json usa una envoltura `message/payload` y puede
+    enviar `#info` sin seq. Un cursor timestamp obsoleto se recorta con
+    OutdatedCursor; ignorarlo presentaría una ingesta parcial como completa.
+    """
+    if not isinstance(message, dict):
+        raise StreamProtocolError("Jetstream v2: envoltura no válida")
+    if message.get("$type") == "error":
+        # No volcar el mensaje remoto: podría incluir detalles del servidor.
+        raise StreamProtocolError("Jetstream v2: error terminal del servidor")
+    if message.get("$type") != "message":
+        raise StreamProtocolError("Jetstream v2: envoltura inesperada")
+    payload = message.get("payload")
+    if not isinstance(payload, dict):
+        raise StreamProtocolError("Jetstream v2: payload no válido")
+    kind = payload.get("$type")
+    prefix = "network.bsky.jetstream.subscribeEvents#"
+    if kind == prefix + "info":
+        notice = payload.get("name")
+        if notice in {"OutdatedCursor", "FutureCursor"}:
+            raise StreamProtocolError(
+                f"Jetstream v2: {notice}; replay incompleto, cursor conservado"
+            )
+        raise StreamProtocolError("Jetstream v2: aviso de cursor desconocido")
+    if kind != prefix + "commit":
+        raise StreamProtocolError("Jetstream v2: tipo de mensaje inesperado")
+
+
 def _normalize_frame(message):
     """Convierte Jetstream v2 y legacy al mismo evento interno.
 
@@ -609,6 +639,8 @@ async def collect(
                             continue
                         try:
                             decoded = json.loads(raw)
+                            if is_v2:
+                                _validate_v2_frame_shape(decoded)
                             event, event_cursor, mode = _normalize_frame(decoded)
                             if not event:
                                 # Un mensaje estructural no procesable no es progreso.
@@ -618,7 +650,9 @@ async def collect(
                             matched, last_seq, replayed = _apply_frame(
                                 db, event, event_cursor, mode, terms, last_seq
                             )
-                        except (ValueError, TypeError, KeyError) as exc:
+                        except StreamProtocolError:
+                            raise
+                        except (ValueError, TypeError, KeyError, AttributeError):
                             raise StreamProtocolError(
                                 "Frame Jetstream malformado; cursor conservado"
                             ) from None
