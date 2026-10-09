@@ -259,6 +259,36 @@ class KPITests(unittest.TestCase):
         r = k.build_report(self.root, self.day)["networks"]["x"]
         self.assertEqual(r["followers_net"], 5)
 
+    def test_timestamped_snapshots_are_sorted_by_instant_not_csv_position(self):
+        # El ultimo renglon puede contener una captura anterior: no atribuir
+        # una caida/ganancia incorrecta por confundir orden fisico y temporal.
+        self.write("x", "metricas.csv", [
+            ["fecha", "seguidores"],
+            ["2026-10-08", "100"],
+            ["2026-10-09T20:00:00+02:00", "105"],
+            ["2026-10-09T10:00:00+02:00", "102"],
+        ])
+        r = k.build_report(self.root, self.day)["networks"]["x"]
+        self.assertEqual(r["followers_net"], 5)
+
+    def test_dst_fold_follower_snapshot_uses_absolute_instant(self):
+        # El segundo 02:15 (+01) ocurre despues del primer 02:45 (+02).
+        self.write("mastodon", "metricas.csv", [
+            ["2026-10-24", "100"],
+            ["2026-10-25T02:15:00+01:00", "105"],
+            ["2026-10-25T02:45:00+02:00", "102"],
+        ])
+        r = k.build_report(self.root, date(2026, 10, 25))["networks"]["mastodon"]
+        self.assertEqual(r["followers_net"], 5)
+
+    def test_date_only_legacy_snapshots_keep_append_order(self):
+        self.write("threads", "metricas.csv", [
+            ["2026-10-08", "100"], ["2026-10-09", "101"],
+            ["2026-10-09", "104"],
+        ])
+        r = k.build_report(self.root, self.day)["networks"]["threads"]
+        self.assertEqual(r["followers_net"], 4)
+
     def test_no_old_baseline_and_no_rounded_number(self):
         self.write("facebook", "metricas.csv", [["2026-09-01", "234"], ["2026-10-09", "1.2k"]])
         r = k.build_report(self.root, self.day)["networks"]["facebook"]
