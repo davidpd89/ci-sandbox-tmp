@@ -357,6 +357,7 @@ ROUND_CSV_COLUMNS = (
     "confirmadas", "saltadas", "fallos", "codigo",
 )
 ROUND_CSV_LOCK_TIMEOUT_SECONDS = 15.0
+ROUND_CSV_LEGACY_COLUMNS = ("fecha", "red", "estado")
 
 
 def _recover_incomplete_csv_tail(stream):
@@ -444,7 +445,8 @@ def _read_round_csv_rows():
                     reader = csv.DictReader(
                         io.StringIO(data[:last + 1].decode("utf-8-sig"), newline=""),
                         strict=True)
-                    if reader.fieldnames != list(ROUND_CSV_COLUMNS):
+                    if reader.fieldnames not in (
+                            list(ROUND_CSV_COLUMNS), list(ROUND_CSV_LEGACY_COLUMNS)):
                         raise ValueError("Cabecera CSV distinta del contrato esperado")
                     rows = list(reader)
                     if any(None in row or any(value is None for value in row.values())
@@ -470,6 +472,17 @@ def _append_round_csv(row):
             with _recovery_guard(LOG + ".writer") as locked:
                 if locked:
                     with open(LOG, "a+b") as stream:
+                        stream.seek(0)
+                        first_line = stream.readline()
+                        if first_line:
+                            try:
+                                header = next(csv.reader(
+                                    io.StringIO(first_line.decode("utf-8-sig"), newline="")))
+                            except (csv.Error, UnicodeError) as exc:
+                                raise ValueError("Cabecera CSV ilegible") from exc
+                            if header != list(ROUND_CSV_COLUMNS):
+                                raise ValueError(
+                                    "CSV antiguo o incompatible: conservar y migrar antes de escribir")
                         _recover_incomplete_csv_tail(stream)
                         stream.seek(0, os.SEEK_END)
                         empty = stream.tell() == 0
