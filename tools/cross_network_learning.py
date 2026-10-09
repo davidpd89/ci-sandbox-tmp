@@ -55,7 +55,7 @@ def _queue(entry):
     if not isinstance(entry, dict):
         return None
     value = entry.get("queue")
-    return value if value in QUEUES else None
+    return value if isinstance(value, str) and value in QUEUES else None
 
 
 def _positive(row, today):
