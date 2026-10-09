@@ -163,6 +163,7 @@ def _compact_shortlist(rows, *, limit, config=None):
             item["posts"].append({
                 "url": row.get("url"),
                 "post_ref": row.get("post_ref"),
+                "created_at": row.get("created_at") or row.get("create_time") or row.get("created_time") or "",
                 "caption": row["caption"],
                 "source": row["source"],
                 "actions": actions,
@@ -202,6 +203,7 @@ def _compact_shortlist(rows, *, limit, config=None):
                 "id": f"{cid}-P{pi}",
                 "url": post["url"],
                 "post_ref": post.get("post_ref"),
+                "created_at": post.get("created_at") or "",
                 "caption": post["caption"][:500],
                 "source": post["source"],
                 "actions": post["actions"],
@@ -337,6 +339,7 @@ def build_auto_plan(shortlist, config):
                     plan.append({
                         "kind": "like", "handle": candidate["handle"], "lane": lane, "url": post["url"],
                         "post_ref": post.get("post_ref"),
+                        "post_created_at": post.get("created_at") or "",
                         "post_resumen": (post.get("caption") or "")[:300],
                         "motivo": f"auto:{post['id']}:{post.get('source') or 'unknown'}",
                     })
