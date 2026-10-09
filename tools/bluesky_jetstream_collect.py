@@ -440,6 +440,21 @@ def _validate_v2_frame_shape(message):
         raise StreamProtocolError("Jetstream v2: aviso de cursor desconocido")
     if kind != prefix + "commit":
         raise StreamProtocolError("Jetstream v2: tipo de mensaje inesperado")
+    # No avanzar un cursor con una mutación parcial o malformada: el
+    # contrato v2 requiere estos campos aun cuando el post no coincida.
+    seq = payload.get("seq")
+    if type(seq) is not int or seq <= 0:
+        raise StreamProtocolError("Jetstream v2: commit sin seq válido")
+    for field in ("did", "time", "collection", "rkey"):
+        if not isinstance(payload.get(field), str) or not payload[field]:
+            raise StreamProtocolError(f"Jetstream v2: commit sin {field} válido")
+    if _iso_to_time_us(payload["time"]) <= 0:
+        raise StreamProtocolError("Jetstream v2: commit con time inválido")
+    operation = payload.get("operation")
+    if operation not in ("create", "update", "delete"):
+        raise StreamProtocolError("Jetstream v2: operación inválida")
+    if operation in ("create", "update") and not isinstance(payload.get("record"), dict):
+        raise StreamProtocolError("Jetstream v2: record no válido")
 
 
 def _normalize_frame(message):
@@ -627,8 +642,8 @@ async def collect(
                         try:
                             raw = await asyncio.wait_for(ws.recv(), timeout=timeout)
                         except asyncio.TimeoutError:
-                            # Un socket vivo y silencioso acredita recuperación.
-                            unrecovered_stream_error = False
+                            # El timeout mantiene el socket, pero no confirma
+                            # recuperación tras una caída previa sin nuevos frames.
                             # Streams silenciosos no deben retener locks SQLite.
                             if db.in_transaction:
                                 _checkpoint(
