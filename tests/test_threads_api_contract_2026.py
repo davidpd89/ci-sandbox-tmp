@@ -280,5 +280,30 @@ class ThreadsTransportTests(unittest.TestCase):
             update.assert_called_once()
 
 
+    def test_offline_plan_build_uses_neither_env_nor_browser(self):
+        import io
+        import json
+        import tempfile
+        with tempfile.TemporaryDirectory() as temporary:
+            source = os.path.join(temporary, "threads_api_followups.json")
+            decisions = os.path.join(temporary, "decisions.json")
+            output = os.path.join(temporary, "plan.json")
+            with open(source, "w", encoding="utf-8") as stream:
+                json.dump([{"id": "reply1", "username": "ana",
+                            "text": "¿Alguna recomendación?",
+                            "timestamp": "2026-10-08T12:00:00Z"}], stream)
+            with open(decisions, "w", encoding="utf-8") as stream:
+                json.dump({"actions": [{"id": "reply1", "text": "La segunda."}]}, stream)
+            with patch.object(api, "ROOT", temporary), \
+                 patch.object(api, "_env", side_effect=AssertionError("build must be offline")), \
+                 patch.object(api.sys, "stdout", io.StringIO()):
+                code = api.main(["build", decisions, output])
+            self.assertEqual(code, 0)
+            with open(output, encoding="utf-8") as stream:
+                plan = json.load(stream)
+            self.assertEqual(plan[0]["reply_to_id"], "reply1")
+            self.assertEqual(plan[0]["target_created_at"], "2026-10-08T12:00:00Z")
+
+
 if __name__ == "__main__":
     unittest.main()
