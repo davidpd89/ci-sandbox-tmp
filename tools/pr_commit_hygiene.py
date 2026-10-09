@@ -36,8 +36,8 @@ def pr_parents(root: pathlib.Path = ROOT, merge: str = "HEAD") -> tuple[str, str
     return parents[1], parents[2]
 
 
-def changes(root: pathlib.Path, parent: str | None, commit: str) -> set[str]:
-    opts = ("--no-renames", "--no-ext-diff", "--name-only", "-z", "--diff-filter=AMT")
+def changes(root: pathlib.Path, parent: str | None, commit: str, *, statuses: str = "AMT") -> set[str]:
+    opts = ("--no-renames", "--no-ext-diff", "--name-only", "-z", f"--diff-filter={statuses}")
     if parent:
         data = git(root, "diff", *opts, parent, commit)
     else:
@@ -57,9 +57,17 @@ def scan_pr(base: str, head: str, *, root: pathlib.Path = ROOT) -> list[tuple[st
     findings = []
     for line in rows:
         commit, *parents = line.decode("ascii").split()
-        paths = changes(root, parents[0] if parents else None, commit)
+        first_parent_paths = changes(root, parents[0] if parents else None, commit)
+        paths = set(first_parent_paths)
         for parent in parents[1:]:
             paths.intersection_update(changes(root, parent, commit))
+        if len(parents) > 1:
+            # A merge can resurrect a path from an already-reachable side-branch
+            # ancestor without changing that path relative to the side parent.
+            # Only reintroduced paths absent from the *current base* qualify:
+            # importing an advancement of the base itself must remain allowed.
+            new_vs_base = changes(root, base, commit, statuses="A")
+            paths.update(first_parent_paths & new_vs_base)
         count = sum(forbidden_path(p) for p in paths)
         if count:
             findings.append((commit, count))

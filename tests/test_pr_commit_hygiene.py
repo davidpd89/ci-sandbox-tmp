@@ -120,6 +120,26 @@ class PRHistoryTests(unittest.TestCase):
         self.git("merge", "--no-ff", "-qm", "merge baseline", "base")
         self.assertEqual(self.audit(base), [])
 
+    def test_merge_resurrects_secret_from_already_reachable_side_history(self):
+        self.git("switch", "-qc", "side")
+        self.write("secrets/from-side.json")
+        self.commit("old side path")
+        self.git("switch", "base")
+        self.git("merge", "--no-ff", "-qm", "import side", "side")
+        (self.root / "secrets/from-side.json").unlink()
+        self.commit("base removes old path")
+        base = self.oid()
+        self.git("switch", "side")
+        self.write("side-safe.txt")
+        self.commit("benign side update")
+        self.git("switch", "-qc", "topic", base)
+        self.write("topic.txt")
+        self.commit("benign topic update")
+        self.git("merge", "--no-ff", "--no-commit", "side")
+        self.git("restore", "--source", "side", "--staged", "--worktree", "secrets/from-side.json")
+        self.git("commit", "-qm", "merge resurrects old path")
+        self.assertEqual(self.audit(base), [(self.oid(), 1)])
+
     def test_new_merge_resolution_is_detected(self):
         self.topic()
         self.write("docs/text.txt", "topic\n")

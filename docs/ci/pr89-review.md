@@ -49,6 +49,8 @@ La primera suite completa de Windows detectó un fixture no portable: NTFS no ad
 - La PR #93 ya propone `tools/git_history_paths.py` como núcleo de política agnóstica de red. Durante la integración, reemplazar el recorrido local de #89 por ese módulo único, adaptando el caso de merge sintético. No copiar sus funciones otra vez, ni modificar ahora #93 desde esta rama.
 - La ejecución verde inicial de 4 jobs corresponde al HEAD anterior `d4897f0`; tras estos dos commits hay que comprobar **de nuevo** el workflow sobre el HEAD actualizado. El verificador de #89 sigue siendo autocontrolado por la PR; la verificación confiable está asignada a #92. Ninguno de los dos sustituye la auditoría de contenido de #87 ni los checks de push #88/#93.
 
+- **Tercera pasada (10/10):** caso de falso negativo reproducido con DAG sintético: un merge podía resucitar una ruta sensible desde una rama lateral cuyo commit inicial ya pertenecía al historial de la base. La intersección de diffs por padres ocultaba la restauración. Se amplía exclusivamente el caso de rutas **añadidas respecto a la base actual** y también modificadas frente al primer padre; mantiene exentas las altas heredadas de un avance normal de la base. Regresión `test_merge_resurrects_secret_from_already_reachable_side_history`. No reemplaza la posterior unificación con #93 ni resuelve el control de confianza de #92.
+
 ## Interdependencias y traspaso a Claude
 
 - #2 mantiene control del árbol final; #89 añade la dimensión temporal, no lo reemplaza.
