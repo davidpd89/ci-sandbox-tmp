@@ -360,7 +360,11 @@ ROUND_CSV_LOCK_TIMEOUT_SECONDS = 15.0
 
 
 def _recover_incomplete_csv_tail(stream):
-    """Discard only the unterminated tail left by a crashed writer."""
+    """Repair an unterminated tail; preserve a valid legacy row without newline.
+
+    The lock is held by the caller. A malformed tail must not be glued to
+    the next record. A *complete* legacy final row must not be discarded.
+    """
     stream.seek(0, os.SEEK_END)
     size = stream.tell()
     if not size:
@@ -371,20 +375,82 @@ def _recover_incomplete_csv_tail(stream):
         return False
 
     position = size
+    previous_newline = -1
     while position:
         start = max(0, position - 4096)
         stream.seek(start)
         block = stream.read(position - start)
         newline = block.rfind(b"\n")
         if newline >= 0:
-            stream.truncate(start + newline + 1)
-            stream.seek(0, os.SEEK_END)
-            return True
+            previous_newline = start + newline
+            break
         position = start
 
-    stream.truncate(0)
-    stream.seek(0)
+    offset = previous_newline + 1
+    tail_size = size - offset
+    if tail_size <= 65536:
+        stream.seek(offset)
+        raw = stream.read(tail_size)
+        try:
+            parsed = list(csv.reader(
+                io.StringIO(raw.decode("utf-8-sig"), newline=""), strict=True))
+        except (csv.Error, UnicodeError):
+            parsed = []
+        if len(parsed) == 1:
+            fields = parsed[0]
+            if fields == list(ROUND_CSV_COLUMNS) or (
+                    len(fields) == len(ROUND_CSV_COLUMNS)
+                    and fields[5] in ("ok", "parcial", "ocupada", "saltada", "error")
+                    and re.fullmatch(r"\d{4}-\d{2}-\d{2}", fields[0])
+                    and re.fullmatch(r"\d{2}:\d{2}:\d{2}", fields[2])
+                    and re.fullmatch(r"\d{2}:\d{2}:\d{2}", fields[3])
+                    and fields[7].isdigit() and fields[8].isdigit()
+                    and re.fullmatch(r"-?\d+", fields[9])):
+                stream.seek(0, os.SEEK_END)
+                stream.write(b"\r\n" if not raw.endswith(b"\r") else b"\n")
+                return True
+
+    stream.truncate(offset)
+    stream.seek(0, os.SEEK_END)
     return True
+
+
+def _read_round_csv_rows():
+    """Read a consistent CSV snapshot under the same process-wide writer guard.
+
+    Never substitute an empty ledger for lock failure or corruption: that
+    could cause a previously confirmed round to be replayed after restart.
+    """
+    deadline = time.monotonic() + ROUND_CSV_LOCK_TIMEOUT_SECONDS
+    while True:
+        with _recovery_guard(LOG + ".writer") as locked:
+            if locked:
+                try:
+                    with open(LOG, "rb") as stream:
+                        data = stream.read()
+                except FileNotFoundError:
+                    return []
+                if not data:
+                    return []
+                last = data.rfind(b"\n")
+                if last < 0:
+                    raise OSError("Cabecera CSV incompleta; revisar antes de reanudar")
+                try:
+                    reader = csv.DictReader(
+                        io.StringIO(data[:last + 1].decode("utf-8-sig"), newline=""),
+                        strict=True)
+                    if reader.fieldnames != list(ROUND_CSV_COLUMNS):
+                        raise ValueError("Cabecera CSV distinta del contrato esperado")
+                    rows = list(reader)
+                    if any(None in row or any(value is None for value in row.values())
+                           for row in rows):
+                        raise ValueError("CSV contiene filas con ancho incorrecto")
+                except (csv.Error, ValueError, UnicodeError) as exc:
+                    raise OSError("CSV inconsistente; no reanudar rondas a ciegas") from exc
+                return rows
+        if time.monotonic() >= deadline:
+            raise OSError("No se pudo leer el CSV con exclusion interproceso")
+        time.sleep(0.02 + random.random() * 0.05)
 
 
 def _append_round_csv(row):
@@ -438,13 +504,9 @@ def done_today(today=None):
     """Rondas ya lanzadas hoy segun el CSV de tiempos (para reanudar la cola sin repetir)."""
     today = (today or datetime.date.today()).isoformat()
     done = {}
-    try:
-        with open(LOG, encoding="utf-8", newline="") as stream:
-            for row in csv.DictReader(stream):
-                if row.get("fecha") == today and row.get("estado") in ("ok", "parcial"):
-                    done[row["red"]] = done.get(row["red"], 0) + 1
-    except OSError:
-        pass
+    for row in _read_round_csv_rows():
+        if row.get("fecha") == today and row.get("estado") in ("ok", "parcial"):
+            done[row["red"]] = done.get(row["red"], 0) + 1
     return done
 
 
@@ -543,46 +605,42 @@ def retry_snapshot_today(now=None):
     """
     now = now or datetime.datetime.now()
     states = {}
-    try:
-        with open(LOG, encoding="utf-8-sig", newline="") as stream:
-            for row in csv.DictReader(stream):
-                network = row.get("red")
-                state = row.get("estado")
-                if (row.get("fecha") != now.date().isoformat()
-                        or network not in WEB + API + PHONE + ("tiktok_bulk",)
-                        or state not in ("ok", "parcial", "ocupada", "saltada", "error")):
-                    continue
-                try:
-                    clock = datetime.time.fromisoformat(row["fin"])
-                    when = now.replace(hour=clock.hour, minute=clock.minute,
-                                       second=clock.second, microsecond=clock.microsecond)
-                except (TypeError, ValueError, KeyError):
-                    continue
-                # Ignorar registros con horario futuro (reloj reajustado,
-                # registros manipulados o CSV parcialmente escrito).
-                if when > now:
-                    continue
-                failures = states.get(network, (0, None))[0]
-                if state in ("ok", "parcial"):
-                    states[network] = (0, None)
-                    continue
-                if state == "error":
-                    failures += 1
-                if state == "ocupada":
-                    delay = 300.0
-                elif state == "saltada":
-                    _, breaker_delay, _ = classify_round_state(
-                        state, failures,
-                        network="tiktok" if network == "tiktok_bulk" else network,
-                        now=when)
-                    delay = max(12 * 60 * 1.2, breaker_delay)
-                else:
-                    base = 2 * 60 * 60 if failures >= 6 else (
-                        900, 1800, 3600)[min(failures - 1, 2)]
-                    delay = base * 1.2
-                states[network] = (failures, when + datetime.timedelta(seconds=delay))
-    except (OSError, csv.Error, UnicodeError):
-        return {}
+    for row in _read_round_csv_rows():
+            network = row.get("red")
+            state = row.get("estado")
+            if (row.get("fecha") != now.date().isoformat()
+                    or network not in WEB + API + PHONE + ("tiktok_bulk",)
+                    or state not in ("ok", "parcial", "ocupada", "saltada", "error")):
+                continue
+            try:
+                clock = datetime.time.fromisoformat(row["fin"])
+                when = now.replace(hour=clock.hour, minute=clock.minute,
+                                   second=clock.second, microsecond=clock.microsecond)
+            except (TypeError, ValueError, KeyError):
+                continue
+            # Ignorar registros con horario futuro (reloj reajustado,
+            # registros manipulados o CSV parcialmente escrito).
+            if when > now:
+                continue
+            failures = states.get(network, (0, None))[0]
+            if state in ("ok", "parcial"):
+                states[network] = (0, None)
+                continue
+            if state == "error":
+                failures += 1
+            if state == "ocupada":
+                delay = 300.0
+            elif state == "saltada":
+                _, breaker_delay, _ = classify_round_state(
+                    state, failures,
+                    network="tiktok" if network == "tiktok_bulk" else network,
+                    now=when)
+                delay = max(12 * 60 * 1.2, breaker_delay)
+            else:
+                base = 2 * 60 * 60 if failures >= 6 else (
+                    900, 1800, 3600)[min(failures - 1, 2)]
+                delay = base * 1.2
+            states[network] = (failures, when + datetime.timedelta(seconds=delay))
     return states
 
 
