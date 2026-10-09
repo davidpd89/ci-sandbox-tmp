@@ -6,4 +6,4 @@ contenedores multimedia, errores y reconciliacion de estados.
 
 Comparar con `threads_api.py`, ejecutores y rutas web. Buscar piezas que reduzcan
 la dependencia del navegador y mejoren confirmacion, contexto conversacional,
-descubrimiento o metricas. Mantener fallback solo cuando tenga valor probado.
+descubrimiento o metricas. Mantener los fallbacks con valor probado.
