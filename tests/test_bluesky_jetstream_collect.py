@@ -740,5 +740,39 @@ class JetstreamCollectorTests(unittest.TestCase):
             self.assertEqual(result["last_error"], "OSError")
 
 
+
+    def test_v2_corrupt_persisted_seq_fails_before_prune_and_releases_db(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = pathlib.Path(tmp) / "cache.sqlite3"
+            config = pathlib.Path(tmp) / "config.json"
+            cfg = self.config()
+            cfg["jetstream"] = {"retention_hours": 1}
+            config.write_text(json.dumps(cfg), encoding="utf-8")
+            db = js.init_db(str(cache))
+            old_post = self.event()
+            old_post["time_us"] = 1_000_000
+            js.store_event(db, old_post, ["lectura"])
+            js.set_state(db, "last_seq", "not-an-integer")
+            db.commit()
+            db.close()
+
+            class NoNetwork:
+                def connect(self, *_a, **_kw):
+                    raise AssertionError("No debería conectar con cursor corrupto")
+
+            with patch.dict(sys.modules, {"websockets": NoNetwork()}):
+                with self.assertRaisesRegex(RuntimeError, "checkpoint persistido inválido"):
+                    asyncio.run(js.collect(
+                        db_path=str(cache), config_path=str(config),
+                        endpoint=js.DEFAULT_ENDPOINT, minutes=0.001,
+                        resume_overlap_seconds=5,
+                    ))
+            # La BD debe permanecer intacta y reabrirse sin locks Windows.
+            restored = js.init_db(str(cache))
+            self.assertEqual(js.get_state(restored, "last_seq"), "not-an-integer")
+            self.assertEqual(restored.execute("SELECT COUNT(*) FROM posts").fetchone()[0], 1)
+            restored.close()
+
+
 if __name__ == "__main__":
     unittest.main()
