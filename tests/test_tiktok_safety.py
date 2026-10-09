@@ -245,6 +245,41 @@ class TikTokSafetyTests(unittest.TestCase):
             with self.subTest(func=func.__name__):
                 self.assertIn("tap_reserved_follow(", inspect.getsource(func))
 
+    def test_external_breaker_blocks_follows_without_changing_deadline(self):
+        # El controlador general debe seguir activo; lo había perdido la copia mirror.
+        class Rng:
+            def randint(self, a, b):
+                return a
+
+        import circuit_breaker as breaker
+        deadline = bulk.time.time() + 300
+        session = bulk.Session(None, None, Rng(), max_follows=10,
+                               deadline=deadline, done=set())
+        with mock.patch.object(breaker, "check", return_value=(False, "pausa")) as checked:
+            with mock.patch("builtins.print") as output:
+                self.assertTrue(session.over)
+                self.assertTrue(session.over)
+            checked.assert_called_with(bulk.ROOT)
+            output.assert_called_once()
+        self.assertTrue(session.external_hold)
+        self.assertEqual(session.attempted, 0)
+        self.assertEqual(session.deadline, deadline)
+
+    def test_official_breaker_preflight_takes_precedence(self):
+        class Rng:
+            def randint(self, a, b):
+                return a
+
+        import circuit_breaker as breaker
+        session = bulk.Session(None, None, Rng(), max_follows=10,
+                               deadline=bulk.time.time() + 300, done=set())
+        with mock.patch.object(breaker, "write_preflight", create=True,
+                               return_value=(False, "revision_manual")) as guarded:
+            with mock.patch.object(breaker, "check", side_effect=AssertionError("fallback")):
+                self.assertTrue(session.over)
+            guarded.assert_called_once_with("tiktok")
+        self.assertTrue(session.external_hold)
+
     def test_no_progress_alert_does_not_change_deadline(self):
         class Rng:
             def randint(self, a, b):
@@ -274,6 +309,18 @@ class TikTokSafetyTests(unittest.TestCase):
             used, pending = safety.recorded_actions(str(path), today=dt.date(2026, 10, 9))
             self.assertEqual(used, {"follow": 1, "like": 1, "comment": 0})
             self.assertIn(("follow", "lectora"), pending)
+
+    def test_legacy_private_follow_request_consumes_daily_quota(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = pathlib.Path(folder) / "registro.csv"
+            path.write_text(
+                "fecha,cuenta,tipo,post_resumen,texto_usado,resultado,notas\\n"
+                "2026-10-09,@privada,follow,,,pendiente_aprobacion,sin-id\\n".replace("\\\\n", "\\n"),
+                encoding="utf-8",
+            )
+            used, pending = safety.recorded_actions(str(path), today=dt.date(2026, 10, 9))
+            self.assertEqual(used["follow"], 1)
+            self.assertEqual(pending, set())
 
     def test_pending_approval_is_historical_no_retry_target(self):
         with tempfile.TemporaryDirectory() as folder:
