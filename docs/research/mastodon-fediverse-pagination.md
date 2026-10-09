@@ -2,8 +2,10 @@
 
 Fuente primaria: https://docs.joinmastodon.org/methods/search/
 Fecha de consulta: 2026-10-09
-Licencia SPDX: MIT
-Referencia inmutable: https://github.com/halcy/Mastodon.py/tree/b9f2effbb5a9f07ebca3807466f4130e69b1614c
+Licencia SPDX: NOASSERTION
+Referencia inmutable: N/A (sin codigo incorporado)
+
+No se incorporó código de terceros: `NOASSERTION` identifica que la licencia del parche propio no se determina aquí. El SDK candidato Mastodon.py es MIT y su referencia inmutable, que permite auditar la comparación sin adjudicar la licencia del SDK al parche, figura en «Licencias y procedencia».
 
 Consulta: **2026-10-09 (Europe/Madrid)**. Alcance funcional: `tools/mastodon_interact.py::search_accounts_pages` y pruebas offline; `_headers` solo recibe una refactorización equivalente, probada, para superar un falso positivo del escáner del padre. **Sin tráfico ni escrituras contra cuentas reales**. El espejo es público y anonimizado; no se copiaron datos del repositorio privado.
 
