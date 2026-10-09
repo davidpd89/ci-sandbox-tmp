@@ -188,6 +188,65 @@ desconexiones persistentes y compatibilidad con scheduler privado, además de
 diseñar recuperación de `CursorTooOld` y cambios de instancia detrás del
 mismo hostname.
 
+## Tercera revisión adversarial: salud de conexión y errores de parseo
+
+Fecha de consulta: 2026-10-09. La segunda lectura detectó que un fallo
+permanente de handshake o recv podía acabar devolviendo exit=0 al agotarse la
+ventana. En `bluesky_growth_flow.py prepare --deep` eso convierte una sesión
+sin ingesta fiable en un paso aparentemente correcto.
+
+Se incorpora `unrecovered_stream_error`: cualquier excepción transitoria
+lo activa, una lectura o periodo de conexión estable lo limpia, y si al finalizar
+sigue activo el collector termina con código de error. La base de datos mantiene
+el último checkpoint, sin ejecutar escrituras remotas. Los HTTP 429/5xx siguen
+con reintentos, pero nunca enmascaran una caída no recuperada como éxito.
+Se prueba tanto outage permanente como recuperación posterior.
+
+El JSON inválido, secuencia inválida y errores SQLite ya no producen reintentos
+infinitos hasta acabar la ventana: `StreamProtocolError` detiene la sesión
+sin incluir contenido del frame en el mensaje público; una escritura SQLite
+fallida hace rollback y detiene. Los logs de errores de socket conservan solo
+la clase, nunca URL ni cuerpo de respuesta. Las excepciones fatales HTTP se
+relanzan sin encadenar cuerpo/headers, para no publicar inadvertidamente
+información del transporte.
+
+La protección nueva es específica de lectura Bluesky; la lección transversal
+es que cada worker WEB/API/MOBILE debe distinguir explícitamente
+`sin eventos`, `transitorio recuperado` y `incompleto/no recuperado`.
+No se cambia un contrato genérico desde esta PR por no interferir con trabajos
+independientes de colas, ledger y observabilidad.
+
+**Tests offline añadidos**:
+`test_v2_persistent_handshake_outage_marks_window_incomplete`,
+`test_v2_bad_json_fails_with_protocol_error_without_echoing_raw`,
+`test_v2_recovery_after_drop_does_not_fail_window`.
+La prueba con WebSocket sustituido por transporte sintético no equivale
+a validar la infraestructura de Bluesky; el valor es la señal de error y
+persistencia verificables. Compatibilidad y retirada idénticas a sección
+anterior, sin dependencia adicional.
+
+**Alternativas adicionales revisadas**:
+- `skyware-js/jetstream` (TS) quedó archivado el 18-02-2026:
+  https://github.com/skyware-js/jetstream. No es candidato de adopción.
+- La biblioteca `@bsky/jetstream` mantiene reconexión, señal de error y
+  `idleTimeoutMs`, pero exige Node.js e integración ajena a SQLite de Python:
+  https://github.com/bluesky-social/bsky/blob/bc6737a4b52dd2458c7aecbc296ec660e068af89/packages/jetstream/README.md.
+- El cliente Go oficial registra `Batch.LastCursor` para guardar cursores
+  tras persistir el lote y puede hacer transición archive→live. Aporta diseño,
+  no un reemplazo Python/Windows sin IPC adicional:
+  https://github.com/bluesky-social/jetstream/blob/f42df08ba0ca9e4287020139aefbcfe24506d1ef/client.go.
+- El problema del cliente Go con cursores timestamp reinterpretados como seq
+  fue documentado en issue `#349` (20-09-2026), reforzando pruebas mixtas
+  v1/v2: https://github.com/bluesky-social/jetstream/issues/349.
+
+**Hueco no resuelto por esta PR**: integración archive/backfill cuando el
+cursor sea demasiado antiguo (`CursorTooOld`) o cambie la infraestructura
+v2 detrás del mismo hostname. No reiniciar silenciosamente desde el presente:
+se perdería cobertura. Seguirá como trabajo separado con fixtures y
+reconciliación auditables. El estado v2 de caches heredadas sin
+`last_seq_stream` solo se puede vincular tras observar el primer frame nuevo;
+no existe prueba retrospectiva de la instancia que generó el valor.
+
 ## Referencias primarias y procedencia
 
 - AT Protocol, [Event Stream](https://atproto.com/specs/event-stream): secuencias monotónicas, cursor tras procesamiento exitoso, errores y HTTP 429 (consultado 09-10-2026).
