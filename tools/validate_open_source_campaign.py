@@ -101,13 +101,13 @@ def check_privacy(paths, root=ROOT):
 
 
 def fetch_live(token=None, opener=urlopen):
-    url = f'https://api.github.com/repos/{REPO}/pulls?state=all&per_page=100&page=1'
+    url = f'https://api.github.com/repos/{REPO}/pulls?state=all&per_page=100'
     headers = {'Accept': 'application/vnd.github+json', 'User-Agent': 'campaign-metadata-validator'}
     if token:
         headers['Authorization'] = 'Bearer ' + token
     result = []
     for page in range(1, 11):
-        with opener(Request(url.replace('page=1', f'page={page}'), headers=headers), timeout=20) as response:
+        with opener(Request(f'{url}&page={page}', headers=headers), timeout=20) as response:
             batch = json.load(response)
         if not isinstance(batch, list):
             raise ValueError('Invalid GitHub PR listing: fail closed')
