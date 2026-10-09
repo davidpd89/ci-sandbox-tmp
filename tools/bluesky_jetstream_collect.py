@@ -30,6 +30,12 @@ import scan_common as sc
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 IDLE_CHECKPOINT_SECONDS = 5.0
+
+
+class StreamProtocolError(ValueError):
+    """Error estructural: reconectar al mismo origen no lo subsana."""
+
+
 DEFAULT_CONFIG = os.path.join(ROOT, "SISTEMA_DIARIO_BLUESKY", "growth_config.json")
 DEFAULT_ENDPOINT = (
     "wss://jetstream.us-east.bsky.network/"
@@ -536,6 +542,7 @@ async def collect(
     connection_errors = 0
     last_error = None
     retry_delay = 1.0
+    unrecovered_stream_error = False
 
     saved_time = get_state(db, "last_time_us")
     stream_confirmed = bool(saved_stream)
@@ -570,6 +577,8 @@ async def collect(
                         try:
                             raw = await asyncio.wait_for(ws.recv(), timeout=timeout)
                         except asyncio.TimeoutError:
+                            # Un socket vivo y silencioso acredita recuperación.
+                            unrecovered_stream_error = False
                             # Streams silenciosos no deben retener locks SQLite.
                             if db.in_transaction:
                                 _checkpoint(
@@ -578,13 +587,22 @@ async def collect(
                                 )
                                 last_commit = time.monotonic()
                             continue
-                        decoded = json.loads(raw)
-                        event, event_cursor, mode = _normalize_frame(decoded)
-                        if not event:
-                            continue
-                        matched, last_seq, replayed = _apply_frame(
-                            db, event, event_cursor, mode, terms, last_seq
-                        )
+                        try:
+                            decoded = json.loads(raw)
+                            event, event_cursor, mode = _normalize_frame(decoded)
+                            if not event:
+                                # Un mensaje estructural no procesable no es progreso.
+                                if isinstance(decoded, dict):
+                                    unrecovered_stream_error = False
+                                continue
+                            matched, last_seq, replayed = _apply_frame(
+                                db, event, event_cursor, mode, terms, last_seq
+                            )
+                        except (ValueError, TypeError, KeyError) as exc:
+                            raise StreamProtocolError(
+                                "Frame Jetstream malformado; cursor conservado"
+                            ) from exc
+                        unrecovered_stream_error = False
                         if replayed:
                             continue
                         if mode == "v2":
@@ -634,8 +652,12 @@ async def collect(
                         stream_identity=stream_identity if stream_confirmed else None,
                     )
                     last_commit = time.monotonic()
+                if isinstance(exc, (StreamProtocolError, sqlite3.Error)):
+                    raise
                 connection_errors += 1
-                last_error = f"{type(exc).__name__}: {str(exc)[:200]}"
+                # Evitar incluir URLs, cabeceras o contenido recibido en logs.
+                last_error = type(exc).__name__
+                unrecovered_stream_error = True
                 fatal_status = _fatal_stream_status(exc) if is_v2 else None
                 if fatal_status:
                     raise RuntimeError(
@@ -656,6 +678,12 @@ async def collect(
             )
         finally:
             db.close()
+
+    if unrecovered_stream_error:
+        raise RuntimeError(
+            "Jetstream: ventana terminada con error de conexión sin recuperar; "
+            "checkpoint conservado, ingesta incompleta"
+        )
 
     return {
         "processed": processed,
