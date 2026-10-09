@@ -1,6 +1,7 @@
 name: Validar herramientas RRSS sin acceso a cuentas
 
 on:
+  # Valida toda PR del mirror, incluso si solo cambia configuración.
   pull_request:
   push:
     branches: [main]
@@ -27,6 +28,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # El mirror público valida cada PR tanto en Ubuntu como en Windows.
+        # En el repo privado las PR entre ramas de trabajo solo usan Ubuntu.
         os: ${{ fromJSON(github.repository == 'davidpd89/ci-sandbox-tmp' && '["ubuntu-latest","windows-latest"]' || github.event_name == 'pull_request' && github.base_ref != 'main' && '["ubuntu-latest"]' || '["ubuntu-latest","windows-latest"]') }}
     timeout-minutes: 10
     env:
@@ -35,11 +38,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 2
+          fetch-depth: 2  # PR: merge commit + primer padre (base), suficiente para HEAD^1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.11'
-      - name: No aceptar datos operativos ni secretos en cambios de la PR
+      - name: No aceptar artefactos operativos ni rutas sensibles en cambios de la PR
         run: python tools/repo_hygiene.py --base "HEAD^1"
       - name: Instalar dependencias de pruebas
         run: python -m pip install --disable-pip-version-check -r requirements-ci.txt
