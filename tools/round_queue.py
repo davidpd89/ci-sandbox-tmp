@@ -410,7 +410,7 @@ def _recover_incomplete_csv_tail(stream):
                     and re.fullmatch(r"\d{2}:\d{2}:\d{2}", fields[2])
                     and re.fullmatch(r"\d{2}:\d{2}:\d{2}", fields[3])
                     and fields[7].isdigit() and fields[8].isdigit()
-                    and re.fullmatch(r"-?\d+", fields[9])):
+                    and re.fullmatch(r"-?\d+", fields[9]))):
                 stream.seek(0, os.SEEK_END)
                 stream.write(b"\r\n" if not raw.endswith(b"\r") else b"\n")
                 return True
