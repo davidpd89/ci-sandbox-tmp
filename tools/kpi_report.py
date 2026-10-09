@@ -39,6 +39,10 @@ def _local_day(value):
 
 def _integer(value):
     text = str(value or "").strip()
+    # Un CSV corrupto puede contener miles de dígitos: int() los rechaza
+    # en Python 3.11 y tumbaría el informe de todas las redes.
+    if not 1 <= len(text) <= 32 or not text.isascii():
+        return None
     if text.isdecimal():
         return int(text)
     if THOUSANDS.fullmatch(text):
@@ -209,7 +213,10 @@ def _inbound(root, day):
 def build_report(root, day):
     """Ocho redes, contrato explícito de desconocidos; no abre rutas en escritura."""
     root = Path(root)
-    day = day if isinstance(day, date) else date.fromisoformat(str(day))
+    if isinstance(day, datetime):
+        day = (day.astimezone(MADRID) if day.tzinfo else day).date()
+    elif not isinstance(day, date):
+        day = date.fromisoformat(str(day))
     inbound, inbound_coverage = _inbound(root, day)
     result = {"schema_version": SCHEMA_VERSION, "day": day.isoformat(), "timezone": "Europe/Madrid", "networks": {}}
     for net in NETWORKS:

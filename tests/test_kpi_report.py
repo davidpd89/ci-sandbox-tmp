@@ -170,6 +170,26 @@ class KPITests(unittest.TestCase):
         self.assertIsNone(r["followers_net"])
         self.assertEqual(r["followers_coverage"], "sin_columna_seguidores")
 
+    def test_corrupt_large_follower_number_does_not_abort_other_networks(self):
+        self.write("x", "metricas.csv", [
+            ["fecha", "seguidores"], ["2026-10-08", "100"],
+            ["2026-10-09", "9" * 6000],
+        ])
+        self.write("threads", "metricas.csv", [
+            ["fecha", "seguidores"], ["2026-10-08", "20"],
+            ["2026-10-09", "22"],
+        ])
+        nets = k.build_report(self.root, self.day)["networks"]
+        self.assertIsNone(nets["x"]["followers_net"])
+        self.assertEqual(nets["x"]["followers_coverage"], "sin_snapshot_del_dia")
+        self.assertEqual(nets["threads"]["followers_net"], 2)
+
+    def test_datetime_day_is_converted_to_madrid_before_report(self):
+        import datetime as dt
+        report = k.build_report(self.root, dt.datetime(
+            2026, 10, 8, 23, 30, tzinfo=dt.timezone.utc))
+        self.assertEqual(report["day"], "2026-10-09")
+
     def test_named_followers_column_is_used_by_semantics(self):
         self.write("x", "metricas.csv", [
             ["fecha", "posts", "seguidores", "notas"],
