@@ -190,11 +190,27 @@ class Session:
         if preflight is not None:
             allowed, reason = preflight("tiktok")
         else:
+            # Compatibilidad con el breaker antiguo del mirror: load() devolvía
+            # un estado vacío ante JSON corrupto. No interpretar esa corrupción
+            # como permiso para reanudar escrituras.
             try:
-                allowed, _ = cb.check(ROOT)
-            except (TypeError, ValueError, OSError):
+                with open(cb._path(ROOT), encoding="utf-8") as stream:
+                    legacy_state = json.load(stream)
+            except FileNotFoundError:
+                legacy_state = {}
+            except (OSError, ValueError, UnicodeError):
+                legacy_state = None
+            if (not isinstance(legacy_state, dict)
+                    or legacy_state.get("invalid")
+                    or legacy_state.get("manual_hold")):
                 allowed = False
-            reason = "cooldown_activo" if not allowed else ""
+                reason = "estado_invalido_o_revision_manual"
+            else:
+                try:
+                    allowed, _ = cb.check(ROOT)
+                except (TypeError, ValueError, OSError):
+                    allowed = False
+                reason = "cooldown_activo" if not allowed else ""
         if not allowed:
             if not self.external_hold:
                 print(f"[bulk] cortacircuitos ABIERTO: {reason}; sin más follows", flush=True)
