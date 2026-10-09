@@ -84,6 +84,23 @@ class TikTokSafetyTests(unittest.TestCase):
             with self.assertRaises(safety.SafetyStateError):
                 safety.require_writable(str(path))
 
+    def test_numeric_manual_review_is_never_accepted_as_boolean(self):
+        # En Python, 1 == True y 0 == False, pero el JSON debe exigir booleanos reales.
+        with tempfile.TemporaryDirectory() as folder:
+            path = pathlib.Path(folder) / "pause.json"
+            for invalid in (0, 1, 0.0, 1.0):
+                with self.subTest(invalid=invalid):
+                    payload = {"until": "2020-01-01T00:00:00+00:00",
+                               "manual_review": invalid}
+                    path.write_text(json.dumps(payload), encoding="utf-8")
+                    with self.assertRaises(safety.SafetyStateError):
+                        safety.require_writable(str(path))
+                    with self.assertRaises(safety.SafetyStateError):
+                        safety.remaining_minutes(str(path))
+
+    def test_bulk_uses_the_same_cooldown_file_as_other_tiktok_routes(self):
+        self.assertEqual(bulk.COOLDOWN_PATH, safety.COOLDOWN_PATH)
+
     def test_corrupt_state_fails_closed(self):
         with tempfile.TemporaryDirectory() as folder:
             path = pathlib.Path(folder) / "pause.json"
@@ -125,6 +142,7 @@ class TikTokSafetyTests(unittest.TestCase):
         class DummySession:
             def __init__(self):
                 self.done = set()
+                self.attempted = 0
 
         with tempfile.TemporaryDirectory() as folder:
             path = pathlib.Path(folder) / "registro.csv"
@@ -144,6 +162,39 @@ class TikTokSafetyTests(unittest.TestCase):
             self.assertIn("lectora", already)
             self.assertEqual(used["follow"], 1)
             self.assertIn(("follow", "lectora"), pending)
+
+    def test_uncertain_reservation_exhausts_session_budget(self):
+        class Rng:
+            def randint(self, a, b):
+                return a
+
+        with tempfile.TemporaryDirectory() as folder:
+            path = pathlib.Path(folder) / "registro.csv"
+            session = bulk.Session(None, None, Rng(), max_follows=1,
+                                   deadline=bulk.time.time() + 300, done=set())
+            with mock.patch.object(bulk, "REGISTRO_CSV", str(path)):
+                bulk.tap_reserved_follow(session, "lectora", "test", lambda: None)
+            self.assertEqual(session.attempted, 1)
+            self.assertEqual(session.followed, 0)
+            self.assertTrue(session.over)
+            used, pending = safety.recorded_actions(str(path))
+            self.assertEqual(used["follow"], 1)
+            self.assertIn(("follow", "lectora"), pending)
+
+    def test_failed_reservation_never_taps_or_consumes_session_budget(self):
+        class Rng:
+            def randint(self, a, b):
+                return a
+
+        session = bulk.Session(None, None, Rng(), max_follows=1,
+                               deadline=bulk.time.time() + 300, done=set())
+        with mock.patch.object(bulk, "record_follow", side_effect=OSError("disk full")):
+            tapped = []
+            with self.assertRaises(OSError):
+                bulk.tap_reserved_follow(session, "lectora", "test", lambda: tapped.append(1))
+        self.assertEqual(tapped, [])
+        self.assertEqual(session.attempted, 0)
+        self.assertFalse(session.over)
 
     def test_confirmed_reserved_follow_closes_intent_without_double_quota(self):
         class Rng:
