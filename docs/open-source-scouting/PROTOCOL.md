@@ -1,7 +1,7 @@
 # Campana de reutilizacion de software publico
 
 Esta rama organiza encargos independientes para que un agente GPT investigue
-software publico existente y evite reinventar componentes del sistema RRSS.
+software publico existente y reutilice componentes valiosos en el sistema RRSS.
 Cada PR hija contiene un unico frente de trabajo y se revisa por separado.
 
 ## Mision del agente que tome una PR
@@ -40,12 +40,12 @@ El mirror es incompleto. Si hacen falta modulos, fixtures, configuracion o
 documentacion, tomar del repositorio oficial RRSS todo el contexto necesario
 para evaluar y probar correctamente la mejora.
 
-## Dos PR adicionales como maximo
+## PR adicionales nacidas de la investigacion
 
-Despues de investigar e implementar, el agente puede abrir hasta dos PR nuevas
-si ha descubierto trabajos diferentes, concretos y de alto valor. Cada una debe
-tener evidencia, alcance acotado y criterio de aceptacion. Abrirlas unicamente
-cuando el hallazgo tenga entidad propia y valor demostrable.
+Despues de investigar e implementar, el agente puede abrir dos PR nuevas cuando
+descubra trabajos diferentes, concretos y de alto valor. Cada una debe tener
+evidencia, alcance claro y criterio de aceptacion. Los hallazgos con entidad
+propia y valor demostrable alimentan asi la siguiente ronda de mejora.
 
 ## Entregables minimos
 
@@ -88,3 +88,27 @@ resuelvan el mismo problema.
 | [#30](https://github.com/davidpd89/ci-sandbox-tmp/pull/30) | Testing, fuzzing y contratos |
 | [#31](https://github.com/davidpd89/ci-sandbox-tmp/pull/31) | Seguridad, privacidad y supply chain |
 | [#32](https://github.com/davidpd89/ci-sandbox-tmp/pull/32) | Datos, almacenamiento e informes |
+| [#33](https://github.com/davidpd89/ci-sandbox-tmp/pull/33) | Pruebas diferenciales entre redes |
+| [#34](https://github.com/davidpd89/ci-sandbox-tmp/pull/34) | Mutation testing sobre logica critica |
+| [#35](https://github.com/davidpd89/ci-sandbox-tmp/pull/35) | Pruebas con modelos y maquinas de estado |
+| [#36](https://github.com/davidpd89/ci-sandbox-tmp/pull/36) | Chaos testing y fault injection |
+| [#37](https://github.com/davidpd89/ci-sandbox-tmp/pull/37) | Profiling y presupuestos de rendimiento |
+| [#38](https://github.com/davidpd89/ci-sandbox-tmp/pull/38) | Fugas de recursos y ciclo de vida |
+| [#39](https://github.com/davidpd89/ci-sandbox-tmp/pull/39) | Carreras, concurrencia y deadlocks |
+| [#40](https://github.com/davidpd89/ci-sandbox-tmp/pull/40) | Esquemas, migraciones y compatibilidad |
+| [#41](https://github.com/davidpd89/ci-sandbox-tmp/pull/41) | Drift y contratos de APIs externas |
+| [#42](https://github.com/davidpd89/ci-sandbox-tmp/pull/42) | Selectores y regresion visual |
+| [#43](https://github.com/davidpd89/ci-sandbox-tmp/pull/43) | Paridad de configuracion y capacidades |
+| [#44](https://github.com/davidpd89/ci-sandbox-tmp/pull/44) | Arquitectura y acoplamiento |
+| [#45](https://github.com/davidpd89/ci-sandbox-tmp/pull/45) | Code review, codigo muerto y complejidad |
+| [#46](https://github.com/davidpd89/ci-sandbox-tmp/pull/46) | Calidad de datos y reconciliacion |
+| [#47](https://github.com/davidpd89/ci-sandbox-tmp/pull/47) | Alertas y simulacion de incidentes |
+| [#48](https://github.com/davidpd89/ci-sandbox-tmp/pull/48) | Backup, restore y recuperacion |
+| [#49](https://github.com/davidpd89/ci-sandbox-tmp/pull/49) | Horarios, zonas y DST |
+| [#50](https://github.com/davidpd89/ci-sandbox-tmp/pull/50) | Unicode, locale y codificacion |
+| [#51](https://github.com/davidpd89/ci-sandbox-tmp/pull/51) | Evaluacion ciega de contenido humano |
+| [#52](https://github.com/davidpd89/ci-sandbox-tmp/pull/52) | Ronda end-to-end en shadow mode |
+| [#53](https://github.com/davidpd89/ci-sandbox-tmp/pull/53) | Generacion de fixtures sinteticos |
+| [#54](https://github.com/davidpd89/ci-sandbox-tmp/pull/54) | Optimizacion de tokens, llamadas y coste |
+| [#55](https://github.com/davidpd89/ci-sandbox-tmp/pull/55) | Dependencias, releases y rollback |
+| [#56](https://github.com/davidpd89/ci-sandbox-tmp/pull/56) | Documentacion ejecutable y runbooks |
