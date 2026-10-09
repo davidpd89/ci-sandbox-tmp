@@ -247,10 +247,14 @@ class ThreadsTransportTests(unittest.TestCase):
         items = [{"kind": "reply", "reply_to_id": "synthetic-1"}]
         self.assertFalse(executor._plan_needs_browser(items))
         self.assertTrue(executor._plan_needs_browser(items + [{"kind": "like"}]))
-        with patch.object(executor, "run_plan", return_value=[{"resultado": "confirmado"}]) as runner:
+        with patch.object(executor, "run_plan", return_value=[{"resultado": "confirmado"}]) as runner, \
+             patch.object(executor.t, "ensure_browser") as startup, \
+             patch.object(executor.t, "session") as session:
             result = executor._run_by_transport(items)
         self.assertEqual(result[0]["resultado"], "confirmado")
         runner.assert_called_once()
+        startup.assert_not_called()
+        session.assert_not_called()
 
     def test_offline_metrics_decode(self):
         with patch.object(api, "_env", return_value={"THREADS_ACCESS_TOKEN": "synthetic"}), \
