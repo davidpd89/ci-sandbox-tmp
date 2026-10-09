@@ -129,7 +129,7 @@ class TrustedPRHygieneTests(unittest.TestCase):
 
     def test_untrusted_arguments_never_enter_url(self):
         for repo, number, sha in [
-            ("evil.io/path", 92, HEAD),
+            ("evil.io/path/extra", 92, HEAD),
             (REPO, -1, HEAD),
             (REPO, 92, "not-a-sha"),
         ]:
