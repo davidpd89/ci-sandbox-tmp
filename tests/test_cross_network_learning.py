@@ -43,23 +43,29 @@ def run(*rows, history=None, date=NOW, verified=None):
     for row in rows:
         candidate = copy.deepcopy(row)
         if isinstance(candidate, dict) and isinstance(candidate.get("targets"), dict):
+            digests = {}
             for target in candidate["targets"]:
                 try:
-                    original_digest = c._evidence_digest(row, target)
+                    digests[target] = c._evidence_digest(row, target)
                 except (ValueError, TypeError, KeyError, AttributeError):
                     continue
+            if digests:
+                # Un ensayo multi-destino conserva UNA identidad en todas sus
+                # colas. La fixture no representa un auditor real.
+                seed = hashlib.sha256("|".join(sorted(digests.values())).encode()).hexdigest()
                 candidate["experiment"] = {
-                    "id": "fixture-" + original_digest[:32],
-                    "design_sha256": hashlib.sha256(("design:" + original_digest).encode()).hexdigest(),
-                    "assignment_sha256": hashlib.sha256(("assign:" + original_digest).encode()).hexdigest(),
+                    "id": "fixture-" + seed[:32],
+                    "design_sha256": hashlib.sha256(("design:" + seed).encode()).hexdigest(),
+                    "assignment_sha256": hashlib.sha256(("assign:" + seed).encode()).hexdigest(),
                 }
-                if isinstance(verified, (set, frozenset)) and original_digest in verified:
-                    audit = audit_projection(candidate, target)
-                    digest = evidence_digest(candidate, target)
-                    if audit is not None and digest is not None:
-                        record = {**audit, "evidence_sha256": digest}
-                        if record not in records:
-                            records.append(record)
+                for target, original_digest in digests.items():
+                    if isinstance(verified, (set, frozenset)) and original_digest in verified:
+                        audit = audit_projection(candidate, target)
+                        digest = evidence_digest(candidate, target)
+                        if audit is not None and digest is not None:
+                            record = {**audit, "evidence_sha256": digest}
+                            if record not in records:
+                                records.append(record)
         observations.append(candidate)
     return c.review({"schema": 2, "observations": observations,
                      "history": history or []}, today=date,
@@ -68,6 +74,17 @@ def run(*rows, history=None, date=NOW, verified=None):
 
 
 class CrossNetworkTests(unittest.TestCase):
+    def test_fixture_same_trial_two_targets_can_be_audited_independently(self):
+        row = positive()
+        row["targets"]["x"] = dict(row["targets"]["mastodon"])
+        proofs = {c._evidence_digest(row, target) for target in row["targets"]}
+        output = run(row, verified=proofs)
+        self.assertEqual(len(output["proposals"]), 2)
+        self.assertEqual({p["target"] for p in output["proposals"]},
+                         {"mastodon", "x"})
+        self.assertTrue(all(p["state"] == "proponer_ensayo_manual"
+                            for p in output["proposals"]))
+
     def test_only_out_of_band_verified_evidence_reaches_manual_proposal(self):
         row = positive()
         initial = run(row)
