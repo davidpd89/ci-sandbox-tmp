@@ -117,19 +117,24 @@ def fetch_live(token=None, opener=urlopen):
     raise ValueError('PR list exceeded 10 pages: fail closed')
 
 
-def check_live(doc, live):
+def check_live(doc, live, child_number=None):
     errors, warnings = [], []
     parent = live.get(10)
     if parent is None or parent['base']['ref'] != 'main' or parent['head']['ref'] != PARENT or parent['state'] != 'open':
         errors.append('#10: changed parent/base or missing parent PR')
     expected = {item['number'] for item in doc['children']}
-    discovered = {n for n, pr in live.items()
-                  if isinstance(n, int) and n > 10
-                  and pr.get('base', {}).get('ref') == PARENT}
-    for n in sorted(discovered - expected):
-        errors.append(f'#{n}: unindexed live child PR; update protocol and manifest')
+    if child_number is not None and child_number not in expected:
+        errors.append(f'#{child_number}: child absent from parent manifest')
+    if child_number is None:
+        discovered = {n for n, pr in live.items()
+                      if isinstance(n, int) and n > 10
+                      and pr.get('base', {}).get('ref') == PARENT}
+        for n in sorted(discovered - expected):
+            errors.append(f'#{n}: unindexed live child PR; update protocol and manifest')
     for item in doc['children']:
         n = item['number']
+        if child_number is not None and n != child_number:
+            continue
         p = live.get(n)
         if not p:
             errors.append(f'#{n}: live PR missing (broken link)'); continue
@@ -192,6 +197,7 @@ def main(argv=None):
     parser.add_argument('--live', action='store_true', help='recheck URLs and branch refs against GitHub API')
     parser.add_argument('--changed-base', help='git ref to compare added/changed files for privacy hygiene')
     parser.add_argument('--child-head', help='immutable child head SHA, required for checks of child PRs')
+    parser.add_argument('--child-number', type=int, help='scope live verification to one child PR (parent remains checked)')
     args = parser.parse_args(argv)
     doc = json.loads((ROOT / 'docs/open-source-scouting/children.json').read_text(encoding='utf-8'))
     protocol = (ROOT / 'docs/open-source-scouting/PROTOCOL.md').read_text(encoding='utf-8')
@@ -214,7 +220,7 @@ def main(argv=None):
     if args.live:
         try:
             live = fetch_live(os.environ.get('GITHUB_TOKEN'))
-            e, warnings = check_live(doc, live)
+            e, warnings = check_live(doc, live, args.child_number)
             errors.extend(e)
         except Exception as exc:
             errors.append(f'live verification unavailable: {type(exc).__name__}')
