@@ -25,7 +25,7 @@ Fuentes: [checkout y fetch-depth](https://github.com/actions/checkout), [documen
 
 ## Pruebas y evidencia
 
-- `python -m unittest discover -s tests -p test_pr_commit_hygiene.py -v`: **13 casos sintéticos** en Git local Linux: añadido+borrado con diff final vacío; ruta heredada y modificación; borrado benigno; renombrado; typechange de Git sin privilegios NTFS; espacios/salto de línea; merge de base; resolución de merge; rebase; merge sintético; y refs erróneas.
+- `python -m unittest discover -s tests -p test_pr_commit_hygiene.py -v`: **15 casos sintéticos** en Git local Linux: añadido+borrado con diff final vacío; ruta heredada y modificación; borrado benigno; renombrado; typechange de Git sin privilegios NTFS; espacios/salto de línea; merge de base; resolución de merge; rebase; merge sintético; y refs erróneas.
 - También se comprobó que `tools/repo_hygiene.py` del espejo coincide con la versión de la rama privada citada. No se exportaron credenciales ni archivos operativos.
 - GitHub Actions ejecuta `pr-history` en Ubuntu/Windows y la suite offline de CI por separado; [ejecución asociada](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37988118432). Consultar conclusiones finales de los cuatro jobs (ningún resultado debe interpretarse como probado antes de su cierre).
 - No se hizo canario sobre GitHub con secretos ni sobre redes sociales; todo test que escribe objetos Git usa directorios temporales con datos ficticios. Windows/PowerShell real queda cubierto por CI, no por equipo local; Edge y móvil no corresponden a esta función.
@@ -41,6 +41,13 @@ Fuentes: [checkout y fetch-depth](https://github.com/actions/checkout), [documen
 ## Incidencia real de Windows
 
 La primera suite completa de Windows detectó un fixture no portable: NTFS no admite saltos de línea en nombres físicos. Se corrigió en el commit `4815563c834bdbd932572f8cab9ee9b91b778eb0`: nombre con espacios en Git real y entrada con salto de línea en flujo NUL simulado. El fallo fue del test, no del controlador de Git. La nueva CI debe confirmarlo.
+
+## Revisión independiente adicional (controlador, 09/10/2026)
+
+- Se cerró un caso de aprobación potencialmente incompleta: `scan_pr` rechaza ahora expresamente un checkout Git superficial (`rev-parse --is-shallow-repository`), y `rev-list --missing=error` impide aceptar un rango con objetos ausentes.
+- Las llamadas Git deshabilitan la descarga perezosa de objetos, la sustitución de commits por `refs/replace` y los prompts interactivos; las rutas no se muestran en logs. Dos tests sintéticos nuevos prueban estas invariantes sin secretos: frontera shallow simulada con objetos presentes y comprobación del entorno de subprocess.
+- La PR #93 ya propone `tools/git_history_paths.py` como núcleo de política agnóstica de red. Durante la integración, reemplazar el recorrido local de #89 por ese módulo único, adaptando el caso de merge sintético. No copiar sus funciones otra vez, ni modificar ahora #93 desde esta rama.
+- La ejecución verde inicial de 4 jobs corresponde al HEAD anterior `d4897f0`; tras estos dos commits hay que comprobar **de nuevo** el workflow sobre el HEAD actualizado. El verificador de #89 sigue siendo autocontrolado por la PR; la verificación confiable está asignada a #92. Ninguno de los dos sustituye la auditoría de contenido de #87 ni los checks de push #88/#93.
 
 ## Interdependencias y traspaso a Claude
 
