@@ -2,9 +2,10 @@
 
 > **Puerta operativa vigente (2026-10-09):** Este protocolo es de la
 > campaña **pública** `davidpd89/ci-sandbox-tmp`, PR padre #10 hacia
-> `main`. Las hijas #11–#56 apuntan a `research/public-reuse-parent`.
+> `main`. Las hijas originales #11–#56 y la ampliación #57–#86 apuntan a `research/public-reuse-parent`.
 > La PR padre nunca fusiona automáticamente hijas ni las implementa.
-> El manifiesto verificado es [children.json](children.json); la coordinación,
+> El manifiesto verificado es [children.json](children.json); plantilla verificable
+> de evidencias [RESEARCH_TEMPLATE.md](RESEARCH_TEMPLATE.md); la coordinación,
 > comprobaciones y tres puertas están en [COORDINATION.md](COORDINATION.md).
 > Si otra sección parece autorizar traslado indiscriminado de código privado,
 > prevalecen la revisión humana y las reglas estrictas de privacidad.
@@ -83,6 +84,10 @@ debe reutilizar hallazgos ya publicados por otra y coordinar alternativas que
 resuelvan el mismo problema.
 
 ## Indice de encargos
+
+La primera ola comprende 46 hijas #11–#56; la segunda, 30 hijas #57–#86,
+incorporadas el 2026-10-09. El validador exige que la primera ola permanezca
+íntegra y que el índice y el manifiesto cubran todas las PR nuevas sin huecos.
 
 | PR | Encargo |
 | --- | --- |
