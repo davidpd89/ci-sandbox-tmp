@@ -6,5 +6,5 @@ o sobre artefactos saneados.
 
 Prototipar la opcion minima que unifique estado por red, acciones confirmadas,
 pendientes, fallos, colas, circuit breakers, tiempos y tendencias. Comparar
-coste, privacidad y mantenimiento. El panel no puede exponer handles, textos,
-tokens o datos operativos en el mirror publico.
+coste, privacidad y mantenimiento. Diseñar vistas agregadas y artefactos saneados
+que permitan inspeccion completa tambien desde el mirror publico.
