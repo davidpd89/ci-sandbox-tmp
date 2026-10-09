@@ -73,6 +73,7 @@ y sin parámetro de registro; todo resultado conserva `writes: false`.
 | [python-jsonschema 4.26.0](https://pypi.org/project/jsonschema/4.26.0/) (2026-01-07) | MIT | Sí, >=3.10, OS independiente | attrs, jsonschema-specifications, referencing, rpds-py; activo en 2026 | No incorporar: validación estructural acotada sin $refs; no autentica auditorías |
 | [Pydantic 2.14.0](https://pypi.org/project/pydantic/2.14.0/) (2026-10-08) | MIT | Sí, >=3.10 | pydantic-core compilado, typing-extensions y annotated-types; activo en 2026 | No incorporar: validación más extensa con dependencia binaria para 9 campos |
 | [Hypothesis 6.168.5](https://pypi.org/project/hypothesis/6.168.5/) | MPL-2.0 | Sí, wheel CPython 3.11 Windows/Linux publicado 2026-10-05 | sortedcontainers; activo, generador de tests | No incorporar: la PR #30 ya cubre fuzzing; regresiones actuales deterministas |
+| [rfc8785.py 0.1.4](https://pypi.org/project/rfc8785/0.1.4/) ([fuente](https://github.com/trailofbits/rfc8785.py)) | Apache-2.0 | Puro Python >=3.8, compatible con 3.11 y sin componentes nativos Windows | Sin dependencias de ejecución; versión pública 2024, mantenimiento posterior no confirmado | Candidato si hay verificadores externos en otros lenguajes (JCS/RFC 8785); no añadir para un consumidor Python que ya fija su propia serialización v2 |
 
 La continuidad gana por menor superficie, reutilizando el gate de #3,
 `hashlib`, `json`, `hmac` y `re` de la biblioteca estándar; no se copia
@@ -115,6 +116,24 @@ Python 3.11 en `ubuntu-latest` y `windows-latest` tras cada push;
 su resultado debe comprobarse para el **HEAD final**, no para commits previos.
 No se ejecutan Windows interactivo, móvil ni Edge. Fixture de auditoría
 simulada = prueba de software; no equivale a auditoría humana real.
+
+## Revisión adicional del controlador (09-10-2026)
+
+Se refuerza la correspondencia de un `experiment_id` con **una única**
+identidad auditada: diseño, asignaciones, recuento, origen y táctica deben
+coincidir en todas las aprobaciones de ese ensayo (puede haber más de una
+cola/destino, con digests independientes). Antes el registro solo prohibía
+reutilizar un manifest entre IDs distintos, pero admitía el mismo ID para
+manifests divergentes. También se impide sustituir o eliminar `_entries`
+tras construir el snapshot; no se confunde esta inmutabilidad de API con
+una defensa frente a `object.__setattr__` ejecutado por código privilegiado.
+
+Regresiones nuevas: identidad incoherente con cambio de manifiesto, diseño,
+recuento, red origen y táctica; reutilización legítima del mismo ensayo entre
+colas con aprobaciones independientes; prohibición de reasignar/eliminar el
+mapa del registro. La validación definitiva debe referirse a los checks
+Windows/Ubuntu del **nuevo HEAD** tras estos commits. La integración con #3
+sigue requiriendo reconciliar sus archivos compartidos antes del merge.
 
 ## Segunda revisión adversarial, posterior a la primera CI
 
