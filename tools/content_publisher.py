@@ -144,10 +144,18 @@ def publish_facebook(item):
 def publish_instagram(item):
     import meta_common as mc
     import meta_publish as mp
+    import instagram_publish_guard as guard
     env = mc.read_env()
     images, alts = _media(item)
-    urls = [mp.public_image_url(env["FB_PAGE_TOKEN"], env["FB_PAGE_ID"], path) for path in images]
-    media_id = mp.publish_instagram(env["IG_ACCESS_TOKEN"], env["IG_USER_ID"], item["texto"], urls, alts)
+
+    def submit(before_publish):
+        urls = [mp.public_image_url(env["FB_PAGE_TOKEN"], env["FB_PAGE_ID"], path) for path in images]
+        return mp.publish_instagram(
+            env["IG_ACCESS_TOKEN"], env["IG_USER_ID"], item["texto"], urls, alts,
+            before_publish=before_publish,
+        )
+
+    media_id = guard.publish_guarded(item["md_path"], env["IG_USER_ID"], submit)
     return mp.instagram_permalink(env["IG_ACCESS_TOKEN"], media_id)
 
 
@@ -237,7 +245,11 @@ def run(red, *, apply=False, now=None, out=print, publishers=None, verify=_verif
     if red not in publishers or not config["enabled"].get(red):
         return None
     issues = {path: missing for path, missing in cq.pending_parse_issues(red, auto_only=False)}
-    verify(red, now)                      # marca solas las fichas que ya estan publicadas en la red (David publica a mano y a veces no actualiza la ficha)
+    verification = verify(red, now)
+    if red == "instagram" and apply and (
+        not isinstance(verification, dict) or verification.get("unverifiable") is not False
+    ):
+        raise RuntimeError("Instagram: no se puede verificar el perfil; publicacion detenida")
     ready, skipped = eligible(red, now, config, issues)
     for item, reasons in skipped:
         out(f"[{red}] NO se publica {os.path.basename(item['carpeta'])} ({item['fecha_hora']:%d/%m %H:%M}): " + "; ".join(reasons))
