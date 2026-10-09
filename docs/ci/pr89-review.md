@@ -25,7 +25,7 @@ Fuentes: [checkout y fetch-depth](https://github.com/actions/checkout), [documen
 
 ## Pruebas y evidencia
 
-- `python -m unittest discover -s tests -p test_pr_commit_hygiene.py -v`: **11 casos sintéticos** en Git local Linux: añadido+borrado con diff final vacío; ruta heredada y modificación; borrado benigno; renombrado; typechange de Git sin privilegios NTFS; espacios/salto de línea; merge de base; resolución de merge; rebase; merge sintético; y refs erróneas.
+- `python -m unittest discover -s tests -p test_pr_commit_hygiene.py -v`: **13 casos sintéticos** en Git local Linux: añadido+borrado con diff final vacío; ruta heredada y modificación; borrado benigno; renombrado; typechange de Git sin privilegios NTFS; espacios/salto de línea; merge de base; resolución de merge; rebase; merge sintético; y refs erróneas.
 - También se comprobó que `tools/repo_hygiene.py` del espejo coincide con la versión de la rama privada citada. No se exportaron credenciales ni archivos operativos.
 - GitHub Actions ejecuta `pr-history` en Ubuntu/Windows y la suite offline de CI por separado; [ejecución asociada](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37988118432). Consultar conclusiones finales de los cuatro jobs (ningún resultado debe interpretarse como probado antes de su cierre).
 - No se hizo canario sobre GitHub con secretos ni sobre redes sociales; todo test que escribe objetos Git usa directorios temporales con datos ficticios. Windows/PowerShell real queda cubierto por CI, no por equipo local; Edge y móvil no corresponden a esta función.
