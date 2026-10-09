@@ -120,6 +120,14 @@ class FileHygieneTests(unittest.TestCase):
         ]
         self.assertEqual(rh.violations_for_paths(paths), paths)
 
+    def test_whitespace_must_not_disguise_an_env_template_filename(self):
+        paths = [
+            ".env.example ",
+            "tools/ .env.sample",
+            "docs/.env.template /README.md",
+        ]
+        self.assertEqual(rh.violations_for_paths(paths), paths)
+
     def test_examples_remain_allowed_only_as_standalone_files(self):
         safe = [
             ".env.example",
