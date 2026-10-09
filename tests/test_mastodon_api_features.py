@@ -7,17 +7,15 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools"))
 
-requests_stub = types.ModuleType("requests")
-requests_stub.get = lambda *a, **k: None
-requests_stub.post = lambda *a, **k: None
-requests_stub.delete = lambda *a, **k: None
+# Usar el paquete HTTP real; los tests mockean sus puntos de entrada.
+# Inyectar x_interact solo durante la importación, sin contaminar otras suites.
+import requests  # noqa: F401
+
 x_stub = types.ModuleType("x_interact")
 x_stub._check_spanish_orthography = lambda text: None
-sys.modules.setdefault("requests", requests_stub)
-sys.modules.setdefault("x_interact", x_stub)
-
-import mastodon_interact as m
-import mastodon_execute as execute
+with patch.dict(sys.modules, {"x_interact": x_stub}):
+    import mastodon_interact as m
+    import mastodon_execute as execute
 
 
 class MastodonSearchTests(unittest.TestCase):
