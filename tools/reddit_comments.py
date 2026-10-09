@@ -132,7 +132,7 @@ def _age_hours(stamp, now=None):
     if not isinstance(stamp, str) or not stamp:
         return None
     try:
-        when = datetime.datetime.fromisoformat(re.sub(r"([+-]\\d\\d)(\\d\\d)$", r"\\1:\\2", stamp.replace("Z", "+00:00")))
+        when = datetime.datetime.fromisoformat(re.sub(r"([+-]\d\d)(\d\d)$", r"\1:\2", stamp.replace("Z", "+00:00")))
         # Las horas locales sin zona no certifican fecha del post.
         if when.tzinfo is None or when.utcoffset() is None:
             return None
