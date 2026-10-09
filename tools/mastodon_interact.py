@@ -386,13 +386,31 @@ def search_statuses(query, *, limit=40, max_pages=3):
 
 
 def search_accounts_pages(query, *, limit=40, max_pages=2):
+    """Recorrer resultados v2 sin saltos ni cuentas repetidas.
+
+    /api/v2/search acepta como máximo 40 por tipo; usar 80 como stride
+    perdía la mitad de las cuentas aunque el servidor respondiera 40.
+    Los IDs son locales a la instancia consultada, no IDs federados.
+    """
     rows = []
-    page_size = max(1, min(int(limit), 80))
+    page_size = max(1, min(int(limit), 40))
+    seen_local_ids = set()
     for page in range(max(1, int(max_pages))):
         data = search(query, "accounts", page_size, offset=page * page_size)
-        accounts = data.get("accounts") or []
-        rows.extend(accounts)
-        if len(accounts) < page_size:
+        accounts = data.get("accounts") if isinstance(data, dict) else None
+        if not isinstance(accounts, list):
+            raise RuntimeError("Search Mastodon no devolvió accounts[]")
+        new_count = 0
+        for account in accounts:
+            if not isinstance(account, dict) or not account.get("id"):
+                raise RuntimeError("Search Mastodon devolvió una cuenta sin ID local")
+            local_id = str(account["id"])
+            if local_id in seen_local_ids:
+                continue
+            seen_local_ids.add(local_id)
+            rows.append(account)
+            new_count += 1
+        if len(accounts) < page_size or new_count == 0:
             break
     return rows
 
