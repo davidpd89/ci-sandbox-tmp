@@ -166,8 +166,23 @@ def check_child_deliverables(paths, root=ROOT):
     return ['child research evidence missing headings or license/source metadata']
 
 
-def changed_paths(base):
-    cmd = ['git', 'diff', '--name-only', '-z', '--diff-filter=ACMR', base, 'HEAD', '--']
+def changed_paths(base, child_head=None):
+    """Compare an actual child's head against its merge base, not the PR merge commit.
+
+    A synthetic GitHub merge commit includes updates from the parent. Those
+    updates must never count as the child's tests or research deliverables.
+    """
+    end = 'HEAD'
+    if child_head is not None:
+        if not re.fullmatch(r'[a-f0-9]{40}', child_head):
+            raise ValueError('invalid child head SHA')
+        ancestor = subprocess.check_output(
+            ['git', 'merge-base', base, child_head], cwd=ROOT, text=True
+        ).strip()
+        if not re.fullmatch(r'[a-f0-9]{40}', ancestor):
+            raise ValueError('invalid child merge base')
+        base, end = ancestor, child_head
+    cmd = ['git', 'diff', '--name-only', '-z', '--diff-filter=ACMR', base, end, '--']
     data = subprocess.check_output(cmd, cwd=ROOT)
     return [p.decode('utf-8') for p in data.split(b'\0') if p]
 
@@ -176,6 +191,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--live', action='store_true', help='recheck URLs and branch refs against GitHub API')
     parser.add_argument('--changed-base', help='git ref to compare added/changed files for privacy hygiene')
+    parser.add_argument('--child-head', help='immutable child head SHA, required for checks of child PRs')
     args = parser.parse_args(argv)
     doc = json.loads((ROOT / 'docs/open-source-scouting/children.json').read_text(encoding='utf-8'))
     protocol = (ROOT / 'docs/open-source-scouting/PROTOCOL.md').read_text(encoding='utf-8')
@@ -184,11 +200,14 @@ def main(argv=None):
             for p in (ROOT / d).rglob('*') if p.is_file()]
     if args.changed_base:
         try:
-            changed = changed_paths(args.changed_base)
+            is_child = os.environ.get('GITHUB_BASE_REF') == PARENT
+            if is_child and not args.child_head:
+                raise ValueError('child PR head SHA is required to isolate its diff')
+            changed = changed_paths(args.changed_base, args.child_head if is_child else None)
             scan += changed
-            if os.environ.get('GITHUB_BASE_REF') == PARENT:
+            if is_child:
                 errors += check_child_deliverables(changed)
-        except (subprocess.CalledProcessError, OSError) as exc:
+        except (subprocess.CalledProcessError, OSError, ValueError) as exc:
             errors.append(f'cannot inspect changed paths: {type(exc).__name__}')
     errors += check_privacy(set(map(str, scan)))
     warnings = []
