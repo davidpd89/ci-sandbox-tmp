@@ -53,6 +53,23 @@ class RoundCsvAtomicity(unittest.TestCase):
         self.assertEqual(len(rows), 2)
         self.assertTrue(Path(str(self.path) + ".writer.guard").exists())
 
+    def test_torn_first_header_is_rebuilt_without_losing_new_round(self):
+        header = (",".join(q.ROUND_CSV_COLUMNS) + "\r\n").encode("utf-8")
+        for size in (1, 10, len(header) - 2, len(header) - 1, len(header)):
+            with self.subTest(prefix_bytes=size):
+                self.path.write_bytes(header[:size])
+                q._append_round_csv(self.row("mastodon"))
+                rows = self.read_rows()
+                self.assertEqual(rows[0], list(q.ROUND_CSV_COLUMNS))
+                self.assertEqual([row[1] for row in rows[1:]], ["mastodon"])
+
+    def test_unknown_unterminated_header_is_not_overwritten(self):
+        original = b"fecha,red,otra_cabecera"
+        self.path.write_bytes(original)
+        with self.assertRaises(ValueError):
+            q._append_round_csv(self.row("mastodon"))
+        self.assertEqual(self.path.read_bytes(), original)
+
     def test_partial_tail_from_crashed_writer_is_removed_before_append(self):
         q._append_round_csv(self.row("x"))
         with self.path.open("ab") as stream:
