@@ -133,6 +133,8 @@ def _activity(root, net, day):
             kind = str(entry.get("tipo") or "sin_tipo").strip().casefold()
             by_kind[kind] += 1
             by_source[_source(entry) or "sin_atribucion"] += 1
+    if not counts and not bad and error is None:
+        error = "sin_observaciones_del_dia"
     return dict(counts), dict(sorted(by_kind.items())), dict(sorted(by_source.items())), error, duplicates, bad
 
 
@@ -186,6 +188,7 @@ def _inbound(root, day):
     counts = Counter()
     seen = set()
     incomplete = False
+    observed_today = False
     for entry, malformed in mapped:
         local_day = _local_day(entry.get("fecha"))
         if malformed or local_day is None:
@@ -197,6 +200,7 @@ def _inbound(root, day):
                 or entry.get("tipo") not in ("comment", "like", "repost", "follow")):
             incomplete = True
             continue
+        observed_today = True
         key = (entry.get("fecha"), entry.get("red"), entry.get("handle"), entry.get("tipo"))
         if key in seen:
             continue
@@ -207,6 +211,8 @@ def _inbound(root, day):
     # de ser un valor defendible, incluso si hay otras filas correctas.
     if incomplete:
         return None, "registro_inbound_parcial"
+    if not observed_today:
+        return None, "sin_observaciones_del_dia"
     return counts, "cuentas_tipo_dia_solo_harvest"
 
 

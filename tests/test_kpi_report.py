@@ -43,6 +43,30 @@ class KPITests(unittest.TestCase):
         self.assertIsNone(r["denominators"]["queued"])
         self.assertEqual(r["confirmed_by_source"], {"sin_atribucion": 2})
 
+    def test_existing_empty_or_old_outbound_file_is_not_zero_today(self):
+        self.write("x", "registro_interacciones.csv", [])
+        r = k.build_report(self.root, self.day)["networks"]["x"]
+        self.assertIsNone(r["confirmed_rows"])
+        self.assertEqual(r["outbound_coverage"], "sin_observaciones_del_dia")
+
+        previous = self.sample()
+        previous[0] = "2026-10-08"
+        self.write("x", "registro_interacciones.csv", [
+            ["fecha", "cuenta", "tipo", "post_resumen", "texto_usado",
+             "resultado", "notas"], previous
+        ])
+        r = k.build_report(self.root, self.day)["networks"]["x"]
+        self.assertIsNone(r["confirmed_rows"])
+        self.assertEqual(r["outbound_coverage"], "sin_observaciones_del_dia")
+
+    def test_a_pending_today_is_evidence_for_true_zero_confirmations(self):
+        self.write("x", "registro_interacciones.csv", [
+            self.sample("pendiente_verificacion")
+        ])
+        r = k.build_report(self.root, self.day)["networks"]["x"]
+        self.assertEqual(r["confirmed_rows"], 0)
+        self.assertEqual(r["pending_unknown_rows"], 1)
+
     def test_pending_is_not_confirmation_and_omissions_are_not_attempts(self):
         self.write("threads", "registro_interacciones.csv", [self.sample("pendiente_verificacion"), self.sample("saltado_ya_like"), self.sample("fallo:timeout"), self.sample("enviado")])
         r = k.build_report(self.root, self.day)["networks"]["threads"]
@@ -227,6 +251,29 @@ class KPITests(unittest.TestCase):
         self.assertEqual(result["tiktok"]["incoming_coverage"], "sin_cosecha_instrumentada")
         self.assertIsNone(result["reddit"]["incoming_comment_account_days"])
         self.assertEqual(result["x"]["outbound_coverage"], "ausente")
+
+    def test_old_inbound_events_are_unknown_not_zero_today(self):
+        p = self.root / "00_OPERATIVO" / "inbound_interacciones.csv"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with p.open("w", encoding="utf-8", newline="") as stream:
+            csv.writer(stream).writerows([
+                ["fecha", "red", "handle", "tipo"],
+                ["2026-10-08", "bluesky", "cuenta", "comment"],
+            ])
+        r = k.build_report(self.root, self.day)["networks"]["bluesky"]
+        self.assertIsNone(r["incoming_comment_account_days"])
+        self.assertEqual(r["incoming_coverage"], "sin_observaciones_del_dia")
+
+    def test_today_inbound_like_can_confirm_zero_comments(self):
+        p = self.root / "00_OPERATIVO" / "inbound_interacciones.csv"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with p.open("w", encoding="utf-8", newline="") as stream:
+            csv.writer(stream).writerows([
+                ["fecha", "red", "handle", "tipo"],
+                ["2026-10-09", "bluesky", "cuenta", "like"],
+            ])
+        r = k.build_report(self.root, self.day)["networks"]["bluesky"]
+        self.assertEqual(r["incoming_comment_account_days"], 0)
 
     def test_corrupt_inbound_row_never_masquerades_as_zero(self):
         p = self.root / "00_OPERATIVO" / "inbound_interacciones.csv"
