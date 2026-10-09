@@ -426,7 +426,12 @@ def _read_round_csv_rows():
         with _recovery_guard(LOG + ".writer") as locked:
             if locked:
                 try:
-                    with open(LOG, "rb") as stream:
+                    with open(LOG, "r+b") as stream:
+                        repaired = _recover_incomplete_csv_tail(stream)
+                        if repaired:
+                            stream.flush()
+                            os.fsync(stream.fileno())
+                        stream.seek(0)
                         data = stream.read()
                 except FileNotFoundError:
                     return []
@@ -606,41 +611,41 @@ def retry_snapshot_today(now=None):
     now = now or datetime.datetime.now()
     states = {}
     for row in _read_round_csv_rows():
-            network = row.get("red")
-            state = row.get("estado")
-            if (row.get("fecha") != now.date().isoformat()
+        network = row.get("red")
+        state = row.get("estado")
+        if (row.get("fecha") != now.date().isoformat()
                     or network not in WEB + API + PHONE + ("tiktok_bulk",)
                     or state not in ("ok", "parcial", "ocupada", "saltada", "error")):
                 continue
-            try:
+        try:
                 clock = datetime.time.fromisoformat(row["fin"])
                 when = now.replace(hour=clock.hour, minute=clock.minute,
                                    second=clock.second, microsecond=clock.microsecond)
-            except (TypeError, ValueError, KeyError):
+        except (TypeError, ValueError, KeyError):
                 continue
-            # Ignorar registros con horario futuro (reloj reajustado,
-            # registros manipulados o CSV parcialmente escrito).
-            if when > now:
+        # Ignorar registros con horario futuro (reloj reajustado,
+        # registros manipulados o CSV parcialmente escrito).
+        if when > now:
                 continue
-            failures = states.get(network, (0, None))[0]
-            if state in ("ok", "parcial"):
+        failures = states.get(network, (0, None))[0]
+        if state in ("ok", "parcial"):
                 states[network] = (0, None)
                 continue
-            if state == "error":
+        if state == "error":
                 failures += 1
-            if state == "ocupada":
+        if state == "ocupada":
                 delay = 300.0
-            elif state == "saltada":
+        elif state == "saltada":
                 _, breaker_delay, _ = classify_round_state(
                     state, failures,
                     network="tiktok" if network == "tiktok_bulk" else network,
                     now=when)
                 delay = max(12 * 60 * 1.2, breaker_delay)
-            else:
+        else:
                 base = 2 * 60 * 60 if failures >= 6 else (
                     900, 1800, 3600)[min(failures - 1, 2)]
                 delay = base * 1.2
-            states[network] = (failures, when + datetime.timedelta(seconds=delay))
+        states[network] = (failures, when + datetime.timedelta(seconds=delay))
     return states
 
 
@@ -900,9 +905,9 @@ def main(argv=None):
         return launch_independent(argv)
     until = deadline_from(argv[argv.index("--until") + 1] if "--until" in argv else "23:20")
     targets = {n: rounds_target(n) for n in WEB + API + PHONE}
-    done = done_today()
-    print(f"[cola] objetivos {targets}; ya hechas hoy {done}; hasta {until:%H:%M}", flush=True)
     if "--dry" in argv:
+        done = done_today()
+        print(f"[cola] objetivos {targets}; ya hechas hoy {done}; hasta {until:%H:%M}", flush=True)
         return 0
     wanted = set(argv[argv.index("--only") + 1].split(",")) if "--only" in argv else {"web", "api", "tiktok"}
     mine = {chain for chain in sorted(wanted) if take_chain_lock(chain)}
@@ -912,18 +917,23 @@ def main(argv=None):
         print("[cola] no queda ninguna cadena libre: no se lanza otra cola", flush=True)
         return 0
     heartbeat_stop = threading.Event()
-    heartbeat = threading.Thread(target=_heartbeat_owned_locks, args=(tuple(mine), heartbeat_stop), daemon=True)
-    heartbeat.start()
+    heartbeat = None
     try:
+        # Snapshot DESPUÉS de adquirir la propiedad, no antes: un propietario
+        # anterior podría haber confirmado una ronda durante la espera.
+        done = done_today()
+        print(f"[cola] objetivos {targets}; ya hechas hoy {done}; hasta {until:%H:%M}", flush=True)
+        heartbeat = threading.Thread(target=_heartbeat_owned_locks, args=(tuple(mine), heartbeat_stop), daemon=True)
+        heartbeat.start()
         return _run_chains(argv, until, targets, done, only=mine)
     finally:
         heartbeat_stop.set()
-        heartbeat.join(timeout=2)
+        if heartbeat is not None:
+            heartbeat.join(timeout=2)
         released = {chain: release_chain_lock(chain) for chain in mine}
         if control_signal() == "recargar" and all(released.values()):
             # No relanzar hasta confirmar que liberamos todos los locks.
             # Si falla, una nueva cola moriría por la posesión del padre.
-
             print("[cola] recarga pedida: se relanza con el codigo nuevo y sigue donde iba", flush=True)
             relaunch([os.path.join("tools", "round_queue.py")] + argv, f"cola_rondas_{next(iter(mine))}.log" if len(mine) == 1 else "cola_rondas_recarga.log")
         elif control_signal() == "recargar":
