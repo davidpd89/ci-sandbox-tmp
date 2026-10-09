@@ -26,7 +26,7 @@ class FacebookPaginationError(RuntimeError):
     """Lectura incompleta: no convertirla en sugerencias de respuesta."""
 
 
-def _paged_rows(token, path, *, max_pages=10, **params):
+def _paged_rows(token, path, *, max_pages=10, budget=None, **params):
     """Recorre cursores Graph sin seguir URLs `paging.next` con tokens incluidos.
 
     Un error o paginacion incompleta aborta la lectura completa; no se devuelven
@@ -36,6 +36,10 @@ def _paged_rows(token, path, *, max_pages=10, **params):
         raise ValueError("max_pages debe ser positivo")
     seen, after = set(), None
     for _ in range(max_pages):
+        if budget is not None:
+            if budget[0] <= 0:
+                raise FacebookPaginationError("limite global de lecturas Graph agotado")
+            budget[0] -= 1
         query = dict(params)
         if after is not None:
             query["after"] = after
@@ -67,10 +71,11 @@ def comments_pending(token, page_id, posts_limit=10):
     if not isinstance(posts, dict) or "error" in posts or not isinstance(posts.get("data"), list):
         raise FacebookPaginationError("Graph devolvio posts invalidos")
     pending, seen_ids = [], set()
+    budget = [99]  # una lectura de posts + hasta 99 lecturas de comentarios/respuestas
     for post in posts["data"]:
         for comment in _paged_rows(token, f"{post['id']}/comments",
                                    fields="id,message,from,created_time,comment_count",
-                                   filter="toplevel", limit=50):
+                                   filter="toplevel", limit=50, budget=budget):
             cid = comment.get("id")
             author = comment.get("from") or {}
             if not cid or cid in seen_ids or not isinstance(author, dict):
@@ -81,7 +86,7 @@ def comments_pending(token, page_id, posts_limit=10):
             # Si Graph omite comment_count, tampoco se asume que no hay respuestas.
             if comment.get("comment_count") != 0:
                 if any((reply.get("from") or {}).get("id") == page_id
-                       for reply in _paged_rows(token, f"{cid}/comments", fields="id,from", limit=50)):
+                       for reply in _paged_rows(token, f"{cid}/comments", fields="id,from", limit=50, budget=budget)):
                     continue
             pending.append({"id": cid, "text": comment.get("message", ""),
                             "username": author.get("name", ""),
