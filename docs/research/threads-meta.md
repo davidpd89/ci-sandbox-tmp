@@ -250,8 +250,8 @@ quedan en su propia PR para revision independiente, nunca merge automatico.
   `action_ledger` comun y `WriteOutcomeUnknown` en ejecutores.
   `#26` debe confirmar semantica transversal sin duplicar ese contrato.
 - La CI de contrato de campaña fallo en ambos SO para el HEAD anterior:
-  parent con 76 hijas frente a 46 esperadas y un indice atrasado. El test
-  offline RRSS del mismo SHA paso en Ubuntu y Windows. Estos estados
+  parent con 76 hijas frente a 46 esperadas y un indice atrasado; el padre
+  se actualizo despues. El test offline RRSS del mismo SHA paso en Ubuntu y Windows. Estos estados
   anteriores no se trasladan como afirmaciones sobre futuros HEAD.
 - Prueba adicional **pendiente** para Claude: caso con reply anidada,
   contraste `/{id}/replies` frente a `/{id}/conversation`, y
@@ -260,3 +260,51 @@ quedan en su propia PR para revision independiente, nunca merge automatico.
 - Retirada: revertir los cambios de paginacion y casos nuevos;
   `auto_publish_text=false` es exclusivamente defensa en el mirror.
   No ejecutar rollback sobre el codigo privado protegido.
+
+## Alternativas
+
+Se compararon tres bibliotecas MIT en Python (PyThreads, Inoue AI Threads
+SDK y MetaThreads), ademas de la muestra oficial de Meta. La ruta elegida es
+mantener `meta_common` y adaptar el contrato paginado sin dependencias.
+Ningun SDK sustituye el ledger y los certificados propios de la rama
+operativa. Windows/Python 3.11: la muestra Meta requiere Node; MetaThreads
+requiere Python 3.12 o superior; las otras dos requieren convertir a async.
+
+## Licencias y procedencia
+
+Fuente primaria: https://www.postman.com/meta/threads/documentation/dht3nzz/threads-api
+Fecha de consulta: 2026-10-09
+Licencia SPDX: NOASSERTION
+Referencia inmutable: N/A (sin codigo incorporado)
+
+El metadato `NOASSERTION` indica que esta PR no incorpora codigo de
+terceros; **no** se atribuye esa licencia a la documentacion de Meta.
+Las tres bibliotecas evaluadas declaran MIT (commits y restricciones de
+version detallados abajo). Tambien se inspecciono la muestra oficial
+https://github.com/fbsamples/threads_api/tree/854fc140a37e20f6a7086cf3ee0065f99d41f646 :
+su `package.json` declara ISC, pero el archivo `LICENSE` tiene texto
+especifico de Meta. Es una aplicacion Node/Express de demostracion,
+con dependencias ajenas al runtime Python 3.11 y sin tests funcionales
+(`npm test` es placeholder). No se ha copiado codigo de esta muestra.
+
+## Decisión
+
+Mantener cliente HTTP existente. Reutilizar el formato oficial de cursores,
+continuar en paginas llenas que solo traen `paging.cursors.after`, y validar
+la separacion entre creacion de contenedor y publicacion. Portar solo este
+contrato al cliente privado vigente, preservando `reply_provenance` y
+`action_ledger`, sin nueva capa comun prematura.
+
+## Pruebas
+
+`python -m pytest tests/test_threads_api_contract_2026.py
+tests/test_threads_api.py tests/test_threads_execute_api.py -q` (offline);
+suite completa por Actions Ubuntu/Windows. Los resultados corresponden a
+cada HEAD, no a la existencia de un workflow. El gate de campaña comprueba
+tambien entregables con origen SPDX y privacidad.
+
+## Retirada
+
+Revertir commits específicos de la PR en el mirror; para produccion,
+retirar unicamente la rutina de paginacion portada si falla el canario
+GET supervisado. Nunca revertir certificados ni ledger privados.
