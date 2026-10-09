@@ -106,6 +106,7 @@ class CrossNetworkTests(unittest.TestCase):
         base = {"capability": "verified", "permission": "verified",
                 "implemented": False, "checked_on": "2026-10-08"}
         for payload in (base, {**base, "queue": "DESKTOP"},
+                        {**base, "queue": []}, {**base, "queue": {}},
                         {**base, "implemented": True},
                         {"permission": "denied"}):
             with self.subTest(payload=payload):
