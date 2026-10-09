@@ -123,7 +123,9 @@ def _preflight_plan(plan):
         # Misma accion sobre el mismo objetivo dos veces en un plan (follow repetido al mismo
         # handle, like/reply repetido sobre el mismo fragmento): bloquea el lote entero antes de
         # escribir, como ya hacen X, Bluesky y Mastodon (revision de ChatGPT, 03/10).
-        duplicate_key = (kind, item["handle"].casefold(), (item.get("text_fragment") or "").casefold())
+        # Different API reply targets can legitimately share an excerpt.
+        target_key = (item.get("reply_to_id") if kind == "reply" else None) or item.get("text_fragment") or ""
+        duplicate_key = (kind, item["handle"].casefold(), target_key.casefold())
         if duplicate_key in seen_actions:
             raise ValueError(f"elemento {index}: accion duplicada ({kind} sobre @{item['handle']})")
         seen_actions.add(duplicate_key)

@@ -248,11 +248,22 @@ def followups(token, my_username, limit_posts=25):
             rid = str(reply["id"])
             if rid != root_id:
                 nodes[rid] = reply
-        owned = {root_id} | own_ids | {
+        visible_owned_replies = {
             str(reply["id"]) for reply in conversation
-            if reply.get("is_reply_owned_by_me") is True
-            or str(reply.get("username") or "").casefold().lstrip("@") == mine
+            if str(reply["id"]) != root_id and (
+                reply.get("is_reply_owned_by_me") is True
+                or str(reply.get("username") or "").casefold().lstrip("@") == mine
+            )
         }
+        # An own reply may be visible in /conversation before /me/replies:
+        # either source can prove that its immediate parent was answered.
+        for reply in conversation:
+            if str(reply["id"]) in visible_owned_replies:
+                parent_id = _reply_parent_id(reply)
+                if parent_id is None:
+                    raise RuntimeError("Threads: respuesta propia en conversacion sin replied_to")
+                answered.add(parent_id)
+        owned = {root_id} | own_ids | visible_owned_replies
         for reply in unanswered(conversation, my_username, answered):
             rid = str(reply["id"])
             if (rid == root_id or rid in seen or rid in own_ids

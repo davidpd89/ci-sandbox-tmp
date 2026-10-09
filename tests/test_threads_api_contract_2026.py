@@ -147,6 +147,27 @@ class ThreadsPaginationContract(unittest.TestCase):
         self.assertEqual(plan[0]["thread_turns"], pending[0]["thread_turns"])
         self.assertIn("root/conversation", calls)
 
+    def test_own_reply_visible_only_in_conversation_blocks_duplicate(self):
+        def getter(path, token, **params):
+            if path == "me/threads":
+                return page([{"id": "root", "text": "Inicio", "has_replies": True}])
+            if path == "me/replies":
+                return page([])
+            if path == "root/conversation":
+                return page([
+                    {"id": "question", "username": "ana", "text": "¿Cuál eliges?",
+                     "replied_to": {"id": "root"}, "timestamp": "2026-10-08T10:00:00Z"},
+                    {"id": "our-answer", "username": "autorademodiaz",
+                     "is_reply_owned_by_me": True, "text": "El segundo.",
+                     "replied_to": {"id": "question"}, "timestamp": "2026-10-08T11:00:00Z"},
+                    {"id": "new-question", "username": "ana", "text": "¿Y el tercero?",
+                     "replied_to": {"id": "our-answer"}, "timestamp": "2026-10-08T12:00:00Z"},
+                ])
+            raise AssertionError(path)
+        with patch.object(api, "api_get", side_effect=getter):
+            pending = api.followups("tok", "autorademodiaz")
+        self.assertEqual([r["id"] for r in pending], ["new-question"])
+
     def test_unverifiable_nested_parent_is_not_treated_as_available(self):
         def getter(path, token, **params):
             if path == "me/threads":
@@ -305,6 +326,21 @@ class ThreadsTransportTests(unittest.TestCase):
             self.assertEqual(plan[0]["target_created_at"], "2026-10-08T12:00:00Z")
             self.assertEqual(plan[0]["authored"], "manual")
 
+
+    def test_api_preflight_deduplicates_by_target_id_not_excerpt(self):
+        questions = [
+            {"handle": "ana", "kind": "reply", "reply_to_id": "post-1",
+             "post_text": "¿Qué libro?", "text": "El primero."},
+            {"handle": "ana", "kind": "reply", "reply_to_id": "post-2",
+             "post_text": "¿Qué libro?", "text": "El segundo."},
+        ]
+        with patch.object(executor.sc, "guard_plan_item"), \
+             patch.object(executor.dup, "check", return_value=[]), \
+             patch.object(executor.t, "_check_spanish_orthography"):
+            distinct = executor._preflight_plan(questions)
+            self.assertEqual([x["reply_to_id"] for x in distinct], ["post-1", "post-2"])
+            with self.assertRaisesRegex(ValueError, "accion duplicada"):
+                executor._preflight_plan([questions[0], {**questions[1], "reply_to_id": "post-1"}])
 
     def test_pool_uncertain_result_is_persistently_non_retriable(self):
         import sqlite3
