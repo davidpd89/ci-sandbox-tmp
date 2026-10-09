@@ -9,14 +9,6 @@ on:
       - 'tools/validate_open_source_campaign.py'
       - 'tests/test_open_source_campaign.py'
       - '.github/workflows/validate-public-reuse.yml'
-  push:
-    branches: [research/public-reuse-parent]
-    paths:
-      - 'docs/open-source-scouting/**'
-      - 'docs/research/**'
-      - 'tools/validate_open_source_campaign.py'
-      - 'tests/test_open_source_campaign.py'
-      - '.github/workflows/validate-public-reuse.yml'
   workflow_dispatch:
 
 permissions:
