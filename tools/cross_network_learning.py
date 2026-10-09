@@ -2,6 +2,7 @@
 
 Los agregados legacy de #49 son cobertura parcial, NO ensayos con control.
 Ningún campo de un JSON de entrada acredita permisos reales por sí solo.
+Cada permiso/capacidad de destino queda además ligado a UNA cola concreta.
 """
 from __future__ import annotations
 
@@ -21,11 +22,14 @@ NETWORKS = frozenset((
     "bluesky", "mastodon", "x", "threads", "facebook",
     "pinterest", "reddit", "tiktok",
 )) & OBSERVABLE_NETWORKS
+QUEUES = frozenset(("WEB", "API", "MOBILE"))
 
 FEATURES = frozenset(("hashtag_search", "account_search", "community_hubs",
                       "reply_questions", "micro_replies"))
 METRIC = "new_follower_day14"
-MIN_N = 40  # criterio provisional; revisar con evidencia de potencia estadística
+# Suelo de política, no cálculo de potencia. La separación Wilson al 95 % y la
+# revisión humana siguen siendo requisitos adicionales; ver informe de PR #3.
+MIN_N = 40
 FRESH_DAYS = 30
 TARGET_TTL_DAYS = 30
 MAX_INPUT_BYTES = 256_000
@@ -45,6 +49,13 @@ def _valid_arm(arm):
     return (isinstance(arm, dict) and set(arm) == {"n", "successes"}
             and type(arm["n"]) is int and MIN_N <= arm["n"] <= 1_000_000
             and type(arm["successes"]) is int and 0 <= arm["successes"] <= arm["n"])
+
+
+def _queue(entry):
+    if not isinstance(entry, dict):
+        return None
+    value = entry.get("queue")
+    return value if value in QUEUES else None
 
 
 def _positive(row, today):
@@ -87,6 +98,7 @@ def _evidence_digest(row, target):
 
     Sirve únicamente para vincular una revisión independiente al agregado
     EXACTO; no prueba por sí mismo que los resultados sean auténticos.
+    La cola forma parte del digest: una revisión API no acredita WEB/MOBILE.
     """
     entry = row["targets"][target]
     fields = {key: row.get(key) for key in (
@@ -95,6 +107,7 @@ def _evidence_digest(row, target):
         "baseline_nonfollowers_verified", "assignment_units_unique",
         "day14_snapshot_complete", "treatment", "control")}
     fields["target"] = target
+    fields["queue"] = entry.get("queue")
     fields["capability"] = entry.get("capability")
     fields["permission"] = entry.get("permission")
     fields["implemented"] = entry.get("implemented")
@@ -187,8 +200,11 @@ def review(data, *, today=None, trusted_verifications=None):
                 continue
             seen.add(key)
             entry = targets[target]
+            queue = _queue(entry)
             state = "investigar_equivalencia"
-            if isinstance(entry, dict):
+            # Capacidad, permiso e implementación solo tienen significado
+            # operativo si vienen acotados a una de las tres colas reales.
+            if isinstance(entry, dict) and queue is not None:
                 capability = entry.get("capability")
                 permission = entry.get("permission")
                 date = _date(entry.get("checked_on"))
@@ -199,12 +215,13 @@ def review(data, *, today=None, trusted_verifications=None):
                     state = "ya_implementado"
                 elif (fresh and capability == "verified" and permission == "verified"
                       and entry.get("implemented") is False):
-                    # Una aprobación previa de OTRO agregado no vale.
+                    # Una aprobación previa de OTRO agregado o COLA no vale.
                     state = ("proponer_ensayo_manual"
                              if (_evidence_digest(row, target) in trusted_verifications)
                              else "verificacion_externa_pendiente")
             externally_verified = state == "proponer_ensayo_manual"
             report["proposals"].append({"origin": origin, "target": target,
+                                         "queue": queue,
                                          "feature": feature, "state": state,
                                          **effect, "metric": METRIC,
                                          "evidence_is_self_reported": True,
