@@ -2,7 +2,7 @@
 
 **Consultado:** 2026-10-09. **Decisión:** C — adaptar el patrón de cursor de Graph API con stdlib, sin añadir dependencia y sin copiar código ajeno. **Alcance:** únicamente lectura de comentarios de publicaciones de una Página autorizada; no cambia la escritura de posts, likes, DMs ni el navegador.
 
-## Hallazgo reproducible y ruta real
+## Problema y reproducción
 
 En el mirror, `tools/facebook_api.py::comments_pending` leía solo los primeros 50 comentarios de cada post reciente y solo la primera página de respuestas a cada comentario. Una respuesta de la Página en una página posterior ocasionaba un **falso positivo** de «pendiente»; una pregunta en una segunda página de comentarios ocasionaba un **falso negativo**. El filtro antiguo tampoco excluía el comentario propio de nivel superior por ID de la Página.
 
@@ -18,13 +18,13 @@ Rutas distintas que no deben confundirse:
 
 El repositorio oficial privado `davidpd89/rrss-davidporto-CODE`, `main` consultado el 09-10-2026, contiene `tools/facebook_scan.py`, `tools/facebook_execute.py`, `tools/facebook_interact.py` y `SISTEMA_DIARIO_FACEBOOK/PROCESO.md`; el mirror incorpora además `facebook_api.py`, `meta_*.py`, sus tests y controles posteriores. No se ha copiado ningún dato de cuentas ni ficheros privados al mirror.
 
-## Contrato implementado
+## Decisión e implementación
 
 `_paged_rows` sigue exclusivamente el cursor `paging.cursors.after` cuando hay `paging.next`; **nunca abre la URL `paging.next`**, que puede contener un `access_token` u otros parámetros sensibles. Hace nuevas peticiones por `meta_common.graph_get` al mismo endpoint declarado. Si faltan `data`, `after` o su tipo válido, hay error Graph incrustado, cursor repetido, exceso de 10 páginas por arista o más de 100 lecturas Graph totales por exploración (1 de posts + 99), se aborta con excepción; nunca se entregan sugerencias parciales. Los elementos se deduplican por ID, los comentarios propios se excluyen por ID y solo las preguntas candidatas fuerzan la lectura de respuestas.
 
 `posts_limit=10` conserva por diseño el alcance de los diez posts más recientes **de la primera página**; esta PR no promete analizar todo el historial. La lectura de likes con `comments_to_like` continúa limitada a su primera página; ampliarla requeriría control de idempotencia de las acciones y decisión separada. Las respuestas con envío ambiguo tampoco se reintentan automáticamente.
 
-## Comparativa y procedencia
+## Alternativas
 
 | Baseline | Candidato 1 | Candidato 2 | Elección | Justificación y riesgo |
 | --- | --- | --- | --- | --- |
@@ -36,6 +36,10 @@ El repositorio oficial privado `davidpd89/rrss-davidporto-CODE`, `main` consulta
 - Alternativa: [mobolic/facebook-sdk](https://github.com/mobolic/facebook-sdk), [código de cliente](https://github.com/mobolic/facebook-sdk/blob/master/facebook/__init__.py), [LICENSE Apache-2.0](https://github.com/mobolic/facebook-sdk/blob/master/LICENSE). La actividad y compatibilidad con Graph v26 para este flujo no quedaron verificadas con un tag moderno; no se introduce.
 - Especificación primaria oficial: [Graph API](https://developers.facebook.com/docs/graph-api/), [paginación](https://developers.facebook.com/docs/graph-api/results/), [Pages API](https://developers.facebook.com/docs/pages-api/), [permisos](https://developers.facebook.com/docs/permissions/), [Webhooks](https://developers.facebook.com/docs/graph-api/webhooks/). El portal de Meta devolvió 429/bloqueo de acceso automático al consultarlo; NO se certifican las autorizaciones efectivas de la app ni se inventan cuotas. El SDK oficial y fixtures de la respuesta Graph sí se pudieron contrastar.
 - [OWASP: Software Supply Chain Security](https://cheatsheetseries.owasp.org/cheatsheets/Software_Supply_Chain_Security_Cheat_Sheet.html); [GitHub: protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches).
+
+## Licencias y procedencia
+
+Se utiliza exclusivamente el código existente del proyecto y un patrón conocido de Graph API, sin copiar implementaciones de SDK ni incorporar componentes externos. Los SDK y sus licencias están identificados en la sección de alternativas.
 
 ## Permisos, privacidad, operaciones y deuda
 
@@ -56,7 +60,7 @@ La API puede devolver error 190 por token inválido/caducado, error 200 por perm
 3. Token caducado/permisos denegados o timeout: error propagado a bandeja; el POST incierto se representa como timeout y se verifica que no se reintenta.
 4. Revisión transversal: `meta_common`, Instagram/Threads, insight, publicación, browser, ledger y cola no se han editado; colisiones futuras se gestionan con PR #14, #16, #22 y #41.
 
-## Coordinación e integración
+## Retirada y coordinación de integración
 
 - Mirror [#14](https://github.com/davidpd89/ci-sandbox-tmp/pull/14) Threads y [#16](https://github.com/davidpd89/ci-sandbox-tmp/pull/16) Instagram pueden tocar `meta_common`, `meta_inbox`, `meta_publish`: esta PR NO cambia esos ficheros.
 - [#22](https://github.com/davidpd89/ci-sandbox-tmp/pull/22) respuestas/memoria puede consumir `pending`; el contrato sigue siendo lista completa o error, nunca respuestas automatizadas.
