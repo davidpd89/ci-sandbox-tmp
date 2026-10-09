@@ -12,10 +12,10 @@ v = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(v)
 
 
-def fixtures():
+def fixtures(last=56):
     children = []
     lines = ['| PR | Encargo |', '| --- | --- |']
-    for n in range(11, 57):
+    for n in range(11, last + 1):
         title = f'Tarea {n}'
         lines.append(f'| [#{n}](https://github.com/davidpd89/ci-sandbox-tmp/pull/{n}) | {title} |')
         children.append({'number': n, 'title': title, 'objective': title, 'state': 'open',
@@ -33,6 +33,20 @@ class CampaignMetadataTests(unittest.TestCase):
 
     def test_valid_snapshot(self):
         self.assertEqual(v.check_metadata(self.doc, self.protocol), [])
+
+    def test_contiguous_extension_preserves_initial_wave(self):
+        doc, protocol = fixtures(last=86)
+        self.assertEqual(v.check_metadata(doc, protocol), [])
+
+    def test_extension_gap_fails(self):
+        doc, protocol = fixtures(last=86)
+        doc['children'] = [p for p in doc['children'] if p['number'] != 57]
+        self.assertTrue(v.check_metadata(doc, protocol))
+
+    def test_extension_duplicate_fails(self):
+        doc, protocol = fixtures(last=86)
+        doc['children'][-1]['number'] = 85
+        self.assertTrue(v.check_metadata(doc, protocol))
 
     def test_missing_child(self):
         self.doc['children'].pop()
@@ -104,6 +118,18 @@ class CampaignPrivacyTests(unittest.TestCase):
 
     def test_sensitive_path_rejected_even_without_file(self):
         self.assertTrue(any('forbidden' in e for e in v.check_privacy(['profiles/real.sqlite'], Path('/tmp'))))
+
+    def test_scope_brief_is_not_an_implementation(self):
+        self.assertTrue(v.check_child_deliverables(['docs/open-source-scouting/tasks/01-x.md']))
+
+    def test_child_needs_evidence_and_test(self):
+        with tempfile.TemporaryDirectory() as d:
+            doc = Path(d, 'docs/research/work.md')
+            doc.parent.mkdir(parents=True)
+            doc.write_text('\n'.join(('## Problema', '## Alternativas', '## Licencias y procedencia',
+                                        '## Decisión', '## Pruebas', '## Retirada')), encoding='utf-8')
+            paths = ['docs/research/work.md', 'tests/test_work.py']
+            self.assertEqual(v.check_child_deliverables(paths, Path(d)), [])
 
     def test_deleted_path_does_not_disclose_content(self):
         with tempfile.TemporaryDirectory() as d:
