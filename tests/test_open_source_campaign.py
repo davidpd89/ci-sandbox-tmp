@@ -112,6 +112,24 @@ class CampaignMetadataTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             v.changed_paths('b' * 40, 'untrusted-ref')
 
+    def test_child_live_does_not_fail_on_sister_drift(self):
+        live = {10: {'base': {'ref': 'main'}, 'head': {'ref': v.PARENT}, 'state': 'open'}}
+        for p in self.doc['children']:
+            live[p['number']] = {'html_url': p['url'], 'base': {'ref': p['base']},
+                                 'head': {'ref': p['head'], 'sha': p['head_sha']},
+                                 'state': p['state'], 'title': p['title']}
+        live[12]['title'] = 'title changed by another daughter'
+        live[87] = {'base': {'ref': v.PARENT}, 'state': 'open'}
+        errors, warnings = v.check_live(self.doc, live, child_number=11)
+        self.assertEqual(errors, [])
+        self.assertEqual(warnings, [])
+        self.assertTrue(v.check_live(self.doc, live)[0])
+
+    def test_child_live_must_be_manifested(self):
+        live = {10: {'base': {'ref': 'main'}, 'head': {'ref': v.PARENT}, 'state': 'open'}}
+        errors, _ = v.check_live(self.doc, live, child_number=87)
+        self.assertTrue(any('absent from parent manifest' in e for e in errors))
+
     def test_live_unindexed_extra_pr_fails(self):
         live = {10: {'base': {'ref': 'main'}, 'head': {'ref': v.PARENT}, 'state': 'open'},
                 87: {'base': {'ref': v.PARENT}, 'head': {'ref': 'research/77-new'}, 'state': 'open'}}
