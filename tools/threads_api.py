@@ -250,7 +250,8 @@ def followups(token, my_username, limit_posts=25):
         }
         for reply in unanswered(conversation, my_username, answered):
             rid = str(reply["id"])
-            if rid == root_id or rid in seen:
+            if (rid == root_id or rid in seen or rid in own_ids
+                    or reply.get("is_reply_owned_by_me") is True):
                 continue
             # Conversations include user-to-user debates: only reply when
             # the immediate recipient is one of our own posts or replies.
