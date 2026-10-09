@@ -601,7 +601,7 @@ async def collect(
                         except (ValueError, TypeError, KeyError) as exc:
                             raise StreamProtocolError(
                                 "Frame Jetstream malformado; cursor conservado"
-                            ) from exc
+                            ) from None
                         unrecovered_stream_error = False
                         if replayed:
                             continue
@@ -652,7 +652,12 @@ async def collect(
                         stream_identity=stream_identity if stream_confirmed else None,
                     )
                     last_commit = time.monotonic()
-                if isinstance(exc, (StreamProtocolError, sqlite3.Error)):
+                if isinstance(exc, sqlite3.Error):
+                    # No confirmar una transacción que acaba de fallar; el
+                    # siguiente proceso repetirá desde el cursor confirmado.
+                    db.rollback()
+                    raise
+                if isinstance(exc, StreamProtocolError):
                     raise
                 connection_errors += 1
                 # Evitar incluir URLs, cabeceras o contenido recibido en logs.
@@ -663,7 +668,7 @@ async def collect(
                     raise RuntimeError(
                         f"Jetstream v2 rechazó conexión HTTP {fatal_status}; "
                         "revisar endpoint y cursor persistido antes de reanudar"
-                    ) from exc
+                    ) from None
                 if time.monotonic() < deadline:
                     reconnects += 1
                     if connected_at is not None and time.monotonic() - connected_at >= 60:
