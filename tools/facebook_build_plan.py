@@ -68,7 +68,8 @@ def build_from_pool(db, n, exclude_handles=frozenset(), mark_planned=True, max_c
         text = f"{row['handle']} {row['text']}"
         if row["niche"] < POOL_MIN_NICHE or OFF_TOPIC.search(text) or INSTITUTIONAL.search(text) or SPAM.search(text) or sc.is_political(text):
             continue
-        item = {"kind": "like_external", "permalink": row["permalink"], "autor": row["handle"], "post_text": (row.get("text") or "")[:500], "motivo": f"reserva:{row['source']}:score={row['score']}"}
+        item = {"kind": "like_external", "permalink": row["permalink"], "autor": row["handle"],
+                "post_created_at": row.get("created_at") or "", "post_text": (row.get("text") or "")[:500], "motivo": f"reserva:{row['source']}:score={row['score']}"}
         intent = x_replies.classify(row["text"]) if comments < max_comments and (allow is None or allow(row["handle"])) else None
         phrase = x_replies.choose_phrase(intent, used, rng) if intent else None
         if phrase:
@@ -96,6 +97,7 @@ def build(candidates, max_likes=12):
             continue
         seen.add(autor.casefold())
         plan.append({"kind": "like_external", "permalink": item["permalink"], "autor": autor,
+                     "post_created_at": item.get("created_at") or item.get("created_time") or "",
                      "post_text": text[:500], "motivo": f"hashtag {item.get('tag', '')}"})
         if len(plan) >= max_likes:
             break
