@@ -34,7 +34,7 @@ Procedencia y referencias permanentes:
 
 Ejemplo de ejecución offline (tras escribir los tres archivos JSON propios, sin tokens):
 ```sh
-python -m unittest tests.test_reddit_snapshot_preflight -v
+python -m pytest tests/test_reddit_snapshot_preflight.py -q
 python tools/reddit_snapshot_preflight.py --plan plan.json --snapshot reddit_listing.json --review revision.json
 ```
 El primer comando tiene el mismo criterio que pytest, pero `python -m pytest tests/test_reddit_snapshot_preflight.py -q` es el comando de CI. CLI devuelve 0 para *apto para revisión*, 2 si bloquea. **Nunca autoriza por sí sola publicar**; el snapshot debe adquirirse de modo autorizado y revalidarse bajo el candado de escritura.
@@ -67,3 +67,45 @@ Orden recomendado: integrar primero el estado real/continuidad de la rama oficia
 El baseline oficial **no se ejecutó en este mirror**: faltan sus módulos. Por inspección de `_preflight_plan` no existe entrada para `Listing` ni HTTP 429; por tanto no puede compararse rendimiento antes/después con idéntico fixture. La nueva prueba reproduce el contrato offline con casos negativos y verifica que el CLI devuelve 2; resultados de ejecución de CI deben asociarse al SHA final de la rama. No contabilizar como pruebas de producción ni como resultado de una consulta a Reddit.
 
 **Estado: BLOQUEADA para producción** hasta llevar una comprobación equivalente al repo privado, auditar permisos API, consumir un snapshot real autorizado (o señales DOM verificadas), enlazarla a `comment()` bajo lock y guardar intentos ambiguos. La PR de investigación puede revisarse como pieza auxiliar independiente, pero no debe llamarse protección instalada en la cuenta real.
+
+## Segunda revisión y medición (CI real, 09-10-2026)
+
+**Revisión 1 — corrección/seguridad:** se reabrió el diff completo: solo cinco archivos (encargo, módulo independiente, test, fixture y este informe); no hay credenciales, cookies, perfiles, identificadores humanos ni llamadas de red. Se corrigió una expresión regular para detectar citas Markdown, y se endurecieron `num_comments` y avisos de AutoModerator. El programa nunca hace escrituras remotas. Su salida 0 significa *apto para revisión*, no autorización de ejecución.
+
+**Revisión 2 — arquitectura/otras PR:** no se modifica `tools/reddit_interact.py`, que también cambia la PR #44 del repo **oficial**. No hay migraciones, bloqueos multiproceso ni cambios de historial/ledger: el módulo es puro salvo lectura de tres archivos JSON por CLI. La concurrencia de dos lectores sobre fixtures inmutables no introduce escrituras, pero no demuestra idempotencia del ejecutor real. La rama padre ha evolucionado y se ha detectado divergencia respecto a la hija; resolver integración corresponde a revisión expresa.
+
+**Medición reproducible:** usando la misma matriz sintética, el control nuevo rechaza **15/15 variantes peligrosas** y admite **2/2 escenarios autorizados para revisión** (baseline + cita válida). No se presenta como comparación cuantitativa contra producción: `reddit_execute.py` oficial no está disponible en mirror y su baseline no se ejecutó con esta matriz. El control previo no evaluaba snapshots estructurados por inspección de fuente; la medición comparada sobre el ejecutor privado está **pendiente**.
+
+| Workflow sobre SHA `6f6a6d5` | Resultado real |
+| --- | --- |
+| `Validar herramientas RRSS sin acceso a cuentas`, Ubuntu | **SUCCESS**: 1695 passed, 8 skipped, 8 deselected, 2 warnings, 686 subtests passed; [run 37978740553](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37978740553) |
+| Mismo workflow, Windows | **SUCCESS**: 1698 passed, 5 skipped, 8 deselected, 2 warnings, 686 subtests passed; mismo run |
+| `Validar protocolo de campaña pública`, Ubuntu/Windows | **FAILURE**: índice/protocolo espera 46 PR hijas y el gate encuentra 76; [run 37978747389](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37978747389). Preexistente; no se corrige desde Reddit. |
+| Tests de producción privados / OAuth / DOM / conexión CDP | **NO EJECUTADOS**: no hay fixtures privados ni autorización API en este mirror. |
+
+### Cobertura de criterios de esta PR
+
+| Criterio | Evidencia | Estado |
+| --- | --- | --- |
+| Rama/base, SHA, mirror y repo oficial | `get_pr_info`, árbol `main` oficial `db0edb9`, PROTOCOL | PASA (lectura); mergeability **pendiente** |
+| OAuth, PRAW, Async PRAW, Devvit, términos, licencia | Comparativa y URLs primarias anteriores | PASA (investigación); acceso autorizado **pendiente** |
+| Contexto, edad, cerrado, reglas, subreddit restringido | `evaluate`; fixtures `stale_thread`, `closed_thread`, `rules_undocumented`, `restricted_subreddit` | PASA offline |
+| AutoMod y respuesta retirada | Fixtures `automod_removed`, `automod_notice`, `own_reply_removed` | PASA offline; detección universal **no garantizada** |
+| 429, eliminación, árbol incompleto | Fixtures `http_429`, `partial_tree_count`, `unexpanded_children` | PASA offline |
+| Citas, duplicados, idempotencia | `quoted_message_valid`, `quoted_message_missing`, `cited_deleted`, `uncertain_history`; CLI bloquea 429 | PASA offline; persistencia tras envío **pendiente** |
+| Bloqueo de escritura real | No hay enlace al ejecutor privado | PENDIENTE |
+| CI global Ubuntu/Windows | Run 37978740553 | PASA para herramientas (con skips) |
+| Campaña padre, reviews, conflictos | Run 37978747389 y divergencia parent | FALLA (fuera de alcance) |
+| Privacidad y no interacción real | Diff revisado, fixtures sintéticos | PASA por inspección |
+
+### BLOQUEOS_PARA_CLAUDE — pasos exactos
+
+1. En la máquina autorizada del repositorio privado, comprobar `git status`, SHA y rama propia. **No** fusionar de oficio este mirror público sobre `main`, ni copiar historiales o sesiones. Revisar primero cambios de PR oficial #44 (`tools/reddit_comments.py`, `tools/reddit_interact.py`) y su aprobación humana.
+2. Inspeccionar con cuidado `tools/reddit_execute.py::_preflight_plan`, `run_plan`, `_append_registro`, `tools/reddit_interact.py::comment`, `_comment_history_state` y tests de regresión Reddit. Adaptar la comprobación antes del envío **dentro del lock de navegador**, sin importar código privado al mirror. En el contrato oficial no se admite reintento tras 429/timeout/confirmación ambigua.
+3. Resolver preservación de intentos ambiguos en ledger antes de habilitar escrituras; cotejar con el cambio de #44. No tratar un fallo como si nada hubiese sucedido.
+4. Solo si existen permisos OAuth reales y revisión de términos, conectar lectura de `/comments/<id>.json`, reglas y estado de usuario; de otro modo utilizar señales DOM comprobables sin ampliar acciones automatizadas. Nunca consumir la fixture como dato real.
+5. Ejecutar en el mirror: `python -m compileall -q tools tests` y `python -m pytest tests/test_reddit_snapshot_preflight.py -q -p no:cacheprovider`; luego su workflow global. Ejecutar en el privado **los comandos de tests existentes según sus archivos**, incluyendo `tests/test_reddit_thread_url.py` y `tests/test_r7_reddit_revalidate_under_browser_lock.py` en la rama que realmente los tenga. Probar fallos posteriores al clic, reinicios y dos ejecutores bajo lock. Registrar SHAs y resultados, no inventarlos.
+6. Para el gate de campaña, informar a la PR **padre #10** del drift entre 46/76 y actualizar su índice desde allí. La PR hija tiene base textual correcta, pero su ancestro `4da0584` está anticuado respecto a parent: revisar rebase/merge **solo tras coordinación**, no forzar push.
+7. Bloqueos técnicos vigentes: faltan credenciales/permisos Reddit para confirmar API real; mirror carece del ejecutor/CDP/ledger de producción; checks de campaña fallidos por índice y branch diverged; revisiones y autorización de merge pendientes. No hubo comando de escritura a Reddit ni prueba real de OAuth.
+
+**Veredicto de integración real: BLOQUEADA.** El verificador independiente y sus regresiones sí están listos para revisión de código, pero no debe describirse como protección ya operativa en la cuenta.
