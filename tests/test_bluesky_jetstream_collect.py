@@ -498,5 +498,141 @@ class JetstreamCollectorTests(unittest.TestCase):
             self.assertIsNone(js.get_state(db, "last_seq"))
             db.close()
 
+
+    def test_stream_identity_is_canonical_and_contains_no_credentials(self):
+        base = js.DEFAULT_ENDPOINT
+        self.assertEqual(
+            js._stream_identity(base),
+            js._stream_identity(base.replace("jetstream.us-east", "JETSTREAM.US-EAST") + "?cursor=1"),
+        )
+        with self.assertRaises(ValueError):
+            js._stream_identity("wss://name:pass@jetstream.us-east.bsky.network/xrpc/network.bsky.jetstream.subscribeEvents")
+
+    def test_v2_refuses_foreign_seq_without_pruning_existing_posts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = str(pathlib.Path(tmp) / "cache.sqlite3")
+            config_path = pathlib.Path(tmp) / "config.json"
+            config = self.config()
+            config["jetstream"] = {"retention_hours": 1}
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            db = js.init_db(cache)
+            old = self.event()
+            old["time_us"] = 1_000_000
+            self.assertTrue(js.store_event(db, old, ["lectura"]))
+            js._checkpoint(
+                db, last_seq=123, last_time_us=1_000_000,
+                stream_identity=js._stream_identity(js.DEFAULT_ENDPOINT),
+            )
+            db.close()
+            other = js.DEFAULT_ENDPOINT.replace("us-east", "us-west")
+            class NoSocket:
+                def connect(self, *_a, **_kw):
+                    raise AssertionError("No debe abrir un websocket para un seq ajeno")
+            with patch.dict(sys.modules, {"websockets": NoSocket()}):
+                with self.assertRaisesRegex(RuntimeError, "otro endpoint"):
+                    asyncio.run(js.collect(
+                        db_path=cache, config_path=str(config_path),
+                        endpoint=other, minutes=0.001,
+                        resume_overlap_seconds=5,
+                    ))
+            db = js.init_db(cache)
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM posts").fetchone()[0], 1)
+            self.assertEqual(js.get_state(db, "last_seq"), "123")
+            db.close()
+
+    def test_v2_checkpoint_rollback_never_advances_state_alone(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = str(pathlib.Path(tmp) / "cache.sqlite3")
+            db = js.init_db(cache)
+            stored, seq, replayed = js._apply_frame(
+                db, self.event(), 20, "v2", ["lectura"], None
+            )
+            self.assertEqual((stored, seq, replayed), (True, 20, False))
+            # Caída sintética antes del commit: la transacción revierte ambas escrituras.
+            js.set_state(db, "last_seq", seq)
+            db.rollback()
+            db.close()
+            restored = js.init_db(cache)
+            self.assertIsNone(js.get_state(restored, "last_seq"))
+            self.assertEqual(restored.execute("SELECT COUNT(*) FROM posts").fetchone()[0], 0)
+            restored.close()
+
+    def test_v2_idle_checkpoint_visible_to_second_reader_without_reconnect(self):
+        def frame():
+            return {
+                "$type": "message", "cursor": 99,
+                "payload": {
+                    "$type": "network.bsky.jetstream.subscribeEvents#commit",
+                    "seq": 99, "did": "did:plc:synthetic",
+                    "time": "2026-10-09T09:00:00Z", "operation": "create",
+                    "collection": "app.bsky.feed.post", "rkey": "idle",
+                    "record": {"text": "Mi lectura de fantasía", "langs": ["es"]},
+                },
+            }
+
+        class Socket:
+            def __init__(self, path):
+                self.path = path
+                self.recvs = 0
+                self.checkpoint_observed = None
+
+            async def recv(self):
+                self.recvs += 1
+                if self.recvs == 1:
+                    return json.dumps(frame())
+                if self.recvs == 3:
+                    probe = js.init_db(self.path)
+                    try:
+                        self.checkpoint_observed = (
+                            js.get_state(probe, "last_seq"),
+                            probe.execute("SELECT COUNT(*) FROM posts").fetchone()[0],
+                        )
+                    finally:
+                        probe.close()
+                await asyncio.sleep(20)
+
+        class Connection:
+            def __init__(self, socket):
+                self.socket = socket
+
+            async def __aenter__(self):
+                return self.socket
+
+            async def __aexit__(self, *_args):
+                return False
+
+        class Websockets:
+            def __init__(self, socket):
+                self.socket = socket
+                self.calls = 0
+
+            def connect(self, *_args, **_kwargs):
+                self.calls += 1
+                return Connection(self.socket)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = pathlib.Path(tmp) / "cache.sqlite3"
+            config_path = pathlib.Path(tmp) / "config.json"
+            config_path.write_text(json.dumps(self.config()), encoding="utf-8")
+            socket = Socket(str(db_path))
+            transport = Websockets(socket)
+            with patch.dict(sys.modules, {"websockets": transport}), patch.object(
+                js, "IDLE_CHECKPOINT_SECONDS", 0.1
+            ):
+                result = asyncio.run(js.collect(
+                    db_path=str(db_path), config_path=str(config_path),
+                    endpoint=js.DEFAULT_ENDPOINT, minutes=0.001,
+                    resume_overlap_seconds=5,
+                ))
+            self.assertEqual(transport.calls, 1)
+            self.assertEqual(socket.checkpoint_observed, ("99", 1))
+            self.assertEqual(result["stored"], 1)
+            db = js.init_db(str(db_path))
+            self.assertEqual(
+                js.get_state(db, "last_seq_stream"), js._stream_identity(js.DEFAULT_ENDPOINT)
+            )
+            db.close()
+
+
 if __name__ == "__main__":
     unittest.main()
