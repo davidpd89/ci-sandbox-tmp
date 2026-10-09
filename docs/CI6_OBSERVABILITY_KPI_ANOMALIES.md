@@ -97,6 +97,86 @@ separadas de estos tests. El repositorio oficial también contiene una evolució
 reciente del registro central de códigos de alerta; Claude debe reconciliarla al
 trasladar estos cambios, sin importar refactors ajenos a esta PR.
 
+## Auditoría adicional independiente — 09-10-2026
+
+Se repitió la revisión sin dar por suficientes los checks verdes anteriores, y se
+contrastaron los lectores con los productores de `tools/round_queue.py` y
+`tools/relationship_policy.py` del repositorio oficial. El productor de rondas
+persiste `fecha,red,inicio,fin,minutos,estado,confirmadas,saltadas,fallos,codigo`.
+La columna `confirmadas` es un *desglose* textual; no se debe usar el código de
+salida como prueba de éxito. La cosecha entrante solo está instrumentada para
+Bluesky/Mastodon en este contrato.
+
+### Fallos adicionales encontrados y corregidos
+
+1. **Informe incompleto presentado como cifra cierta.** En filas salientes
+   malformadas, los recuentos positivos observados se conservan solo como cota
+   inferior y un cero no verificable se transforma en `null`.
+   `outbound_coverage=registro_parcial_filas_invalidas` explicita el problema.
+2. **Cosecha parcial o no atribuible.** Las entradas corruptas no se ignoran para
+   fabricar cero comentarios. Ahora hay cobertura por red: un fallo atribuible
+   a Bluesky no borra los datos correctos de Mastodon. Las entradas sin red
+   identificable dejan ambas como parciales; las de redes no cosechadas no
+   contaminan las dos fuentes instrumentadas.
+3. **CSV vacío, cabecera sola o sin eventos de hoy.** La mera existencia física
+   del fichero no prueba que hoy se haya cosechado o registrado nada:
+   `sin_observaciones_del_dia` devuelve KPI desconocido. Un evento de
+   verificación pendiente hoy sí puede demostrar cero confirmaciones anotadas;
+   un like entrante hoy permite observar cero comentarios *registrados*, sin
+   afirmar que no hubo comentarios en la plataforma.
+4. **Defectos históricos.** Si la fecha válida de la fila está fuera del día
+   consultado, no degrada la cobertura actual aunque sobren o falten columnas.
+   Una fecha ilegible sigue siendo incertidumbre real.
+5. **`fin` inválido.** El detector ya no admite una hora imposible como evidencia
+   positiva de una ronda. El defecto invalida solo la red afectada.
+6. **Zona horaria del detector.** El reloj por defecto usa explícitamente
+   `Europe/Madrid`, con independencia de que el runner o servidor esté en UTC.
+   Si falta tzdata no deduce arbitrariamente otro día.
+7. **Contadores corruptos y fechas programáticas.** Un `metricas.csv` con miles
+   de dígitos ya no provoca la excepción de `int` de Python 3.11 ni inutiliza
+   el informe de otras redes. `build_report()` acepta correctamente un
+   `datetime` con zona y lo proyecta al día de Madrid.
+
+Las pruebas añadidas usan exclusivamente archivos temporales sintéticos; la
+lectura continúa sin red, sin publicación y sin escrituras sobre estados reales.
+
+### Nueva exploración de reutilización pública
+
+Repositorios y versiones consultados el 09-10-2026:
+
+| Componente candidato | Licencia y actividad comprobadas | Python 3.11 / Windows / dependencias | Decisión aplicada |
+| --- | --- | --- | --- |
+| [Frictionless](https://github.com/frictionlessdata/frictionless-py) | MIT; commit del 08-10-2026; activo | Declara Python 3.11 y plataforma independiente; incluye petl, attrs, marko, Jinja2 y más | No incorporar framework completo para validar tres campos CSV; útil como referencia para la PR #46 |
+| [ruptures](https://github.com/deepcharles/ruptures) | BSD-2-Clause; actividad en mayo de 2026 | Compilación Cython, NumPy y SciPy; dependencia mayor que el detector | No sustituir la mediana robusta de 9 días por detección general de rupturas |
+| [anomalyzer](https://github.com/PredictabilityAtScale/anomaly-detection) | MIT; commit del 01-10-2026; versión 0.1.0 alfa | Python >=3.11; Pydantic 2 y tzdata en Windows | Alternativa emergente para series largas; no resuelve la calidad de los CSV ni justifica integración ahora |
+
+**Conclusión técnica de reutilización:** se conserva la implementación con
+biblioteca estándar y los tests del proyecto. No se ha copiado ni adaptado código
+de terceros. Las opciones evaluadas tienen licencia compatible, pero el coste
+en dependencias, madurez o complejidad supera el beneficio para este contrato
+pequeño y auditable.
+
+### Límites para la integración de Claude
+
+- Los CSV legacy no tienen IDs de evento ni snapshot de completitud. Los KPI
+  registrados no equivalen a ACK remoto ni miden conversión causal.
+- El sistema oficial, ya con cambios posteriores, debe reconciliar
+  `alert_codes.py` y `round_canaries.py` al portar el diff. No copiar
+  ciegamente todo el archivo del espejo sobre la rama oficial.
+- El KPI de seguidores es la variación desde la observación previa disponible
+  (hasta siete días); no debe presentarse como crecimiento estrictamente diario.
+- La cobertura se limita a las ocho redes del contrato original de la PR #6.
+  Instagram y fuentes futuras necesitan instrumentación/contrato propios; no
+  añadir ceros ficticios por esta ausencia.
+- Los ocho tests previamente excluidos por el workflow de la rama padre siguen
+  fuera de esta validación; ninguna cifra de CI implica garantía absoluta.
+- Quedan pendientes las pruebas supervisadas de Windows operativo y los
+  consumidores reales (panel, Edge, móvil). Aquí solo se ha verificado CI
+  hermética en Windows/Ubuntu y Python 3.11.
+
+Las investigaciones adyacentes ya existen como PR abiertas: #24, #46 y #47,
+verificadas nuevamente. No procede abrir una PR duplicada.
+
 ## Trabajo adicional
 
 No se abrieron PR nuevas: los huecos adyacentes ya están cubiertos por PR abiertas,
