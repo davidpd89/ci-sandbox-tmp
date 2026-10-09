@@ -13,6 +13,7 @@ import pathlib
 import types
 import unittest
 from unittest import mock
+from PIL import Image
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools"))
 import pinterest_daily_pins as pins
@@ -401,11 +402,21 @@ class PinterestDurabilityTests(unittest.TestCase):
         self.assertIsInstance(pins.failed_cooldowns(path=self.log), dict)
 
 
+def _synthetic_pin_image(case):
+    """Fixture real para el contrato de subida: no simular solo os.path.exists."""
+    temp = tempfile.TemporaryDirectory()
+    case.addCleanup(temp.cleanup)
+    filename = os.path.join(temp.name, "pin.png")
+    Image.new("RGB", (100, 150)).save(filename, format="PNG")
+    return filename
+
+
 class PinterestActionabilityTests(unittest.TestCase):
     """Un botón no accionable no debe bloquear la URL por falso envío."""
 
     def test_click_trial_rejects_before_durable_intent(self):
         import pinterest_publish as publisher
+        image = _synthetic_pin_image(self)
         page = mock.MagicMock()
         button = page.get_by_role.return_value.first
         button.click.side_effect = RuntimeError("botón deshabilitado")
@@ -417,7 +428,6 @@ class PinterestActionabilityTests(unittest.TestCase):
         client.start.return_value = session
         before = mock.Mock()
         with mock.patch.object(publisher, "sync_playwright", return_value=client), \
-             mock.patch.object(publisher.os.path, "exists", return_value=True), \
              mock.patch.object(publisher, "_check"), \
              mock.patch.object(publisher, "_assert_account"), \
              mock.patch.object(publisher, "_fill"), \
@@ -425,7 +435,7 @@ class PinterestActionabilityTests(unittest.TestCase):
              mock.patch.object(publisher, "delete_drafts"):
             with self.assertRaisesRegex(RuntimeError, "deshabilitado"):
                 publisher.publish_pin(
-                    "ficticia.png", "Título", "Descripción", A, "Alt",
+                    image, "Título", "Descripción", A, "Alt",
                     "Recursos para escritores", apply=True,
                     before_submit=before)
         before.assert_not_called()
@@ -501,6 +511,7 @@ class PinterestNoDestructiveDraftTests(unittest.TestCase):
 
     def _call(self, *, apply, click_error=False):
         import pinterest_publish as publisher
+        image = _synthetic_pin_image(self)
         pg = mock.MagicMock()
         button = pg.get_by_role.return_value.first
         if click_error:
@@ -524,12 +535,12 @@ class PinterestNoDestructiveDraftTests(unittest.TestCase):
              mock.patch.object(publisher, "delete_drafts") as cleanup:
             if click_error:
                 with self.assertRaisesRegex(TimeoutError, "navigation after click failed"):
-                    publisher.publish_pin("pin.png", "Título", "Descripción", A, "ALT",
+                    publisher.publish_pin(image, "Título", "Descripción", A, "ALT",
                                           "Recursos para escritores", apply=apply,
                                           before_submit=before)
             else:
                 self.assertEqual(publisher.publish_pin(
-                    "pin.png", "Título", "Descripción", A, "ALT",
+                    image, "Título", "Descripción", A, "ALT",
                     "Recursos para escritores", apply=apply,
                     before_submit=before), "ensayo")
         return pg, cleanup, client, before
@@ -550,6 +561,7 @@ class PinterestNoDestructiveDraftTests(unittest.TestCase):
 
     def test_never_cleans_old_drafts_before_upload(self):
         import pinterest_publish as publisher
+        image = _synthetic_pin_image(self)
         pg = mock.MagicMock()
         button = pg.get_by_role.return_value.first
         button.click.side_effect = lambda *a, **kw: (
@@ -567,7 +579,7 @@ class PinterestNoDestructiveDraftTests(unittest.TestCase):
              mock.patch.object(publisher, "_verify", return_value=[]), \
              mock.patch.object(publisher, "delete_drafts") as cleanup:
             with self.assertRaises(TimeoutError):
-                publisher.publish_pin("pin.png", "Título", "Descripción", A, "Alt",
+                publisher.publish_pin(image, "Título", "Descripción", A, "Alt",
                                       "Recursos para escritores", apply=True)
         cleanup.assert_not_called()
 
@@ -624,6 +636,7 @@ class PinterestDescriptionPreflightTests(unittest.TestCase):
 
     def test_changed_form_after_trial_never_marks_remote_intent(self):
         import pinterest_publish as publisher
+        image = _synthetic_pin_image(self)
         pg = mock.MagicMock()
         button = pg.get_by_role.return_value.first
         before = mock.Mock()
@@ -642,7 +655,7 @@ class PinterestDescriptionPreflightTests(unittest.TestCase):
              mock.patch.object(publisher, "delete_drafts") as cleanup:
             with self.assertRaisesRegex(publisher.PinterestPublishError,
                                         "cambió durante el preflight"):
-                publisher.publish_pin("pin.png", "Título", "Descripción", A,
+                publisher.publish_pin(image, "Título", "Descripción", A,
                                       "ALT", "Recursos para escritores",
                                       apply=True, before_submit=before)
         before.assert_not_called()
