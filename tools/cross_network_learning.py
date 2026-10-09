@@ -209,16 +209,17 @@ def review(data, *, today=None, trusted_verifications=None):
                 permission = entry.get("permission")
                 date = _date(entry.get("checked_on"))
                 fresh = date is not None and 0 <= (today - date).days <= TARGET_TTL_DAYS
-                if capability == "unsupported" or permission == "denied":
-                    state = "no_transferible"
-                elif entry.get("implemented") is True:
-                    state = "ya_implementado"
-                elif (fresh and capability == "verified" and permission == "verified"
-                      and entry.get("implemented") is False):
-                    # Una aprobación previa de OTRO agregado o COLA no vale.
-                    state = ("proponer_ensayo_manual"
-                             if (_evidence_digest(row, target) in trusted_verifications)
-                             else "verificacion_externa_pendiente")
+                if fresh:
+                    if capability == "unsupported" or permission == "denied":
+                        state = "no_transferible"
+                    elif entry.get("implemented") is True:
+                        state = "ya_implementado"
+                    elif (capability == "verified" and permission == "verified"
+                          and entry.get("implemented") is False):
+                        # Una aprobación previa de OTRO agregado o COLA no vale.
+                        state = ("proponer_ensayo_manual"
+                                 if (_evidence_digest(row, target) in trusted_verifications)
+                                 else "verificacion_externa_pendiente")
             externally_verified = state == "proponer_ensayo_manual"
             report["proposals"].append({"origin": origin, "target": target,
                                          "queue": queue,
