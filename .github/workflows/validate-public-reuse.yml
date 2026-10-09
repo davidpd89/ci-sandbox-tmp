@@ -1,0 +1,61 @@
+name: Validar protocolo de campaña pública
+
+on:
+  pull_request:
+    branches: [main, research/public-reuse-parent]
+    paths:
+      - 'docs/open-source-scouting/**'
+      - 'docs/research/**'
+      - 'tools/validate_open_source_campaign.py'
+      - 'tests/test_open_source_campaign.py'
+      - '.github/workflows/validate-public-reuse.yml'
+  push:
+    branches: [research/public-reuse-parent]
+    paths:
+      - 'docs/open-source-scouting/**'
+      - 'docs/research/**'
+      - 'tools/validate_open_source_campaign.py'
+      - 'tests/test_open_source_campaign.py'
+      - '.github/workflows/validate-public-reuse.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  metadata:
+    name: campaign gate (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Unit tests without network
+        run: python -m unittest discover -s tests -p test_open_source_campaign.py -v
+      - name: Offline index and privacy gate
+        run: python tools/validate_open_source_campaign.py
+      - name: Diff privacy gate
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python tools/validate_open_source_campaign.py --changed-base "$BASE_SHA"
+        shell: bash
+      - name: Live PR links and branch refs (read-only)
+        if: matrix.os == 'ubuntu-latest'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python tools/validate_open_source_campaign.py --live
