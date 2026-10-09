@@ -29,6 +29,16 @@ FIXTURES = json.loads(
 
 
 class MastodonAccountSearchContractTests(unittest.TestCase):
+    def setUp(self):
+        # Defensa activa: cualquier escape al mock de /search falla en seco.
+        # Los parches de cada caso sobre _get_v2 siguen siendo independientes.
+        for name in ("_get_response", "_post", "_delete"):
+            guard = patch.object(
+                m, name, side_effect=AssertionError("HTTP/escritura real prohibida en test")
+            )
+            guard.start()
+            self.addCleanup(guard.stop)
+
     def test_two_instances_keep_exact_offsets_and_never_duplicate_local_accounts(self):
         for instance in FIXTURES["instances"]:
             with self.subTest(instance=instance["name"]):
