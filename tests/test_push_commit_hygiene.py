@@ -265,6 +265,31 @@ class PushCommitTests(unittest.TestCase):
         self.commit("sensitive uppercase")
         self.assertEqual(self.scan(), [(self.head(), 1)])
 
+    def test_replace_ref_cannot_override_history_truth(self):
+        self.write("secrets/replaced.json")
+        self.commit("unsafe unreachable commit")
+        replacement = self.head()
+        self.git("reset", "--hard", self.base)
+        self.write("docs/safe.md")
+        self.commit("safe commit")
+        safe = self.head()
+        self.git("replace", safe, replacement)
+        self.assertEqual(self.scan(), [])
+
+    def test_git_history_scanner_disables_lazy_fetch(self):
+        original = subprocess.run
+        observed = []
+
+        def watch(*args, **kwargs):
+            observed.append(kwargs.get("env"))
+            return original(*args, **kwargs)
+
+        with patch.object(gh.subprocess, "run", side_effect=watch):
+            gh.git(self.repo, "rev-parse", "HEAD")
+        self.assertEqual(len(observed), 1)
+        for key in ("GIT_NO_LAZY_FETCH", "GIT_TERMINAL_PROMPT", "GIT_NO_REPLACE_OBJECTS"):
+            self.assertEqual(observed[0].get(key), "1" if key != "GIT_TERMINAL_PROMPT" else "0")
+
     def test_cli_does_not_leak_path_contents(self):
         self.write("secrets/synthetic-name.json")
         self.commit("bad")
