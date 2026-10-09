@@ -836,5 +836,139 @@ class JetstreamCollectorTests(unittest.TestCase):
             db.close()
 
 
+    def test_v2_cursor_notices_and_errors_fail_loud_without_mutation(self):
+        """Avisos de recorte y error terminal no equivalen a ingestión íntegra."""
+        prefix = "network.bsky.jetstream.subscribeEvents#"
+        examples = (
+            ("OutdatedCursor", {
+                "$type": "message", "payload": {
+                    "$type": prefix + "info", "name": "OutdatedCursor",
+                    "message": "private-synthetic-detail",
+                },
+            }),
+            ("FutureCursor", {
+                "$type": "message", "payload": {
+                    "$type": prefix + "info", "name": "FutureCursor",
+                    "message": "private-synthetic-detail",
+                },
+            }),
+            ("error terminal", {
+                "$type": "error", "error": "ConsumerTooSlow",
+                "message": "private-synthetic-detail",
+            }),
+            ("envoltura inesperada", {
+                "kind": "commit", "did": "did:plc:synthetic",
+                "time_us": 2_000_000_000_000_000,
+                "commit": {
+                    "operation": "create", "collection": "app.bsky.feed.post",
+                    "rkey": "should-not-save",
+                    "record": {"text": "Lectura de fantasía", "langs": ["es"]},
+                },
+            }),
+        )
+
+        class Socket:
+            def __init__(self, frame):
+                self.frame = frame
+
+            async def recv(self):
+                return json.dumps(self.frame)
+
+        class Connection:
+            def __init__(self, frame):
+                self.frame = frame
+
+            async def __aenter__(self):
+                return Socket(self.frame)
+
+            async def __aexit__(self, *_):
+                return False
+
+        class Websockets:
+            def __init__(self, frame):
+                self.frame = frame
+                self.calls = 0
+
+            def connect(self, *_args, **_kwargs):
+                self.calls += 1
+                return Connection(self.frame)
+
+        for expected, frame in examples:
+            with self.subTest(expected=expected), tempfile.TemporaryDirectory() as tmp:
+                cache = pathlib.Path(tmp) / "cache.sqlite3"
+                config = pathlib.Path(tmp) / "config.json"
+                config.write_text(json.dumps(self.config()), encoding="utf-8")
+                transport = Websockets(frame)
+                with patch.dict(sys.modules, {"websockets": transport}):
+                    with self.assertRaisesRegex(js.StreamProtocolError, expected) as error:
+                        asyncio.run(js.collect(
+                            db_path=str(cache), config_path=str(config),
+                            endpoint=js.DEFAULT_ENDPOINT, minutes=0.001,
+                            resume_overlap_seconds=5,
+                        ))
+                self.assertEqual(transport.calls, 1)
+                self.assertNotIn("private-synthetic-detail", str(error.exception))
+                db = js.init_db(str(cache))
+                try:
+                    self.assertIsNone(js.get_state(db, "last_seq"))
+                    self.assertEqual(db.execute("SELECT COUNT(*) FROM posts").fetchone()[0], 0)
+                finally:
+                    db.close()
+
+    def test_v2_valid_commit_before_terminal_error_is_checkpointed(self):
+        """Un error posterior no descarta una inserción ya aplicada."""
+        frame = {
+            "$type": "message",
+            "payload": {
+                "$type": "network.bsky.jetstream.subscribeEvents#commit",
+                "seq": 150, "did": "did:plc:synthetic",
+                "time": "2026-10-09T09:00:00Z",
+                "operation": "create", "collection": "app.bsky.feed.post",
+                "rkey": "stored-before-error",
+                "record": {"text": "Lectura de fantasía", "langs": ["es"]},
+            },
+        }
+
+        class Socket:
+            def __init__(self):
+                self.frames = [
+                    json.dumps(frame),
+                    json.dumps({"$type": "error", "error": "ConsumerTooSlow"}),
+                ]
+
+            async def recv(self):
+                return self.frames.pop(0)
+
+        class Connection:
+            async def __aenter__(self):
+                return Socket()
+
+            async def __aexit__(self, *_):
+                return False
+
+        class Websockets:
+            def connect(self, *_args, **_kwargs):
+                return Connection()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = pathlib.Path(tmp) / "cache.sqlite3"
+            config = pathlib.Path(tmp) / "config.json"
+            config.write_text(json.dumps(self.config()), encoding="utf-8")
+            with patch.dict(sys.modules, {"websockets": Websockets()}):
+                with self.assertRaisesRegex(js.StreamProtocolError, "error terminal"):
+                    asyncio.run(js.collect(
+                        db_path=str(cache), config_path=str(config),
+                        endpoint=js.DEFAULT_ENDPOINT, minutes=0.001,
+                        resume_overlap_seconds=5,
+                    ))
+            db = js.init_db(str(cache))
+            try:
+                self.assertEqual(js.get_state(db, "last_seq"), "150")
+                self.assertEqual(db.execute("SELECT COUNT(*) FROM posts").fetchone()[0], 1)
+            finally:
+                db.close()
+
+
+
 if __name__ == "__main__":
     unittest.main()
