@@ -88,6 +88,35 @@ Orden sugerido: #11 primero para fijar el contrato v2, luego #41 si toca parser 
 
 **Pasos mínimos para Claude/revisor:** (1) consultar HEAD/diff de la PR #11 y `docs/research/bluesky-jetstream-cursor.md`; (2) validar Ubuntu y Windows en el último SHA; (3) ejecutar `python -m pytest tests/test_bluesky_jetstream_collect.py tests/test_bluesky_reply_dedupe.py tests/test_bluesky_write_confirmations.py -q -p no:cacheprovider` sobre checkout aislado (sin credenciales); (4) revisar comportamiento ante `CursorTooOld`, endpoint switch y reinicio forzado; (5) comprobar contra HEAD privado oficial y su suite equivalente antes de cualquier port; (6) confirmar reviews, branch protection y checks; nunca merge automático.
 
+## Matriz de aceptación verificable
+
+| Criterio PR #11 | Prueba, fuente o inspección | Estado a 09-10-2026 |
+| --- | --- | --- |
+| Ingesta v2 offline y reconexión | `test_v2_stream_reconnect_skip_inclusive_duplicate_and_apply_delete` | PASA en CI Ubuntu; verificar último Windows |
+| Checkpoints, reinicio, replay y delete | `test_v2_replay_does_not_resurrect_deleted_post`, `test_v2_restart_uses_persisted_high_water_and_skips_inclusive_replay` | PASA en CI Ubuntu |
+| Time_us v1 frente a seq v2 | `test_v1_still_accepts_timestamp_based_replays`, `test_saved_seq_beats_lookback_on_v2` | PASA en CI Ubuntu |
+| Errores, 400 fatal y 429 no fatal | `test_v2_invalid_seq_does_not_mutate_cache_or_checkpoint`, `test_v2_rejects_http_400_without_retry_or_cursor_reset` | PASA en CI Ubuntu; falta simulación Retry-After largo |
+| DID / handle | `_post_uri` usa DID; `_consume_jetstream_cache` hidrata DID por getProfiles | INSPECCIÓN; falta test de cambio de handle sobre la misma DID |
+| No duplicar follows / respuestas | `tests/test_bluesky_reply_dedupe.py`, `test_bluesky_write_confirmations.py` + `action_ledger.py` (sin cambios) | Regresión global Ubuntu, no prueba de ejecución real |
+| Compatibilidad Windows/Linux | `validate-social-tools.yml`: Python 3.11 + pytest en ambos | Ubuntu PASA; Windows en comprobación |
+| Dos procesos, fallos de disco, caída forzada y brecha >36h | No hay simulación multiproceso o backfill en esta PR | PENDIENTE; bloqueo explícito |
+| Redes hermanas / contratos compartidos | Diff limitado a collector, tests, ficha y estudio | PASA por inspección del diff; CI global independiente |
+| Revisión de reglas TOS, privacidad, licencias | AT Protocol, repositorios con commit fijado, datos sintéticos | PASA documental; sin credenciales ni interacciones |
+| Aptitud de merge real | Checks completos, reviews y validación del padre | BLOQUEADA por gate de campaña (ver debajo) |
+
+### Incidencia de CI ajena al frente #11
+
+La ejecución de [campaign gate (PR #11)](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37978606460) falló en Ubuntu/Windows aunque sus **15 pruebas internas de metadatos y privacidad pasaron**. El comando `python tools/validate_open_source_campaign.py` devuelve (traza del job):
+
+```text
+campaign: 76 children; 3 errors; 0 warnings
+FAIL: expected 46 children, got 76
+FAIL: missing, extra or duplicate PR numbers
+FAIL: protocol index is incomplete or duplicated
+```
+
+Este validador heredado pertenece a la **rama padre**, que avanzó a `8d855560e12a6dd5f4ea76280ba2c3ee574f3cdc` mientras se trabajaba en #11. No corregir el protocolo ni el validador aquí: corresponde a PR #10 actualizar el índice/contrato tras el aumento de hijas y repetir el gate. La rama #11 mantiene `base=research/public-reuse-parent` y no se ha mergeado. `mergeable=true` no implica readiness.
+
 ## Referencias primarias y procedencia
 
 - AT Protocol, [Event Stream](https://atproto.com/specs/event-stream): secuencias monotónicas, cursor tras procesamiento exitoso, errores y HTTP 429 (consultado 09-10-2026).
