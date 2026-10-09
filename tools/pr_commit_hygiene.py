@@ -61,13 +61,15 @@ def scan_pr(base: str, head: str, *, root: pathlib.Path = ROOT) -> list[tuple[st
         paths = set(first_parent_paths)
         for parent in parents[1:]:
             paths.intersection_update(changes(root, parent, commit))
-        if len(parents) > 1:
-            # A merge can resurrect a path from an already-reachable side-branch
-            # ancestor without changing that path relative to the side parent.
-            # Only reintroduced paths absent from the *current base* qualify:
-            # importing an advancement of the base itself must remain allowed.
-            new_vs_base = changes(root, base, commit, statuses="A")
-            paths.update(first_parent_paths & new_vs_base)
+        if len(parents) > 1 and any(
+            git(root, "rev-list", "--missing=error", "--max-count=1", f"{base}..{parent}")
+            for parent in parents[1:]
+        ):
+            # An outside side branch can restore an old A/M/T path from an
+            # ancestor already in the base, so its side-parent diff is empty.
+            # Check first-parent changes against the *current* base. Merges
+            # solely from ancestors of the current base remain exempt.
+            paths.update(first_parent_paths & changes(root, base, commit))
         count = sum(forbidden_path(p) for p in paths)
         if count:
             findings.append((commit, count))
