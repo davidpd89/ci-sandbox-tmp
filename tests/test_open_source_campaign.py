@@ -127,9 +127,28 @@ class CampaignPrivacyTests(unittest.TestCase):
             doc = Path(d, 'docs/research/work.md')
             doc.parent.mkdir(parents=True)
             doc.write_text('\n'.join(('## Problema', '## Alternativas', '## Licencias y procedencia',
-                                        '## Decisión', '## Pruebas', '## Retirada')), encoding='utf-8')
+                                        '## Decisión', '## Pruebas', '## Retirada',
+                                        'Fuente primaria: https://docs.github.com/en/rest/pulls/pulls',
+                                        'Fecha de consulta: 2026-10-09', 'Licencia SPDX: NOASSERTION',
+                                        'Referencia inmutable: N/A (sin codigo incorporado)')), encoding='utf-8')
             paths = ['docs/research/work.md', 'tests/test_work.py']
             self.assertEqual(v.check_child_deliverables(paths, Path(d)), [])
+
+    def test_child_missing_spdx_metadata_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d, 'docs/research/work.md')
+            path.parent.mkdir(parents=True)
+            path.write_text('\n'.join(('## Problema', '## Alternativas', '## Licencias y procedencia',
+                                        '## Decisión', '## Pruebas', '## Retirada')), encoding='utf-8')
+            self.assertTrue(v.check_child_deliverables(['docs/research/work.md', 'tests/test_work.py'], Path(d)))
+
+    def test_symlink_outside_root_blocked(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            link = root / 'docs/research/link.md'
+            link.parent.mkdir(parents=True)
+            link.symlink_to(root.parent / 'not-here', target_is_directory=False)
+            self.assertTrue(v.check_privacy(['docs/research/link.md'], root))
 
     def test_deleted_path_does_not_disclose_content(self):
         with tempfile.TemporaryDirectory() as d:
