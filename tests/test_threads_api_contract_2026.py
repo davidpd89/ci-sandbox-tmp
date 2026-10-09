@@ -32,7 +32,7 @@ class ThreadsPaginationContract(unittest.TestCase):
             calls.append((path, params))
             return page([{"id": "a"}, {"id": "b"}], "CURSOR") if "after" not in params else page([{"id": "b"}, {"id": "c"}])
         with patch.object(api, "api_get", side_effect=getter):
-            items = api.paginated("me/threads", "test-token", fields="id", limit=2)
+            items = api.paginated("me/threads", "test-token", fields="id", limit=3)
         self.assertEqual([i["id"] for i in items], ["a", "b", "c"])
         self.assertEqual([c[1].get("after") for c in calls], [None, "CURSOR"])
         self.assertEqual([c[0] for c in calls], ["me/threads", "me/threads"])
