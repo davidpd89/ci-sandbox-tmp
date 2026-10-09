@@ -48,6 +48,20 @@ class RankingTests(unittest.TestCase):
         self.assertIsNone(r["networks"]["pinterest"]["ranking_slots_available"])
         self.assertNotIn("plan", repr(r))
 
+    def test_cursor_not_required_without_exploration_work(self):
+        cases = [
+            ({"scan_slots": {"bluesky": 0}}, 0, 0),
+            ({"scan_slots": {"bluesky": 5}, "exploration_fraction": 0}, 0, 5),
+            ({"scan_slots": {"bluesky": 5}}, 1, 4),
+        ]
+        for kwargs, reserved, ranking_slots in cases:
+            with self.subTest(kwargs=kwargs):
+                net = ranking([row()], **kwargs)["networks"]["bluesky"]
+                self.assertEqual(net["exploration_slots_reserved"], reserved)
+                self.assertFalse(net["exploration_cursor_required"])
+                self.assertEqual(net["exploration_candidates"], [])
+                self.assertEqual(net["ranking_slots_available"], ranking_slots)
+
     def test_two_networks_never_have_pooled_rates(self):
         r = ranking([row(), row("mastodon", 1, n=50, back=5)])
         self.assertEqual(len(r["networks"]["mastodon"]["ranked"]), 1)
@@ -70,10 +84,15 @@ class RankingTests(unittest.TestCase):
         self.assertEqual(r["unranked"][0]["reason"], "duplicate_source_cohort")
 
     def test_no_raw_sources_and_all_networks_are_present(self):
-        r = ranking([row(source_key="@personal"), row("threads")])
-        self.assertEqual(set(r["networks"]), set(rank.NETWORKS))
+        expected = {"bluesky", "mastodon", "x", "threads", "facebook", "instagram",
+                    "pinterest", "reddit", "tiktok"}
+        r = ranking([row(source_key="@personal"), row("threads"), row("instagram", 2)])
+        self.assertEqual(set(rank.NETWORKS), expected)
+        self.assertEqual(set(r["networks"]), expected)
         self.assertNotIn("@personal", repr(r))
         self.assertEqual(r["networks"]["threads"]["unranked"][0]["reason"],
+                         "snapshot_adapter_unverified")
+        self.assertEqual(r["networks"]["instagram"]["unranked"][0]["reason"],
                          "snapshot_adapter_unverified")
 
     def test_malformed_parameters_rejected(self):
@@ -166,6 +185,7 @@ class RankingTests(unittest.TestCase):
     def test_unsupported_scan_budget_and_malformed_cursor_fail_closed(self):
         for kwargs in (
             {"scan_slots": {"threads": 1}},
+            {"scan_slots": {"instagram": 1}},
             {"scan_slots": {"reddit": 30}},
             {"exploration_cursor": {"bluesky": 0}},
             {"scan_slots": {"bluesky": 5}, "exploration_cursor": {"threads": 0}},
