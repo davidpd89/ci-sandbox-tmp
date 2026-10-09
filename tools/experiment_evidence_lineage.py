@@ -150,6 +150,9 @@ class TrustedRegistry:
         # También evita sustituir el mapa completo tras construirlo.
         raise AttributeError("registro inmutable")
 
+    def __delattr__(self, name):
+        raise AttributeError("registro inmutable")
+
     def approves(self, row, target):
         audit = audit_projection(row, target)
         if audit is None:
