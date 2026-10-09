@@ -159,16 +159,27 @@ def _followers(root, net, day):
         return None, "sin_columna_seguidores"
 
     previous = current = None
+    invalid_today = False
     for row in data_rows:
-        if len(row) <= follower_index:
+        # El fallo de una fila del día no puede ocultarse detrás de otro
+        # snapshot válido: faltaría evidencia para elegir el último valor.
+        stamp = _local_day(row[0]) if row else None
+        if stamp == day and len(row) <= follower_index:
+            invalid_today = True
             continue
-        stamp, value = _local_day(row[0]), _integer(row[follower_index])
-        if stamp is None or value is None:
+        if stamp is None or len(row) <= follower_index:
+            continue
+        value = _integer(row[follower_index])
+        if value is None:
+            if stamp == day:
+                invalid_today = True
             continue
         if stamp < day and (previous is None or stamp >= previous[0]):
             previous = (stamp, value)
         elif stamp == day:
             current = (stamp, value)
+    if invalid_today:
+        return None, "snapshot_del_dia_invalido"
     if current is None:
         return None, "sin_snapshot_del_dia"
     if previous is None:
