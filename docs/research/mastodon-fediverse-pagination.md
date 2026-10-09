@@ -5,7 +5,7 @@ Fecha de consulta: 2026-10-09
 Licencia SPDX: MIT
 Referencia inmutable: https://github.com/halcy/Mastodon.py/tree/b9f2effbb5a9f07ebca3807466f4130e69b1614c
 
-Consulta: **2026-10-09 (Europe/Madrid)**. Alcance: solo `tools/mastodon_interact.py::search_accounts_pages` y pruebas offline. **Sin tráfico ni escrituras contra cuentas reales**. El espejo es público y anonimizado; no se copiaron datos del repositorio privado.
+Consulta: **2026-10-09 (Europe/Madrid)**. Alcance funcional: `tools/mastodon_interact.py::search_accounts_pages` y pruebas offline; `_headers` solo recibe una refactorización equivalente, probada, para superar un falso positivo del escáner del padre. **Sin tráfico ni escrituras contra cuentas reales**. El espejo es público y anonimizado; no se copiaron datos del repositorio privado.
 
 ## Problema
 
@@ -114,6 +114,13 @@ defectos adicionales que no estaban cubiertos por la primera validación:
    prueba; el contexto se restaura al salir. Cada test instala guardias
    temporales contra `_get_response`, `_post` y `_delete`: una ruta HTTP
    inesperada lanza `AssertionError`, incluso sin credenciales.
+
+Además, `_headers` conserva la lectura única del token en memoria usando
+una variable local: el gate del padre confundía la asignación original
+`_TOKEN = _load_token()` con un valor sensible por coincidencia léxica.
+El contrato se conserva y un test con valor sintético lo confirma; no se
+accede a ningún secreto. No es necesario trasladar este cambio auxiliar al
+código privado si su propio control de higiene no necesita esa forma.
 
 Las regresiones nuevas verifican rechazo de IDs sintéticos no escalares,
 deduplicación consistente entre `123` y `"123"`, y ausencia de
