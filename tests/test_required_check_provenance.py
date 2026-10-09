@@ -75,6 +75,14 @@ class InventoryTests(unittest.TestCase):
         with self.assertRaisesRegex(p.AuditError, "colliding"):
             p.audit_workflows(f)
 
+    def test_whitespace_or_case_ambiguous_reserved_names(self):
+        for name in ('" trusted-pr-paths "', '"TRUSTED-PR-PATHS"'):
+            with self.subTest(name=name):
+                workflows = baseline()
+                workflows[C] = TEMPLATE.format(name=name)
+                with self.assertRaises(p.AuditError):
+                    p.audit_workflows(workflows)
+
     def test_forged_status_from_pull_request_target(self):
         f = baseline()
         f[C] = "on: pull_request_target\njobs:\n  forged:\n    name: trusted-check-provenance\n    runs-on: ubuntu-latest\n    steps: []\n"
@@ -182,7 +190,7 @@ class InventoryTests(unittest.TestCase):
             p.check_pr(FakeReader(baseline(), truncate=True), REPO, 96, HEAD, BASE)
 
     def test_validate_before_network(self):
-        for repo, number, head in ((REPO, 0, HEAD), ("evil/path/extra", 96, HEAD),
+        for repo, number, head in ((REPO, 0, HEAD), ("evil/path/extra", 96, HEAD), ("../repo", 96, HEAD),
                                    (REPO, 96, "not-a-sha")):
             reader = FakeReader(baseline())
             with self.subTest(repo=repo, number=number), self.assertRaises(p.AuditError):
