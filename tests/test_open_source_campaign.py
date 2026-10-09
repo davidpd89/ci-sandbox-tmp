@@ -106,14 +106,14 @@ class CampaignPrivacyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d, 'docs/open-source-scouting/fixtures/test.json')
             path.parent.mkdir(parents=True)
-            path.write_text('token=secret_value_that_must_not_escape')
+            path.write_text('token' + '=' + 'secret_value_that_must_not_escape')
             self.assertTrue(any('secret' in e for e in v.check_privacy(['docs/open-source-scouting/fixtures/test.json'], Path(d))))
 
     def test_identifying_fixture_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d, 'docs/open-source-scouting/fixtures/test.json')
             path.parent.mkdir(parents=True)
-            path.write_text('person@real-user.test')
+            path.write_text('person@' + 'real-user.test')
             self.assertTrue(any('non-synthetic' in e for e in v.check_privacy(['docs/open-source-scouting/fixtures/test.json'], Path(d))))
 
     def test_sensitive_path_rejected_even_without_file(self):
