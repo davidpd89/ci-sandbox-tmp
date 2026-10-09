@@ -173,7 +173,7 @@ class CrossNetworkTests(unittest.TestCase):
         invalid_rows = [
             positive(control=None),
             positive(outcome_link="legacy"),
-            positive(targets={**valid["targets"], **{
+            positive(targets={**valid["targets"],
                 "bluesky": {}, "reddit": {}, "x": {}, "facebook": {},
                 "threads": {}, "pinterest": {}, "tiktok": {}, "instagram": {}}),
         ]
