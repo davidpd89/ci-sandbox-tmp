@@ -61,6 +61,13 @@ def _publish_under_lock(db_path, target, submit):
         if not container_id:
             raise ValueError("contenedor sin ID")
         ledger.settle(KIND, target, UNCERTAIN, "container=" + str(container_id)[:80])
+        # ActionLedger.settle actualiza solo si la fila sigue RESERVED.
+        # Puede afectar cero filas sin lanzar excepcion (fila ausente o estado
+        # alterado). En tal caso NUNCA devolver el control al POST externo.
+        if ledger.status(KIND, target) != UNCERTAIN:
+            raise InstagramPublicationHeld(
+                "Instagram: no se pudo confirmar el checkpoint persistente; POST cancelado"
+            )
 
     try:
         result = submit(before_publish)
