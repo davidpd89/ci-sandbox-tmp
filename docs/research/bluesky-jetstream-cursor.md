@@ -37,6 +37,7 @@ Se adaptó conceptualmente el patrón de **high-water monotónico, replay idempo
 
 - `_apply_frame` rechaza secuencia v2 inexistente, no positiva o previamente consumida; solo entonces invoca `store_event`. El valor de retorno distingue `matched`, high-water y `replayed`.
 - Se inicializa `last_seq` con la marca persistida: un replay inclusivo tras reinicio no vuelve a mutar `posts`.
+- Los HTTP 400/401/403/404/410 de handshake v2 se detienen con error explícito, sin resetear un cursor posiblemente obsoleto ni fingir éxito; 429/5xx conservan la recuperación por backoff.
 - La marca de cursor v2 no retrocede después de un frame viejo; si el arranque fue mediante `time_us` legacy, se cambia al primer `seq` válido en lugar de hacer un `max` entre unidades incompatibles.
 - Cada commit periódico, cada 250 eventos **o** pasados cinco segundos de procesamiento, guarda `last_seq` y `last_time_us` en la **misma** transacción que `posts` (incluidos deletes y eventos no coincidentes). `finally` confirma estado al cierre ordinario.
 
@@ -50,6 +51,7 @@ Archivo `tests/test_bluesky_jetstream_collect.py`, casos añadidos:
 - `test_v2_restart_uses_persisted_high_water_and_skips_inclusive_replay`: cierre/apertura reales de SQLite, contenido más nuevo conservado.
 - `test_v2_invalid_seq_does_not_mutate_cache_or_checkpoint`: no avance ante cursor 0, -1 o ausente.
 - `test_v1_still_accepts_timestamp_based_replays`: v1 mantiene su semántica de timestamps.
+- `test_v2_rejects_http_400_without_retry_or_cursor_reset`: handshake HTTP 400 fatal tras un intento, 429 sigue clasificado como recuperable.
 - `test_v2_stream_reconnect_skip_inclusive_duplicate_and_apply_delete`: WebSocket sintético con caídas, reconexión, replay inclusivo, delete y persistencia; cliente y mensajes reproducen el contrato v2 sin contactar con Bluesky.
 
 CI del mirror usa Python 3.11 en Ubuntu y Windows, instala `requirements-ci.txt`, ejecuta `python -m compileall -q tools tests` y `python -m pytest tests -q -p no:cacheprovider` con exclusiones **ya configuradas** en el workflow `.github/workflows/validate-social-tools.yml`. El guard de red `tests/conftest.py` impide tráfico saliente durante pytest. Evidencia de cada ejecución: [Actions de la PR](https://github.com/davidpd89/ci-sandbox-tmp/actions/workflows/validate-social-tools.yml?query=branch%3Aresearch%2F01-bluesky-atproto). **No equiparar el éxito del subconjunto a una prueba end-to-end con autenticación real.**
@@ -77,7 +79,7 @@ Orden sugerido: #11 primero para fijar el contrato v2, luego #41 si toca parser 
 ## Seguridad, permisos, acceso y riesgos residuales / BLOQUEOS PARA CLAUDE
 
 - **No se ha probado tráfico vivo** (expresamente prohibido en este encargo); no se requieren tokens ni app passwords. La escucha de posts públicos requiere minimizar su retención, no subir la SQLite, no incluir capturas ni mensajes identificables en documentación y respetar los límites/condiciones de los hosts.
-- **Cursor v2 obsoleto**: la documentación del servidor señala ventana limitada (36 h por defecto) y `CursorTooOld` en v2. Este parche **no implementa** resync/backfill ni recuperación de brechas; hacer retry infinito es incorrecto, por lo que se debe valorar degradación explícita y aviso antes de producción.
+- **Cursor v2 obsoleto**: la documentación del servidor señala ventana limitada (36 h por defecto) y `CursorTooOld` en v2. Este parche falla explícitamente ante HTTP 400 sin resetear el cursor; **no implementa** resync/backfill ni recuperación de brechas. Antes de producción hay que definir cómo notificar y recuperar un hueco de más de 36 h, sin declarar ingesta completa.
 - **Cambiar de endpoint**: no se añade todavía namespace por host/versión al valor `last_seq`. No reutilizar una SQLite entre servidores con secuencias no comparables sin una estrategia de migración segura.
 - **Dos escritores simultáneos y corrupción de SQLite**: se mantiene la serialización prevista en `bluesky_growth_flow.py` y timeout/WAL. No hay test multiproceso con bloqueo exclusivo del collector; el endurecimiento concurrente pertenece principalmente a #26 y requiere acuerdo para no duplicar.
 - **Windows/Linux**: usar resultados reales del workflow. El acceso privado oficial no implica autorización para publicar su historial en el mirror; no se ha transferido material privado.
