@@ -15,8 +15,7 @@ de ramas; hay que tratar los SHA como volátiles y bloquear revalidaciones
 basadas en commits viejos.
 
 Reproducción sin acciones reales: eliminar la línea #11 del índice, cambiar
-el URL de #12, duplicar #13 en el manifiesto o colocar
-`token=secret_value_that_must_not_escape` en un fixture sintético.
+el URL de #12, duplicar #13 en el manifiesto o colocar un campo de credencial con valor sintético en un fixture de prueba.
 El test offline debe fallar en cada caso. Un enlace sintácticamente válido
 pero con 404 se detecta con `--live` (API real o inyección de respuesta
 sin esa PR), no únicamente con expresiones regulares.
