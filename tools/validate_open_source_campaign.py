@@ -23,7 +23,7 @@ SECRET = re.compile(
     r'(?i:(?:api[_-]?key|access[_-]?token|client[_-]?secret|password|token))[ \t]*[=:][ \t]*[^\s#]{8,})'
 )
 EMAIL = re.compile(r'(?<![\w.+-])[\w.+-]+@([\w.-]+\.[a-zA-Z]{2,})(?![\w.-])')
-BANNED_PATH = re.compile(r'(?i)(?:^|/)(?:\.env(?:\.|$)|\.git/|cache/|profiles?/|screenshots?/|historial(?:es)?/|(?:[^/]+\.(?:sqlite3?|db|pem|p12|key|pyc))$)')
+BANNED_PATH = re.compile(r'(?i)(?:^|/)(?:\.env(?:\.|$)|\.git/|cache/|profiles?/|screenshots?/|historial(?:es)?/|[^/]+\.(?:sqlite3?|db|pem|p12|key|pyc)$)')
 
 
 def check_metadata(doc, protocol):
