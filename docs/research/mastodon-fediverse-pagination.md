@@ -1,5 +1,10 @@
 # Mastodon / Fediverse — búsqueda de cuentas sin saltos (PR #12)
 
+Fuente primaria: https://docs.joinmastodon.org/methods/search/
+Fecha de consulta: 2026-10-09
+Licencia SPDX: MIT
+Referencia inmutable: https://github.com/halcy/Mastodon.py/tree/b9f2effbb5a9f07ebca3807466f4130e69b1614c
+
 Consulta: **2026-10-09 (Europe/Madrid)**. Alcance: solo `tools/mastodon_interact.py::search_accounts_pages` y pruebas offline. **Sin tráfico ni escrituras contra cuentas reales**. El espejo es público y anonimizado; no se copiaron datos del repositorio privado.
 
 ## Problema
