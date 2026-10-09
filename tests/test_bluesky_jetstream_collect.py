@@ -462,5 +462,41 @@ class JetstreamCollectorTests(unittest.TestCase):
         self.assertEqual(result["stored"], 1)
         self.assertGreaterEqual(result["connection_errors"], 1)
 
+    def test_v2_rejects_http_400_without_retry_or_cursor_reset(self):
+        """Un CursorTooOld/400 no se resuelve repitiendo la misma suscripción."""
+        class HandshakeFailure(Exception):
+            def __init__(self):
+                self.response = type("Response", (), {"status_code": 400})()
+                super().__init__("synthetic bad cursor")
+
+        class Websockets:
+            calls = 0
+
+            def connect(self, *_args, **_kwargs):
+                self.calls += 1
+                raise HandshakeFailure()
+
+        self.assertIsNone(js._fatal_stream_status(
+            type("Throttle", (Exception,), {
+                "response": type("Response", (), {"status_code": 429})()
+            })()
+        ))
+        with tempfile.TemporaryDirectory() as tmp:
+            config_path = pathlib.Path(tmp) / "config.json"
+            db_path = pathlib.Path(tmp) / "cache.sqlite3"
+            config_path.write_text(json.dumps(self.config()), encoding="utf-8")
+            sockets = Websockets()
+            with patch.dict(sys.modules, {"websockets": sockets}):
+                with self.assertRaisesRegex(RuntimeError, "HTTP 400"):
+                    asyncio.run(js.collect(
+                        db_path=str(db_path), config_path=str(config_path),
+                        endpoint=js.DEFAULT_ENDPOINT, minutes=0.001,
+                        resume_overlap_seconds=5,
+                    ))
+            self.assertEqual(sockets.calls, 1)
+            db = js.init_db(str(db_path))
+            self.assertIsNone(js.get_state(db, "last_seq"))
+            db.close()
+
 if __name__ == "__main__":
     unittest.main()
