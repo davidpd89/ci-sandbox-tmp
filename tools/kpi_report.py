@@ -8,7 +8,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 import csv
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import json
 from pathlib import Path
 import re
@@ -138,6 +138,24 @@ def _activity(root, net, day):
     return dict(counts), dict(sorted(by_kind.items())), dict(sorted(by_source.items())), error, duplicates, bad
 
 
+def _snapshot_rank(raw_day, row_number):
+    """Ordena por instante real si el CSV aporta hora, no por orden de filas.
+
+    En CSV legacy que solo contienen fecha se conserva el orden de insercion.
+    Una captura fechada con hora tiene precedencia sobre otra sin hora.
+    """
+    text = str(raw_day).strip()
+    if len(text) == 10:
+        return (0, datetime.min.replace(tzinfo=timezone.utc), row_number)
+    try:
+        stamp = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return (0, datetime.min.replace(tzinfo=timezone.utc), row_number)
+    if stamp.tzinfo is None:
+        stamp = stamp.replace(tzinfo=MADRID)
+    return (1, stamp.astimezone(timezone.utc), row_number)
+
+
 def _followers(root, net, day):
     path = root / f"SISTEMA_DIARIO_{net.upper()}" / "metricas.csv"
     rows, error = _rows(path)
@@ -160,7 +178,7 @@ def _followers(root, net, day):
 
     previous = current = None
     invalid_today = False
-    for row in data_rows:
+    for index, row in enumerate(data_rows):
         # El fallo de una fila del día no puede ocultarse detrás de otro
         # snapshot válido: faltaría evidencia para elegir el último valor.
         stamp = _local_day(row[0]) if row else None
@@ -174,10 +192,11 @@ def _followers(root, net, day):
             if stamp == day:
                 invalid_today = True
             continue
-        if stamp < day and (previous is None or stamp >= previous[0]):
-            previous = (stamp, value)
-        elif stamp == day:
-            current = (stamp, value)
+        rank = _snapshot_rank(row[0], index)
+        if stamp < day and (previous is None or (stamp, rank) >= (previous[0], previous[2])):
+            previous = (stamp, value, rank)
+        elif stamp == day and (current is None or rank >= current[2]):
+            current = (stamp, value, rank)
     if invalid_today:
         return None, "snapshot_del_dia_invalido"
     if current is None:
