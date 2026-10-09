@@ -1,0 +1,26 @@
+name: Publication calendar offline
+on:
+  push:
+    branches: [research/10-publication-scheduling]
+  pull_request:
+    branches: [research/public-reuse-parent]
+permissions:
+  contents: read
+jobs:
+  calendar:
+    name: Calendar Python 3.11
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.11'
+      - name: Install timezone database
+        run: python -m pip install "tzdata>=2026.1,<2027"
+      - name: Syntax
+        run: python -m compileall -q tools/publication_calendar.py tests/test_publication_calendar.py
+      - name: Test read-only calendar
+        run: python -m unittest discover -s tests -p test_publication_calendar.py -v
