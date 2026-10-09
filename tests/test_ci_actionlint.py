@@ -82,6 +82,18 @@ class ActionlintInstallerTests(unittest.TestCase):
                 target = lint.install(Path(temp), archive_file=source)
             self.assertEqual(target.read_bytes(), b"synthetic executable")
 
+    def test_workflow_discovery_accepts_yml_and_yaml(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            directory = root / ".github" / "workflows"
+            directory.mkdir(parents=True)
+            self.assertEqual(lint.discover_workflows(root), [])
+            for filename in ("b.yml", "a.yaml", "ignored.txt"):
+                (directory / filename).write_text("name: synthetic\\n", encoding="utf-8")
+            (directory / "nested").mkdir()
+            (directory / "nested" / "nested.yml").write_text("name: synthetic\\n", encoding="utf-8")
+            self.assertEqual([path.name for path in lint.discover_workflows(root)], ["a.yaml", "b.yml"])
+
     def test_no_workflows_is_a_failure(self):
         with self.assertRaises(ValueError):
             lint.run_lint(Path("fake"), [])

@@ -124,15 +124,18 @@ def selftest(binary: Path, directory: Path) -> bool:
     return ok
 
 
+def discover_workflows(root: Path) -> list[Path]:
+    directory = root / ".github" / "workflows"
+    return sorted([*directory.glob("*.yml"), *directory.glob("*.yaml")])
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive", type=Path, help="Use a local release archive; SHA256 is still enforced")
     parser.add_argument("--selftest", action="store_true", help="Also run synthetic valid/invalid YAML cases")
     args = parser.parse_args(argv)
     root = Path(__file__).resolve().parents[1]
-    workflows = sorted((root / ".github" / "workflows").glob("*.yml")) + sorted(
-        (root / ".github" / "workflows").glob("*.yaml")
-    )
+    workflows = discover_workflows(root)
     if not workflows:
         print("No workflows found", file=sys.stderr)
         return 2
