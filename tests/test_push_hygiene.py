@@ -130,6 +130,15 @@ class PushHygieneTests(unittest.TestCase):
         self.commit("rename")
         self.assertEqual(self.offenders(self.event()), ["notes/tokens.json"])
 
+    def test_type_change_to_gitlink_is_inspected(self):
+        # Stage a synthetic gitlink without needing symlinks or submodules.
+        self.write("legacy/answers.json")
+        self.commit("historical regular file")
+        before = self.sha()
+        self.git("update-index", "--add", "--cacheinfo", "160000," + self.first + ",legacy/answers.json")
+        self.git("commit", "-qm", "replace regular file with gitlink")
+        self.assertEqual(self.offenders(self.event(before)), ["legacy/answers.json"])
+
     def test_deleted_forbidden_path_not_part_of_final_tree(self):
         self.write("legacy/pending.json")
         self.commit("old")
