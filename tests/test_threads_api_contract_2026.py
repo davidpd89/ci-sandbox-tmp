@@ -329,15 +329,16 @@ class ThreadsTransportTests(unittest.TestCase):
             db.close()
 
 
-    def test_shared_age_policy_rejects_stale_followup_without_new_rules(self):
-        import post_age_policy as age
-        now = datetime.datetime(2026, 10, 9, 12, tzinfo=datetime.timezone.utc)
-        recent = {"kind": "reply", "reply_to_us": True,
-                  "target_created_at": "2026-10-08T10:00:00Z"}
-        old = {"kind": "reply", "reply_to_us": True,
-               "target_created_at": "2026-09-29T10:00:00Z"}
-        self.assertTrue(age.check("threads", recent, now=now)[0])
-        self.assertFalse(age.check("threads", old, now=now)[0])
+    def test_age_evidence_survives_plan_build_on_private_port_boundary(self):
+        items = [{"id": "old", "username": "ana", "text": "¿Qué recomiendas?",
+                  "timestamp": "2026-09-29T10:00:00Z"}]
+        plan = api.build_plan(items, {
+            "actions": [{"id": "old", "text": "El segundo.", "authored": "manual"}]
+        })
+        self.assertTrue(plan[0]["reply_to_us"])
+        self.assertEqual(plan[0]["target_created_at"], "2026-09-29T10:00:00Z")
+        # The production policy module is in the private branch, not in this
+        # sanitized mirror; that policy must be exercised during integration.
 
 
 if __name__ == "__main__":
