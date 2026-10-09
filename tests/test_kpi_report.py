@@ -94,6 +94,20 @@ class KPITests(unittest.TestCase):
         self.assertIsNone(r["confirmed_rows"])
         self.assertEqual(r["outbound_coverage"], "cabecera_invalida")
 
+    def test_current_official_named_aliases_are_accepted(self):
+        header = ["fecha", "cuenta", "tipo", "post_resumen",
+                  "texto_usado", "resultado", "notas"]
+        self.write("x", "registro_interacciones.csv", [header, self.sample()])
+        reddit_header = ["fecha", "subreddit", "hilo_url", "tipo",
+                         "texto_usado", "resultado", "notas"]
+        reddit_row = ["2026-10-09", "r/libros", "https://reddit.com/r/libros/x",
+                      "comentario", "Hola", "confirmado", ""]
+        self.write("reddit", "registro_interacciones.csv",
+                   [reddit_header, reddit_row])
+        networks = k.build_report(self.root, self.day)["networks"]
+        self.assertEqual(networks["x"]["confirmed_rows"], 1)
+        self.assertEqual(networks["reddit"]["confirmed_rows"], 1)
+
     def test_lineage_only_explicit_never_guess(self):
         self.write("pinterest", "registro_interacciones.csv", [self.sample(notes="buena fuente:seed-a"), [*self.sample(notes="motivo | fuente=semilla_1")]])
         r = k.build_report(self.root, self.day)["networks"]["pinterest"]

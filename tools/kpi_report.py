@@ -57,11 +57,12 @@ def _rows(path):
         return [], type(exc).__name__
 
 
-def _mapping(rows, columns):
+def _mapping(rows, columns, *, required=None):
     """Devuelve (filas mapeadas, error); nunca trunca columnas en silencio."""
     if rows and rows[0] and rows[0][0].strip().casefold() == "fecha":
         names = [name.strip().casefold() for name in rows[0]]
-        if len(names) != len(set(names)) or not set(columns).issubset(names):
+        required = set(columns if required is None else required)
+        if len(names) != len(set(names)) or not required.issubset(names):
             return (), "cabecera_invalida"
         return ((dict(zip(names, row)), len(row) != len(names))
                 for row in rows[1:]), None
@@ -96,7 +97,13 @@ def _activity(root, net, day):
     rows, error = _rows(path)
     columns = ("fecha", "cuenta", "url", "tipo", "texto", "resultado", "notas") if net == "reddit" else (
         "fecha", "cuenta", "tipo", "post_resumen", "texto", "resultado", "notas")
-    mapped, schema_error = _mapping(rows, columns)
+    # Los CSV reales nombrados usan aliases distintos por red
+    # (texto_usado, subreddit/hilo_url...). Solo estos tres campos son
+    # necesarios para computar la actividad; el legacy sin cabecera sigue
+    # siendo posicional.
+    mapped, schema_error = _mapping(
+        rows, columns, required=("fecha", "tipo", "resultado")
+    )
     if schema_error:
         return {}, {}, {}, schema_error, 0, max(len(rows) - 1, 0)
     counts, by_kind, by_source = Counter(), Counter(), Counter()
