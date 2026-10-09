@@ -399,7 +399,11 @@ def _recover_incomplete_csv_tail(stream):
             parsed = []
         if len(parsed) == 1:
             fields = parsed[0]
-            if fields == list(ROUND_CSV_COLUMNS) or (
+            if (fields in (list(ROUND_CSV_COLUMNS), list(ROUND_CSV_LEGACY_COLUMNS))
+                    or (len(fields) == len(ROUND_CSV_LEGACY_COLUMNS)
+                        and re.fullmatch(r"\d{4}-\d{2}-\d{2}", fields[0])
+                        and fields[2] in ("ok", "parcial", "ocupada", "saltada", "error"))
+                    or (
                     len(fields) == len(ROUND_CSV_COLUMNS)
                     and fields[5] in ("ok", "parcial", "ocupada", "saltada", "error")
                     and re.fullmatch(r"\d{4}-\d{2}-\d{2}", fields[0])
