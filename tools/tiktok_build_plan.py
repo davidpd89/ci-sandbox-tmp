@@ -79,6 +79,7 @@ def build(scan, decisions):
                 "handle": candidate["handle"],
                 "url": url,
                 "post_ref": post.get("post_ref"),
+                "post_created_at": post.get("created_at") or post.get("create_time") or post.get("created_time") or "",
                 "post_resumen": (post.get("caption") or "")[:500],
                 "motivo": f"growth:{pid}:{post.get('source') or 'unknown'}",
             }
