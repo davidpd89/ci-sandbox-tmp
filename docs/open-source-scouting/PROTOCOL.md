@@ -1,5 +1,21 @@
 # Campana de reutilizacion de software publico
 
+> **Puerta operativa vigente (2026-10-09):** Este protocolo es de la
+> campaña **pública** `davidpd89/ci-sandbox-tmp`, PR padre #10 hacia
+> `main`. Las hijas #11–#56 apuntan a `research/public-reuse-parent`.
+> La PR padre nunca fusiona automáticamente hijas ni las implementa.
+> El manifiesto verificado es [children.json](children.json); la coordinación,
+> comprobaciones y tres puertas están en [COORDINATION.md](COORDINATION.md).
+> Si otra sección parece autorizar traslado indiscriminado de código privado,
+> prevalecen la revisión humana y las reglas estrictas de privacidad.
+>
+> Comprobación offline: `python tools/validate_open_source_campaign.py`.
+> Comprobación online explícita: `python tools/validate_open_source_campaign.py --live`
+> (opcional `GITHUB_TOKEN` en entorno, jamás pegarlo en ficheros).
+> Pruebas: `python -m unittest discover -s tests -p test_open_source_campaign.py -v`.
+> El workflow aislado es `.github/workflows/validate-public-reuse.yml`.
+> El éxito de este validador NO garantiza seguridad integral ni autoriza un merge.
+
 Esta rama organiza encargos independientes para que un agente GPT investigue
 software publico existente y reutilice componentes valiosos en el sistema RRSS.
 Cada PR hija contiene un unico frente de trabajo y se revisa por separado.
@@ -19,7 +35,8 @@ Cada PR hija contiene un unico frente de trabajo y se revisa por separado.
    - extraer un patron y reimplementarlo cuando sea la opcion mas conveniente;
    - conservar lo existente cuando gane la comparacion con evidencia.
 6. Si hay cambio, incluir pruebas offline, migracion reversible, documentacion,
-   procedencia y medicion antes/despues. Dejar la PR lista para merge.
+   procedencia y medicion antes/despues. Dejar la PR lista para revision; nunca
+   declarar aptitud de merge basada solamente en mergeable=true.
 7. Si aparecen fallos, reproducirlos, investigar alternativas actuales y
    corregirlos en la misma PR con regresiones que ejerciten el comportamiento.
 
@@ -36,9 +53,12 @@ Cada PR hija contiene un unico frente de trabajo y se revisa por separado.
 
 ## Repositorio oficial
 
-El mirror es incompleto. Si hacen falta modulos, fixtures, configuracion o
-documentacion, tomar del repositorio oficial RRSS todo el contexto necesario
-para evaluar y probar correctamente la mejora.
+El mirror es publico e incompleto; el oficial es privado. Se permite consultar
+el original por una conexion autorizada, pero NUNCA copiar indiscriminadamente
+modulos, historiales, capturas, perfiles, bases de datos ni configuraciones.
+Clasificar todo artefacto antes de su traslado. Solo se incorporan piezas con
+licencia/propiedad y redistribucion comprobadas, datos sinteticos y revision
+humana. Un mirror sin un modulo NO demuestra que falte en el original.
 
 ## PR adicionales nacidas de la investigacion
 
