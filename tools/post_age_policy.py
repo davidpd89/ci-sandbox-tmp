@@ -144,6 +144,13 @@ def _explicit_post_datetime(item):
 
 def post_datetime(network, item):
     """Fecha declarada por el post o estimación del identificador si no existe."""
+    if network == "x":
+        for ref in _target_ref(item, network):
+            if "/status/" in ref:
+                match = re.search(r"/status/(\d+)", ref)
+                when = _snowflake_x(match.group(1)) if match else None
+                if when is not None:
+                    return when
     declared = _explicit_post_datetime(item)
     if declared is not None:
         return declared
