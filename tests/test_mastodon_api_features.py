@@ -231,7 +231,7 @@ class MastodonInteractionTests(unittest.TestCase):
                 return {"descendants": []}
             return {
                 "visibility": "unlisted",
-                "account": {"acct": "lectora@example.social"},
+                "account": {"acct": "lectora@example.com"},
             }
 
         with patch.object(m, "_status_id", return_value="7"), \
