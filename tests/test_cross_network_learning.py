@@ -200,7 +200,7 @@ class CrossNetworkTests(unittest.TestCase):
                 report = run(*rows, verified={proof})
                 self.assertEqual(report["proposals"], [])
                 self.assertEqual(report["non_positive_trials"], 1)
-                self.assertEqual(report["invalid_or_unproven"], 0)
+                self.assertEqual(report["invalid_or_unproven"], 1)
                 self.assertEqual(report["duplicate_evidence"], 1)
         # Otra cola sigue siendo independiente: la réplica API no veta WEB.
         web = positive(targets={"mastodon": {
