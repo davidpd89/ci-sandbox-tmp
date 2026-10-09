@@ -13,6 +13,7 @@ import json
 import stat
 from collections import Counter
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from discovery_attribution import NETWORKS as OBSERVABLE_NETWORKS, STATE_ADAPTERS
 from growth_attribution import wilson
@@ -33,6 +34,11 @@ MIN_N = 40
 FRESH_DAYS = 30
 TARGET_TTL_DAYS = 30
 MAX_INPUT_BYTES = 256_000
+
+
+def _local_today():
+    """Fecha civil de Madrid, independiente del huso horario del runner."""
+    return dt.datetime.now(ZoneInfo("Europe/Madrid")).date()
 
 
 def _date(value):
@@ -123,7 +129,7 @@ def review(data, *, today=None, trusted_verifications=None):
     Campos del resultado controlados; no se devuelve ninguna URL, texto o ID
     de usuario que aparezca en la entrada, incluso si es arbitrario.
     """
-    today = dt.date.today() if today is None else today
+    today = _local_today() if today is None else today
     # Quien inyecte tiempo debe pasar FECHA local explícita; un datetime
     # UTC a las 22:30 todavía puede ser mañana en Madrid.
     if isinstance(today, dt.datetime):
@@ -268,11 +274,12 @@ def main(argv=None):
             return obj
         data = json.loads(raw.decode("utf-8"), parse_constant=_reject_constant,
                           object_pairs_hook=_reject_duplicate_keys)
-        today = _date(args.as_of) if args.as_of is not None else dt.date.today()
+        today = _date(args.as_of) if args.as_of is not None else _local_today()
         if today is None:
             raise ValueError("fecha de corte no válida")
         result = review(data, today=today)
-    except (OSError, UnicodeError, ValueError, RecursionError, OverflowError):
+    except (OSError, UnicodeError, ValueError, RecursionError,
+            OverflowError, ZoneInfoNotFoundError):
         print("DATOS_NO_VALIDOS")
         return 2
     print(json.dumps(result, sort_keys=True, ensure_ascii=False))
