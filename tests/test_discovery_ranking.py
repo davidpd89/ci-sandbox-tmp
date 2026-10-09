@@ -76,7 +76,7 @@ class RankingTests(unittest.TestCase):
         self.assertEqual(r["ranked"], [])
         self.assertEqual({x["reason"] for x in r["unranked"]},
                          {"snapshot_incomplete", "identity_unverified", "outcome_not_observed",
-                          "invalid_denominator", "immature_or_invalid_date", "insufficient_sample"})
+                          "invalid_denominator", "immature_or_invalid_date", "empty_cohort"})
 
     def test_duplicate_source_fails_closed(self):
         r = ranking([row(), row(n=500, back=400)])["networks"]["bluesky"]
@@ -143,6 +143,29 @@ class RankingTests(unittest.TestCase):
         self.assertEqual(result["exploration_slots_reserved"], 2)
         self.assertEqual(result["exploration_candidates"], [f"{1:024x}", f"{2:024x}"])
         self.assertEqual(len(result["ranked"]), 1)
+
+    def test_empty_cohort_cannot_consume_exploration_candidate(self):
+        data = [row(key=1, n=0, back=0), row(key=2, n=2, back=1)]
+        result = ranking(data, scan_slots={"bluesky": 10},
+                         exploration_cursor={"bluesky": 0})["networks"]["bluesky"]
+        self.assertEqual(result["ranked"], [])
+        self.assertEqual(result["exploration_candidates"], [f"{2:024x}"])
+        self.assertEqual({r["source_key"]: r["reason"] for r in result["unranked"]},
+                         {f"{1:024x}": "empty_cohort",
+                          f"{2:024x}": "insufficient_sample"})
+        only_empty = ranking([data[0]], scan_slots={"bluesky": 5})["networks"]["bluesky"]
+        self.assertFalse(only_empty["exploration_cursor_required"])
+        self.assertEqual(only_empty["exploration_candidates"], [])
+
+    def test_exploration_order_does_not_depend_on_ingest_order(self):
+        data = [row(key=i, n=3, back=2) for i in range(1, 5)]
+        data.append(row(key=5, n=100, back=30))
+        opts = {"scan_slots": {"bluesky": 10},
+                "exploration_cursor": {"bluesky": 2}}
+        first = ranking(data, **opts)["networks"]["bluesky"]
+        reversed_rows = ranking(list(reversed(data)), **opts)["networks"]["bluesky"]
+        self.assertEqual(first, reversed_rows)
+        self.assertEqual(first["exploration_candidates"], [f"{3:024x}", f"{4:024x}"])
 
     def test_unreasonably_large_read_budget_rejected(self):
         with self.assertRaises(ValueError):
