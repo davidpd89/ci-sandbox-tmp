@@ -52,6 +52,17 @@ class AgeProvenanceTests(unittest.TestCase):
         self.assertEqual(policy.check("reddit", item, now=NOW),
                          (True, "edad_ok"))
 
+    def test_x_executable_url_precedes_inconsistent_auxiliary_target_id(self):
+        item = {"kind": "reply",
+                "target_post_id": x_id(0),
+                "url": f"https://x.com/test/status/{x_id(60)}"}
+        self.assertEqual(policy.check("x", item, now=NOW),
+                         (False, "post_antiguo"))
+        item["url"] = "https://x.com/test/status/not-a-snowflake"
+        # Solo cuando la URL ejecutable no aporta tiempo se consulta el ID.
+        self.assertEqual(policy.check("x", item, now=NOW),
+                         (True, "edad_ok"))
+
     def test_atproto_record_createdAt_is_post_time(self):
         item = {"kind": "reply", "createdAt": ago(0),
                 "post": {"record": {"createdAt": ago(5)}}}
