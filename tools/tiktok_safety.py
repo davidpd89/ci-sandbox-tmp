@@ -64,6 +64,8 @@ def _read(path=None):
         raise SafetyStateError("estado de TikTok inválido")
     if value.get("scope") not in (None, "follow"):
         raise SafetyStateError("ámbito de pausa inválido")
+    if value.get("manual_review") not in (None, False, True):
+        raise SafetyStateError("manual_review inválido")
     return value
 
 
@@ -131,24 +133,14 @@ def restrict(reason, path=None, *, now=None):
         until = max(until, _date(prev["until"]))
     payload = dict(day=now.date().isoformat(), strikes=strikes, reason=reason,
                    until=until.isoformat(timespec="seconds"), manual_review=True)
-    folder = os.path.dirname(os.path.abspath(path))
-    os.makedirs(folder, exist_ok=True)
-    fd, temp = tempfile.mkstemp(prefix=".tiktok_stop_", suffix=".tmp", dir=folder)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False)
-            f.write("\n")
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(temp, path)
-    finally:
-        if os.path.exists(temp):
-            os.unlink(temp)
+    _write_state(path, payload)
     return minutes
 
 
 def _restrict_follow(path, now, prev):
-    """Pausa SOLO de follows (sin revision manual). Si ya hay una pausa global activa, esa manda y no se rebaja."""
+    """Pausa SOLO de follows; nunca degrada una revisión manual/global existente."""
+    if prev.get("manual_review") is True:
+        return float("inf")
     if prev.get("scope") != "follow" and prev.get("until") and _date(prev["until"]) > now:
         return max(0., (_date(prev["until"]) - now).total_seconds() / 60)
     try:
@@ -274,13 +266,14 @@ def recorded_actions(path, *, today=None):
                     if result not in (
                         "pendiente_verificacion", "confirmado", "publicado",
                         "saltado_ya_like", "saltado_ya_seguido",
-                        "saltado_ya_comentado",
+                        "saltado_ya_comentado", "pendiente_aprobacion",
                     ) and not result.startswith("saltado_like_contexto:"):
                         raise SafetyStateError("transición de intención desconocida")
                     result_kind = {
                         "saltado_ya_like": "like",
                         "saltado_ya_seguido": "follow",
                         "saltado_ya_comentado": "comment",
+                        "pendiente_aprobacion": "follow",
                     }.get(result)
                     if (result_kind is not None and kind != result_kind) or (
                         result.startswith("saltado_like_contexto:") and kind != "like"
@@ -315,7 +308,7 @@ def recorded_actions(path, *, today=None):
     for key, date, result in intents.values():
         if result == "pendiente_verificacion":
             pending.add(key)
-        if result in ("pendiente_verificacion", "confirmado", "publicado") and date == today.isoformat():
+        if result in ("pendiente_verificacion", "confirmado", "publicado", "pendiente_aprobacion") and date == today.isoformat():
             daily[key[0]].add(key)
     return {kind: len(keys) for kind, keys in daily.items()}, pending
 
