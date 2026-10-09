@@ -39,6 +39,10 @@ def validate_web_pin_image(path):
                 if width <= 0 or height <= 0:
                     raise PinPreflightError("imagen: dimensiones inválidas")
                 source.verify()
+            # verify() comprueba la estructura, pero un JPEG truncado puede
+            # superarla y fallar después al cargar los píxeles. Decodificarlo.
+            with Image.open(path) as decoded:
+                decoded.load()
     except (OSError, ValueError, UnidentifiedImageError,
             Image.DecompressionBombWarning, Image.DecompressionBombError) as exc:
         if isinstance(exc, PinPreflightError):
