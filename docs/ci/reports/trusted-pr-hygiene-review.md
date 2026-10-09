@@ -57,3 +57,14 @@ python -m unittest discover -s tests -p test_trusted_pr_hygiene.py -v
 Confirmar el run Ubuntu/Windows **del HEAD final** de esta PR. El job `trusted-pr-paths` no podrá verificarse como check independiente hasta instalar el workflow sobre la default branch y configurar su protección. **No confundir simulación y gate activo.**
 
 Rollback: retirar `.github/workflows/trusted-pr-hygiene.yml` de default y quitar su required check de la configuración del repositorio; mantener #2 hasta completar migración. No hay cambios en estados, cuentas ni credenciales.
+
+## Evidencia de runners del HEAD revisado (09/10/2026)
+
+Commit: [`9b901c0bf738616c8317dbf78d60b8f6549fc7b5`](https://github.com/davidpd89/ci-sandbox-tmp/commit/9b901c0bf738616c8317dbf78d60b8f6549fc7b5).
+
+- [CI sintética #37989654648](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37989654648): Ubuntu Python 3.11 **12/12 OK**; Windows Python 3.11 **12/12 OK**.
+- [Suite general #37989648119](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37989648119): Ubuntu **1700 passed, 8 skipped, 8 deselected, 668 subtests passed**; Windows **1703 passed, 5 skipped, 8 deselected, 668 subtests passed**; ambos jobs **success**. Dos advertencias preexistentes sin relación con este cambio.
+- Los primeros jobs de la implementación detectaron un fixture mal construido (un nombre de repositorio que GitHub sí admite); se corrigió antes del HEAD citado. Después se detectó la amenaza de `skipped` como éxito, y se aislaron físicamente los workflows. La CI anterior **no** constituye evidencia del último HEAD.
+- `docs/open-source-scouting/PROTOCOL.md` no existe ni en `ci/test-campaign-parent` ni en esta rama; se consultó `repo_hygiene.py` en el repositorio oficial y coincide byte a byte (SHA de blob `9987782b1a94a4fd152f0f0cb5e2b42a044d9ae4`) con el mirror base.
+
+**Dictamen independiente:** lista para *revisión de código* de Claude, no para afirmar enforcement. Activación `pull_request_target` + required workflow/check correcto sobre la rama protegida requiere configuración externa e inspección posterior. No se hizo merge.
