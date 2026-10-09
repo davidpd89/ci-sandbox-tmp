@@ -70,8 +70,8 @@ y sin parámetro de registro; todo resultado conserva `writes: false`.
 
 | Proyecto | Licencia | Python 3.11 / Windows | Dependencias y mantenimiento | Decisión |
 | --- | --- | --- | --- | --- |
-| [python-jsonschema](https://github.com/python-jsonschema/jsonschema) | MIT | Sí, >=3.10, OS independiente | attrs, jsonschema-specifications, referencing, rpds-py; activo en 2026 | No incorporar: validación estructural acotada sin $refs; no autentica auditorías |
-| [Pydantic](https://github.com/pydantic/pydantic) | MIT | Sí, >=3.10 | pydantic-core compilado, typing-extensions y annotated-types; activo en 2026 | No incorporar: validación más extensa con dependencia binaria para 9 campos |
+| [python-jsonschema 4.26.0](https://pypi.org/project/jsonschema/4.26.0/) (2026-01-07) | MIT | Sí, >=3.10, OS independiente | attrs, jsonschema-specifications, referencing, rpds-py; activo en 2026 | No incorporar: validación estructural acotada sin $refs; no autentica auditorías |
+| [Pydantic 2.14.0](https://pypi.org/project/pydantic/2.14.0/) (2026-10-08) | MIT | Sí, >=3.10 | pydantic-core compilado, typing-extensions y annotated-types; activo en 2026 | No incorporar: validación más extensa con dependencia binaria para 9 campos |
 | [Hypothesis 6.168.5](https://pypi.org/project/hypothesis/6.168.5/) | MPL-2.0 | Sí, wheel CPython 3.11 Windows/Linux publicado 2026-10-05 | sortedcontainers; activo, generador de tests | No incorporar: la PR #30 ya cubre fuzzing; regresiones actuales deterministas |
 
 La continuidad gana por menor superficie, reutilizando el gate de #3,
@@ -102,3 +102,16 @@ de auditoría externa automática.
   Tampoco sustituye #23, #80, #85 o revisión humana de una propuesta.
 - Integración: dado que #3 sigue abierta, resolver la dependencia al
   fusionar ambas; comprobar workflows Ubuntu y Windows en HEAD final.
+
+## Pruebas reproducibles para el controlador
+
+```shell
+python -m compileall -q tools tests
+python -m pytest -q tests/test_cross_network_learning.py tests/test_experiment_evidence_lineage.py -p no:cacheprovider
+```
+
+El workflow `.github/workflows/validate-social-tools.yml` existente ejecuta
+Python 3.11 en `ubuntu-latest` y `windows-latest` tras cada push;
+su resultado debe comprobarse para el **HEAD final**, no para commits previos.
+No se ejecutan Windows interactivo, móvil ni Edge. Fixture de auditoría
+simulada = prueba de software; no equivale a auditoría humana real.

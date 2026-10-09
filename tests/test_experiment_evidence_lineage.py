@@ -213,6 +213,31 @@ class VersionedEvidenceTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 TrustedRegistry(invalid)
 
+    def test_unhashable_queue_or_malformed_targets_never_crashes(self):
+        for invalid_queue in ([], {}, ["API"], None, 42):
+            row = trial()
+            row["targets"]["mastodon"]["queue"] = invalid_queue
+            self.assertIsNone(audit_projection(row, "mastodon"))
+            self.assertIsNone(evidence_digest(row, "mastodon"))
+            report = run(row, registry=TrustedRegistry([]))
+            self.assertEqual(report["proposals"][0]["state"], "investigar_equivalencia")
+        row = trial()
+        row["targets"] = ["API"]
+        self.assertIsNone(evidence_digest(row, "mastodon"))
+        self.assertEqual(run(row)["proposals"], [])
+
+    def test_approval_requires_explicit_current_audit_and_never_reuses_old_sha(self):
+        row = trial()
+        registry = TrustedRegistry([audited(row)])
+        self.assertTrue(registry.approves(row, "mastodon"))
+        # v1 verifier and plain dict cannot smuggle legacy approvals into v2.
+        legacy = gate._evidence_digest(row, "mastodon")
+        self.assertEqual(run(row, legacy_proofs={legacy})["proposals"][0]["state"],
+                         "verificacion_externa_pendiente")
+        mutation = copy.deepcopy(row)
+        mutation["experiment"]["id"] = "trial-C003"
+        self.assertFalse(registry.approves(mutation, "mastodon"))
+
     def test_no_network_calls_or_user_identity_in_output(self):
         row = trial()
         row["internal_handle"] = "secret-pseudonym"
