@@ -23,7 +23,7 @@ import sqlite3
 import sys
 import time
 import unicodedata
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 sys.path.insert(0, os.path.dirname(__file__))
 import scan_common as sc
@@ -175,6 +175,17 @@ def set_state(db, key, value):
     )
 
 
+def _checkpoint(db, *, last_seq, last_time_us, stream_identity=None):
+    """Guarda posts y high-water juntos en una transacción SQLite."""
+    if last_time_us:
+        set_state(db, "last_time_us", last_time_us)
+    if last_seq:
+        set_state(db, "last_seq", last_seq)
+        if stream_identity:
+            set_state(db, "last_seq_stream", stream_identity)
+    db.commit()
+
+
 def _post_uri(did, rkey):
     return f"at://{did}/app.bsky.feed.post/{rkey}"
 
@@ -305,6 +316,16 @@ def _is_v2_endpoint(endpoint):
         "network.bsky.jetstream.subscribeEvents" in str(endpoint)
         or "://jetstream.us-" in str(endpoint)
     )
+
+
+def _stream_identity(endpoint):
+    """Origen v2 sin query ni credenciales: los seq son locales a la instancia."""
+    parsed = urlsplit(str(endpoint))
+    if parsed.scheme.lower() not in {"ws", "wss"} or not parsed.hostname:
+        raise ValueError("Endpoint Jetstream no es una URL WebSocket válida")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("Endpoint Jetstream no admite credenciales en URL")
+    return f"{parsed.scheme.lower()}://{parsed.netloc.lower()}{parsed.path.rstrip('/')}"
 
 
 def read_active_authors(path, *, limit=25, min_posts=2, max_age_hours=72):
@@ -486,7 +507,17 @@ async def collect(
 
     config = load_config(config_path)
     terms = load_terms(config)
+    is_v2 = _is_v2_endpoint(endpoint)
+    stream_identity = _stream_identity(endpoint) if is_v2 else None
     db = init_db(db_path)
+    saved_seq = get_state(db, "last_seq") if is_v2 else None
+    saved_stream = get_state(db, "last_seq_stream") if is_v2 else None
+    if saved_seq and saved_stream and saved_stream != stream_identity:
+        db.close()
+        raise RuntimeError(
+            "Jetstream v2: seq persistido pertenece a otro endpoint; "
+            "usar caché separada o migración supervisada"
+        )
     retention_hours = int(
         (config.get("jetstream") or {}).get("retention_hours", 72)
     )
@@ -505,9 +536,8 @@ async def collect(
     last_error = None
     retry_delay = 1.0
 
-    is_v2 = _is_v2_endpoint(endpoint)
-    saved_seq = get_state(db, "last_seq") if is_v2 else None
     saved_time = get_state(db, "last_time_us")
+    stream_confirmed = bool(saved_stream)
     cursor = _resume_cursor(
         is_v2=is_v2,
         saved_seq=saved_seq,
@@ -535,12 +565,17 @@ async def collect(
                 async with websockets.connect(url, **connect_kwargs) as ws:
                     connected_at = time.monotonic()
                     while time.monotonic() < deadline:
-                        timeout = min(30.0, max(0.1, deadline - time.monotonic()))
+                        timeout = min(5.0, max(0.1, deadline - time.monotonic()))
                         try:
                             raw = await asyncio.wait_for(ws.recv(), timeout=timeout)
                         except asyncio.TimeoutError:
-                            # Una ventana larga y silenciosa no debe reconectar
-                            # cada 30s; mantener el socket vivo hasta el deadline.
+                            # Streams silenciosos no deben retener locks SQLite.
+                            if db.in_transaction:
+                                _checkpoint(
+                                    db, last_seq=last_seq, last_time_us=last_time_us,
+                                    stream_identity=stream_identity if stream_confirmed else None,
+                                )
+                                last_commit = time.monotonic()
                             continue
                         decoded = json.loads(raw)
                         event, event_cursor, mode = _normalize_frame(decoded)
@@ -551,6 +586,8 @@ async def collect(
                         )
                         if replayed:
                             continue
+                        if mode == "v2":
+                            stream_confirmed = True
                         processed += 1
                         event_time = int(event.get("time_us") or 0)
                         if event_time:
@@ -570,12 +607,18 @@ async def collect(
                         # a una desconexión o caída del proceso.
                         now = time.monotonic()
                         if processed % 250 == 0 or now - last_commit > 5.0:
-                            if last_time_us:
-                                set_state(db, "last_time_us", last_time_us)
-                            if last_seq:
-                                set_state(db, "last_seq", last_seq)
-                            db.commit()
+                            _checkpoint(
+                                db, last_seq=last_seq, last_time_us=last_time_us,
+                                stream_identity=stream_identity if stream_confirmed else None,
+                            )
                             last_commit = now
+                # Confirmar el lote antes del backoff tras cierre limpio.
+                if db.in_transaction:
+                    _checkpoint(
+                        db, last_seq=last_seq, last_time_us=last_time_us,
+                        stream_identity=stream_identity if stream_confirmed else None,
+                    )
+                    last_commit = time.monotonic()
                 if time.monotonic() < deadline:
                     reconnects += 1
                     if connected_at is not None and time.monotonic() - connected_at >= 60:
@@ -583,6 +626,13 @@ async def collect(
                     await asyncio.sleep(retry_delay)
                     retry_delay = _next_retry_delay(retry_delay)
             except Exception as exc:
+                # Liberar escrituras pendientes antes de reintentar el socket.
+                if db.in_transaction:
+                    _checkpoint(
+                        db, last_seq=last_seq, last_time_us=last_time_us,
+                        stream_identity=stream_identity if stream_confirmed else None,
+                    )
+                    last_commit = time.monotonic()
                 connection_errors += 1
                 last_error = f"{type(exc).__name__}: {str(exc)[:200]}"
                 fatal_status = _fatal_stream_status(exc) if is_v2 else None
@@ -598,12 +648,13 @@ async def collect(
                     await asyncio.sleep(retry_delay)
                     retry_delay = _next_retry_delay(retry_delay)
     finally:
-        if last_time_us:
-            set_state(db, "last_time_us", last_time_us)
-        if last_seq:
-            set_state(db, "last_seq", last_seq)
-        db.commit()
-        db.close()
+        try:
+            _checkpoint(
+                db, last_seq=last_seq, last_time_us=last_time_us,
+                stream_identity=stream_identity if stream_confirmed else None,
+            )
+        finally:
+            db.close()
 
     return {
         "processed": processed,
