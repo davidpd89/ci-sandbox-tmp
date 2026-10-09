@@ -149,3 +149,25 @@ conservaba su diccionario interno mutable. Se corrigió con
 reproduce tanto mutación del origen tras la construcción como intento de
 alterar el snapshot desde el llamador. El límite sigue siendo de confianza
 entre procesos: no asegura la autenticidad del archivo externo.
+
+## Revisión independiente adicional (10-10-2026)
+
+- Se detectó un límite de escala en `TrustedRegistry`: 100 ensayos con
+  siete destinos requieren 700 revisiones; el máximo anterior de 200
+  impedía construir ese registro. El máximo pasa a 800, manteniendo
+  las 100 observaciones por lote y una cota finita. Un test sintético
+  valida las 700 aprobaciones y el rechazo de 801 entradas.
+- Se corrigió el **adaptador de fixtures** procedente de #3: al
+  recorrer varios destinos sobrescribía la identidad opaca del ensayo
+  y dejaba los registros anteriores ligados a otra identidad.
+  Ahora fija una identidad antes de proyectar cada destino; un test
+  acredita dos destinos aprobados por separado. Este adaptador
+  **solo existe en tests**, no permite autoverificación en producción.
+- Alternativa pública para evolución: [in-toto](https://github.com/in-toto/in-toto)
+  ofrece metadatos de procedencia firmados y verificación independiente,
+  pero adoptarlo sin manifests reales ni un productor auditado añade
+  complejidad. `rfc8785.py` solo aportaría valor al normalizar contratos
+  entre lenguajes. No se introducen dependencias nuevas.
+- Sigue pendiente conciliar #3 antes de integrar #91 y repetir
+  Windows/Ubuntu sobre el HEAD final. La capacidad demostrada
+  es del registro offline, no prueba aprendizaje causal ni acciones reales.
