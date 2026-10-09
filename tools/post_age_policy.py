@@ -69,7 +69,7 @@ def _snowflake_x(sid):
 
 def _tid_bluesky(rkey):
     rkey = str(rkey or "")
-    if len(rkey) != 13 or any(ch not in _B32 for ch in rkey):
+    if len(rkey) != 13 or rkey[0] not in "234567abcdefghij" or any(ch not in _B32 for ch in rkey):
         return None
     value = 0
     for ch in rkey:
@@ -104,8 +104,19 @@ def _threads_shortcode(code):
     return when if dt.datetime(2020, 1, 1, tzinfo=dt.timezone.utc) <= when else None
 
 
-def _target_ref(item):
-    for key in ("status_id", "_target_uri", "post_uri", "target_post_id", "url", "post_url", "permalink"):
+def _target_ref(item, network=None):
+    # Priorizar el destino de la acción por encima de IDs auxiliares de
+    # notificación/conversación. No convertir la fecha de otro objeto en la
+    # fecha del post que se va a comentar.
+    if network == "x":
+        keys = ("target_post_id", "url", "post_url", "permalink", "status_id", "_target_uri", "post_uri")
+    elif network == "bluesky":
+        keys = ("_target_uri", "post_uri", "url", "post_url", "permalink", "target_post_id", "status_id")
+    elif network == "threads":
+        keys = ("url", "post_url", "permalink", "target_post_id", "status_id")
+    else:
+        keys = ("status_id", "_target_uri", "post_uri", "target_post_id", "url", "post_url", "permalink")
+    for key in keys:
         if item.get(key):
             return str(item[key])
     return ""
@@ -113,11 +124,11 @@ def _target_ref(item):
 
 def _explicit_post_datetime(item):
     """No confundir created_at del trabajo/cola con fecha del objetivo de texto."""
-    fields = _DATE_FIELDS
-    if item.get("kind") in TEXT_KINDS:
-        # created_at es ambiguo en la raiz de una acción: puede ser fecha de
-        # encolado. Requerir una clave de objetivo o un record/post anidado.
-        fields = tuple(field for field in _DATE_FIELDS if field != "created_at")
+    # created_at / createdAt en la raíz del plan pueden indicar la fecha de
+    # ENCOLADO, no la fecha del destino. Nunca certifican antigüedad para
+    # ninguna acción: los timestamps del post deben viajar como target_/post_
+    # o dentro del objeto post/record obtenido del proveedor.
+    fields = tuple(field for field in _DATE_FIELDS if field not in ("created_at", "createdAt"))
     for field in fields:
         if item.get(field):
             when = _parse(item[field])
@@ -147,7 +158,7 @@ def post_datetime(network, item):
     declared = _explicit_post_datetime(item)
     if declared is not None:
         return declared
-    ref = _target_ref(item)
+    ref = _target_ref(item, network)
     when = None
     if network == "x":
         match = re.search(r"/status/(\d+)", ref) or re.fullmatch(r"(\d+)", ref)
