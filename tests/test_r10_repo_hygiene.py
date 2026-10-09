@@ -168,7 +168,7 @@ class FileHygieneTests(unittest.TestCase):
 
     def test_rejected_paths_escape_control_characters_in_logs(self):
         # Git on Unix supports these names; logs must remain one line per path.
-        filename = ".env\\n::error::falsa-anotacion\\x1b[31m"
+        filename = ".env" + chr(10) + "::error::falsa-anotacion" + chr(27) + "[31m"
         error_output = io.StringIO()
         with patch.object(rh, "changed_paths", return_value=[filename]):
             with contextlib.redirect_stderr(error_output):
@@ -184,13 +184,13 @@ class FileHygieneTests(unittest.TestCase):
         error_output = io.StringIO()
         with patch.object(
             rh, "changed_paths",
-            side_effect=RuntimeError("revision no disponible\\n::warning::falsa-alerta"),
+            side_effect=RuntimeError("revision no disponible" + chr(10) + "::warning::falsa-alerta"),
         ):
             with contextlib.redirect_stderr(error_output):
                 status = rh.main(["--base", "HEAD^1"])
         message = error_output.getvalue()
         self.assertEqual(status, 2)
-        self.assertIn(r"\\n::warning::", message)
+        self.assertIn(repr("revision no disponible" + chr(10) + "::warning::falsa-alerta"), message)
         self.assertNotIn(chr(10) + "::warning::", message)
 
     def test_only_changed_paths_are_considered_not_old_repository_history(self):
