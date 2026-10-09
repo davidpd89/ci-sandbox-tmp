@@ -1,5 +1,12 @@
 # Facebook Graph API: paginación y confirmación de respuestas (PR #15)
 
+Fuente primaria: https://github.com/facebook/facebook-python-business-sdk/blob/26.0.2/facebook_business/api.py
+Fecha de consulta: 2026-10-09
+Licencia SPDX: NOASSERTION
+Referencia inmutable: N/A (sin codigo incorporado)
+
+**SPDX:** `NOASSERTION` aquí indica que **no se incorpora código tercero** y no se atribuye una licencia genérica al patrón de cursores. Para el SDK evaluado, véase su licencia específica de Facebook Platform citada en las alternativas y la referencia `26.0.2` (commit de release `efd8423`).
+
 **Consultado:** 2026-10-09. **Decisión:** C — adaptar el patrón de cursor de Graph API con stdlib, sin añadir dependencia y sin copiar código ajeno. **Alcance:** únicamente lectura de comentarios de publicaciones de una Página autorizada; no cambia la escritura de posts, likes, DMs ni el navegador.
 
 ## Problema y reproducción
