@@ -39,6 +39,14 @@ class MastodonAccountSearchContractTests(unittest.TestCase):
             guard.start()
             self.addCleanup(guard.stop)
 
+    def test_header_loads_synthetic_token_once_without_network(self):
+        with patch.object(m, "_TOKEN", None), patch.object(
+            m, "_load_token", return_value="valor_sintetico"
+        ) as reader:
+            self.assertEqual(m._headers(), {"Authorization": "Bearer valor_sintetico"})
+            self.assertEqual(m._headers(), {"Authorization": "Bearer valor_sintetico"})
+            reader.assert_called_once_with()
+
     def test_two_instances_keep_exact_offsets_and_never_duplicate_local_accounts(self):
         for instance in FIXTURES["instances"]:
             with self.subTest(instance=instance["name"]):
