@@ -127,12 +127,26 @@ def evaluate(plan, snapshot, review, *, now=None):
         if review["subreddit_type"] != "public" and review.get("account_approved") is not True:
             return Decision(False, "comunidad restringida sin autorización acreditada")
         comments = list(_comment_nodes(comments_listing))
+        # num_comments puede ser aproximado; si supera lo leído, fallar cerrado.
+        count = post.get("num_comments")
+        if isinstance(count, bool) or not isinstance(count, int) or count > len(comments) or count < 0:
+            return Decision(False, "lectura de comentarios incompleta o no verificable")
+        removal_notices = (
+            "your post has been removed",
+            "your submission has been removed",
+            "se ha eliminado tu publicación",
+            "tu publicación ha sido eliminada",
+        )
+        if any(c.get("author", "").casefold() == "automoderator"
+               and any(marker in str(c.get("body", "")).casefold() for marker in removal_notices)
+               for c in comments):
+            return Decision(False, "AutoModerator comunica retirada del hilo")
         if not isinstance(review.get("account_name"), str) or not review["account_name"].strip():
             return Decision(False, "cuenta activa no identificada")
         if any(c.get("author", "").casefold() == review["account_name"].casefold() for c in comments):
             return Decision(False, "respuesta propia previa, no duplicar")
         quote_id = plan.get("quoted_comment_id")
-        if quote_id is None and re.search(r"(?m)^\\s*>", text):
+        if quote_id is None and re.search(r"(?m)^\s*>", text):
             return Decision(False, "cita sin identificador verificable")
         if quote_id is not None:
             if not isinstance(quote_id, str) or not re.fullmatch(r"t1_[a-z0-9]+", quote_id, re.I):
