@@ -59,7 +59,7 @@ class FacebookGraphContractTests(unittest.TestCase):
         for name in ("expired_token", "permission_denied"):
             payload = json.dumps(CASES[name]).encode("utf-8")
             failure = urllib.error.HTTPError(
-                url="https://graph.facebook.com/v26.0/page-1/posts?access_token=SYNTHETIC_TOKEN",
+                url="https://graph.facebook.com/v26.0/page-1/posts?access%5Ftoken=SYNTHETIC_TOKEN",
                 code=400, msg="Bad Request", hdrs={}, fp=io.BytesIO(payload))
             with self.subTest(name=name), mock.patch.object(mc.urllib.request, "urlopen", side_effect=failure):
                 with self.assertRaisesRegex(RuntimeError, "API 400") as caught:
@@ -69,7 +69,7 @@ class FacebookGraphContractTests(unittest.TestCase):
 
     def test_missing_after_cursor_fails_closed(self):
         bad = {"data": [{"id": "c", "message": "¿Dónde?"}],
-               "paging": {"next": "https://graph.facebook.com/v26.0/xyz?access_token=SYNTHETIC_TOKEN"}}
+               "paging": {"next": "https://graph.facebook.com/v26.0/xyz?access%5Ftoken=SYNTHETIC_TOKEN"}}
         with mock.patch.object(fb.mc, "graph_get", return_value=bad):
             with self.assertRaisesRegex(fb.FacebookPaginationError, "cursor"):
                 list(fb._paged_rows("SYNTHETIC_TOKEN", "post-1/comments"))
