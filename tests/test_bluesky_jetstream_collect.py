@@ -2,6 +2,7 @@
 import asyncio
 import json
 import pathlib
+import sqlite3
 import tempfile
 import time
 import unittest
@@ -772,6 +773,67 @@ class JetstreamCollectorTests(unittest.TestCase):
             self.assertEqual(js.get_state(restored, "last_seq"), "not-an-integer")
             self.assertEqual(restored.execute("SELECT COUNT(*) FROM posts").fetchone()[0], 1)
             restored.close()
+
+
+
+    def test_sqlite_failure_rolls_back_posts_and_cursor_together(self):
+        def frame(seq, rkey):
+            return {
+                "$type": "message", "cursor": seq,
+                "payload": {
+                    "$type": "network.bsky.jetstream.subscribeEvents#commit",
+                    "seq": seq, "did": "did:plc:synthetic", "time": "2026-10-09T10:00:00Z",
+                    "operation": "create", "collection": "app.bsky.feed.post",
+                    "rkey": rkey, "record": {
+                        "text": "Mi lectura de fantasía", "langs": ["es"],
+                    },
+                },
+            }
+
+        class Socket:
+            def __init__(self):
+                self.frames = [frame(100, "good"), frame(101, "fail")]
+
+            async def recv(self):
+                return json.dumps(self.frames.pop(0))
+
+        class Connection:
+            async def __aenter__(self):
+                return Socket()
+
+            async def __aexit__(self, *_args):
+                return False
+
+        class Websockets:
+            def connect(self, *_args, **_kw):
+                return Connection()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = pathlib.Path(tmp) / "cache.sqlite3"
+            config = pathlib.Path(tmp) / "config.json"
+            config.write_text(json.dumps(self.config()), encoding="utf-8")
+            db = js.init_db(str(cache))
+            db.execute("""
+                CREATE TRIGGER synthetic_write_failure BEFORE INSERT ON posts
+                WHEN NEW.rkey='fail'
+                BEGIN SELECT RAISE(ABORT, 'synthetic-db-fail'); END
+            """)
+            db.commit()
+            db.close()
+            with patch.dict(sys.modules, {"websockets": Websockets()}):
+                with self.assertRaises(sqlite3.IntegrityError):
+                    asyncio.run(js.collect(
+                        db_path=str(cache), config_path=str(config),
+                        endpoint=js.DEFAULT_ENDPOINT, minutes=0.001,
+                        resume_overlap_seconds=5,
+                    ))
+            # La primera fila todavía no estaba confirmada. Es correcto
+            # perderla junto al cursor y repetirla tras el siguiente arranque.
+            db = js.init_db(str(cache))
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM posts").fetchone()[0], 0)
+            self.assertIsNone(js.get_state(db, "last_seq"))
+            self.assertIsNone(js.get_state(db, "last_seq_stream"))
+            db.close()
 
 
 if __name__ == "__main__":
