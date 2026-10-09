@@ -177,11 +177,29 @@ class Session:
         self.fails = 0
         self.started = time.monotonic()
         self.progress_alarm = False
+        self.external_hold = False
         self.count = 0
         self.next_break = rng.randint(12, 20)
 
     @property
     def over(self):
+        # Conservar el cortacircuitos compartido del repositorio oficial.
+        # El mirror antiguo expone check(); el oficial usa write_preflight().
+        import circuit_breaker as cb
+        preflight = getattr(cb, "write_preflight", None)
+        if preflight is not None:
+            allowed, reason = preflight("tiktok")
+        else:
+            try:
+                allowed, _ = cb.check(ROOT)
+            except (TypeError, ValueError, OSError):
+                allowed = False
+            reason = "cooldown_activo" if not allowed else ""
+        if not allowed:
+            if not self.external_hold:
+                print(f"[bulk] cortacircuitos ABIERTO: {reason}; sin más follows", flush=True)
+            self.external_hold = True
+            return True
         if not self.progress_alarm and not self.followed and time.monotonic() - self.started >= 15 * 60:
             self.progress_alarm = True
             print("[TIKTOK_NO_PROGRESS] bulk 15 min sin follows confirmados; diagnostico, sin retry", flush=True)
@@ -549,6 +567,8 @@ def main(argv=None):
                         with open(SEEDS_PATH, "w", encoding="utf-8") as stream:
                             json.dump(seeds_log, stream, ensure_ascii=False, indent=1)
 
+                if sess.external_hold:
+                    print("[bulk] parada preventiva por cortacircuitos externo (sin strike de plataforma)", flush=True)
                 print(
                     f"[bulk] sesion terminada: {sess.followed} follows nuevos "
                     f"(hoy ya {today_n} antes de la sesion)"
