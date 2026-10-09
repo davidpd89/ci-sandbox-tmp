@@ -72,7 +72,18 @@ explícita. Un `follow_limit` posterior no reescribe ese estado. Además,
 `manual_review` con un tipo distinto de booleano/null se considera corrupción,
 no una falsedad permisiva.
 
-### 3. Existía una ventana de duplicación entre tap y registro
+### 3. El scope podía ocultar corrupción semántica
+
+La segunda revisión detectó que un estado JSON bien formado con
+`scope="follow"` y un `until` inválido podía permitir likes/comentarios:
+la excepción se evitaba al devolver antes de interpretar la fecha.
+
+`_read()` valida ahora de entrada `until`, `day` y `strikes`, además de
+`scope` y `manual_review`. Un estado semánticamente imposible falla cerrado
+con independencia del tipo de acción solicitado. También se rechaza un
+`pendiente_aprobacion` sin objetivo.
+
+### 4. Existía una ventana de duplicación entre tap y registro
 
 En la rama inicial se hacía primero `nav.c.tap(...)` y el CSV se escribía solo
 si la UI confirmaba «Siguiendo». Si el proceso, el móvil o el transporte fallaba
@@ -91,7 +102,7 @@ Se introdujo `tap_reserved_follow()` en las tres rutas
 Si el tap queda incierto, el pending se conserva y bloquea el replay. Si falla
 la escritura previa, el tap no se ejecuta.
 
-### 4. El éxito en memoria podía adelantarse al ACK persistente
+### 5. El éxito en memoria podía adelantarse al ACK persistente
 
 `Session.ok()` actualizaba contadores/conjunto antes de escribir el registro.
 Ante un fallo de disco, la ejecución actual podía parecer exitosa sin ACK
@@ -101,7 +112,7 @@ Ahora escribe el cierre primero. Solo después incrementa `followed` y actualiza
 `done`. El pending anterior sigue siendo la fuente conservadora si el ACK
 falla.
 
-### 5. Estado y cuota podían cambiar mientras se esperaba el lock móvil
+### 6. Estado y cuota podían cambiar mientras se esperaba el lock móvil
 
 El preflight anterior se calculaba antes de `mobile_session_lock()`. Otra fase
 podía consumir cuota o activar una restricción durante la espera.
@@ -110,11 +121,14 @@ Tras adquirir el lock se revalidan: barrera compartida, CSV, objetivos ya
 intentados y presupuesto. Las señales terminales se convierten en estado local
 antes de liberar el lock.
 
-### 6. Compatibilidad de cierres
+### 7. Compatibilidad de cierres
 
 El plegado de intents acepta `pendiente_aprobacion` como cierre de follow
-privado y lo cuenta una sola vez en la fecha de apertura, igual que el código
-oficial actual.
+privado y lo cuenta una sola vez en la fecha de apertura. La revisión
+adversarial detectó además que ese estado no estaba en `followed_before()`:
+una solicitud privada ya enviada podía dejar de formar parte del conjunto
+histórico de no-reintento al día siguiente. Ahora también se conserva como
+objetivo ya intentado.
 
 ## Reutilización pública evaluada
 
@@ -131,29 +145,41 @@ esta PR.
 
 ## Pruebas
 
-Workflow: https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37980367070
+Workflow del mirror:
+https://github.com/davidpd89/ci-sandbox-tmp/actions/workflows/validate-social-tools.yml
 
-Se ejecutó exactamente el workflow offline del mirror, sin red hacia redes
-sociales:
+Se ejecuta exactamente el workflow offline, sin red hacia redes sociales:
 
 - `python -m compileall -q tools tests`;
 - suite completa de pytest con las ocho exclusiones conocidas del mirror;
-- Ubuntu, Python 3.11: **1704 passed, 8 skipped, 8 deselected,
-  2 warnings, 668 subtests passed**;
-- Windows, Python 3.11: **1707 passed, 5 skipped, 8 deselected,
-  2 warnings, 668 subtests passed**.
+- matriz Ubuntu + Windows, Python 3.11.
+
+La matriz verde inmediatamente anterior al último ajuste de no-reintento fue
+https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37980823809:
+
+- Ubuntu: **1707 passed, 8 skipped, 8 deselected, 2 warnings,
+  668 subtests passed**;
+- Windows: **1710 passed, 5 skipped, 8 deselected, 2 warnings,
+  668 subtests passed**.
+
+El resultado del HEAD definitivo se deja también en la revisión/conversación de
+la PR para no modificar este archivo después de cada ejecución y crear una
+cadena infinita de runs por commits solo documentales.
 
 Las regresiones nuevas cubren, entre otras cosas, crash después del write-ahead,
-ACK con fallo de disco, downgrade de revisión manual, cooldown corrupto,
-deduplicación de intents, `pendiente_aprobacion`, las tres rutas de follow y
+ACK con fallo de disco, downgrade de revisión manual, corrupción semántica
+aunque el scope permita otra acción, cooldown corrupto, deduplicación de intents,
+`pendiente_aprobacion`, no-retry de follow privado, las tres rutas de follow y
 deadline inmutable ante la alerta de no progreso.
 
 ## Segunda revisión adversarial
 
 Se volvió a leer el diff completo como si fuera una revisión independiente.
-Los defectos detectados en esa pasada fueron precisamente la degradación de
-`manual_review`, la ventana tap→registro, el orden memoria→ACK y la falta de
-revalidación bajo lock; todos tienen regresión específica y están corregidos.
+Los defectos detectados en esa pasada fueron la degradación de
+`manual_review`, la ventana tap→registro, el orden memoria→ACK, la falta de
+revalidación bajo lock, el bypass de una fecha inválida por `scope=follow` y
+el posible reintento de `pendiente_aprobacion`. Todos tienen regresión
+específica y están corregidos.
 
 Riesgos residuales que esta PR no puede demostrar:
 
