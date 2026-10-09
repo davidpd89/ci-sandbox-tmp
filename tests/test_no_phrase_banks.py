@@ -1,4 +1,5 @@
 """08/10: ningun banco de frases y ninguna respuesta/comentario sin texto de ChatGPT (David vio en Reddit respuestas sin sentido, p. ej. «¿lo recomiendas sin spoilers?» a quien puso «Audiolibros»)."""
+import datetime
 import os
 import sys
 import tempfile
@@ -23,7 +24,7 @@ class NoBanksTests(unittest.TestCase):
     def test_builders_only_put_a_pending_marker(self):
         self.assertEqual(xr.choose_phrase("finished_book", set(), None), xr.PENDING_TEXT)
         self.assertIsNone(xr.choose_phrase(None, set(), None))
-        plan = rc.build_plan([{"url": "https://reddit.com/r/libros/comments/a/b", "subreddit": "libros", "title": "Nuevas adquisiciones después de mucho tiempo", "author": "x", "comment_count": 1}], max_comments=2)
+        plan = rc.build_plan([{"url": "https://reddit.com/r/libros/comments/a/b", "subreddit": "libros", "title": "Nuevas adquisiciones después de mucho tiempo", "author": "x", "comment_count": 1, "created": (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=1)).isoformat()}], max_comments=2)
         self.assertTrue(plan and all(item["text"] == rc.PENDING_TEXT for item in plan))
         replies = rc.plan_replies([{"id": "t1_a", "author": "ana", "depth": 0, "text": "Para mí fue Los juegos del hambre"}], max_replies=2)
         self.assertTrue(replies and all(item["text"] == rc.PENDING_TEXT for item in replies))
