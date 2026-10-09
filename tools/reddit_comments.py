@@ -154,13 +154,13 @@ def build_plan(threads, *, max_comments, per_sub=2, used=frozenset(), done_keys=
         if t.get("comment_count", 0) > MAX_COMMENTS_IN_THREAD or t.get("url") in done_keys:
             continue
         age = _age_hours(t.get("created"), now)
-        if age is not None and age > MAX_AGE_HOURS:
-            continue
+        if age is None or age > MAX_AGE_HOURS:
+            continue  # sin fecha del post no preparar texto que el ejecutor omitirá
         intent = classify(t.get("title"), t.get("post_type"))
         if not intent:
             continue
         per[sub] = per.get(sub, 0) + 1
-        plan.append({"kind": "comment", "subreddit": sub, "url": t["url"], "text": PENDING_TEXT, "motivo": f"karma:{intent}:{t.get('title', '')[:60]}"})      # el texto lo escribe ChatGPT despues (write_comment_texts)
+        plan.append({"kind": "comment", "subreddit": sub, "url": t["url"], "post_created_at": t.get("created"), "text": PENDING_TEXT, "motivo": f"karma:{intent}:{t.get('title', '')[:60]}"})      # el texto lo escribe ChatGPT despues (write_comment_texts)
     return plan
 
 
@@ -301,6 +301,7 @@ def reply_kind(text):
 
 
 _JS_COMMENTS = """() => [...document.querySelectorAll('shreddit-comment')].map(e => ({id: e.getAttribute('thingid'), author: e.getAttribute('author'), depth: parseInt(e.getAttribute('depth') || '0', 10),
+    created: e.getAttribute('created-timestamp') || e.querySelector('time[datetime]')?.getAttribute('datetime') || '',
     text: ((e.querySelector('[slot=comment]') || {}).innerText || '').trim()}))"""
 
 
@@ -339,7 +340,7 @@ def plan_replies(comments, *, done_ids=frozenset(), used=frozenset(), max_replie
         kind = reply_kind(c.get("text"))
         if not kind or ctp.is_closed_turn(c.get("text")):
             continue                     # 08/10: «gracias», «jaja», «genial»... cierran la conversación: no se contesta por contestar
-        plan.append({"id": cid, "author": author, "text": PENDING_TEXT, "kind": kind, "snippet": (c.get("text") or "")[:60], "full": (c.get("text") or "")[:500]})
+        plan.append({"id": cid, "author": author, "text": PENDING_TEXT, "kind": kind, "post_created_at": c.get("created") or c.get("created_at") or "", "snippet": (c.get("text") or "")[:60], "full": (c.get("text") or "")[:500]})
     return plan
 
 
@@ -374,10 +375,25 @@ def upvote_comment(node):
     return False
 
 
+def _check_own_thread_reply_age(item):
+    """Comprueba la fecha del COMENTARIO entrante, nunca la del hilo propio."""
+    import conversation_turn_policy as ctp
+    return ctp.check_execution("reddit", {
+        "kind": "reply", "reply_to_us": True,
+        "post_created_at": item.get("post_created_at"),
+        "post_text": item.get("full"),
+        "target_post_id": item.get("id"),
+    })
+
+
 def reply_in_thread(pg, thread_url, item, log=print):
     """Vota a favor y responde al comentario `item['id']` del hilo abierto. Limpia el borrador (Reddit lo guarda y el texto se concatenaba: «Qué buen libro.Qué buen libro.», 07/10),
     comprueba que lo escrito es EXACTAMENTE la frase y verifica tras recargar que aparece como respuesta nuestra. Devuelve True/False."""
     import reddit_interact as r
+    allowed, why = _check_own_thread_reply_age(item)
+    if not allowed:
+        log(f"[reddit] respuesta en hilo propio omitida: {why}")
+        return False
     check_reply(item["text"])
     r._check_spanish_orthography(item["text"].replace("¿", "").replace("?", ""))
     node = pg.locator(f'shreddit-comment[thingid="{item["id"]}"]').first
