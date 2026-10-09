@@ -90,12 +90,12 @@ def main(argv=None) -> int:
     try:
         offenders = violations_for_paths(changed_paths(args.base))
     except (RuntimeError, ValueError) as exc:
-        print(f"HIGIENE ERROR: {exc}", file=sys.stderr)
+        print(f"HIGIENE ERROR: {str(exc)!r}", file=sys.stderr)
         return 2
     if offenders:
         print("HIGIENE FALLIDA: no versionar artefactos de cuentas, logs, perfiles ni secretos:", file=sys.stderr)
         for path in offenders:
-            print(f"  - {path}", file=sys.stderr)
+            print(f"  - {path!r}", file=sys.stderr)
         return 1
     print("HIGIENE OK: cambios A/M/T sin ficheros operativos prohibidos.")
     return 0
