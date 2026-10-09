@@ -22,9 +22,11 @@ Ahora:
 - capacidad, permiso e implementación no se interpretan si la cola falta o es desconocida;
 - la cola queda incluida en el digest SHA-256 de evidencia;
 - una verificación externa para `API` no puede reutilizarse para `WEB` o `MOBILE`;
+- `denied`, `unsupported`, `implemented` y `verified` comparten el mismo TTL: un estado viejo vuelve a `investigar_equivalencia`;
+- valores de cola malformados (listas, objetos u otros tipos) fallan cerrados sin excepción;
 - el informe devuelve la cola explícita, sin ejecutar ni encolar ninguna acción.
 
-Esto conserva una norma genérica entre redes sin compartir permisos ni capacidades entre superficies.
+Esto conserva una norma genérica entre redes sin compartir permisos ni capacidades entre superficies. Como la cola pasa a formar parte del digest, verificaciones calculadas con el contrato anterior dejan de promover propuestas y deben revisarse de nuevo; el fallo es deliberadamente seguro.
 
 ## Contrato estadístico actual
 
@@ -87,4 +89,15 @@ La validación final debe tomarse de GitHub Actions, que ejecuta Python 3.11 en 
 
 ## Revisión adversarial
 
-Pendiente de cerrar tras inspeccionar el diff final y los jobs de CI.
+Se hizo una segunda pasada separada del desarrollo inicial. Hallazgos corregidos:
+- los estados negativos/positivos de destino no caducaban de forma uniforme y podían bloquear o afirmar estado indefinidamente;
+- la primera implementación de cola podía lanzar `TypeError` con JSON no escalar por una comprobación sobre `frozenset`;
+- la verificación externa no estaba ligada a WEB/API/MOBILE y podía reutilizarse entre superficies.
+
+Tras las correcciones, no queda un hallazgo crítico conocido dentro del alcance de esta PR. Límites deliberados:
+- no hay cálculo formal de potencia ni corrección por múltiples tests;
+- Instagram no se incorpora porque el contrato recuperado y `discovery_attribution.NETWORKS` instrumentan ocho redes;
+- no se ejecutan Edge, móvil, navegador, API social ni canarios reales;
+- la evidencia final de portabilidad es el workflow del HEAD, con Python 3.11 en Ubuntu y Windows.
+
+No se abre PR adicional en esta ronda: los huecos encontrados eran autocontenidos y se implementaron aquí, y la búsqueda de PRs abiertas no encontró un trabajo equivalente que hubiera que reutilizar o coordinar.
