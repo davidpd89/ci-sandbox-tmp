@@ -21,7 +21,7 @@ Encargo: [#90](https://github.com/davidpd89/ci-sandbox-tmp/pull/90). Sin merge.
 
 ## Diseño implementado
 
-- `.github/workflows/workflow-static-analysis.yml`: workflow independiente que se ejecuta en **cada push, PR y lanzamiento manual** con matriz `ubuntu-latest`/`windows-latest`, permisos `contents: read`, `persist-credentials: false` y acciones de checkout/setup-python por SHA completo. No introduce acciones sociales ni accede a estados operativos.
+- `.github/workflows/workflow-static-analysis.yml`: workflow independiente que se ejecuta en **cada PR, push a main/ci/test-campaign-parent y lanzamiento manual** (evita duplicar push y PR en ramas de trabajo) con matriz `ubuntu-latest`/`windows-latest`, permisos `contents: read`, `persist-credentials: false` y acciones de checkout/setup-python por SHA completo. No introduce acciones sociales ni accede a estados operativos.
 - `tools/ci_actionlint.py`: descarga exclusivamente el activo `v1.7.12` para x86_64 Linux o Windows desde el proyecto upstream. Verifica SHA256 del **archivo de release completo antes de extraer**, valida tipo/tamaño del miembro extraído, no descomprime rutas arbitrarias, comprueba la versión ejecutable y analiza **todos** los `*.yml` y `*.yaml` de `.github/workflows/`. Si no hay archivos o falla descarga/integridad/lint, retorna no cero.
 - SHA256 archivo Linux: `8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8`.
 - SHA256 archivo Windows: `6e7241b51e6817ea6a047693d8e6fed13b31819c9a0dd6c5a726e1592d22f6e9`.
