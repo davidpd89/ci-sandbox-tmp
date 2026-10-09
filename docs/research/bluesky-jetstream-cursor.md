@@ -27,7 +27,7 @@ La rama oficial privada contiene `tools/bluesky_jetstream_collect.py` en `main` 
 | Alternativa | Licencia / revisión verificable | Ventaja | Coste o riesgo | Decisión |
 | --- | --- | --- | --- | --- |
 | Baseline: `websockets>=12,<16` + SQLite | Dependencia actual en mirror; versión instalada y licencia transitiva no auditadas aquí | Sin runtime adicional, actual interfaz de consumidores, sin nuevos permisos | Checkpoint y replay propio frágiles | **Elegida: patrón C (corrección local acotada)** |
-| SDK Python `MarshalX/atproto` | MIT; commit [4c17895](https://github.com/MarshalX/atproto/tree/4c17895c97f6d42ecb9c41dc5c2fb450ab9c6ac8) (2026-10-02) | Identidad DID, rich text, XRPC, firehose | Añade `pydantic`, `cryptography`, `libipld`, `zstandard`, etc.; **no elimina** el deber transaccional local | No integrar |
+| SDK Python `MarshalX/atproto` | MIT; commit [4c17895](https://github.com/MarshalX/atproto/tree/4c17895c97f6d42ecb9c41dc5c2fb450ab9c6ac8) (2026-10-02) | **Sí incorpora** `AsyncJetstreamClient` v2, reconexión, dedupe, cursor y `snapshot`/`replay` de archivo, además de DID, rich text y XRPC | `client.py` actualiza cursor **antes** del callback de persistencia y descarta ciertos frames que no logra decodificar; no garantiza nuestro checkpoint SQLite. Añade `pydantic`, `cryptography`, `zstandard`, `libipld`, etc. Archivo exige credencial. | No integrar en #11; evaluar adaptador/handoff en #94 |
 | `@bsky/jetstream` (TypeScript) | Proyecto Bluesky dual MIT/Apache-2.0, repo [bc6737a](https://github.com/bluesky-social/bsky/tree/bc6737a4b52dd2458c7aecbc296ec660e068af89) (2026-10-08) | Reconexión, cursores y abstracciones mantenidas | Node.js/TS y puente entre procesos hacia SQLite de Python; distinto contrato v1/v2 | No integrar |
 | Cliente Go del Jetstream oficial | MIT/Apache-2.0; [f42df08](https://github.com/bluesky-social/jetstream/tree/f42df08ba0ca9e4287020139aefbcfe24506d1ef) (2026-10-09) | Referencia de cursor inclusivo, resync v2 y dedupe | Nuevo binario, empaquetado Windows/Linux y capa IPC | No integrar |
 
@@ -342,3 +342,45 @@ sabiendo que ello reintroduce el falso éxito. Comprobar los checks
 del SHA final antes de autorizar merge; comparar contra la rama
 privada oficial inmediatamente antes de portar. Las PR #94 (backfill)
 y #95 (taste) siguen separadas; no abrir derivadas duplicadas.
+
+## Sexta revisión de reutilización: SDK Python Jetstream v2 (10-10-2026)
+
+**Alternativa reevaluada en el mismo commit ya citado de MarshalX/atproto:**
+la implementación *sí* incluye un cliente Python nativo Jetstream v2,
+`AsyncJetstreamClient`, así como `snapshot()` y `replay()` sobre el
+archivo, lo cual no quedaba reflejado en la comparativa inicial.
+Fuentes inmutables:
+[cliente y cursor](https://github.com/MarshalX/atproto/blob/4c17895c97f6d42ecb9c41dc5c2fb450ab9c6ac8/packages/atproto_jetstream/client.py),
+[API archive→live](https://github.com/MarshalX/atproto/blob/4c17895c97f6d42ecb9c41dc5c2fb450ab9c6ac8/packages/atproto_jetstream/jetstream.py)
+y [dependencias/licencia](https://github.com/MarshalX/atproto/blob/4c17895c97f6d42ecb9c41dc5c2fb450ab9c6ac8/pyproject.toml).
+El paquete integrado `atproto` es MIT y declara Python 3.11/Windows;
+no debe confundirse con la distribución homónima independiente
+`atproto_jetstream` de otro mantenedor en PyPI.
+
+**Comparación aplicada:** `_JetstreamClientMixin._decode_frame()`
+invoca `_track_cursor(seq)` **antes** de entregar el mensaje al consumidor.
+Una excepción posterior del callback SQLite podría dejar el cursor interno
+más avanzado que los datos durables, por lo que reemplazar el collector
+actual sin un adaptador de confirmación/rollback reproduciría una pérdida
+que precisamente corrige #11. El SDK también tolera algunos fallos de
+decodificación para continuar: esta política no equivale a nuestra detección
+explícita de ingestión incompleta. Su ventaja es reducir la cantidad de
+código propio de transporte, reconexión y backfill; su coste es mayor árbol
+de dependencias (entre ellas `websockets>=15,<18`) y un contrato nuevo de
+entrega/ACK. La lectura del archivo exige credencial separada; no se usa
+ni configura aquí.
+
+**Decisión:** conservar `websockets + SQLite` y los tests de esta PR,
+sin añadir paquetes o mecanismos de cuentas. **En #94**, comparar un
+adaptador del SDK para `snapshot/replay` con cliente Go y HTTP/stream
+propios mediante fixture offline: commits/delete, brecha de secuencia,
+handoff archive→live, excepción del callback entre evento y checkpoint,
+reanudación tras reinicio y compatibilidad real Python 3.11/Windows.
+Solo adoptar si no adelanta cursor durable por encima de datos escritos
+y aporta una mejora verificable de mantenimiento. Evitar abrir otra PR
+para lo mismo.
+
+La semántica compartida es **confirmación durable antes de declarar
+progreso**, independiente de Bluesky; cada red implementa su ACK en
+el adaptador. Ninguna evaluación anterior o actual incluye credenciales
+ni acciones reales en redes.
