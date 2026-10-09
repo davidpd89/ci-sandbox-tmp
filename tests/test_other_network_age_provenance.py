@@ -71,6 +71,29 @@ class CrossNetworkPlanTimeTests(unittest.TestCase):
         self.assertEqual(age.check("tiktok", actions[0], now=NOW),
                          (False, "post_antiguo"))
 
+    def test_tiktok_scanner_to_shortlist_to_builder_to_age_gate(self):
+        import types
+        path = TOOLS / "tiktok_growth_scan.py"
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        fn = next(x for x in tree.body if isinstance(x, ast.FunctionDef)
+                  and x.name == "_compact_shortlist")
+        ns = {"sc": types.SimpleNamespace(
+            is_conversation_closer=lambda text: False),
+            "_lane": lambda candidate: "acquisition"}
+        exec(compile(ast.Module(body=[fn], type_ignores=[]), str(path), "exec"), ns)
+        rows = [{"handle": "lectora", "known": False, "known_date": None,
+                 "followed": False, "source": "video_search",
+                 "caption": "Libros de fantasía", "url": "https://tiktok.test/video/123",
+                 "niche_hits": 4, "score": 10, "create_time": ts(10)}]
+        shortlist = ns["_compact_shortlist"](rows, limit=2)
+        self.assertEqual(shortlist[0]["posts"][0]["created_at"], ts(10))
+        plan = tiktok.build({"shortlist": shortlist, "auto_plan": []}, {
+            "actions": [{"post": "T001-P1", "kind": "comment",
+                         "text": "Me interesan los libros."}]})
+        self.assertEqual(plan[0]["post_created_at"], ts(10))
+        self.assertEqual(age.check("tiktok", plan[0], now=NOW),
+                         (False, "post_antiguo"))
+
     def test_missing_source_does_not_turn_scan_time_into_post_time(self):
         threads_plan = threads.build(
             [{"handle": "lectora", "text": "Libros de fantasía"}], max_follows=0)
