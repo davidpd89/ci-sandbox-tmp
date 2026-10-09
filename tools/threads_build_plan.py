@@ -49,7 +49,8 @@ def build(candidates, max_follows=4):
         if not NICHE.search(text) or sc.is_political(text) or SPAM.search(text):
             continue
         handles.add(handle.casefold())
-        plan.append({"handle": handle, "kind": "like", "text_fragment": fragment(text)})
+        plan.append({"handle": handle, "kind": "like", "text_fragment": fragment(text),
+                     "post_created_at": item.get("created_at") or item.get("created_time") or ""})
         if follows < max_follows and not item.get("known_date") and NICHE.search(text):
             plan.append({"handle": handle, "kind": "follow", "motivo": "autor/lector del nicho"})
             follows += 1
@@ -98,7 +99,7 @@ def build_from_pool(db, *, likes, follows, known=None, exclude_days=5, today=Non
     for row in picked:
         fragment_text = fragment(row["text"])
         item = {"handle": row["handle"], "kind": "like", "permalink": row["permalink"], "text_fragment": fragment_text,
-                "motivo": f"growth:pool:score={row['score']}:src={row['source']}"}
+                "post_created_at": row.get("created_at") or "", "motivo": f"growth:pool:score={row['score']}:src={row['source']}"}
         plan.append(item)
         if nfollows < post_follow_budget and row["handle"].casefold() not in {str(h).lstrip("@").casefold() for h in known}:
             plan.append({"handle": row["handle"], "kind": "follow", "motivo": f"growth:pool:autor/lector del nicho:src={row['source']}"})
@@ -129,7 +130,8 @@ def build_replies(db, stage_number, registro, rng=None):
         row = by_handle.get(str(item["handle"]).casefold())
         if not row:
             continue
-        out.append({"handle": row["handle"], "kind": "reply", "permalink": row["permalink"], "text_fragment": fragment(row["text"]), "text": item["text"], "bank": True, "post_text": (row.get("text") or "")[:500], "motivo": item["motivo"]})
+        out.append({"handle": row["handle"], "kind": "reply", "permalink": row["permalink"],
+                    "post_created_at": row.get("created_at") or "", "text_fragment": fragment(row["text"]), "text": item["text"], "bank": True, "post_text": (row.get("text") or "")[:500], "motivo": item["motivo"]})
     return out
 
 
