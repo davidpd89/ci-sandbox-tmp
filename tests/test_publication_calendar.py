@@ -76,6 +76,12 @@ class CalendarTests(unittest.TestCase):
         self.assertEqual([p["status"] for p in rows], ["review", "invalid"])
         self.assertIn("bloqueo_editorial", rows[1]["issues"])
 
+    def test_negated_or_manual_ready_state_is_never_due(self):
+        for state in ("no lista para publicar", "lista solo manual", "lista negra"):
+            with self.subTest(state=state):
+                row = plan({"bluesky": [item(state=state, when=datetime(2026, 10, 9, 10))]})["items"][0]
+                self.assertEqual(row["status"], "review")
+
     def test_missing_required_fields_media_alt(self):
         p = plan({"bluesky": [item(text="", state="", when=None,
                      media=[{"exists": False, "alt": ""}])]})["items"][0]
