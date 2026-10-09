@@ -70,7 +70,7 @@ con privacidad y autorización (G3). G1 es automática solo parcialmente:
 paridad con el original. Las decisiones individuales A/B/C/D pertenecen
 exclusivamente a las hijas; el padre adopta **C para el control de campaña**.
 
-El script usa comparación exacta del dominio del repo, 46 PR del rango,
+El script usa comparación exacta del dominio del repo, la cohorte mínima de 46 PR originales y ampliaciones consecutivas (76 verificadas el 2026-10-09),
 unicidad de números/objetivos/ramas, ramas prefijadas, títulos, SHA con
 formato válido, bases, relaciones sin referencias externas, privacidad
 por regex y exclusión de rutas sensibles, más revalidación de GitHub
@@ -97,7 +97,7 @@ El test unitario usa fixtures generados y respuestas simuladas.
 Medición local del primer prototipo: **15 pruebas**; primera ejecución,
 **14 correctas y 1 fallo** al no detectar `token=...`. Tras corrección
 del patrón de secreto, **15/15 correctas** (suite específica).
-No se ha ejecutado en este entorno la suite completa del repo privado.
+Una ampliación simultánea de #57–#86 hizo fallar correctamente la suposición inicial de un total fijo; se cambió a integridad de rango con 46 obligatorias. La suite dedicada incorpora después 22 casos unitarios; se exige confirmación CI de ese resultado, distinta de los 15 tests locales iniciales. No se ha ejecutado en este entorno la suite completa del repo privado.
 Los checks remotos solo se consideran realizados cuando GitHub confirma
 su resultado para el SHA final.
 
