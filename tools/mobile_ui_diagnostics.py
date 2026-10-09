@@ -27,7 +27,7 @@ ROLES = frozenset({
 LANDMARKS = frozenset({
     "inicio", "home", "para ti", "for you", "siguiendo", "following",
     "seguir", "follow", "perfil", "profile", "usuarios", "users",
-    "videos", "comentarios", "comments", "buscar", "search",
+    "videos", "vídeos", "comentarios", "comments", "buscar", "search",
     "me gusta", "like", "compartir", "share", "amigos", "friends",
     "mensajes", "messages",
 })
@@ -125,7 +125,7 @@ def _validated(snapshot: dict[str, Any]) -> dict[str, int]:
     if not isinstance(snapshot.get("fingerprint"), str) or not FINGERPRINT_RE.fullmatch(snapshot["fingerprint"]):
         raise ValueError("invalid fingerprint")
     features = snapshot.get("features")
-    if not isinstance(features, dict) or len(features) > 1024:
+    if not isinstance(features, dict) or len(features) > MAX_NODES:
         raise ValueError("invalid feature map")
     allowed_labels = {label.replace(" ", "_") for label in LANDMARKS} | {"none"}
     for key, count in features.items():
