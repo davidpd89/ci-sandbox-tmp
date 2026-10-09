@@ -831,6 +831,7 @@ class GrowthScanTests(unittest.TestCase):
         likes = [a for a in result["auto_plan"] if a["kind"] == "like"]
         self.assertEqual(len(likes), 1)
         self.assertEqual(likes[0]["handle"], "descubrimiento-fuerte.bsky.social")
+        self.assertEqual(likes[0]["post_created_at"], "2026-09-29T08:00:00Z")
         self.assertIn("umbral_mecanico", likes[0]["motivo"])
 
     def test_high_score_like_skips_off_niche_post_from_off_niche_account(self):
@@ -1596,6 +1597,7 @@ class GrowthScanTests(unittest.TestCase):
         plan = gs._build_output(c)["auto_plan"]
         reposts = [a for a in plan if a["kind"] == "repost"]
         self.assertEqual(len(reposts), 1)                                   # tope por ronda
+        self.assertEqual(reposts[0]["post_created_at"], "2026-09-29T08:00:00Z")
         self.assertTrue(reposts[0]["handle"].startswith("fuerte"))          # solo posts claramente del nicho, en espanol y sin publicidad/enlaces
         liked_same_post = [a for a in plan if a["kind"] == "like" and a["url"] == reposts[0]["url"]]
         self.assertEqual(liked_same_post, [])                               # un post, una interaccion: el ejecutor rechazaria TODO el lote con like + repost
