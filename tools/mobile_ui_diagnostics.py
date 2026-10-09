@@ -92,7 +92,10 @@ def _geometry(element: dict[str, Any]) -> tuple[float, float] | None:
         return None
     if not (math.isfinite(y) and math.isfinite(h) and y >= 0 and h >= 0):
         return None
-    return y + h / 2, y + h
+    center, bottom = y + h / 2, y + h
+    if not (math.isfinite(center) and math.isfinite(bottom)):
+        return None
+    return center, bottom
 
 
 def diagnose(tree: Any) -> dict[str, Any]:
