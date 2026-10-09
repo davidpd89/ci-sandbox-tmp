@@ -150,7 +150,8 @@ def build_plan(candidates, max_follows=10, max_saves=10, max_reacts=15, max_comm
             seen_pin_react.add(pin["url"])
             caption = f"{pin.get('title') or ''} {pin.get('desc') or ''}".strip()
             plan.append({"kind": "react", "url": pin["url"], "title": (pin.get("title") or "")[:80],
-                         "post_text": caption[:600], "media_present": True})
+                         "post_text": caption[:600], "media_present": True,
+                         "post_created_at": pin.get("post_created_at") or pin.get("created_at") or pin.get("created_time") or ""})
     for pin in pins:
         if len([a for a in plan if a["kind"] == "save"]) >= max_saves:
             break
