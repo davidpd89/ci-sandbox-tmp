@@ -185,7 +185,7 @@ def _is_followup(item):
 
 def age_days(network, item, *, now=None):
     now = _aware(now) if now else dt.datetime.now(dt.timezone.utc)
-    if (network == "bluesky" and isinstance(item, dict)
+    if (network in ("bluesky", "threads") and isinstance(item, dict)
             and item.get("kind") in TEXT_KINDS
             and _explicit_post_datetime(item) is None):
         return None  # TID reciente no autentica la edad de una respuesta
@@ -215,7 +215,7 @@ def check(network, item, *, now=None):
             return False, "post_antiguo"
         # ATProto: un TID puede ser elegido por el autor; no autoriza texto.
         # Una fecha explícita del post sigue siendo necesaria para respuesta.
-        if network == "bluesky" and text_action and _explicit_post_datetime(item) is None:
+        if network in ("bluesky", "threads") and text_action and _explicit_post_datetime(item) is None:
             return False, "edad_desconocida"
         return True, "edad_ok"
     except Exception:       # noqa: BLE001 - las acciones de texto fallan cerradas ante datos invalidos
