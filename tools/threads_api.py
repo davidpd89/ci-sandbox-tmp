@@ -164,7 +164,7 @@ def build_plan(items, decisions):
 
 def followups(token, my_username, limit_posts=25):
     """Reconciliacion solo lectura: nunca confundir primera pagina con historial completo."""
-    posts = paginated("me/threads", token, fields="id,text,timestamp,has_replies", limit=limit_posts)
+    posts = paginated("me/threads", token, fields="id,text,timestamp,is_reply,has_replies", limit=limit_posts)
     own_replies = paginated("me/replies", token, fields="id,replied_to", limit=100)
     answered = {
         str(parent["id"]) for item in own_replies
@@ -173,7 +173,7 @@ def followups(token, my_username, limit_posts=25):
     }
     pending, seen = [], set()
     for post in posts:
-        if not post.get("has_replies"):
+        if post.get("is_reply") or not post.get("has_replies"):
             continue
         replies = paginated(
             f"{post['id']}/replies", token,
