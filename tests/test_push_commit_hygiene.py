@@ -223,6 +223,48 @@ class PushCommitTests(unittest.TestCase):
         self.commit("space")
         self.assertEqual(self.scan(), [(self.head(), 1)])
 
+    def test_root_commit_sensitive_on_first_push(self):
+        # An orphan first push must inspect the root commit, not only its tip.
+        self.git("checkout", "--orphan", "first")
+        self.git("rm", "-rfq", ".")
+        self.write("secrets/root.json")
+        self.commit("root sensitive")
+        root_sha = self.head()
+        self.git("rm", "secrets/root.json")
+        self.commit("remove root secret")
+        self.assertEqual(self.scan("0" * 40), [(root_sha, 1)])
+
+    def test_force_to_unrelated_orphan_history(self):
+        self.git("checkout", "--orphan", "replace")
+        self.git("rm", "-rfq", ".")
+        self.write("docs/only-safe.md")
+        self.commit("unrelated root")
+        self.write("cache/metricas.csv")
+        self.commit("unrelated sensitive")
+        self.assertEqual(self.scan(), [(self.head(), 1)])
+
+    def test_same_sha_before_after_is_not_a_verified_push(self):
+        with self.assertRaisesRegex(gh.HistoryError, "No commits"):
+            self.scan(self.head())
+
+    def test_real_shallow_clone_fails_closed(self):
+        self.write("docs/safe.md")
+        self.commit("second commit")
+        with tempfile.TemporaryDirectory() as td:
+            target = Path(td) / "shallow"
+            proc = subprocess.run(["git", "clone", "-q", "--depth", "1",
+                                   "--no-local", self.repo.as_uri(), str(target)],
+                                  capture_output=True)
+            self.assertEqual(proc.returncode, 0, proc.stderr.decode("utf-8", "replace"))
+            self.assertEqual(gh.git(target, "rev-parse", "--is-shallow-repository").strip(), b"true")
+            with self.assertRaisesRegex(gh.HistoryError, "Shallow"):
+                gh.commits_in_range(target, None, self.head())
+
+    def test_sensitive_path_on_unix_casefold(self):
+        self.write("SISTEMA_DIARIO_X/METRICAS.CSV")
+        self.commit("sensitive uppercase")
+        self.assertEqual(self.scan(), [(self.head(), 1)])
+
     def test_cli_does_not_leak_path_contents(self):
         self.write("secrets/synthetic-name.json")
         self.commit("bad")
