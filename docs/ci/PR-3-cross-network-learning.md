@@ -148,3 +148,7 @@ Metadatos consultados en GitHub el 09-10-2026:
 Se exige una sola evidencia favorable no contradicha **dentro del lote disponible**, no se afirma haber inspeccionado la totalidad de experimentos externos. La integridad del historial de ensayos y la identidad auditada de cada ensayo deben verificarse en la PR #91. La ausencia de datos contradictorios en un JSON autodeclarado no es prueba de inexistencia real. Claude deberá revisar la integración con el repo privado y no confundir CI sintética con validación real.
 
 El resultado exacto de la nueva ejecución Ubuntu/Windows se verificará contra el HEAD final de esta ronda; los éxitos de commits anteriores no se atribuyen a código posterior.
+
+## Sexta revisión adversarial — precisión de la brecha (10-10-2026)
+
+Corregido un caso límite reproducible: con `n=1_000_000` en cada brazo y éxitos `500_990` frente a `499_010`, la diferencia positiva entre extremos de Wilson es aproximadamente `0.00002`, pero `round(..., 4)` devolvía `0.0`. La propuesta podía mantenerse positiva con una brecha declarada nula. `wilson_interval_gap` conserva ahora el valor positivo sin redondeo para que consumidores y revisores no confundan una separación real con cero; sigue siendo una separación descriptiva de extremos, **no** un IC de la diferencia. Nueva prueba de regresión offline `test_small_positive_interval_gap_is_not_reported_as_zero`. El cambio amplía la precisión decimal del campo y debe conservarse al integrar la PR #91, que comparte el archivo.

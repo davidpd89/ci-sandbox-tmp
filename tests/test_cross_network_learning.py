@@ -113,7 +113,7 @@ class CrossNetworkTests(unittest.TestCase):
                     positive(treatment={"n": True, "successes": True})):
             self.assertFalse(run(row)["proposals"])
 
-    def test_unknown_expired_or_denied_permissions_never_suggest_apply(self):
+    def test_small_positive_interval_gap_is_not_reported_as_zero(self):\n        """Un gate positivo jamás debe publicar una brecha 0.0 por redondeo."""\n        row = positive(treatment={"n": 1_000_000, "successes": 500_990},\n                       control={"n": 1_000_000, "successes": 499_010})\n        result = run(row)\n        self.assertEqual(len(result["proposals"]), 1)\n        proposal = result["proposals"][0]\n        self.assertEqual(proposal["state"], "verificacion_externa_pendiente")\n        self.assertGreater(proposal["wilson_interval_gap"], 0.0)\n        self.assertLess(proposal["wilson_interval_gap"], 0.00005)\n        self.assertFalse(result["writes"])\n\n    def test_unknown_expired_or_denied_permissions_never_suggest_apply(self):
         cases = [({}, "investigar_equivalencia"),
                  ({"queue": "API", "capability": "verified", "permission": "unknown",
                    "checked_on": "2026-10-08"}, "investigar_equivalencia"),
