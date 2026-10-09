@@ -2,6 +2,7 @@ name: Lint GitHub Actions workflows (pinned actionlint)
 
 on:
   push:
+    branches: [main, ci/test-campaign-parent]
   pull_request:
   workflow_dispatch:
 
