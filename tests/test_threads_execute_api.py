@@ -1,4 +1,5 @@
 import os
+import datetime as dt
 import sys
 import unittest
 
@@ -10,6 +11,10 @@ import threads_api as api
 class ApiReplyTests(unittest.TestCase):
     ITEM = {"handle": "ana", "kind": "reply", "text": "El segundo, sin duda.", "reply_to_id": "99",
             "post_text": "Cual recomiendas?"}
+
+    def setUp(self):
+        self.ITEM = {**type(self).ITEM,
+            "post_created_at": (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=2)).isoformat()}
 
     def test_preflight_accepts_api_reply_without_text_fragment(self):
         plan = te._preflight_plan([dict(self.ITEM)])

@@ -1,5 +1,6 @@
 """Preflight X debe bloquear el lote completo ante errores locales."""
 import ast
+import datetime as dt
 import pathlib
 import re
 import types
@@ -122,6 +123,7 @@ class XExecutePreflightTests(unittest.TestCase):
             {
                 "kind": "reply",
                 "url": "https://x.com/lectora/status/123",
+                "post_created_at": (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=2)).isoformat(),
                 "text": "Respuesta concreta sobre este libro.",
             },
         ])

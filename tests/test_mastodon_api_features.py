@@ -1,5 +1,6 @@
 """Mastodon API: discovery e interacción segura; sin red real."""
 import pathlib
+import datetime as dt
 import sys
 import types
 import unittest
@@ -313,7 +314,8 @@ class MastodonPublicationPolicyTests(unittest.TestCase):
 
     def test_executor_rejects_own_publication_kinds(self):
         for kind in ("post", "quote", "poll"):
-            item = {"kind": kind, "curated": True, "text": "Texto", "url": "7"}
+            item = {"kind": kind, "curated": True, "text": "Texto", "url": "7",
+                    "post_created_at": (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=2)).isoformat()}
             with self.subTest(kind=kind), \
                  patch("repost_policy.done_today", return_value=0), \
                  patch.object(execute.dup, "check", return_value=[]):
@@ -340,7 +342,8 @@ class MastodonPublicationPolicyTests(unittest.TestCase):
     def test_invalid_later_reply_blocks_earlier_follow(self):
         plan = [
             {"kind": "follow", "handle": "lectora"},
-            {"kind": "reply", "url": "7", "text": "  "},
+            {"kind": "reply", "url": "7", "text": "  ",
+             "post_created_at": (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=2)).isoformat()},
         ]
         with patch.object(execute.m, "follow") as follow, \
              patch.object(execute.dup, "check", return_value=[]):

@@ -1,5 +1,6 @@
 """Bluesky: ningún error determinista del plan puede aparecer después de escribir."""
 import ast
+import datetime as dt
 import pathlib
 import types
 import unittest
@@ -130,6 +131,7 @@ class BlueskyPreflightTests(unittest.TestCase):
             {
                 "kind": "reply", "handle": "lectora.bsky.social",
                 "url": "https://bsky.app/profile/lectora.bsky.social/post/abc",
+                "post_created_at": (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=1)).isoformat(),
                 "text": "Respuesta distinta y útil.",
             },
         ])
@@ -149,6 +151,7 @@ class LedgerIntegrationTests(unittest.TestCase):
         import action_ledger as al
         plan = [
             {"kind": "reply", "handle": "lectora.bsky.social",
+             "post_created_at": (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=1)).isoformat(),
              "url": "https://bsky.app/profile/lectora.bsky.social/post/abc", "text": "Respuesta única."},
             {"kind": "like", "handle": "otra.bsky.social",
              "url": "https://bsky.app/profile/otra.bsky.social/post/xyz"},
