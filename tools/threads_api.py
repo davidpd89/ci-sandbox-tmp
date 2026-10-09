@@ -38,6 +38,42 @@ def api_get(path, token, **params):
     return mc.graph_get(BASE, path, token, **params)
 
 
+def paginated(path, token, *, fields, limit=50, max_pages=5):
+    """Itera paginas de Graph Threads sin abrir URLs devueltas por el servidor.
+
+    'paging.next' solo indica que hay otra pagina: se pasa su cursor 'after' al
+    endpoint original. Ante truncado/error se aborta antes de producir un plan parcial.
+    """
+    if not 1 <= limit <= 100 or max_pages < 1:
+        raise ValueError("limite de paginacion invalido")
+    items, seen_cursors, seen_ids = [], set(), set()
+    cursor = None
+    for _ in range(max_pages):
+        params = {"fields": fields, "limit": limit}
+        if cursor is not None:
+            params["after"] = cursor
+        response = api_get(path, token, **params)
+        if not isinstance(response, dict) or not isinstance(response.get("data"), list):
+            raise RuntimeError("respuesta paginada Threads sin data valida")
+        for item in response["data"]:
+            if not isinstance(item, dict) or not item.get("id"):
+                raise RuntimeError("elemento Threads sin id")
+            if str(item["id"]) not in seen_ids:
+                items.append(item)
+                seen_ids.add(str(item["id"]))
+        paging = response.get("paging") or {}
+        if not isinstance(paging, dict):
+            raise RuntimeError("paging Threads invalido")
+        if not paging.get("next"):
+            return items
+        next_cursor = (paging.get("cursors") or {}).get("after")
+        if not isinstance(next_cursor, str) or not next_cursor or next_cursor in seen_cursors:
+            raise RuntimeError("cursor Threads ausente o repetido")
+        seen_cursors.add(next_cursor)
+        cursor = next_cursor
+    raise RuntimeError("Threads: paginacion incompleta, revisar limite antes de generar acciones")
+
+
 def token_days_left(env, today=None):
     today = today or datetime.date.today()
     try:
@@ -75,7 +111,11 @@ def api_post(path, token, **params):
 
 
 class ReplyNotCreated(RuntimeError):
-    """Fallo ANTES de publicar: no hay respuesta en Threads, se puede reintentar o usar el navegador."""
+    """Fallo antes de crear un contenedor, sin llamada de publicacion."""
+
+
+class ReplyPublishUncertain(RuntimeError):
+    """Hubo intento de publicar; no se sabe si Threads acepto la respuesta."""
 
 
 def check_reply_text(text):
@@ -96,7 +136,14 @@ def publish_reply(token, user_id, reply_to_id, text):
         container = api_post(f"{user_id}/threads", token, media_type="TEXT", text=text, reply_to_id=reply_to_id)
     except RuntimeError as exc:
         raise ReplyNotCreated(str(exc)) from None
-    published = api_post(f"{user_id}/threads_publish", token, creation_id=container["id"])
+    if not isinstance(container, dict) or not container.get("id"):
+        raise ReplyNotCreated("Threads no devolvio id de contenedor")
+    try:
+        published = api_post(f"{user_id}/threads_publish", token, creation_id=container["id"])
+    except Exception as exc:
+        raise ReplyPublishUncertain("publicacion sin confirmacion; reconciliar antes de reintentar") from exc
+    if not isinstance(published, dict) or not published.get("id"):
+        raise ReplyPublishUncertain("Threads acepto la peticion sin id confirmado; reconciliar")
     return published["id"]
 
 
@@ -116,18 +163,29 @@ def build_plan(items, decisions):
 
 
 def followups(token, my_username, limit_posts=25):
-    mine = api_get("me/threads", token, fields="id,text,timestamp,is_reply,has_replies,replied_to{id}", limit=limit_posts)
-    posts = mine.get("data", [])
-    answered = {(p.get("replied_to") or {}).get("id") for p in posts if p.get("is_reply")}
-    pending = []
+    """Reconciliacion solo lectura: nunca confundir primera pagina con historial completo."""
+    posts = paginated("me/threads", token, fields="id,text,timestamp,has_replies", limit=limit_posts)
+    own_replies = paginated("me/replies", token, fields="id,replied_to", limit=100)
+    answered = {
+        str(parent["id"]) for item in own_replies
+        for parent in [item.get("replied_to")]
+        if isinstance(parent, dict) and parent.get("id")
+    }
+    pending, seen = [], set()
     for post in posts:
         if not post.get("has_replies"):
             continue
-        data = api_get(f"{post['id']}/replies", token, fields="id,text,username,timestamp,permalink")
-        for reply in unanswered(data.get("data", []), my_username, answered):
+        replies = paginated(
+            f"{post['id']}/replies", token,
+            fields="id,text,username,timestamp,permalink,replied_to", limit=100
+        )
+        for reply in unanswered(replies, my_username, answered):
+            if reply["id"] in seen:
+                continue
+            seen.add(reply["id"])
             reply["a_nuestro"] = (post.get("text") or "")[:100]
             pending.append(reply)
-    return pending
+    return sorted(pending, key=lambda x: x.get("timestamp") or "", reverse=True)
 
 
 def main(argv=None):
