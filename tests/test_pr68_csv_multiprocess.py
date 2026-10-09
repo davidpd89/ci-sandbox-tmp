@@ -81,6 +81,28 @@ class RoundCsvAtomicity(unittest.TestCase):
         self.assertEqual(q._read_round_csv_rows()[0]["estado"], "ok")
         self.assertTrue(self.path.read_bytes().endswith(b"\n"))
 
+    def test_three_column_legacy_ledger_is_read_only_and_preserved(self):
+        import datetime as dt
+        with self.path.open("w", encoding="utf-8", newline="") as stream:
+            writer = csv.writer(stream)
+            writer.writerow(q.ROUND_CSV_LEGACY_COLUMNS)
+            writer.writerow(["2026-10-09", "mastodon", "parcial"])
+        before = self.path.read_bytes()
+        self.assertEqual(q.done_today(dt.date(2026, 10, 9)), {"mastodon": 1})
+        with self.assertRaises(ValueError):
+            q._append_round_csv(self.row("x"))
+        self.assertEqual(self.path.read_bytes(), before)
+
+    def test_three_column_legacy_without_terminator_is_not_deleted(self):
+        import datetime as dt
+        with self.path.open("w", encoding="utf-8", newline="") as stream:
+            writer = csv.writer(stream)
+            writer.writerow(q.ROUND_CSV_LEGACY_COLUMNS)
+            writer.writerow(["2026-10-09", "mastodon", "parcial"])
+        self.path.write_bytes(self.path.read_bytes().rstrip(b"\\r\\n"))
+        self.assertEqual(q.done_today(dt.date(2026, 10, 9)), {"mastodon": 1})
+        self.assertEqual(len(self.read_rows()), 2)
+
     def test_corrupt_header_fails_closed_in_both_readers(self):
         import datetime as dt
         self.path.write_text("untrusted,date\n2026,1\n", encoding="utf-8")
