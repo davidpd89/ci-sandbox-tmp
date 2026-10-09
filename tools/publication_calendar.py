@@ -68,7 +68,7 @@ def _entry(red: str, item: dict, now: datetime, zone: ZoneInfo, max_days: int) -
         status = "resolved"
     elif issues:
         status = "invalid"
-    elif not (state.casefold().startswith("lista") and "manual" not in state.casefold()):
+    elif state.casefold().strip().rstrip(".") not in ("lista", "lista para publicar", "lista para publicación", "lista para publicacion", "lista para programar"):
         status = "review"
     elif instant > now:
         status = "future"
