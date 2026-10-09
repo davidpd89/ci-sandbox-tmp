@@ -36,15 +36,21 @@ sobre `research/public-reuse-parent`. No se interactuo con cuentas ni se usaron 
   IDs propios reconocidos; permalink de publicaciones ajenas no equivale
   a un ID reconocido. No se amplia el acceso del navegador ni se sortea
   `threads_keyword_search`.
-- **Repositorio oficial privado (inspeccionado main)**:
-  `tools/threads_scan.py`, `tools/threads_execute.py`,
-  `tools/threads_interact.py`, `tests/test_threads_post_confirmation.py`,
-  `SISTEMA_DIARIO_THREADS/PROCESO.md`.
-  El listado del directorio `tools/` de main **no incluye**
-  `threads_api.py` ni `threads_build_plan.py`: el mirror no es una copia
-  equivalente del main oficial. Hay que comparar con ramas operativas
-  reales antes de sincronizar/portar; no atribuir ausencia de funciones
-  al proyecto sin esa comparacion.
+- **Repositorio oficial privado (rama operativa
+  `integracion/crecimiento-2026-10`, inspeccion 09-10-2026)**:
+  `tools/threads_api.py` (blob
+  `0a86f1e6943d486b45722cd09d0b40248c986861`) y
+  `tools/threads_execute.py` (blob
+  `b55dc1a048fffef135cca550605f0e7d2f315d01`) **si existen**.
+  El publicador oficial ya utiliza `reply_provenance` (firma, ID,
+  permalink y texto comprobados contra GET del destino),
+  `conversation_turn_policy` y reservas atomicas de
+  `action_ledger`, con estado `UNCERTAIN` para ACK ambiguo.
+  La copia publica **no** contiene esas guardias de forma equivalente:
+  **nunca sustituir** el publicador privado por `publish_reply` del mirror.
+  Portar solo paginacion y contrato de lectura a ese archivo privado,
+  preservando la firma y el ledger. El comentario anterior sobre ausencia
+  de `threads_api.py` correspondia a main, no a la rama operativa.
 - Integridad: `pendiente_verificacion` queda disponible para ledger,
   sin afirmar `confirmado`. Un fallo 401/403 o paginacion truncada
   interrumpe la lectura sin generar una bandeja parcial que se interprete
@@ -101,14 +107,23 @@ por pagina. No se inventa un benchmark de latencia.
 - `tools/threads_api.py::paginated`: solo reusa el endpoint original y
   `after` obtenido en `paging.cursors`; nunca abre `paging.next` como URL
   (evita SSRF/fuga del token a hosts suministrados por una respuesta).
-  Deduplicacion por `id`; rechazo de respuestas/cursor malformados,
-  repetidos y limite de cinco paginas con error explicito. El error
+  Deduplicacion por `id`; continuacion tambien cuando solo hay
+  `paging.cursors.after` en una pagina llena, aun sin `paging.next`
+  (formato ilustrado en Postman oficial). Rechazo de pagina llena sin
+  cursor util, cursor malformado/repetido y limite de cinco paginas
+  con error explicito. El error
   **interrumpe todo el barrido**, no entrega resultados parciales.
 - `followups`: lee threads propios, `me/replies` y las paginas de
   respuestas recibidas; cruza `replied_to.id`, excluye roots que son
-  replies propias, deduplica y ordena. No intenta crear respuestas.
-- `publish_reply` distingue `ReplyNotCreated` previo a publicacion
-  de `ReplyPublishUncertain` despues de un intento.
+  replies propias, deduplica y ordena. **Alcance actual: replies directas**;
+  el endpoint `/{id}/replies` no equivale a `/{id}/conversation`.
+  La recuperacion de preguntas anidadas requiere prueba contractual
+  diferenciada para no inventar conversaciones. No crea respuestas.
+- El publicador del mirror desactiva `auto_publish_text` durante la
+  creacion de contenedor (para mantener el modelo de dos POST), valida
+  `id` no vacio de tipo `str` y distingue `ReplyNotCreated`
+  previo a publicacion de `ReplyPublishUncertain` despues de un intento.
+  No copiar esta version sobre la rama privada, que usa ledger/firma.
   `threads_execute.run_plan` guarda resultado `pendiente_verificacion`.
   **No reintentar manualmente ni reprogramar un pendiente sin comprobar
   primero `me/replies` contra parent ID/texto**. Los mecanismos
@@ -212,3 +227,36 @@ semantica compartida con #20/#26 y tests de drift de #41.
 hasta portar al repo privado vigente, revisar resultados de CI y
 cerrar el riesgo de reintento persistente. Las correcciones del mirror
 quedan en su propia PR para revision independiente, nunca merge automatico.
+
+## Segunda revision independiente: evidencias y puntos de integracion (09-10-2026)
+
+- Los ejemplos **oficiales de Meta** para listados y replies contienen
+  `paging.cursors.after` sin `paging.next`:
+  https://www.postman.com/meta/threads/documentation/dht3nzz/threads-api .
+  Se añade fallback solo para **pagina llena con cursor**, manteniendo
+  finalizacion en pagina corta y error si la pagina llena carece de cursor.
+  Es una heuristica documentada, no garantia de completitud de un servidor
+  que omita cursores: requiere canario de solo lectura antes de portar.
+- Contratos extra offline: cursor sin `next`, pagina llena sin cursor,
+  estructura de cursor corrupta, `auto_publish_text=false`, timeout
+  durante creacion de contenedor e ID no textual en ACK.
+  No se instalan SDKs; permanece la comparacion MIT/Python 3.11 anterior.
+- Hallazgo de prioridad **alta** en el privado:
+  `threads_api.py` tiene una verificacion de procedencia y ledger de
+  acciones de las que carece el espejo. La implementacion de `#14` **no
+  es un cherry-pick directo**: aplicar manualmente la lectura y tests
+  sobre la version operativa, sin borrar las protecciones existentes.
+- No crear un ledger nuevo desde esta PR: la rama privada ya incorpora
+  `action_ledger` comun y `WriteOutcomeUnknown` en ejecutores.
+  `#26` debe confirmar semantica transversal sin duplicar ese contrato.
+- La CI de contrato de campaña fallo en ambos SO para el HEAD anterior:
+  parent con 76 hijas frente a 46 esperadas y un indice atrasado. El test
+  offline RRSS del mismo SHA paso en Ubuntu y Windows. Estos estados
+  anteriores no se trasladan como afirmaciones sobre futuros HEAD.
+- Prueba adicional **pendiente** para Claude: caso con reply anidada,
+  contraste `/{id}/replies` frente a `/{id}/conversation`, y
+  reconciliacion de `replied_to` ausente; sin una muestra de contrato
+  fiable no ampliar automaticamente el barrido a respuestas anidadas.
+- Retirada: revertir los cambios de paginacion y casos nuevos;
+  `auto_publish_text=false` es exclusivamente defensa en el mirror.
+  No ejecutar rollback sobre el codigo privado protegido.
