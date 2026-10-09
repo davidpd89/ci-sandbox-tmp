@@ -29,6 +29,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import scan_common as sc
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
+IDLE_CHECKPOINT_SECONDS = 5.0
 DEFAULT_CONFIG = os.path.join(ROOT, "SISTEMA_DIARIO_BLUESKY", "growth_config.json")
 DEFAULT_ENDPOINT = (
     "wss://jetstream.us-east.bsky.network/"
@@ -565,7 +566,7 @@ async def collect(
                 async with websockets.connect(url, **connect_kwargs) as ws:
                     connected_at = time.monotonic()
                     while time.monotonic() < deadline:
-                        timeout = min(5.0, max(0.1, deadline - time.monotonic()))
+                        timeout = min(IDLE_CHECKPOINT_SECONDS, max(0.1, deadline - time.monotonic()))
                         try:
                             raw = await asyncio.wait_for(ws.recv(), timeout=timeout)
                         except asyncio.TimeoutError:
