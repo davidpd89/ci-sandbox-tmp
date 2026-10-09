@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 SOURCE = Path(__file__).resolve().parents[1] / 'tools/validate_open_source_campaign.py'
 spec = importlib.util.spec_from_file_location('campaign_validator', SOURCE)
@@ -92,6 +93,24 @@ class CampaignMetadataTests(unittest.TestCase):
         self.assertEqual(len(urls), 2)
         self.assertTrue(all('per_page=100&' in url for url in urls))
         self.assertTrue(urls[-1].endswith('page=2'))
+
+    def test_child_diff_uses_merge_base_not_merge_commit(self):
+        ancestor = 'c' * 40
+        child_sha = 'd' * 40
+        with patch.object(v.subprocess, 'check_output',
+                          side_effect=[ancestor + '\n', b'docs/open-source-scouting/tasks/01-x.md\0']) as mocked:
+            paths = v.changed_paths('b' * 40, child_sha)
+        self.assertEqual(paths, ['docs/open-source-scouting/tasks/01-x.md'])
+        self.assertEqual(mocked.call_args_list[0].args[0],
+                         ['git', 'merge-base', 'b' * 40, child_sha])
+        self.assertEqual(mocked.call_args_list[1].args[0],
+                         ['git', 'diff', '--name-only', '-z', '--diff-filter=ACMR',
+                          ancestor, child_sha, '--'])
+        self.assertTrue(v.check_child_deliverables(paths))
+
+    def test_invalid_child_head_rejected(self):
+        with self.assertRaises(ValueError):
+            v.changed_paths('b' * 40, 'untrusted-ref')
 
     def test_live_unindexed_extra_pr_fails(self):
         live = {10: {'base': {'ref': 'main'}, 'head': {'ref': v.PARENT}, 'state': 'open'},
