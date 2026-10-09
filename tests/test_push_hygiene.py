@@ -161,6 +161,34 @@ class PushHygieneTests(unittest.TestCase):
                 contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(ph.main(), 2)
 
+    def test_cli_escapes_control_characters_in_rejected_paths(self):
+        # El runner no debe interpretar líneas procedentes de rutas Git sintéticas.
+        event_file = Path(self.temp.name) / "event.json"
+        event_file.write_text(json.dumps(self.event()), encoding="utf-8")
+        injected_path = ".env\\n::error::anotacion_falsa\\x1b[31m"
+        output = io.StringIO()
+        with patch.object(ph, "push_paths", return_value=[injected_path]), \\
+                patch.dict(os.environ, {"GITHUB_EVENT_PATH": str(event_file),
+                                        "GITHUB_SHA": self.sha()}), \\
+                contextlib.redirect_stderr(output):
+            self.assertEqual(ph.main(), 1)
+        self.assertIn(repr(injected_path), output.getvalue())
+        self.assertNotIn("\\n::error::", output.getvalue().replace("\\\\n", ""))
+        self.assertNotIn("\\x1b", output.getvalue())
+
+    def test_cli_escapes_control_characters_in_git_errors(self):
+        event_file = Path(self.temp.name) / "event.json"
+        event_file.write_text(json.dumps(self.event()), encoding="utf-8")
+        error_text = "objeto perdido\\n::warning::anotacion_falsa"
+        output = io.StringIO()
+        with patch.object(ph, "push_paths", side_effect=ph.PushRangeError(error_text)), \\
+                patch.dict(os.environ, {"GITHUB_EVENT_PATH": str(event_file),
+                                        "GITHUB_SHA": self.sha()}), \\
+                contextlib.redirect_stderr(output):
+            self.assertEqual(ph.main(), 2)
+        self.assertIn(repr(error_text), output.getvalue())
+        self.assertNotIn("\\n::warning::", output.getvalue().replace("\\\\n", ""))
+
     def test_missing_event_file_fails_closed(self):
         with patch.dict(os.environ, {"GITHUB_EVENT_PATH": ""}), \
                 contextlib.redirect_stderr(io.StringIO()):
