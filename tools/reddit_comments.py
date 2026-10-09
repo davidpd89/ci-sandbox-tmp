@@ -494,6 +494,8 @@ def engage_user(pg, username, log=print):
 def _publish_profile_comment(extra, *, log=print, publish=None):
     """Apply the shared policy immediately before the secondary comment."""
     import conversation_turn_policy as ctp
+    # Sin kind, el contrato común consideraba esta escritura una acción sin límite.
+    extra = {**extra, "kind": "comment"}
     permitted, reason = ctp.check_execution("reddit", extra)
     if not permitted:
         log(f"[reddit] comentario en perfil omitido: {reason}")
