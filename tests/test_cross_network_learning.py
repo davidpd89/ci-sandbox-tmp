@@ -134,6 +134,49 @@ class CrossNetworkTests(unittest.TestCase):
             self.assertEqual(out["proposals"], [])
             self.assertEqual(out["suppressed"], 1)
 
+    def test_independent_queues_do_not_erase_each_others_evidence(self):
+        api = positive()
+        web = positive(targets={"mastodon": {
+            **api["targets"]["mastodon"], "queue": "WEB"}})
+        for rows in ((api, web), (web, api)):
+            out = run(*rows)
+            self.assertEqual(out["duplicate_evidence"], 0)
+            self.assertEqual({p["queue"] for p in out["proposals"]},
+                             {"API", "WEB"})
+            self.assertEqual({p["state"] for p in out["proposals"]},
+                             {"verificacion_externa_pendiente"})
+        out = run(api, web, api)
+        self.assertEqual(out["duplicate_evidence"], 2)
+        self.assertEqual([(p["queue"], p["state"]) for p in out["proposals"]],
+                         [("WEB", "verificacion_externa_pendiente")])
+
+    def test_queue_specific_history_preserves_other_queue(self):
+        api = positive()
+        web = positive(targets={"mastodon": {
+            **api["targets"]["mastodon"], "queue": "WEB"}})
+        decision = {"origin": "bluesky", "feature": "hashtag_search",
+                    "target": "mastodon", "decision": "rejected"}
+        # Contrato legacy: sin cola significa decisión global.
+        self.assertEqual(run(api, web, history=[decision])["proposals"], [])
+        only_web = run(api, web, history=[{**decision, "queue": "WEB"}])
+        self.assertEqual([p["queue"] for p in only_web["proposals"]], ["API"])
+        only_api = run(api, web, history=[{**decision, "queue": "API"}])
+        self.assertEqual([p["queue"] for p in only_api["proposals"]], ["WEB"])
+        for bad in ([], {}, "UNKNOWN", None):
+            with self.subTest(bad=bad):
+                out = run(api, web, history=[{**decision, "queue": bad}])
+                self.assertEqual(len(out["proposals"]), 2)
+
+    def test_unknown_queue_conflict_does_not_approve_specific_queue(self):
+        api = positive()
+        unknown = positive(targets={"mastodon": {
+            "capability": "verified", "permission": "verified",
+            "implemented": False, "checked_on": "2026-10-08"}})
+        out = run(api, unknown, verified={c._evidence_digest(api, "mastodon")})
+        self.assertEqual(out["duplicate_evidence"], 1)
+        self.assertNotIn("proponer_ensayo_manual",
+                         {p["state"] for p in out["proposals"]})
+
     def test_cross_network_only_and_duplicate_conflicts_fail_closed(self):
         row = positive(targets={"bluesky": {}, "mastodon": {}, "reddit": {}})
         good = run(row)
