@@ -59,6 +59,62 @@ class RoundCsvAtomicity(unittest.TestCase):
         self.assertEqual([row[1] for row in rows[1:]], ["x", "tiktok"])
         self.assertTrue(all(len(row) == len(q.ROUND_CSV_COLUMNS) for row in rows))
 
+    def test_legacy_final_row_without_line_break_is_preserved(self):
+        import datetime as dt
+        q._append_round_csv(self.row("x"))
+        original = self.path.read_bytes()
+        self.assertTrue(original.endswith(b"\r\n"))
+        self.path.write_bytes(original.rstrip(b"\r\n"))
+        completed = q.done_today(dt.date(2026, 10, 9))
+        self.assertEqual(completed, {})  # "saltada" no consume cuota.
+        q._append_round_csv(self.row("bluesky"))
+        self.assertEqual([row[1] for row in self.read_rows()[1:]],
+                         ["x", "bluesky"])
+
+    def test_legacy_confirmed_row_without_line_break_counts_on_restart(self):
+        import datetime as dt
+        complete = self.row("mastodon")
+        complete[5] = "ok"
+        q._append_round_csv(complete)
+        self.path.write_bytes(self.path.read_bytes().rstrip(b"\r\n"))
+        self.assertEqual(q.done_today(dt.date(2026, 10, 9)), {"mastodon": 1})
+        self.assertEqual(q._read_round_csv_rows()[0]["estado"], "ok")
+        self.assertTrue(self.path.read_bytes().endswith(b"\n"))
+
+    def test_corrupt_header_fails_closed_in_both_readers(self):
+        import datetime as dt
+        self.path.write_text("untrusted,date\n2026,1\n", encoding="utf-8")
+        with self.assertRaises(OSError):
+            q.done_today(dt.date(2026, 10, 9))
+        with self.assertRaises(OSError):
+            q.retry_snapshot_today(now=dt.datetime(2026, 10, 9, 14))
+
+    def test_truncated_tail_does_not_appear_in_restart_snapshot(self):
+        import datetime as dt
+        success = self.row("x")
+        success[5] = "ok"
+        q._append_round_csv(success)
+        with self.path.open("ab") as stream:
+            stream.write(b"2026-10-09,bluesky,14:00:00,14:00:01,0,ok")
+        self.assertEqual(q.done_today(dt.date(2026, 10, 9)), {"x": 1})
+        self.assertEqual(len(self.read_rows()), 2)
+        self.assertTrue(self.path.read_bytes().endswith(b"\n"))
+
+    def test_unavailable_snapshot_never_masquerades_as_empty_ledger(self):
+        from contextlib import contextmanager
+        import datetime as dt
+
+        @contextmanager
+        def denied(path):
+            yield False
+
+        with (mock.patch.object(q, "_recovery_guard", side_effect=denied),
+              mock.patch.object(q, "ROUND_CSV_LOCK_TIMEOUT_SECONDS", 0.0)):
+            with self.assertRaises(OSError):
+                q.done_today(dt.date(2026, 10, 9))
+            with self.assertRaises(OSError):
+                q.retry_snapshot_today(now=dt.datetime(2026, 10, 9, 14))
+
     def test_denied_interprocess_lock_preserves_previous_state(self):
         q._append_round_csv(self.row("x"))
         before = self.path.read_bytes()
