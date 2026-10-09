@@ -68,6 +68,12 @@ El campo `NOASSERTION` significa que **no se afirma licencia SPDX del código de
 
 Comandos existentes de CI: `python -m pip install -r requirements-ci.txt`; `python -m compileall -q tools tests`; `python -m pytest tests -q -p no:cacheprovider` (con los `--deselect` del workflow). Subconjunto recomendado: `python -m pytest -q tests/test_instagram_publication_guard.py tests/test_meta_publish.py tests/test_content_publisher.py`. Los resultados reales de CI se documentan en `BLOQUEOS_PARA_CLAUDE.md`, no se presume éxito por la existencia del test.
 
+### Registro de ejecución real en GitHub Actions
+
+* [Run 37979914547](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37979914547), SHA `692407ac6357abc365238b47a31aa24a021c0ab5`: **Ubuntu success**, 1700 passed / 8 skipped / 8 deselected; **Windows success**, 1703 passed / 5 skipped / 8 deselected. Incluye `compileall`, instalación `requirements-ci.txt`, suite global y 667 subtests en cada plataforma.
+* [Run 37980268899](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37980268899), SHA `366cc3715e257f5679103aef538e3bb2587a65ed`: **success** tras incorporar encabezados de evidencia, sin cambiar el código del publicador.
+* El validador de la campaña corre en una matriz separada. En el [run 37980275235](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37980275235) encontró 76 hijas y 0 errores en el índice, pero el workflow de una revisión del padre invocó la versión nueva del validador **sin** el nuevo `--child-head`, dando `ValueError`. La rama padre tuvo cambios simultáneos en workflow/validador; el gate debe contrastarse contra el **SHA del HEAD final** y su base vigente. No es un fallo demostrado de publicaciones de Instagram ni autoriza el merge.
+
 Escenarios adversariales:
 1. Timeout tras envío confirmado o ambiguo + segundo worker: journal `UNCERTAIN`, segundo POST bloqueado.
 2. Dos procesos simultáneos: solo uno obtiene reserva del SQLite; el segundo no entra en `submit`.
