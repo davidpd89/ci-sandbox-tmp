@@ -5,8 +5,10 @@ Only synthetic JSON; no network, accounts, credentials or remote writes.
 import copy
 from datetime import datetime, timezone
 import json
+import subprocess
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -154,6 +156,33 @@ class ProvenanceRegressionTests(unittest.TestCase):
                 data = load()
                 data["snapshot"]["retrieved_at"] = checked_at
                 self.assertFalse(check(data).allowed)
+
+    def test_cli_malformed_missing_or_non_utf8_file_returns_block(self):
+        for failure in ("malformed", "missing", "non_utf8"):
+            with self.subTest(failure=failure):
+                with tempfile.TemporaryDirectory() as work:
+                    folder = Path(work)
+                    files = []
+                    for name in ("plan", "snapshot", "review"):
+                        path = folder / (name + ".json")
+                        path.write_text(json.dumps(DATA[name]), encoding="utf-8")
+                        files.append(path)
+                    if failure == "malformed":
+                        files[1].write_text("{not json", encoding="utf-8")
+                    elif failure == "missing":
+                        files[1].unlink()
+                    else:
+                        files[1].write_bytes(bytes([255, 254]))
+                    proc = subprocess.run(
+                        [sys.executable, str(ROOT / "tools" / "reddit_snapshot_preflight.py"),
+                         "--plan", str(files[0]), "--snapshot", str(files[1]),
+                         "--review", str(files[2])],
+                        capture_output=True, text=True, timeout=10, check=False,
+                    )
+                self.assertEqual(proc.returncode, 2, proc.stderr)
+                self.assertIn('"allowed": false', proc.stdout)
+                self.assertNotIn("Traceback", proc.stderr)
+                self.assertNotIn(str(files[1]), proc.stdout)
 
     def test_wrong_type_http_status_is_not_accepted(self):
         data = load()
