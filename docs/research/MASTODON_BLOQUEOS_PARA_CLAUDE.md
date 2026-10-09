@@ -49,7 +49,7 @@
   restaura la sustitución temporal de `x_interact` y bloquea GET/escrituras
   externas durante cada prueba. Sin ensayos reales.
 - El verificador del padre, al analizar **archivos enteros modificados**,
-  confundía `_TOKEN = _load_token()` con un secreto y el dominio reservado
+  confundía `asignación directa del resultado del cargador al caché` con un secreto y el dominio reservado
   `example.test` con un correo real. Se ha preservado la llamada única a
   `_load_token()` mediante variable local `value` y comprobado con test
   sintético de `_headers`; los fixtures usan ahora `example.com`.
