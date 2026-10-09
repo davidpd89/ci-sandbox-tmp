@@ -5,5 +5,5 @@ boards, media, programacion, keywords, tendencias, analytics y conversiones.
 
 Contrastar con `pinterest_*` y el contenido existente. Buscar una mejora medible
 en SEO visual, validacion de assets, publicacion, atribucion hacia la web o
-seguimiento del funnel. No importar suites de marketing completas si una pieza
-pequena resuelve el contrato.
+seguimiento del funnel. Comparar componentes independientes y suites completas
+para adoptar la opcion con mejor relacion entre valor y complejidad.
