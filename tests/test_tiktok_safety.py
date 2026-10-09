@@ -56,6 +56,34 @@ class TikTokSafetyTests(unittest.TestCase):
                 )
             self.assertEqual(path.read_bytes(), before)
 
+    def test_follow_scope_with_invalid_until_still_fails_closed_for_like(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = pathlib.Path(folder) / "pause.json"
+            path.write_text(
+                json.dumps({"scope": "follow", "until": "not-a-date"}),
+                encoding="utf-8",
+            )
+            before = path.read_bytes()
+
+            with self.assertRaises(safety.SafetyStateError):
+                safety.require_writable(str(path), kind="like")
+            with self.assertRaises(safety.SafetyStateError):
+                safety.remaining_minutes(str(path), kind="comment")
+            self.assertEqual(path.read_bytes(), before)
+
+    def test_invalid_strikes_is_rejected_on_read_not_only_on_write(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = pathlib.Path(folder) / "pause.json"
+            path.write_text(
+                json.dumps({
+                    "until": "2026-10-10T09:00:00+00:00",
+                    "strikes": -1,
+                }),
+                encoding="utf-8",
+            )
+            with self.assertRaises(safety.SafetyStateError):
+                safety.require_writable(str(path))
+
     def test_corrupt_state_fails_closed(self):
         with tempfile.TemporaryDirectory() as folder:
             path = pathlib.Path(folder) / "pause.json"
@@ -209,6 +237,18 @@ class TikTokSafetyTests(unittest.TestCase):
             used, pending = safety.recorded_actions(str(path), today=dt.date(2026, 10, 9))
             self.assertEqual(used["follow"], 1)
             self.assertNotIn(("follow", "privada"), pending)
+
+    def test_pending_approval_without_target_fails_closed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = pathlib.Path(folder) / "registro.csv"
+            intent_id = "c" * 32
+            lines = [
+                "fecha,cuenta,tipo,post_resumen,texto_usado,resultado,notas",
+                f"2026-10-09,,follow,,,pendiente_aprobacion,x | intent_id={intent_id}",
+            ]
+            path.write_text("\n".join(lines) + "\n", encoding="utf-8-sig")
+            with self.assertRaises(safety.SafetyStateError):
+                safety.recorded_actions(str(path), today=dt.date(2026, 10, 9))
 
     def test_csv_bad_header_fails_closed(self):
         with tempfile.TemporaryDirectory() as folder:
