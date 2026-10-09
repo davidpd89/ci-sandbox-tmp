@@ -1,0 +1,46 @@
+name: Evidencia auditable entre redes (offline)
+
+on:
+  push:
+    paths:
+      - '.github/workflows/experiment-evidence-lineage.yml'
+      - 'tools/cross_network_learning.py'
+      - 'tools/experiment_evidence_lineage.py'
+      - 'tools/discovery_attribution.py'
+      - 'tests/test_cross_network_learning.py'
+      - 'tests/test_experiment_evidence_lineage.py'
+  pull_request:
+    paths:
+      - '.github/workflows/experiment-evidence-lineage.yml'
+      - 'tools/cross_network_learning.py'
+      - 'tools/experiment_evidence_lineage.py'
+      - 'tools/discovery_attribution.py'
+      - 'tests/test_cross_network_learning.py'
+      - 'tests/test_experiment_evidence_lineage.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evidence:
+    name: evidence (Python 3.11 / ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Dependencias offline
+        run: python -m pip install --disable-pip-version-check "pytest>=8,<10" "tzdata>=2026.1,<2027"
+      - name: Sintaxis
+        run: python -m compileall -q tools/cross_network_learning.py tools/experiment_evidence_lineage.py tools/discovery_attribution.py tests/test_cross_network_learning.py tests/test_experiment_evidence_lineage.py
+      - name: Regresiones de procedencia
+        run: python -m pytest -q -p no:cacheprovider tests/test_cross_network_learning.py tests/test_experiment_evidence_lineage.py
