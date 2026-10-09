@@ -13,7 +13,7 @@ import datetime as dt
 import re
 
 # dias maximos de antiguedad del post destino por tipo de accion
-MAX_AGE_DAYS = {"reply": 3, "comment": 3, "comment_external": 3, "quote": 3, "like": 21, "like_external": 21, "favourite": 21, "like_latest": 21, "react": 21, "vote": 21, "boost": 7, "repost": 7}   # likes: como growth_policy (21 d a lector nuevo); boost/repost y texto, mas estrictos
+MAX_AGE_DAYS = {"reply": 3, "comment": 3, "comment_external": 3, "quote": 3, "like": 21, "like_external": 21, "favourite": 21, "like_latest": 21, "react": 21, "vote": 21, "boost": 7, "repost": 7, "save": 7}   # likes: como growth_policy (21 d a lector nuevo); boost/repost y texto, mas estrictos
 TEXT_KINDS = frozenset({"reply", "comment", "comment_external", "quote"})
 FOLLOWUP_MAX_AGE_DAYS = 7           # contestar a quien nos escribio: el comentario puede tardar mas en recibir respuesta, pero no semanas
 _DATE_FIELDS = ("target_created_at", "post_created_at", "created_at", "createdAt", "created_utc", "create_time", "created_time", "published_at")
