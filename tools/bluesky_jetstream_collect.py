@@ -432,6 +432,24 @@ def _resume_cursor(
     return max(0, int(now_us - lookback * 60.0 * 1_000_000))
 
 
+def _apply_frame(db, event, event_cursor, mode, terms, last_seq):
+    """Aplica un commit v2 una sola vez y solo avanza tras tratarlo.
+
+    El cursor v2 es inclusivo al reconectar. No permitir que un replay antiguo
+    resucite un post borrado ni revierta una actualización más reciente.
+    El caller confirma estado+posts en una misma transacción SQLite.
+    """
+    if mode == "v2":
+        if not isinstance(event_cursor, int) or event_cursor <= 0:
+            raise ValueError("Jetstream v2: commit sin secuencia positiva")
+        if last_seq is not None and event_cursor <= int(last_seq):
+            return False, last_seq, True
+    stored = store_event(db, event, terms)
+    if mode == "v2":
+        last_seq = event_cursor
+    return stored, last_seq, False
+
+
 def _next_retry_delay(delay):
     """Backoff exponencial acotado para reconexiones de una escucha larga."""
     return min(60.0, max(1.0, float(delay) * 2.0))
@@ -485,7 +503,9 @@ async def collect(
         overlap_seconds=resume_overlap_seconds,
         initial_lookback_minutes=initial_lookback_minutes,
     )
-    last_seq = None
+    # El high-water se recupera ANTES del primer frame: el servidor puede
+    # reentregar el último cursor inclusive después de un reinicio.
+    last_seq = int(saved_seq) if saved_seq else None
 
     try:
         while time.monotonic() < deadline:
@@ -514,25 +534,36 @@ async def collect(
                         event, event_cursor, mode = _normalize_frame(decoded)
                         if not event:
                             continue
+                        matched, last_seq, replayed = _apply_frame(
+                            db, event, event_cursor, mode, terms, last_seq
+                        )
+                        if replayed:
+                            continue
                         processed += 1
                         event_time = int(event.get("time_us") or 0)
                         if event_time:
-                            last_time_us = event_time
+                            last_time_us = max(last_time_us or 0, event_time)
                         if event_cursor:
-                            cursor = event_cursor
                             if mode == "v2":
-                                last_seq = event_cursor
-                        if store_event(db, event, terms):
+                                # Una primera conexión v2 puede arrancar con
+                                # cursor v1 (microsegundos); tras el primer
+                                # frame ya guardamos exclusivamente su seq.
+                                cursor = last_seq
+                            else:
+                                cursor = max(cursor or 0, event_cursor)
+                        if matched:
                             stored += 1
-                            if time.monotonic() - last_commit > 5.0:       # 06/10: una transaccion abierta mas de unos segundos bloquea al otro recolector
-                                db.commit()
-                                last_commit = time.monotonic()
-                        if processed % 250 == 0:
+                        # Post, borrado y high-water son atómicos. Incluso si
+                        # no hay coincidencias, el cursor debe sobrevivir
+                        # a una desconexión o caída del proceso.
+                        now = time.monotonic()
+                        if processed % 250 == 0 or now - last_commit > 5.0:
                             if last_time_us:
                                 set_state(db, "last_time_us", last_time_us)
                             if last_seq:
                                 set_state(db, "last_seq", last_seq)
                             db.commit()
+                            last_commit = now
                 if time.monotonic() < deadline:
                     reconnects += 1
                     if connected_at is not None and time.monotonic() - connected_at >= 60:
