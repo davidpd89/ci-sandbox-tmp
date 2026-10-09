@@ -1,5 +1,12 @@
 # Pinterest: preflight local y decisión de reutilización
 
+Fuente primaria: https://github.com/python-pillow/Pillow/blob/11.3.0/src/PIL/ImageOps.py
+Fecha de consulta: 2026-10-09
+Licencia SPDX: MIT-CMU
+Referencia inmutable: https://github.com/python-pillow/Pillow/tree/11.3.0
+
+**Alcance de los metadatos anteriores:** componente público Pillow reutilizado como dependencia, no una licencia del sitio Pinterest ni una atribución de código copiado. La especificación funcional de Pinterest se cita por separado más abajo.
+
 **Consulta:** 2026-10-09 (Europa/Madrid). **PR:** https://github.com/davidpd89/ci-sandbox-tmp/pull/17. **Rama:** `research/07-pinterest`; base verificada `research/public-reuse-parent`. No se ha conectado a Pinterest ni se ha publicado.
 
 ## Problema y reproducción del flujo real
