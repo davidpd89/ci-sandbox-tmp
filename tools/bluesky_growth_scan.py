@@ -255,7 +255,9 @@ def _post_url(post):
 
 def _created_at(post):
     record = (post or {}).get("record") or {}
-    return record.get("createdAt") or (post or {}).get("indexedAt") or ""
+    # indexedAt mide la indexación, no la publicación original; nunca
+    # rejuvenecer un post antiguo con la hora de ingestión.
+    return record.get("createdAt") or ""
 
 
 SPANISH_FUNCTION_WORDS = frozenset(
@@ -3519,7 +3521,7 @@ def _build_output(c):
             if "repost" in actions and _repost_worthy(c, item, post):
                 repost_pool.append((item["score"] + 2 * min(_hits(post["text"]), 3), item["handle"], post["url"],
                                     f"growth:auto_repost:score={item['score']}:src={_src(item, post['sources'], item['sources'])}",
-                                    _relationship_lane(item)))
+                                    _relationship_lane(item), post.get("created_at") or None))
             post_rows.append({
                 "id": f"{cid}-P{pidx}",
                 "uri": post["uri"],
@@ -3545,6 +3547,7 @@ def _build_output(c):
                     "kind": "like",
                     "lane": "community",
                     "url": post["url"],
+                    "post_created_at": post.get("created_at") or None,
                     "motivo": f"growth:auto_like:lane=community:relacion_existente:src={_src(item, post['sources'], item['sources'])}",
                 })
             elif (
@@ -3561,6 +3564,7 @@ def _build_output(c):
                     "kind": "like",
                     "lane": "community",
                     "url": post["url"],
+                    "post_created_at": post.get("created_at") or None,
                     "motivo": f"growth:auto_like:lane=community:reciprocidad:src={_src(item, post['sources'], item['sources'])}",
                 })
             elif (
@@ -3585,6 +3589,7 @@ def _build_output(c):
                     "kind": "like",
                     "lane": _relationship_lane(item),
                     "url": post["url"],
+                    "post_created_at": post.get("created_at") or None,
                     "motivo": f"growth:auto_like:score={item['score']}:umbral_mecanico:src={_src(item, post['sources'], item['sources'])}",
                 })
 
@@ -3635,13 +3640,14 @@ def _build_output(c):
     # claramente del nicho, en espanol, de cuentas pequenas, con tope por ronda (`auto_repost_per_round`; 0 = desactivado) y una sola por cuenta.
     repost_cap = int(c.config["shortlist"].get("auto_repost_per_round", 0))
     reposted_handles = set()
-    for _, handle, url, motivo, lane in sorted(repost_pool, key=lambda row: (-row[0], row[1])):
+    for _, handle, url, motivo, lane, created_at in sorted(repost_pool, key=lambda row: (-row[0], row[1])):
         if len(reposted_handles) >= repost_cap:
             break
         if handle in reposted_handles:
             continue
         reposted_handles.add(handle)
-        auto_plan.append({"handle": handle, "kind": "repost", "lane": lane, "url": url, "motivo": motivo})
+        auto_plan.append({"handle": handle, "kind": "repost", "lane": lane, "url": url,
+                          "post_created_at": created_at, "motivo": motivo})
     # El ejecutor rechaza TODO el lote si un post lleva dos interacciones (like + repost): 05/10 la ronda de las 17:55 (428 acciones) no ejecuto nada por esto.
     # El repost ya es la interaccion; se quita el like de ese post.
     reposted_urls = {a["url"] for a in auto_plan if a["kind"] == "repost"}
