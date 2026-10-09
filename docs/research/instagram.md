@@ -8,13 +8,17 @@ La PR #16 se desarrolla en el **mirror público** `davidpd89/ci-sandbox-tmp`, ra
 
 **Reproducción lógica anterior:** si Meta publica correctamente pero se pierde la respuesta de `media_publish` o cae el proceso antes de marcar la ficha, la verificación posterior puede fallar, paginar de forma incompleta o no localizar aún la publicación. Antes la misma ficha podía volver a enviarse en el siguiente `--apply`. La comprobación textual de los últimos 50 posts no constituye confirmación transaccional. El riesgo no queda solucionado usando navegador/móvil como fallback: añadiría otra ruta capaz de duplicar.
 
-## Decisión y comparativa
+## Alternativas
 
 | Baseline | Candidato 1 | Candidato 2 | Elección | Evidencia y coste | Riesgo |
 | --- | --- | --- | --- | --- | --- |
 | `requests`/`urllib`, comprobación textual tras excepción | Meta Business SDK Python 26.0.2 (licencia propia Meta; SDK amplio) | `instagrapi` 3.0.20 (MIT; endpoints no oficiales de app móvil) | **C: adaptación mínima del `ActionLedger` existente** | Nueva dependencia externa: **0**; una reserva SQLite y checkpoint por publicación; tests sintéticos de doble envío y concurrencia | Reconciliación manual de resultados inciertos; ruta de ficha estable y journal persistente |
 
 Tercera alternativa: publicación manual/nativa desde la app, aceptable cuando Meta no autoriza un tipo de publicación, pero no sustituye la protección de idempotencia del flujo automático. No se importó ni copió código de ningún OSS externo. Se descartó Meta SDK por superficie, dependencias y política de licencia frente al bug concreto; `instagrapi` por depender de APIs privadas y aumentar el riesgo de bloqueo/cambio de contrato. Versión 3.0.20 de instagrapi publicada el 04-10-2026 (tag firmado, revisión de credenciales/dispositivo) y comprobada en PyPI y GitHub; actividad reciente **no** elimina el problema de usar endpoints privados. No se inventan benchmarks de red: el mismo fixture de Graph `FINISHED` + timeout tras `media_publish` genera **2 intentos de envío** sin journal y **1** con el journal; test `test_same_fixture_baseline_two_posts_guard_one`. No demuestra que Instagram haya creado posts reales. Es medición de comportamiento del doble intento, no una cifra de rendimiento de Instagram.
+
+## Decisión
+
+Se elige **C: adaptar un patrón de idempotencia ya mantenido en el proyecto**. El camino oficial es el único autorizado para este publicador; se evita añadir SDK y ninguna vía web o móvil suplanta automáticamente un resultado incierto. La configuración conserva Instagram desactivado por defecto y no requiere migración del esquema del ledger compartido.
 
 ## Cambio implementado
 
@@ -26,7 +30,7 @@ Tercera alternativa: publicación manual/nativa desde la app, aceptable cuando M
 
 El modo `--apply` y `auto_publicacion.json` siguen siendo los controles de activación; Instagram está deshabilitado por defecto en la configuración del mirror. El código no habilita publicación automáticamente, no llama a Instagram durante los tests y no autoriza una ejecución real. No protege deliberadamente el CLI autónomo `instagram_api.py`: tiene flujo de aprobación propio y no debe considerarse cubierto.
 
-## Recuperación y rollback
+## Retirada y recuperación
 
 Ruta: `00_OPERATIVO/instagram_publish_intents.sqlite3` (incluidos sus sidecars cuando existan). El estado `UNCERTAIN` es irreversible **automáticamente**: tras caída, red caída, 5xx, permiso negado al leer, ausencia en una página parcial o respuesta ambigua, **no se debe cambiar a FAILED ni activar fallback web/móvil**.
 
@@ -50,6 +54,15 @@ Referencias primarias:
 * [GitHub, comprobaciones y protección de ramas](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches).
 
 La comparativa considera compatibilidad Windows/Linux (Python 3.11 y `sqlite3`), un grafo de dependencias externas sin cambios y minimización de datos. No se midieron CVE/depencencias transitivas de componentes no incorporados como pretexto para declararlos seguros.
+
+## Licencias y procedencia
+
+Fuente primaria: https://www.postman.com/meta/instagram/folder/1z5vxzu/instagram-api-with-instagram-login
+Fecha de consulta: 2026-10-09
+Licencia SPDX: NOASSERTION
+Referencia inmutable: N/A (sin codigo incorporado)
+
+El campo `NOASSERTION` significa que **no se afirma licencia SPDX del código del repositorio propio**; el cambio es código propio y no se ha importado software público ajeno. Los componentes *evaluados* sí tienen licencias contrastadas: `instagrapi` 3.0.20 es MIT, según el fichero LICENSE del tag; el Business SDK 26.0.2 posee licencia específica de Meta, no MIT. Procedencia del patrón: `tools/action_ledger.py` ya presente en el mirror antes del HEAD original `5d00c7f23b75a56ff790ea768029b930adbd70bb`. Sus ficheros se citan por rutas/SHAs de este repo, sin copiar código del privado. Enlaces inmutables de candidatos en la sección API anterior.
 
 ## Pruebas, refutación y coordinación
 
