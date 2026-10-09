@@ -2,8 +2,10 @@
 
 UNCERTAIN se persiste antes del POST final. La reconciliación es manual.
 """
+import contextlib
 import hashlib
 import os
+import sqlite3
 
 from action_ledger import ActionLedger, FAILED, RESERVED, UNCERTAIN, RoundBusy, exclusive
 
@@ -31,15 +33,22 @@ def publish_guarded(item_path, account_id, submit, *, db_path=None):
     os.makedirs(directory, exist_ok=True)
     # ActionLedger activa WAL al abrir cada conexión. Serializar desde ANTES de
     # su inicialización evita el SQLITE_BUSY al arrancar dos workers juntos.
-    # El candado de fichero también impide dos envíos simultáneos de esta ficha.
+    # Candado por base, incluso si distintos objetivos comparten el mismo DB.
     try:
-        with exclusive("instagram_publish_" + target, directory=directory):
+        with exclusive("instagram_publish_" + hashlib.sha256(path.encode("utf-8")).hexdigest(), directory=directory):
             return _publish_under_lock(path, target, submit)
     except RoundBusy as exc:
         raise InstagramPublicationHeld("Instagram: publicación concurrente en curso") from exc
 
 
 def _publish_under_lock(db_path, target, submit):
+    # El _conn() compartido cambia journal_mode antes de devolver la conexion.
+    # Si el archivo es corrupto puede fallar sin cerrar el handle en Windows.
+    # Verificar con cierre garantizado ANTES de acceder al ledger.
+    with contextlib.closing(sqlite3.connect(db_path, timeout=30)) as conn:
+        result = conn.execute("PRAGMA quick_check").fetchone()
+        if result != ("ok",):
+            raise sqlite3.DatabaseError("journal de Instagram corrupto")
     ledger = ActionLedger(db_path)
     state = ledger.reserve(KIND, target)
     if state != "ok":
