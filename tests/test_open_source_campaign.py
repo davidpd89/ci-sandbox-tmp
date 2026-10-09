@@ -137,6 +137,12 @@ class CampaignPrivacyTests(unittest.TestCase):
     def test_validator_source_is_not_a_secret(self):
         self.assertEqual(v.check_privacy(['tools/validate_open_source_campaign.py'], SOURCE.parents[1]), [])
 
+    def test_sensitive_nested_cache_path_blocked(self):
+        self.assertTrue(any('forbidden' in e for e in v.check_privacy(
+            ['00_OPERATIVO/cache/errores/event.json'], Path('/tmp'))))
+        self.assertTrue(any('forbidden' in e for e in v.check_privacy(
+            ['local/profile/prefs.json'], Path('/tmp'))))
+
     def test_scope_brief_is_not_an_implementation(self):
         self.assertTrue(v.check_child_deliverables(['docs/open-source-scouting/tasks/01-x.md']))
 
