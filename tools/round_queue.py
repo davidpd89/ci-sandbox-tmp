@@ -614,39 +614,39 @@ def retry_snapshot_today(now=None):
         network = row.get("red")
         state = row.get("estado")
         if (row.get("fecha") != now.date().isoformat()
-                    or network not in WEB + API + PHONE + ("tiktok_bulk",)
-                    or state not in ("ok", "parcial", "ocupada", "saltada", "error")):
-                continue
+                or network not in WEB + API + PHONE + ("tiktok_bulk",)
+                or state not in ("ok", "parcial", "ocupada", "saltada", "error")):
+            continue
         try:
-                clock = datetime.time.fromisoformat(row["fin"])
-                when = now.replace(hour=clock.hour, minute=clock.minute,
-                                   second=clock.second, microsecond=clock.microsecond)
+            clock = datetime.time.fromisoformat(row["fin"])
+            when = now.replace(hour=clock.hour, minute=clock.minute,
+                               second=clock.second, microsecond=clock.microsecond)
         except (TypeError, ValueError, KeyError):
-                continue
-        # Ignorar registros con horario futuro (reloj reajustado,
-        # registros manipulados o CSV parcialmente escrito).
+            continue
+        # Ignorar registros con horario futuro (reloj reajustado).
         if when > now:
-                continue
+            continue
         failures = states.get(network, (0, None))[0]
         if state in ("ok", "parcial"):
-                states[network] = (0, None)
-                continue
+            states[network] = (0, None)
+            continue
         if state == "error":
-                failures += 1
+            failures += 1
         if state == "ocupada":
-                delay = 300.0
+            delay = 300.0
         elif state == "saltada":
-                _, breaker_delay, _ = classify_round_state(
-                    state, failures,
-                    network="tiktok" if network == "tiktok_bulk" else network,
-                    now=when)
-                delay = max(12 * 60 * 1.2, breaker_delay)
+            _, breaker_delay, _ = classify_round_state(
+                state, failures,
+                network="tiktok" if network == "tiktok_bulk" else network,
+                now=when)
+            delay = max(12 * 60 * 1.2, breaker_delay)
         else:
-                base = 2 * 60 * 60 if failures >= 6 else (
-                    900, 1800, 3600)[min(failures - 1, 2)]
-                delay = base * 1.2
+            base = 2 * 60 * 60 if failures >= 6 else (
+                900, 1800, 3600)[min(failures - 1, 2)]
+            delay = base * 1.2
         states[network] = (failures, when + datetime.timedelta(seconds=delay))
     return states
+
 
 
 def web_chain(until, targets, done):
@@ -918,6 +918,7 @@ def main(argv=None):
         return 0
     heartbeat_stop = threading.Event()
     heartbeat = None
+    reload_allowed = False
     try:
         # Snapshot DESPUÉS de adquirir la propiedad, no antes: un propietario
         # anterior podría haber confirmado una ronda durante la espera.
@@ -925,13 +926,14 @@ def main(argv=None):
         print(f"[cola] objetivos {targets}; ya hechas hoy {done}; hasta {until:%H:%M}", flush=True)
         heartbeat = threading.Thread(target=_heartbeat_owned_locks, args=(tuple(mine), heartbeat_stop), daemon=True)
         heartbeat.start()
+        reload_allowed = True
         return _run_chains(argv, until, targets, done, only=mine)
     finally:
         heartbeat_stop.set()
         if heartbeat is not None:
             heartbeat.join(timeout=2)
         released = {chain: release_chain_lock(chain) for chain in mine}
-        if control_signal() == "recargar" and all(released.values()):
+        if reload_allowed and control_signal() == "recargar" and all(released.values()):
             # No relanzar hasta confirmar que liberamos todos los locks.
             # Si falla, una nueva cola moriría por la posesión del padre.
             print("[cola] recarga pedida: se relanza con el codigo nuevo y sigue donde iba", flush=True)
