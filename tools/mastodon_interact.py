@@ -402,9 +402,11 @@ def search_accounts_pages(query, *, limit=40, max_pages=2):
             raise RuntimeError("Search Mastodon no devolvió accounts[]")
         new_count = 0
         for account in accounts:
-            if not isinstance(account, dict) or not account.get("id"):
-                raise RuntimeError("Search Mastodon devolvió una cuenta sin ID local")
-            local_id = str(account["id"])
+            raw_id = account.get("id") if isinstance(account, dict) else None
+            if (isinstance(raw_id, bool) or not isinstance(raw_id, (str, int))
+                    or not str(raw_id).strip()):
+                raise RuntimeError("Search Mastodon devolvió una cuenta sin ID local válido")
+            local_id = str(raw_id)
             if local_id in seen_local_ids:
                 continue
             seen_local_ids.add(local_id)
