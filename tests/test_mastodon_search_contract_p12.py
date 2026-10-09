@@ -146,6 +146,12 @@ class MastodonAccountSearchContractTests(unittest.TestCase):
     def test_collection_imports_do_not_leave_global_request_doubles(self):
         # El conjunto completo de tests debe poder importar requests real.
         import requests
+        # Dos referencias a un mismo stub también superarían assertIs.
+        # El paquete instalado tiene origen físico y API Session; el doble
+        # histórico de test_mastodon_api_features carece de ambas.
+        self.assertTrue(getattr(requests, "__file__", None),
+                        "requests no debe provenir de un stub en sys.modules")
+        self.assertTrue(hasattr(requests, "Session"))
         self.assertIs(m.requests, requests)
         self.assertIsNot(sys.modules.get("x_interact"), x_stub)
 
