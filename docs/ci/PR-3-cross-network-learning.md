@@ -24,6 +24,10 @@ Ahora:
 - una verificación externa para `API` no puede reutilizarse para `WEB` o `MOBILE`;
 - `denied`, `unsupported`, `implemented` y `verified` comparten el mismo TTL: un estado viejo vuelve a `investigar_equivalencia`;
 - valores de cola malformados (listas, objetos u otros tipos) fallan cerrados sin excepción;
+- el historial con cola `WEB/API/MOBILE` solo bloquea su cola; el historial anterior sin cola sigue siendo global para no reinterpretar rechazos antiguos;
+- dos evidencias válidas de colas distintas se revisan por separado; dos de la misma cola siguen siendo un conflicto;
+- observaciones sin controles o con `targets` estructuralmente inválidos no contaminan el detector de duplicados;
+- las fechas implícitas usan `Europe/Madrid` (con `zoneinfo` y `tzdata` en CI), nunca el huso horario accidental del runner;
 - el informe devuelve la cola explícita, sin ejecutar ni encolar ninguna acción.
 
 Esto conserva una norma genérica entre redes sin compartir permisos ni capacidades entre superficies. Como la cola pasa a formar parte del digest, verificaciones calculadas con el contrato anterior dejan de promover propuestas y deben revisarse de nuevo; el fallo es deliberadamente seguro.
@@ -85,7 +89,9 @@ La suite específica cubre, entre otros:
 - verificación externa ligada al agregado exacto;
 - nueva regresión: digest y permisos ligados a `WEB/API/MOBILE`.
 
-La validación final debe tomarse de GitHub Actions, que ejecuta Python 3.11 en `ubuntu-latest` y `windows-latest`. El entorno local de esta sesión no pudo resolver `github.com`, por lo que no se usa como evidencia de ejecución.
+La validación final debe tomarse de GitHub Actions, que ejecuta Python 3.11 en `ubuntu-latest` y `windows-latest`. El entorno local de esta sesión no resuelve `github.com`, por lo que no se toma como evidencia de ejecución.
+
+La tanda adicional prueba aislamiento de duplicados por cola, compatibilidad con historial legacy, rechazo de historial con tipos de cola malformados, protección frente a filas estadísticas inválidas y corte local de Madrid frente a la medianoche UTC. Las pruebas se ejecutan en el workflow del HEAD final, no se infiere su éxito desde un workflow anterior.
 
 ## Revisión adversarial
 
@@ -94,10 +100,24 @@ Se hizo una segunda pasada separada del desarrollo inicial. Hallazgos corregidos
 - la primera implementación de cola podía lanzar `TypeError` con JSON no escalar por una comprobación sobre `frozenset`;
 - la verificación externa no estaba ligada a WEB/API/MOBILE y podía reutilizarse entre superficies.
 
-Tras las correcciones, no queda un hallazgo crítico conocido dentro del alcance de esta PR. Límites deliberados:
+Una nueva revisión adversarial del código completo detectó:
+- error de arquitectura: el digest tenía cola, pero el historial y la deduplicación solo tenían red y táctica; corregido;
+- observaciones estadísticamente inválidas contabilizadas como duplicados; corregido;
+- fecha por defecto dependiente del huso horario del proceso, especialmente en CI UTC; corregido;
+- error de sintaxis introducido en la fixture nueva, detectado por `compileall` real en Actions y corregido antes de concluir.
+
+Límites deliberados:
 - no hay cálculo formal de potencia ni corrección por múltiples tests;
 - Instagram no se incorpora porque el contrato recuperado y `discovery_attribution.NETWORKS` instrumentan ocho redes;
 - no se ejecutan Edge, móvil, navegador, API social ni canarios reales;
 - la evidencia final de portabilidad es el workflow del HEAD, con Python 3.11 en Ubuntu y Windows.
 
-No se abre PR adicional en esta ronda: los huecos encontrados eran autocontenidos y se implementaron aquí, y la búsqueda de PRs abiertas no encontró un trabajo equivalente que hubiera que reutilizar o coordinar.
+## Comparación ampliada: generación de pruebas
+
+Se comprobó el repositorio `HypothesisWorks/hypothesis`: proyecto activo (último push observado 2026-10-05), MPL-2.0, Python >=3.10 con soporte explícito de Windows, Linux y Python 3.11; su dependencia principal es `sortedcontainers`. Ofrece reducción automática de casos adversos mediante property-based testing. Se mantiene fuera del `requirements-ci.txt` de esta PR: los regresores concretos son deterministas y la PR abierta #30 ya se ocupa expresamente de incorporar fuzzing y contratos donde merezca la pena. Código: https://github.com/HypothesisWorks/hypothesis
+
+## Hueco de trazabilidad que NO resuelve esta PR
+
+`_evidence_digest` ata un agregado, su cola y los permisos a un hash determinista. No ata a una identidad independiente de ensayo / manifiesto de asignación: dos ensayos diferentes con exactamente los mismos campos agregados pueden obtener el mismo digest. Esto no autoriza acciones automáticas ni invalida los regresores offline, pero limita la afirmación de que una verificación solo puede emplearse una vez. Para resolverlo se requiere un identificador auditable de experimento, vinculación a fuente independiente y migración compatible de consumidores `schema=1`; no basta con añadir un UUID arbitrario autodeclarado. Es una integración específica para un trabajo posterior, sin duplicar la PR #23 (analítica/IC) ni la #85 (identidad entre usuarios/redes).
+
+La PR #3 no se fusiona automáticamente ni ejecuta canarios reales. La aprobación de merge queda en manos del controlador tras comprobar el HEAD y sus workflows.
