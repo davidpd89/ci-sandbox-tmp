@@ -37,6 +37,36 @@ class ThreadsPaginationContract(unittest.TestCase):
         self.assertEqual([c[1].get("after") for c in calls], [None, "CURSOR"])
         self.assertEqual([c[0] for c in calls], ["me/threads", "me/threads"])
 
+    def test_cursor_only_full_page_continues_without_next_url(self):
+        calls = []
+        def getter(path, token, **params):
+            calls.append(params.get("after"))
+            if "after" not in params:
+                return {"data": [{"id": "first"}, {"id": "second"}],
+                        "paging": {"cursors": {"after": "C2"}}}
+            return {"data": [{"id": "third"}],
+                    "paging": {"cursors": {"after": "C3"}}}
+        with patch.object(api, "api_get", side_effect=getter):
+            found = api.paginated("me/replies", "test-token", fields="id", limit=2)
+        self.assertEqual([item["id"] for item in found],
+                         ["first", "second", "third"])
+        self.assertEqual(calls, [None, "C2"])
+
+    def test_full_page_without_any_cursor_must_not_silently_truncate(self):
+        with patch.object(api, "api_get", return_value={
+                "data": [{"id": "one"}, {"id": "two"}],
+                "paging": {"cursors": {"before": "B"}}}):
+            with self.assertRaisesRegex(RuntimeError, "potencialmente incompleta"):
+                api.paginated("me/replies", "tok", fields="id", limit=2)
+
+    def test_bad_cursor_shape_never_triggers_third_party_url(self):
+        with patch.object(api, "api_get", return_value={
+                "data": [{"id": "one"}],
+                "paging": {"next": "https://invalid.example/steal-token",
+                           "cursors": ["no", "dictionary"]}}):
+            with self.assertRaisesRegex(RuntimeError, "invalidos"):
+                api.paginated("me/replies", "tok", fields="id", limit=2)
+
     def test_repeated_cursor_and_page_budget_fail_closed(self):
         with patch.object(api, "api_get", return_value=page([{"id": "a"}], "same")):
             with self.assertRaisesRegex(RuntimeError, "repetido"):
@@ -102,6 +132,19 @@ class ThreadsPublishContract(unittest.TestCase):
 
     def test_timeout_after_publish_sent_is_uncertain(self):
         with patch.object(api, "api_post", side_effect=[{"id": "container-01"}, TimeoutError("timeout")]):
+            with self.assertRaises(api.ReplyPublishUncertain):
+                api.publish_reply("tok", "me", "parent", "Respuesta.")
+
+    def test_first_post_never_autopublishes_and_timeout_is_not_created(self):
+        with patch.object(api, "api_post", side_effect=TimeoutError("offline")) as post:
+            with self.assertRaises(api.ReplyNotCreated):
+                api.publish_reply("tok", "me", "parent", "Respuesta.")
+        self.assertEqual(post.call_count, 1)
+        self.assertEqual(post.call_args.kwargs["auto_publish_text"], "false")
+
+    def test_invalid_publish_ack_id_is_uncertain(self):
+        with patch.object(api, "api_post",
+                          side_effect=[{"id": "container"}, {"id": 123}]):
             with self.assertRaises(api.ReplyPublishUncertain):
                 api.publish_reply("tok", "me", "parent", "Respuesta.")
 
