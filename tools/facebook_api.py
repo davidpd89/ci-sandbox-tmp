@@ -78,7 +78,7 @@ def comments_pending(token, page_id, posts_limit=10):
                                    filter="toplevel", limit=50, budget=budget):
             cid = comment.get("id")
             author = comment.get("from") or {}
-            if not cid or cid in seen_ids or not isinstance(author, dict):
+            if not cid or cid in seen_ids or not isinstance(author, dict) or not author.get("id"):
                 continue
             seen_ids.add(cid)
             if author.get("id") == page_id or "?" not in (comment.get("message") or ""):
