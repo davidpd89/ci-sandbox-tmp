@@ -107,8 +107,9 @@ la ubicación autorizada del original si pudiera revelar rutas privadas.
 - [ ] G2 y G3 verificadas por separado; no publicar ni fusionar sin aprobación humana.
 
 CI de GitHub: `.github/workflows/validate-public-reuse.yml`, sin secretos
-externos, usa permisos de solo lectura, Ubuntu y Windows. En G1: `--live`
-verifica enlaces reales y ramas vía API; fallos de red dan fallo, no una
+externos, usa permisos de solo lectura, Ubuntu y Windows. En G1: `--live` de la PR padre verifica todo el catálogo y detecta hijas nuevas;
+`--live --child-number <N>` en una PR hija valida sólo la hija y el padre,
+para no bloquearla por el trabajo paralelo de las demás. Ambos usan GitHub API; fallos de red dan fallo, no una
 aprobación simulada. El SHA cambiado de hija es **aviso**: invalida cualquier
 aprobación anterior y exige nueva revisión de checks.
 
