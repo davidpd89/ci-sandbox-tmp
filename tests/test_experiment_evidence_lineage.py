@@ -213,6 +213,17 @@ class VersionedEvidenceTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 TrustedRegistry(invalid)
 
+    def test_registry_snapshot_immutable_and_input_defensively_copied(self):
+        source = audited(trial())
+        registry = TrustedRegistry([source])
+        source["evidence_sha256"] = "0" * 64
+        self.assertTrue(registry.approves(trial(), "mastodon"))
+        with self.assertRaises(AttributeError):
+            registry._entries.clear()
+        key = next(iter(registry._entries))
+        with self.assertRaises(TypeError):
+            registry._entries[key]["evidence_sha256"] = "0" * 64
+
     def test_unhashable_queue_or_malformed_targets_never_crashes(self):
         for invalid_queue in ([], {}, ["API"], None, 42):
             row = trial()

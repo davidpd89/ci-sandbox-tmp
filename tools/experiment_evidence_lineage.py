@@ -10,6 +10,7 @@ import hashlib
 import hmac
 import json
 import re
+from types import MappingProxyType
 
 VERSION = 2
 DOMAIN = "rrss.cross-network-learning.verified-evidence.v2"
@@ -133,8 +134,8 @@ class TrustedRegistry:
             if manifest in assignments and assignments[manifest] != record["experiment_id"]:
                 raise ValueError("manifest de asignaciones reutilizado entre ensayos")
             assignments[manifest] = record["experiment_id"]
-            records[key] = dict(record)
-        self._entries = records
+            records[key] = MappingProxyType(dict(record))
+        self._entries = MappingProxyType(records)
 
     def approves(self, row, target):
         audit = audit_projection(row, target)

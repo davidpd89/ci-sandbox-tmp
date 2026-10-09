@@ -115,3 +115,15 @@ Python 3.11 en `ubuntu-latest` y `windows-latest` tras cada push;
 su resultado debe comprobarse para el **HEAD final**, no para commits previos.
 No se ejecutan Windows interactivo, móvil ni Edge. Fixture de auditoría
 simulada = prueba de software; no equivale a auditoría humana real.
+
+## Segunda revisión adversarial, posterior a la primera CI
+
+La primera tanda (HEAD `31f6b285`) ejecutó correctamente las regresiones
+offline en Ubuntu, pero quedó cancelada en Windows por la llegada de un commit
+posterior: no debe considerarse Windows validado por esa tanda.
+Se detectó además que la clase inicialmente copiaba las entradas pero
+conservaba su diccionario interno mutable. Se corrigió con
+`MappingProxyType` anidado para congelar claves y valores, y una prueba
+reproduce tanto mutación del origen tras la construcción como intento de
+alterar el snapshot desde el llamador. El límite sigue siendo de confianza
+entre procesos: no asegura la autenticidad del archivo externo.
