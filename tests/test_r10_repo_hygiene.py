@@ -1,15 +1,55 @@
 """R10 / F8: nunca admitir archivos de ejecución añadidos por una PR.
 
-Los casos se reproducen con RUTAS ficticias; nunca creamos ni tocamos
-registros de cuentas ni secretos para probarlo.
+Los casos unitarios de nombres usan RUTAS ficticias. Los casos de Git crean un
+repositorio temporal con datos sintéticos; nunca leen ni tocan cuentas reales.
 """
 import pathlib
+import subprocess
 import sys
+import tempfile
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import repo_hygiene as rh
+
+
+def _git(root: pathlib.Path, *args: str) -> str:
+    completed = subprocess.run(
+        ["git", "-C", str(root), *args],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    return completed.stdout.strip()
+
+
+def _write(root: pathlib.Path, relative: str, content: str = "synthetic\n") -> None:
+    target = root / relative
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(content, encoding="utf-8")
+
+
+def _synthetic_pr_merge(root: pathlib.Path, changed_path: str) -> None:
+    """Crea el mismo shape que checkout recibe en pull_request: merge con base primero."""
+    _git(root, "init")
+    _git(root, "config", "user.email", "ci@example.invalid")
+    _git(root, "config", "user.name", "CI Contract")
+
+    # Deuda histórica deliberada: la comprobación de una PR no debe reabrirla.
+    _write(root, "SISTEMA_DIARIO_X/metricas.csv")
+    _git(root, "add", ".")
+    _git(root, "commit", "-m", "base")
+    base_branch = _git(root, "branch", "--show-current")
+
+    _git(root, "checkout", "-b", "feature")
+    _write(root, changed_path)
+    _git(root, "add", ".")
+    _git(root, "commit", "-m", "feature")
+
+    _git(root, "checkout", base_branch)
+    _git(root, "merge", "--no-ff", "feature", "-m", "merge feature")
 
 
 class FileHygieneTests(unittest.TestCase):
@@ -62,10 +102,24 @@ class FileHygieneTests(unittest.TestCase):
         ]
         self.assertEqual(rh.violations_for_paths(paths), paths)
 
+    def test_pr_merge_diff_ignores_forbidden_file_already_in_base(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = pathlib.Path(tmp)
+            _synthetic_pr_merge(repo, "tools/safe_change.py")
+            self.assertEqual(rh.changed_paths("HEAD^1", root=repo), ["tools/safe_change.py"])
+            self.assertEqual(rh.violations_for_paths(rh.changed_paths("HEAD^1", root=repo)), [])
+
+    def test_pr_merge_diff_blocks_new_forbidden_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = pathlib.Path(tmp)
+            _synthetic_pr_merge(repo, "mobile/cache/state.json")
+            changed = rh.changed_paths("HEAD^1", root=repo)
+            self.assertEqual(changed, ["mobile/cache/state.json"])
+            self.assertEqual(rh.violations_for_paths(changed), ["mobile/cache/state.json"])
+
     def test_only_changed_paths_are_considered_not_old_repository_history(self):
-        from pathlib import Path
         workflow = (ROOT / ".github/workflows/validate-social-tools.yml").read_text("utf-8")
-        self.assertIn("repo_hygiene.py", workflow)
+        self.assertIn('repo_hygiene.py --base "HEAD^1"', workflow)
         self.assertIn("fetch-depth: 2", workflow)
 
 
