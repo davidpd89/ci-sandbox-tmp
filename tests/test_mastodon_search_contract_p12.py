@@ -20,11 +20,11 @@ requests_stub.post = lambda *a, **k: (_ for _ in ()).throw(AssertionError("escri
 requests_stub.delete = lambda *a, **k: (_ for _ in ()).throw(AssertionError("escritura prohibida"))
 x_stub = types.ModuleType("x_interact")
 x_stub._check_spanish_orthography = lambda _text: None
-sys.modules.setdefault("requests", requests_stub)
-sys.modules.setdefault("x_interact", x_stub)
-
-import mastodon_interact as m
-import mastodon_execute as execute
+# Scope import doubles to this test module's imports. Leaving them in
+# sys.modules would corrupt unrelated tests according to collection order.
+with patch.dict(sys.modules, {"requests": requests_stub, "x_interact": x_stub}):
+    import mastodon_interact as m
+    import mastodon_execute as execute
 
 FIXTURES = json.loads(
     (ROOT / "tests/fixtures/mastodon_search_capabilities.json").read_text(encoding="utf-8")
@@ -120,10 +120,32 @@ class MastodonAccountSearchContractTests(unittest.TestCase):
 
     def test_malformed_accounts_response_fails_closed(self):
         for payload in ({"hashtags": [], "statuses": []}, {"accounts": None}, {"accounts": "oops"},
-                        {"accounts": [{"acct": "sinid@example.test"}]}):
+                        {"accounts": [{"acct": "sinid@example.test"}]},
+                        {"accounts": [{"id": ["no-es-un-id"]}]},
+                        {"accounts": [{"id": True}]},
+                        {"accounts": [{"id": "  "}]}):
             with self.subTest(payload=payload), patch.object(m, "_get_v2", return_value=payload):
                 with self.assertRaisesRegex(RuntimeError, "accounts\\[\\]|sin ID local"):
                     m.search_accounts_pages("libros", limit=40, max_pages=2)
+
+    def test_collection_imports_do_not_leave_global_request_doubles(self):
+        # El conjunto completo de tests debe poder importar requests real.
+        self.assertIsNot(sys.modules.get("requests"), requests_stub)
+        self.assertIsNot(sys.modules.get("x_interact"), x_stub)
+
+    def test_local_id_deduplication_accepts_string_and_integer_equivalents(self):
+        offsets = []
+
+        def search_v2(_path, params):
+            offsets.append(params["offset"])
+            if params["offset"] == 0:
+                return {"accounts": [{"id": 123}, {"id": "123"}]}
+            return {"accounts": [{"id": "124"}]}
+
+        with patch.object(m, "_get_v2", side_effect=search_v2):
+            accounts = m.search_accounts_pages("libros", limit=2, max_pages=5)
+        self.assertEqual(offsets, [0, 2])
+        self.assertEqual([str(account["id"]) for account in accounts], ["123", "124"])
 
     def test_second_page_error_propagates_instead_of_silent_partial_success(self):
         observed = []
