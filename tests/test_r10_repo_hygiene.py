@@ -117,6 +117,52 @@ class FileHygieneTests(unittest.TestCase):
             self.assertEqual(changed, ["mobile/cache/state.json"])
             self.assertEqual(rh.violations_for_paths(changed), ["mobile/cache/state.json"])
 
+    def test_type_change_to_symlink_is_not_invisible_to_hygiene(self):
+        # Index-only mode switch is Windows-compatible: no OS symlink needed.
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = pathlib.Path(tmp)
+            _git(repo, "init")
+            _git(repo, "config", "user.email", "ci@example.invalid")
+            _git(repo, "config", "user.name", "CI Contract")
+            _write(repo, "credentials.json")
+            _git(repo, "add", "credentials.json")
+            _git(repo, "commit", "-m", "historical regular file")
+            _write(repo, "synthetic-link-target", "synthetic target only\\n")
+            blob = _git(repo, "hash-object", "-w", "synthetic-link-target")
+            _git(repo, "update-index", "--cacheinfo", f"120000,{blob},credentials.json")
+            _git(repo, "commit", "-m", "change file type")
+            changed = rh.changed_paths("HEAD^1", root=repo)
+            self.assertEqual(changed, ["credentials.json"])
+            self.assertEqual(rh.violations_for_paths(changed), ["credentials.json"])
+
+    def test_rename_into_sensitive_name_is_detected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = pathlib.Path(tmp)
+            _git(repo, "init")
+            _git(repo, "config", "user.email", "ci@example.invalid")
+            _git(repo, "config", "user.name", "CI Contract")
+            _write(repo, "example.json")
+            _git(repo, "add", ".")
+            _git(repo, "commit", "-m", "base")
+            _git(repo, "mv", "example.json", "credentials.json")
+            _git(repo, "commit", "-m", "rename to blocked path")
+            changed = rh.changed_paths("HEAD^1", root=repo)
+            self.assertEqual(changed, ["credentials.json"])
+            self.assertEqual(rh.violations_for_paths(changed), ["credentials.json"])
+
+    def test_deleting_historical_forbidden_path_is_allowed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = pathlib.Path(tmp)
+            _git(repo, "init")
+            _git(repo, "config", "user.email", "ci@example.invalid")
+            _git(repo, "config", "user.name", "CI Contract")
+            _write(repo, "secrets.json")
+            _git(repo, "add", ".")
+            _git(repo, "commit", "-m", "old history")
+            _git(repo, "rm", "secrets.json")
+            _git(repo, "commit", "-m", "remove obsolete sensitive path")
+            self.assertEqual(rh.changed_paths("HEAD^1", root=repo), [])
+
     def test_only_changed_paths_are_considered_not_old_repository_history(self):
         workflow = (ROOT / ".github/workflows/validate-social-tools.yml").read_text("utf-8")
         self.assertIn('repo_hygiene.py --base "HEAD^1"', workflow)
