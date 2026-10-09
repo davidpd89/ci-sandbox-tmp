@@ -216,8 +216,28 @@ class KPITests(unittest.TestCase):
         ])
         nets = k.build_report(self.root, self.day)["networks"]
         self.assertIsNone(nets["x"]["followers_net"])
-        self.assertEqual(nets["x"]["followers_coverage"], "sin_snapshot_del_dia")
+        self.assertEqual(nets["x"]["followers_coverage"], "snapshot_del_dia_invalido")
         self.assertEqual(nets["threads"]["followers_net"], 2)
+
+    def test_invalid_snapshot_today_overrides_an_earlier_valid_snapshot(self):
+        self.write("threads", "metricas.csv", [
+            ["fecha", "seguidores"],
+            ["2026-10-08", "100"],
+            ["2026-10-09", "105"],
+            ["2026-10-09", "desconocido"],
+        ])
+        row = k.build_report(self.root, self.day)["networks"]["threads"]
+        self.assertIsNone(row["followers_net"])
+        self.assertEqual(row["followers_coverage"], "snapshot_del_dia_invalido")
+
+    def test_short_same_day_snapshot_cannot_be_ignored(self):
+        self.write("mastodon", "metricas.csv", [
+            ["fecha", "seguidores"], ["2026-10-08", "100"],
+            ["2026-10-09", "105"], ["2026-10-09"],
+        ])
+        row = k.build_report(self.root, self.day)["networks"]["mastodon"]
+        self.assertIsNone(row["followers_net"])
+        self.assertEqual(row["followers_coverage"], "snapshot_del_dia_invalido")
 
     def test_datetime_day_is_converted_to_madrid_before_report(self):
         import datetime as dt
