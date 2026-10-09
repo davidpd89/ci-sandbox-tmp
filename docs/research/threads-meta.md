@@ -113,12 +113,14 @@ por pagina. No se inventa un benchmark de latencia.
   cursor util, cursor malformado/repetido y limite de cinco paginas
   con error explicito. El error
   **interrumpe todo el barrido**, no entrega resultados parciales.
-- `followups`: lee threads propios, `me/replies` y las paginas de
-  respuestas recibidas; cruza `replied_to.id`, excluye roots que son
-  replies propias, deduplica y ordena. **Alcance actual: replies directas**;
-  el endpoint `/{id}/replies` no equivale a `/{id}/conversation`.
-  La recuperacion de preguntas anidadas requiere prueba contractual
-  diferenciada para no inventar conversaciones. No crea respuestas.
+- `followups`: lee threads propios, `me/replies` y conversaciones
+  paginadas por `/{id}/conversation`, documentado por Meta para el contexto
+  completo. Reconstruye la cadena de padres `replied_to.id` hasta la raiz;
+  solo selecciona preguntas directamente dirigidas a posts o respuestas
+  nuestras (no debates entre terceros), descarta las ya contestadas y
+  conserva `thread_turns`, `target_created_at` y URL en la decision.
+  Sin padre, historial o texto verificable, error explicito en vez de
+  inventar contexto. No realiza POST.
 - El publicador del mirror desactiva `auto_publish_text` durante la
   creacion de contenedor (para mantener el modelo de dos POST), valida
   `id` no vacio de tipo `str` y distingue `ReplyNotCreated`
@@ -253,10 +255,11 @@ quedan en su propia PR para revision independiente, nunca merge automatico.
   parent con 76 hijas frente a 46 esperadas y un indice atrasado; el padre
   se actualizo despues. El test offline RRSS del mismo SHA paso en Ubuntu y Windows. Estos estados
   anteriores no se trasladan como afirmaciones sobre futuros HEAD.
-- Prueba adicional **pendiente** para Claude: caso con reply anidada,
-  contraste `/{id}/replies` frente a `/{id}/conversation`, y
-  reconciliacion de `replied_to` ausente; sin una muestra de contrato
-  fiable no ampliar automaticamente el barrido a respuestas anidadas.
+- El caso de pregunta anidada se cubre ahora offline con
+  `/{id}/conversation`: se comprueban la cadena de padres, los turnos
+  nuestros/ajenos, la fecha del destino, los debates entre terceros y
+  la ausencia de `replied_to`. **Pendiente para Claude**: validar el
+  contrato de este endpoint con GET supervisado y volumen/costos reales.
 - Retirada: revertir los cambios de paginacion y casos nuevos;
   `auto_publish_text=false` es exclusivamente defensa en el mirror.
   No ejecutar rollback sobre el codigo privado protegido.
@@ -308,3 +311,58 @@ tambien entregables con origen SPDX y privacidad.
 Revertir commits específicos de la PR en el mirror; para produccion,
 retirar unicamente la rutina de paginacion portada si falla el canario
 GET supervisado. Nunca revertir certificados ni ledger privados.
+
+## Nueva revisión adversarial: lectura de conversaciones en conjunto
+
+Consulta externa (09-10-2026):
+- Meta, request de conversaciones: 
+  https://www.postman.com/meta/threads/documentation/dht3nzz/threads-api
+  (Read and Manage Threads Replies > GET Get Threads Conversations).
+  `/{id}/replies` lista respuestas de nivel superior y
+  `/{id}/conversation` devuelve el contexto conversacional. El esquema
+  publicado incluye `replied_to.id`, `root_post.id`,
+  `is_reply_owned_by_me` y cursores.
+- Meta, GET replies propias:
+  https://www.postman.com/meta/threads/request/34203612-b02f08fa-a8c3-4b9c-9848-e83e95a1e237 .
+- Meta, creacion de texto:
+  https://www.postman.com/meta/threads/request/jkuogpa/1-1-create-text-container ,
+  `auto_publish_text` optativo; el caso de dos POST requiere evitar
+  la autopublicacion durante el primero.
+- Muestra oficial https://github.com/fbsamples/threads_api/tree/854fc140a37e20f6a7086cf3ee0065f99d41f646 .
+  Se contrasta la semantica, no se incorpora ni distribuye su codigo.
+
+### Nuevos riesgos resueltos
+
+1. **Replies de segundo nivel perdidas**: antes se consultaba
+   `/{id}/replies` y una pregunta posterior a nuestra respuesta
+   permanecia invisible. Ahora se consulta la conversacion completa
+   y se reconstruye una cadena de padres verificable.
+2. **Responder a lectores que hablaban entre ellos**: no basta
+   detectar pregunta dentro de una conversacion. Se exige que el
+   padre inmediato sea nuestro; una replica a un tercero se excluye.
+3. **Texto sin historial**: si un nodo necesario no aparece en el
+   resultado de Meta, se considera lectura incompleta y no se crea
+   un falso certificado contextual.
+4. **Plan sin fecha de destino**: `build_plan` pasa el timestamp de la
+   pregunta como `target_created_at` para la politica comun
+   `post_age_policy`, mantiene `thread_turns` para
+   `conversation_turn_policy` y `url` para la cadena de procedencia
+   verificada en la rama privada. No reutilizar la implementacion del
+   publicador del espejo para el privado.
+
+### Tests offline añadidos en esta revisión
+
+- `test_nested_question_to_our_reply_preserves_verified_ancestry`
+- `test_unverifiable_nested_parent_is_not_treated_as_available`
+- `test_own_reply_without_parent_does_not_mask_duplicate_risk`
+- `test_missing_parent_on_inbound_question_fails_closed`
+
+### Impacto transversal
+
+El adaptador Threads puede emitir `thread_turns` en el mismo contrato
+que Bluesky/Mastodon, con un role `ours/theirs` y `post_id` enlazado.
+No crear una politica de conversacion nueva: reutilizar la existente,
+y coordinar tests/capacidades con #77. El limite de paginas de la rutina
+`paginated` sigue siendo un presupuesto intencionado; una paginacion
+truncada debe informar y no convertirse en una falsa cola vacia. La
+comprobacion live del volumen y del ordenamiento real sigue pendiente.
