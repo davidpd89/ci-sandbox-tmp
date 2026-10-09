@@ -1,0 +1,723 @@
+{
+  "schema_version": 1,
+  "repository": "davidpd89/ci-sandbox-tmp",
+  "parent_pr": 10,
+  "parent_head": "research/public-reuse-parent",
+  "observed_at": "2026-10-09",
+  "children": [
+    {
+      "number": 11,
+      "title": "Research: reutilización pública para Bluesky y AT Protocol",
+      "objective": "Bluesky y AT Protocol",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/01-bluesky-atproto",
+      "head_sha": "6d8d51461eecb6f8b108d4ccc62347817bbc8f8a",
+      "area": "platform",
+      "related_prs": [
+        21,
+        33
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/11"
+    },
+    {
+      "number": 12,
+      "title": "Research: reutilización pública para Mastodon y Fediverse",
+      "objective": "Mastodon y Fediverse",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/02-mastodon-fediverse",
+      "head_sha": "0077e868ddc99ad927fa9add359a07f363c0fd36",
+      "area": "platform",
+      "related_prs": [
+        21
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/12"
+    },
+    {
+      "number": 13,
+      "title": "Research: reutilización pública para X",
+      "objective": "X",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/03-x-twitter",
+      "head_sha": "dc4035497a742d713b1ef7cf08c887dbbe228e05",
+      "area": "platform",
+      "related_prs": [
+        20,
+        22
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/13"
+    },
+    {
+      "number": 14,
+      "title": "Research: reutilización pública para Threads",
+      "objective": "Threads",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/04-threads-meta",
+      "head_sha": "8faf230d2f1fa7f6278c9fc169b6e8d7ad4f8af2",
+      "area": "platform",
+      "related_prs": [
+        15,
+        16
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/14"
+    },
+    {
+      "number": 15,
+      "title": "Research: reutilización pública para Facebook",
+      "objective": "Facebook",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/05-facebook-meta",
+      "head_sha": "3553edd2cb813d092de88c44f9f52d326357d773",
+      "area": "platform",
+      "related_prs": [
+        14,
+        16
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/15"
+    },
+    {
+      "number": 16,
+      "title": "Research: reutilización pública para Instagram",
+      "objective": "Instagram",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/06-instagram",
+      "head_sha": "5d00c7f23b75a56ff790ea768029b930adbd70bb",
+      "area": "platform",
+      "related_prs": [
+        14,
+        15,
+        28
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/16"
+    },
+    {
+      "number": 17,
+      "title": "Research: reutilización pública para Pinterest",
+      "objective": "Pinterest",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/07-pinterest",
+      "head_sha": "6c0d343d3df1d0923983f41aa39988ca9a05f5b2",
+      "area": "platform",
+      "related_prs": [
+        20
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/17"
+    },
+    {
+      "number": 18,
+      "title": "Research: reutilización pública para Reddit",
+      "objective": "Reddit",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/08-reddit",
+      "head_sha": "ccb24a5bf367b4818035481eee4d4fb114710baa",
+      "area": "platform",
+      "related_prs": [
+        22
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/18"
+    },
+    {
+      "number": 19,
+      "title": "Research: reutilización pública para TikTok",
+      "objective": "TikTok",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/09-tiktok",
+      "head_sha": "66ecbc867aa16aebcd79d1ada1d62a78d7dc22e6",
+      "area": "platform",
+      "related_prs": [
+        27
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/19"
+    },
+    {
+      "number": 20,
+      "title": "Research: publicación y programación multiplataforma",
+      "objective": "Publicacion y programacion",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/10-publication-scheduling",
+      "head_sha": "1e847cfbbdf98eb22347851631b952ead5733474",
+      "area": "capability",
+      "related_prs": [
+        13,
+        17,
+        26,
+        49,
+        55
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/20"
+    },
+    {
+      "number": 21,
+      "title": "Research: descubrimiento, escucha y ranking",
+      "objective": "Descubrimiento, escucha y ranking",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/11-discovery-listening-ranking",
+      "head_sha": "d74b4eaf68659bcd038c34d3de421bcce11eb718",
+      "area": "capability",
+      "related_prs": [
+        11,
+        12,
+        23,
+        25
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/21"
+    },
+    {
+      "number": 22,
+      "title": "Research: respuestas humanas, contexto y memoria",
+      "objective": "Respuestas, contexto y memoria",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/12-replies-context-memory",
+      "head_sha": "6e496cad0bf5a1569f2ed6eed79db793669bd027",
+      "area": "capability",
+      "related_prs": [
+        13,
+        18,
+        25,
+        26
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/22"
+    },
+    {
+      "number": 23,
+      "title": "Research: analítica, atribución y experimentos",
+      "objective": "Analitica, atribucion y experimentos",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/13-analytics-attribution-experiments",
+      "head_sha": "fd900fc0a5adb9bacf976b6b2468f14d7fc1216e",
+      "area": "capability",
+      "related_prs": [
+        21,
+        24,
+        32
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/23"
+    },
+    {
+      "number": 24,
+      "title": "Research: dashboard y observabilidad RRSS",
+      "objective": "Dashboard y observabilidad",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/14-dashboard-observability",
+      "head_sha": "d02f56fbb8cc1ff13bf513017d31fa6276e44c27",
+      "area": "capability",
+      "related_prs": [
+        23,
+        47
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/24"
+    },
+    {
+      "number": 25,
+      "title": "Research: comunidad, CRM y fidelización",
+      "objective": "Comunidad, CRM y fidelizacion",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/15-community-crm-loyalty",
+      "head_sha": "c1aea7be77038453371ecf39511763e8cd4d5fce",
+      "area": "capability",
+      "related_prs": [
+        21,
+        22
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/25"
+    },
+    {
+      "number": 26,
+      "title": "Research: colas, idempotencia y recuperación",
+      "objective": "Colas, idempotencia y recuperacion",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/16-queues-idempotency-recovery",
+      "head_sha": "95fdd37d40bb14cff63282f1468877a65eb13170",
+      "area": "capability",
+      "related_prs": [
+        20,
+        22,
+        39,
+        40,
+        46,
+        48
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/26"
+    },
+    {
+      "number": 27,
+      "title": "Research: automatización fiable de navegador y móvil",
+      "objective": "Navegador y movil",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/17-browser-mobile-automation",
+      "head_sha": "7868a9b168f69c3ec99d00533d74e128e902c818",
+      "area": "capability",
+      "related_prs": [
+        19,
+        38,
+        42
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/27"
+    },
+    {
+      "number": 28,
+      "title": "Research: pipeline público para contenido y media",
+      "objective": "Contenido, media y assets",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/18-content-media-assets",
+      "head_sha": "82b09b0b4eba7cc0ee5949d1e55c8d00e66a9fc9",
+      "area": "capability",
+      "related_prs": [
+        16,
+        51,
+        53
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/28"
+    },
+    {
+      "number": 29,
+      "title": "Research: agentes, skills y orquestación",
+      "objective": "Agentes, skills y orquestacion",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/19-agents-skills-orchestration",
+      "head_sha": "94110ff157a03bc52981101c074a5df37656cb4e",
+      "area": "capability",
+      "related_prs": [
+        54
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/29"
+    },
+    {
+      "number": 30,
+      "title": "Research: testing, fuzzing y contratos",
+      "objective": "Testing, fuzzing y contratos",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/20-testing-fuzz-contracts",
+      "head_sha": "574518a2580c90a15040efd350c020ea218f180b",
+      "area": "capability",
+      "related_prs": [
+        33,
+        34,
+        35,
+        36,
+        52
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/30"
+    },
+    {
+      "number": 31,
+      "title": "Research: seguridad, privacidad y supply chain",
+      "objective": "Seguridad, privacidad y supply chain",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/21-security-privacy-supply-chain",
+      "head_sha": "fcd59bd4972d28ad9b34638422173634219285aa",
+      "area": "capability",
+      "related_prs": [
+        53,
+        55
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/31"
+    },
+    {
+      "number": 32,
+      "title": "Research: modelo de datos, almacenamiento e informes",
+      "objective": "Datos, almacenamiento e informes",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/22-data-model-storage-reporting",
+      "head_sha": "ff5f0062ff0f102d18e2cc43a85775ef5bcb95a1",
+      "area": "capability",
+      "related_prs": [
+        23,
+        40,
+        46,
+        48
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/32"
+    },
+    {
+      "number": 33,
+      "title": "Research: pruebas diferenciales entre redes",
+      "objective": "Pruebas diferenciales entre redes",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/23-differential-cross-network",
+      "head_sha": "1be058e9f09f30f1a8f66735fdbb04dbec30ec37",
+      "area": "quality",
+      "related_prs": [
+        11,
+        30,
+        43
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/33"
+    },
+    {
+      "number": 34,
+      "title": "Research: mutation testing sobre logica critica",
+      "objective": "Mutation testing sobre logica critica",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/24-mutation-testing",
+      "head_sha": "0da12c762367ab3cff26a4f3a10233cf361528f9",
+      "area": "quality",
+      "related_prs": [
+        30,
+        35
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/34"
+    },
+    {
+      "number": 35,
+      "title": "Research: pruebas con modelos y maquinas de estado",
+      "objective": "Pruebas con modelos y maquinas de estado",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/25-model-based-state-machines",
+      "head_sha": "5e0c7769167be37ddb7787db95a562fe43e5c2b8",
+      "area": "quality",
+      "related_prs": [
+        30,
+        34,
+        36
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/35"
+    },
+    {
+      "number": 36,
+      "title": "Research: chaos testing y fault injection",
+      "objective": "Chaos testing y fault injection",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/26-chaos-fault-injection",
+      "head_sha": "76cc0f260ad0c3b9b700b4d78a1ec321ce191d09",
+      "area": "quality",
+      "related_prs": [
+        30,
+        35,
+        39
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/36"
+    },
+    {
+      "number": 37,
+      "title": "Research: profiling y presupuestos de rendimiento",
+      "objective": "Profiling y presupuestos de rendimiento",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/27-performance-profiling",
+      "head_sha": "1191f98d56971bd1a4874a6b806950b0311e69e9",
+      "area": "quality",
+      "related_prs": [
+        38
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/37"
+    },
+    {
+      "number": 38,
+      "title": "Research: fugas de recursos y ciclo de vida",
+      "objective": "Fugas de recursos y ciclo de vida",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/28-resource-leaks-lifecycle",
+      "head_sha": "9c447d9936c64e3f42a3367afbd4ba799c340c6f",
+      "area": "quality",
+      "related_prs": [
+        27,
+        37
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/38"
+    },
+    {
+      "number": 39,
+      "title": "Research: carreras, concurrencia y deadlocks",
+      "objective": "Carreras, concurrencia y deadlocks",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/29-concurrency-races-deadlocks",
+      "head_sha": "558d5e4fa09961683e0487be8158bde7b2e5b515",
+      "area": "quality",
+      "related_prs": [
+        26,
+        36,
+        48
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/39"
+    },
+    {
+      "number": 40,
+      "title": "Research: esquemas, migraciones y compatibilidad",
+      "objective": "Esquemas, migraciones y compatibilidad",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/30-schema-migrations-compatibility",
+      "head_sha": "4c424d492f677f1159eb6004943794b05dea1ac6",
+      "area": "quality",
+      "related_prs": [
+        26,
+        32,
+        50
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/40"
+    },
+    {
+      "number": 41,
+      "title": "Research: drift y contratos de APIs externas",
+      "objective": "Drift y contratos de APIs externas",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/31-api-contract-drift",
+      "head_sha": "c0d65affd75579f57ccd9f7e2ba460d01a75b0f7",
+      "area": "quality",
+      "related_prs": [
+        43
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/41"
+    },
+    {
+      "number": 42,
+      "title": "Research: selectores y regresion visual",
+      "objective": "Selectores y regresion visual",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/32-ui-selector-visual-regression",
+      "head_sha": "047631d38723fdcdab9ae5d4a5f9a3ce68371464",
+      "area": "quality",
+      "related_prs": [
+        27,
+        43
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/42"
+    },
+    {
+      "number": 43,
+      "title": "Research: paridad de configuracion y capacidades",
+      "objective": "Paridad de configuracion y capacidades",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/33-configuration-capability-parity",
+      "head_sha": "54afc2582d198011914a62c383f3f41ab66ef8dd",
+      "area": "quality",
+      "related_prs": [
+        33,
+        41,
+        42
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/43"
+    },
+    {
+      "number": 44,
+      "title": "Research: arquitectura y acoplamiento",
+      "objective": "Arquitectura y acoplamiento",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/34-architecture-boundaries-coupling",
+      "head_sha": "4e1a8cb4ee6412c61f537444d503e3399c332160",
+      "area": "quality",
+      "related_prs": [
+        45
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/44"
+    },
+    {
+      "number": 45,
+      "title": "Research: code review, codigo muerto y complejidad",
+      "objective": "Code review, codigo muerto y complejidad",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/35-code-quality-dead-code-complexity",
+      "head_sha": "1b7c8c27d7aa8516f9ab86a71b4881eaadaf5bfe",
+      "area": "quality",
+      "related_prs": [
+        44,
+        54
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/45"
+    },
+    {
+      "number": 46,
+      "title": "Research: calidad de datos y reconciliacion",
+      "objective": "Calidad de datos y reconciliacion",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/36-data-quality-reconciliation",
+      "head_sha": "24f7d935509accedbfb43e7a98932855f9f8a88a",
+      "area": "quality",
+      "related_prs": [
+        26,
+        32,
+        48
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/46"
+    },
+    {
+      "number": 47,
+      "title": "Research: alertas y simulacion de incidentes",
+      "objective": "Alertas y simulacion de incidentes",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/37-alerts-incident-simulation",
+      "head_sha": "46b07f8d6dcdf9acf0f4219eee23e54cb202133e",
+      "area": "quality",
+      "related_prs": [
+        24,
+        52
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/47"
+    },
+    {
+      "number": 48,
+      "title": "Research: backup, restore y recuperacion",
+      "objective": "Backup, restore y recuperacion",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/38-backup-restore-disaster-recovery",
+      "head_sha": "89e7a43a6875499a808371409348ca88b75528e8",
+      "area": "quality",
+      "related_prs": [
+        26,
+        32,
+        39,
+        46
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/48"
+    },
+    {
+      "number": 49,
+      "title": "Research: horarios, zonas y DST",
+      "objective": "Horarios, zonas y DST",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/39-timezones-scheduling-dst",
+      "head_sha": "7b0cae1ced7baca28bc08b0ff49f6b3d94fb67b4",
+      "area": "quality",
+      "related_prs": [
+        20,
+        50
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/49"
+    },
+    {
+      "number": 50,
+      "title": "Research: Unicode, locale y codificacion",
+      "objective": "Unicode, locale y codificacion",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/40-unicode-locale-encoding",
+      "head_sha": "f94fd0db8821f84fb8214ba3a78b4765bf1202a8",
+      "area": "quality",
+      "related_prs": [
+        40,
+        49
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/50"
+    },
+    {
+      "number": 51,
+      "title": "Research: evaluacion ciega de contenido humano",
+      "objective": "Evaluacion ciega de contenido humano",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/41-human-content-blind-evaluation",
+      "head_sha": "75616fb44581d427f2c5d41f8fe75b1e68ac1a0a",
+      "area": "operations",
+      "related_prs": [
+        28,
+        52
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/51"
+    },
+    {
+      "number": 52,
+      "title": "Research: ronda end-to-end en shadow mode",
+      "objective": "Ronda end-to-end en shadow mode",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/42-end-to-end-shadow-mode",
+      "head_sha": "75a13bcec55a8aedce82a224a9d2b6503a27d686",
+      "area": "operations",
+      "related_prs": [
+        30,
+        47,
+        51,
+        53
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/52"
+    },
+    {
+      "number": 53,
+      "title": "Research: generacion de fixtures sinteticos",
+      "objective": "Generacion de fixtures sinteticos",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/43-synthetic-fixture-generation",
+      "head_sha": "dbe24199eda410726845e1dfc451f870e9ce5700",
+      "area": "operations",
+      "related_prs": [
+        28,
+        31,
+        52
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/53"
+    },
+    {
+      "number": 54,
+      "title": "Research: optimizacion de tokens, llamadas y coste",
+      "objective": "Optimizacion de tokens, llamadas y coste",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/44-cost-token-call-optimization",
+      "head_sha": "ad253c1a072e4a837b107a0d377ecac8fa51c986",
+      "area": "operations",
+      "related_prs": [
+        29,
+        45
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/54"
+    },
+    {
+      "number": 55,
+      "title": "Research: dependencias, releases y rollback",
+      "objective": "Dependencias, releases y rollback",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/45-dependency-upgrade-release-rollback",
+      "head_sha": "5d2c6c12acd13ebaa2d25289b66bc91e7c50fe8d",
+      "area": "operations",
+      "related_prs": [
+        20,
+        31,
+        56
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/55"
+    },
+    {
+      "number": 56,
+      "title": "Research: documentacion ejecutable y runbooks",
+      "objective": "Documentacion ejecutable y runbooks",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "research/46-executable-docs-runbooks",
+      "head_sha": "378826cdd515d520a635f2039ab91469eac73d09",
+      "area": "operations",
+      "related_prs": [
+        55
+      ],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/56"
+    }
+  ]
+}
