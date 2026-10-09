@@ -1,20 +1,16 @@
-name: Trusted PR hygiene
+name: Trusted PR hygiene (default branch only)
 
-# The independent job is ONLY effective after this workflow and its verifier
-# have been reviewed and installed on the repository's DEFAULT branch.
+# MUST be installed on the repository DEFAULT branch to work.
+# No pull_request/push job with this status-check name may run in the PR head.
 on:
   pull_request_target:
     types: [opened, reopened, synchronize, ready_for_review, edited]
-  pull_request:
-  push:
-    branches: [ci/trusted-pr-hygiene]
 
 permissions: {}
 
 jobs:
   trusted-paths:
     name: trusted-pr-paths
-    if: github.event_name == 'pull_request_target'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -42,24 +38,3 @@ jobs:
           python tools/trusted_pr_hygiene.py \
             --repo "$TARGET_REPO" --number "$TARGET_PR" \
             --head "$EXPECTED_HEAD" --base "$EXPECTED_BASE"
-
-  offline-contract:
-    name: trusted-contract (${{ matrix.os }})
-    if: github.event_name != 'pull_request_target'
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 8
-    permissions:
-      contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: '3.11'
-      - name: Offline synthetic regressions only
-        run: python -m unittest discover -s tests -p test_trusted_pr_hygiene.py -v
