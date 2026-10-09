@@ -320,6 +320,20 @@ def _update_estado(results, metrics):
     ec.update_estado(ESTADO_MD, results, metrics, fields=(("Seguidores", "followers"),))
 
 
+def _pool_post_status(result):
+    """Do not mislabel an unconfirmed API write as a failed attempt."""
+    outcome = str(result.get("resultado") or "")
+    if outcome in ("confirmado", "saltado_ya_like", "saltado_ya_comentado"):
+        return "done"
+    if outcome == "pendiente_verificacion":
+        return "pending_verification"
+    if outcome == "pendiente_aprobacion":
+        return "pending_approval"
+    if outcome == "no_intentado" or outcome.startswith("parada:"):
+        return None
+    return "failed"
+
+
 def _plan_needs_browser(plan):
     """The API-only lane must not require a live Edge/CDP session."""
     return any(item.get("kind") != "reply" or not item.get("reply_to_id")
@@ -392,7 +406,9 @@ if __name__ == "__main__":
             db = pool.connect()
             try:
                 if r.get("permalink"):
-                    pool.mark(db, r["permalink"], "done" if r["resultado"] in ("confirmado", "saltado_ya_like") else "failed")
+                    post_status = _pool_post_status(r)
+                    if post_status:
+                        pool.mark(db, r["permalink"], post_status)
                 if r.get("kind") in ("follow", "like", "like_latest") and r.get("handle"):
                     outcome = r["resultado"]
                     status = ("done" if outcome in ("confirmado", "saltado_ya_like", "saltado_ya_seguido", "pendiente_aprobacion")
