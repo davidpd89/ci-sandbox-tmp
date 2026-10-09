@@ -68,9 +68,22 @@ class SourceTimePropagationTests(unittest.TestCase):
                                  ("mastodon", self._mastodon)):
             with self.subTest(network=network):
                 item = builder(None)
-                self.assertIsNone(item["post_created_at"])
+                self.assertFalse(item["post_created_at"])
                 self.assertEqual(age.check(network, item, now=NOW),
                                  (False, "edad_desconocida"))
+
+    def test_bluesky_compact_record_source_date_fallback(self):
+        scan = {"auto_plan": [], "shortlist": [{
+            "id": "G001", "handle": "lectora.bsky.social",
+            "actions": [], "posts": [{
+                "id": "G001-P1", "url": "https://bsky.app/profile/lectora.bsky.social/post/x",
+                "record": {"createdAt": stamp(8)}, "text": "Fantasía",
+                "actions": ["reply"]}]}]}
+        plan = bb.build(scan, {"actions": [{
+            "kind": "reply", "post": "G001-P1", "text": "Qué lectura."}]})
+        self.assertEqual(plan[0]["post_created_at"], stamp(8))
+        self.assertEqual(age.check("bluesky", plan[0], now=NOW),
+                         (False, "post_antiguo"))
 
     def test_auto_bluesky_scan_rejects_indexed_at_as_publication_time(self):
         # Se extrae solo la función pura de scan para no cargar clientes de red.
