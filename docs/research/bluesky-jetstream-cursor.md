@@ -33,6 +33,25 @@ La rama oficial privada contiene `tools/bluesky_jetstream_collect.py` en `main` 
 
 Se adaptó conceptualmente el patrón de **high-water monotónico, replay idempotente y checkpoint atómico**; **no se copió código fuente ni fixtures ajenos**. Coste de librerías nuevas: **cero**. Se mantienen `websockets`, `sqlite3` y la interfaz de `read_recent_matches`. No se inventan tiempos ni ahorros de CPU; no hay benchmark de throughput reproducido con el entorno de producción.
 
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/bluesky-social/jetstream/blob/f42df08ba0ca9e4287020139aefbcfe24506d1ef/docs/README.md
+Fecha de consulta: 2026-10-09
+Licencia SPDX: MIT
+Referencia inmutable: https://github.com/bluesky-social/jetstream/tree/f42df08ba0ca9e4287020139aefbcfe24506d1ef
+
+La referencia oficial Go tiene licencia alternativa `MIT OR Apache-2.0`.
+El SDK Python `MarshalX/atproto` es MIT, admite Python 3.11 y Windows
+(Python independiente de SO) pero incorpora dependencias transitivas
+(`httpx`, `pydantic`, `cryptography`, `libipld`, `zstandard`).
+`@bsky/jetstream` depende de Node.js y requiere puente de persistencia
+para este proceso Python. Se comprueba actividad pública reciente en los
+commits fijos indicados arriba; no se incorpora código ni fixture extranjero.
+El patrón reutilizado es el contrato de cursor inclusivo e idempotencia
+más checkpoint durable, no una implementación copiada. La compatibilidad
+real con Windows/Python 3.11 se contrasta con CI propio; los SDK descartados
+no se instalaron ni sometieron a tests ejecutables.
+
 ## Decisión implementada
 
 - `_apply_frame` rechaza secuencia v2 inexistente, no positiva o previamente consumida; solo entonces invoca `store_event`. El valor de retorno distingue `matched`, high-water y `replayed`.
@@ -68,6 +87,42 @@ Resultados CI confirmados en [run 37978832148](https://github.com/davidpd89/ci-s
 5. **ID DID/handle.** El collector construye claves `at://did/collection/rkey`; la resolución mutable del handle ocurre posteriormente en scan. No añadir manejo de alias ni introducir identificadores reales en fixtures.
 6. **Regresión transversal.** No se toca `scan_common`, `action_ledger` ni `reply_writer`; los contratos compartidos permanecen. La suite global offline del mirror debe terminar en ambos sistemas para considerarlo apto.
 
+## Segunda revisión adversarial: origen y locks del collector (09-10-2026)
+
+Se identificaron dos huecos adicionales al revisar el código contra Jetstream
+v2 y la rama privada `integracion/crecimiento-2026-10`:
+
+1. **Secuencia de otra instancia**: `seq` pertenece al servidor que lo emite.
+   El cache ahora guarda `last_seq_stream` (origen `wss://host/path`,
+   sin parámetros ni credenciales) con el mismo commit de posts/cursor y
+   rechaza una reutilización contra otro origen antes de podar datos.
+   Los caches antiguos sin ese campo no pueden reconstruir su procedencia:
+   se asocian solo tras aceptar un evento nuevo del host consultado; ese
+   primer reinicio requiere supervisión si se cambió de host previamente.
+   La igualdad de URL no demuestra por sí sola igualdad física de instancia
+   si el proveedor reasigna su infraestructura.
+2. **Transacción abierta durante inactividad/caída del socket**: además del
+   lote de 250 eventos o cinco segundos de trabajo, el collector guarda
+   estado en SQLite al vencimiento del tiempo de lectura (cinco segundos),
+   tras cierre limpio y antes de reintentar una caída. No desconecta por
+   silencio. La prueba con dos conexiones SQLite observa checkpoint previo
+   al cierre de una ventana, y otra comprueba rollback de posts+state.
+   Coste: comprobación de socket cada cinco segundos, sin dependencia nueva.
+
+**Tests nuevos:** `test_stream_identity_is_canonical_and_contains_no_credentials`,
+`test_v2_refuses_foreign_seq_without_pruning_existing_posts`,
+`test_v2_checkpoint_rollback_never_advances_state_alone` y
+`test_v2_idle_checkpoint_visible_to_second_reader_without_reconnect`.
+Son pruebas sintéticas; no prueban cambio de instancia tras DNS, servidores
+vivos, dos writers simultáneos ni corrupción física.
+
+**Retirada y compatibilidad:** no se altera el esquema de tablas, solo se
+añade la clave opcional `state.last_seq_stream`. Versiones antiguas ignoran
+esa clave, pero también ignoran la nueva barrera de identidad. La reversión
+consiste en revertir commits de collector/tests y revalidar la SQLite en
+entorno supervisado antes de reactivar; no borrar manualmente la marca para
+forzar un cambio de host. Sin canarios vivos ni acciones sobre cuentas.
+
 ## Coordinación PR hermanas (números de ci-sandbox-tmp)
 
 | PR | Estado consultado 09-10-2026 | Zona con posible colisión | Acuerdo de alcance |
@@ -83,7 +138,7 @@ Orden sugerido: #11 primero para fijar el contrato v2, luego #41 si toca parser 
 
 - **No se ha probado tráfico vivo** (expresamente prohibido en este encargo); no se requieren tokens ni app passwords. La escucha de posts públicos requiere minimizar su retención, no subir la SQLite, no incluir capturas ni mensajes identificables en documentación y respetar los límites/condiciones de los hosts.
 - **Cursor v2 obsoleto**: la documentación del servidor señala ventana limitada (36 h por defecto) y `CursorTooOld` en v2. Este parche falla explícitamente ante HTTP 400 sin resetear el cursor; **no implementa** resync/backfill ni recuperación de brechas. Antes de producción hay que definir cómo notificar y recuperar un hueco de más de 36 h, sin declarar ingesta completa.
-- **Cambiar de endpoint**: no se añade todavía namespace por host/versión al valor `last_seq`. No reutilizar una SQLite entre servidores con secuencias no comparables sin una estrategia de migración segura.
+- **Cambiar de endpoint**: la nueva barrera compara origen de cursores v2 ya vinculados. No proporciona namespace por host ni migra automáticamente entre instancias. Los estados antiguos sin procedencia no se pueden verificar retrospectivamente; ante dudas usar caché independiente y comprobar cobertura.
 - **Dos escritores simultáneos y corrupción de SQLite**: se mantiene la serialización prevista en `bluesky_growth_flow.py` y timeout/WAL. No hay test multiproceso con bloqueo exclusivo del collector; el endurecimiento concurrente pertenece principalmente a #26 y requiere acuerdo para no duplicar.
 - **Windows/Linux**: usar resultados reales del workflow. El acceso privado oficial no implica autorización para publicar su historial en el mirror; no se ha transferido material privado.
 - **Rate limits / TOS**: la escucha no autentica ni elude límites; el código no debe reintentar 429 sin respetar condiciones del proveedor. La ejecución de follows/replies tiene su propio preflight y aprobación humana.
@@ -102,7 +157,7 @@ Orden sugerido: #11 primero para fijar el contrato v2, luego #41 si toca parser 
 | DID / handle | `_post_uri` usa DID; `_consume_jetstream_cache` hidrata DID por getProfiles | INSPECCIÓN; falta test de cambio de handle sobre la misma DID |
 | No duplicar follows / respuestas | `tests/test_bluesky_reply_dedupe.py`, `test_bluesky_write_confirmations.py` + `action_ledger.py` (sin cambios) | Regresión global Ubuntu, no prueba de ejecución real |
 | Compatibilidad Windows/Linux | `validate-social-tools.yml`: Python 3.11 + pytest en ambos | Ubuntu PASA; Windows en comprobación |
-| Dos procesos, fallos de disco, caída forzada y brecha >36h | No hay simulación multiproceso o backfill en esta PR | PENDIENTE; bloqueo explícito |
+| Dos procesos, fallos de disco, caída forzada y brecha >36h | Hay rollback transaccional sintético, no doble escritor ni backfill | PENDIENTE parcial; bloqueo explícito |
 | Redes hermanas / contratos compartidos | Diff limitado a collector, tests, ficha y estudio | PASA por inspección del diff; CI global independiente |
 | Revisión de reglas TOS, privacidad, licencias | AT Protocol, repositorios con commit fijado, datos sintéticos | PASA documental; sin credenciales ni interacciones |
 | Aptitud de merge real | Checks completos, reviews y validación del padre | BLOQUEADA por gate de campaña (ver debajo) |
@@ -119,6 +174,19 @@ FAIL: protocol index is incomplete or duplicated
 ```
 
 El gate fallido se ejecutó sobre el *merge ref* anterior; la rama padre avanzó posteriormente hasta `8fa01e6456160d1a01db895290fb288e8d475f83`, cuya versión de `tools/validate_open_source_campaign.py` **ya admite como mínimo 46 hijas originales y un índice continuo de más PR**. El re-run (attempt 2) de [37978839286](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37978839286) **volvió a usar el merge ref anterior `c3fcf6f`**, por lo que repitió los tres errores; no sirve como validación de la corrección del padre. Se requiere un **nuevo evento de validación** con una base/merge ref actualizada y revisar su SHA. No corregir el protocolo ni el validador aquí: corresponde a PR #10 actualizar el índice/contrato tras el aumento de hijas y repetir el gate. La rama #11 mantiene `base=research/public-reuse-parent` y no se ha mergeado. `mergeable=true` no implica readiness.
+
+## Retirada, pendientes y aceptación
+
+La incorporación se limita al collector del mirror y sus fixtures; no añade
+paquetes, credenciales ni escrituras sociales. Revertir los commits de código
+es suficiente para restaurar la interfaz anterior, pero el fallback antiguo
+volvería a admitir cursores ajenos y transacciones largas. La clave
+`last_seq_stream` puede permanecer en SQLite sin afectar a lectores
+anteriores. **Pendientes reales antes de port oficial**: verificar CI exacta
+del último HEAD en Windows/Ubuntu, resolver el gate padre #10, simular
+desconexiones persistentes y compatibilidad con scheduler privado, además de
+diseñar recuperación de `CursorTooOld` y cambios de instancia detrás del
+mismo hostname.
 
 ## Referencias primarias y procedencia
 
