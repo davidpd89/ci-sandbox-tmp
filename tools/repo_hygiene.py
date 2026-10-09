@@ -86,7 +86,7 @@ def changed_paths(base: str, *, root: pathlib.Path = ROOT) -> list[str]:
         raise RuntimeError("No se pudo comparar la rama con la base de Git: " +
                            completed.stderr.decode("utf-8", "replace")[:300])
     try:
-        return [p.decode("utf-8") for p in completed.stdout.split(b"\\0") if p]
+        return [p.decode("utf-8") for p in completed.stdout.split(b"\0") if p]
     except UnicodeDecodeError as exc:
         # git diff -z entrega nombres como bytes; no ocultar rutas con replacement.
         raise RuntimeError("Git devolvió una ruta sin codificación UTF-8 válida") from exc
