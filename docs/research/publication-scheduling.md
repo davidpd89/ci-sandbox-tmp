@@ -30,8 +30,9 @@ variable. Falta prueba de mantenimiento sostenido futuro, que no se promete.
 
 ## Solución
 
-Se añade tools/publication_calendar.py. Genera JSON read-only por stdout:
+Se añade tools/publication_calendar.py y una entrada optativa en el runner de solo informe tools/run_content_queue.py. Genera JSON read-only por stdout:
 
+    python tools/run_content_queue.py --calendar --network bluesky
     python tools/publication_calendar.py
     python tools/publication_calendar.py --network x --network bluesky
     python -m unittest discover -s tests -p test_publication_calendar.py -v
