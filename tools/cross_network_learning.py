@@ -64,7 +64,7 @@ def _queue(entry):
     return value if isinstance(value, str) and value in QUEUES else None
 
 
-def _positive(row, today):
+def _eligible_trial(row, today):
     if (not isinstance(row, dict)
             or not isinstance(row.get("feature"), str)
             or row["feature"] not in FEATURES
@@ -89,6 +89,14 @@ def _positive(row, today):
     a, b = row.get("treatment"), row.get("control")
     if not _valid_arm(a) or not _valid_arm(b):
         return None
+    return a, b
+
+
+def _positive_effect(arms):
+    """Efecto favorable, separado de la validez de un ensayo independiente."""
+    if arms is None:
+        return None
+    a, b = arms
     lo_a, _ = wilson(a["successes"], a["n"], z=1.96)
     _, hi_b = wilson(b["successes"], b["n"], z=1.96)
     if lo_a <= hi_b:
@@ -97,6 +105,19 @@ def _positive(row, today):
     # de la diferencia ni una inferencia causal o ajustada por múltiples tests.
     return {"wilson_interval_gap": round(lo_a - hi_b, 4),
             "treatment_n": a["n"], "control_n": b["n"]}
+
+
+def _positive(row, today):
+    """Compatibilidad para consumidores existentes; NO usar como filtro de conflicto."""
+    return _positive_effect(_eligible_trial(row, today))
+
+
+def _targets_valid(targets, origin):
+    """Contrato exacto de las redes instrumentadas, sin ocultar redes desconocidas."""
+    return (isinstance(targets, dict)
+            and 0 < len(targets) <= len(NETWORKS)
+            and all(isinstance(target, str) and target in NETWORKS for target in targets)
+            and any(target != origin for target in targets))
 
 
 def _evidence_digest(row, target):
@@ -170,37 +191,42 @@ def review(data, *, today=None, trusted_verifications=None):
     # Conflictos no se resuelven por orden: una segunda evidencia en la
     # misma cola invalida ambas. Una cola desconocida es ambigua y bloquea
     # las verificaciones concretas de esa red/táctica hasta su reconciliación.
-    # Solo evidencias elegibles cuentan como conflictos. Una fila rota,
-    # sin control o con esquema inválido nunca debe invalidar otra válida.
-    effects = [_positive(row, today) for row in items]
+    # Una réplica negativa o inconclusa es evidencia CONTRADICTORIA aunque
+    # no cumpla el umbral positivo; no permitir sesgo de selección de ensayos.
+    # A la inversa, filas sin control o con estructura inválida no contaminan.
+    arms = [_eligible_trial(row, today) for row in items]
+    valid_targets = [
+        _targets_valid(row.get("targets"), row.get("origin"))
+        if isinstance(row, dict) else False
+        for row in items
+    ]
+    effects = [_positive_effect(a) for a in arms]
     counts = Counter()
-    for row, effect in zip(items, effects):
-        if effect is None:
+    for row, trial, targets_ok in zip(items, arms, valid_targets):
+        if trial is None or not targets_ok:
             continue
-        origin, feature, targets = row["origin"], row["feature"], row.get("targets")
-        if (not isinstance(targets, dict) or len(targets) > len(NETWORKS)
-                or any(not isinstance(t, str) for t in targets)):
-            continue
+        origin, feature, targets = row["origin"], row["feature"], row["targets"]
         for target, entry in targets.items():
-            if target in NETWORKS and target != origin:
+            if target != origin:
                 counts[(origin, feature, target, _queue(entry))] += 1
 
     report = {"schema": 1, "as_of": today.isoformat(),
               "coverage": {n: ("partial" if n in STATE_ADAPTERS else "unverified")
                            for n in sorted(NETWORKS)}, "proposals": [],
-              "invalid_or_unproven": 0, "suppressed": 0,
-              "duplicate_evidence": 0, "writes": False}
+              "invalid_or_unproven": 0, "non_positive_trials": 0,
+              "suppressed": 0, "duplicate_evidence": 0, "writes": False}
     seen = set()
-    for row, effect in zip(items, effects):
-        if effect is None:
+    for row, trial, targets_ok, effect in zip(items, arms, valid_targets, effects):
+        if trial is None or not targets_ok:
             report["invalid_or_unproven"] += 1
+            continue
+        if effect is None:
+            # Un ensayo válido sin efecto favorable no promueve resultados;
+            # sí participa en los conflictos del recuento anterior.
+            report["non_positive_trials"] += 1
             continue
         origin, feature = row["origin"], row["feature"]
-        targets = row.get("targets")
-        if (not isinstance(targets, dict) or len(targets) > len(NETWORKS)
-                or any(not isinstance(t, str) for t in targets)):
-            report["invalid_or_unproven"] += 1
-            continue
+        targets = row["targets"]
         for target in sorted(targets):
             if target not in NETWORKS or target == origin:
                 continue
