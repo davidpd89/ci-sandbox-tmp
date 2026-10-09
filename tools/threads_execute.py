@@ -359,6 +359,15 @@ def _fetch_metrics_api():
     return {"followers": "?"}
 
 
+def _persist_metrics_without_erasing_known_followers(results, metrics):
+    """Keep the last verified follower count when insights are unavailable."""
+    _append_metricas(results, metrics)
+    if metrics.get("followers") != "?":
+        _update_estado(results, metrics)
+    else:
+        print("METRICAS: el recuento no es verificable; ESTADO.md se conserva.")
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print(__doc__)
@@ -411,7 +420,6 @@ if __name__ == "__main__":
         print("PARADA TOTAL: resultados guardados; no se abre de nuevo el navegador para métricas.")
         sys.exit(5)
     metrics = _fetch_metrics() if _plan_needs_browser(plan) else _fetch_metrics_api()
-    _append_metricas(results, metrics)
-    _update_estado(results, metrics)
-    print(f"\nregistro_interacciones.csv, metricas.csv y ESTADO.md actualizados automaticamente.")
+    _persist_metrics_without_erasing_known_followers(results, metrics)
+    print(f"\nregistro_interacciones.csv y metricas.csv actualizados; ESTADO.md solo con recuento verificado.")
     print(f"Metricas finales: seguidores={metrics['followers']}")
