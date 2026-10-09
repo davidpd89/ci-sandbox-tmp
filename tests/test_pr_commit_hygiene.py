@@ -92,11 +92,21 @@ class PRHistoryTests(unittest.TestCase):
         self.git("commit", "-qm", "typechange")
         self.assertEqual(self.audit(), [(first, 1), (self.oid(), 1)])
 
-    def test_newlines_and_spaces_in_paths(self):
+    def test_spaces_in_real_git_paths_and_newline_in_git_nul_output(self):
+        from unittest import mock
+
         self.topic()
-        self.write("folder with space/secrets/odd\nname.json")
+        self.write("folder with space/secrets/ordinary.json")
         self.commit("path")
         self.assertEqual(self.audit(), [(self.oid(), 1)])
+        # NTFS cannot create a newline pathname, but Git's -z parser still must
+        # handle such raw byte output. This fixture is intentionally synthetic.
+        payload = b"folder with space/secrets/odd\\nname.json".replace(b"\\n", bytes([10]))
+        payload += bytes([0]) + b"normal.txt" + bytes([0])
+        with mock.patch.object(h, "git", return_value=payload):
+            parsed = h.changes(self.root, "parent", "commit")
+        self.assertEqual(parsed, {"folder with space/secrets/odd\nname.json", "normal.txt"})
+        self.assertTrue(all(h.forbidden_path(p) for p in parsed if p != "normal.txt"))
 
     def test_merging_new_base_does_not_import_false_positive(self):
         self.topic()
