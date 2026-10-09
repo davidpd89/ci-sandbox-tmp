@@ -107,10 +107,10 @@ def build_calendar(*, now: datetime | None = None, zone_name: str = "Europe/Madr
              for red in names for item in scan(red)]
     fingerprints, slots = defaultdict(list), defaultdict(list)
     for entry in items:
-        if entry["status"] == "resolved":
-            continue
         if entry["fingerprint"]:
             fingerprints[(entry["network"], entry["fingerprint"])].append(entry)
+        if entry["status"] == "resolved":
+            continue
         if entry["time_utc"] and entry["status"] in ("due", "future", "stale"):
             slots[(entry["network"], entry["time_utc"])].append(entry)
     for groups, warning in ((fingerprints, "possible_duplicate"),
