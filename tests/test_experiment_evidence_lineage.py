@@ -12,7 +12,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools"))
 import cross_network_learning as gate
 from experiment_evidence_lineage import (
-    TrustedRegistry, audit_projection, evidence_digest,
+    TrustedRegistry, MAX_REGISTRY_RECORDS, audit_projection, evidence_digest,
 )
 
 NOW = dt.date(2026, 10, 9)
@@ -133,6 +133,30 @@ class VersionedEvidenceTests(unittest.TestCase):
         report = run(row, copy.deepcopy(row), registry=TrustedRegistry([audited(row)]))
         self.assertEqual(report["proposals"], [])
         self.assertEqual(report["duplicate_evidence"], 2)
+
+    def test_registry_capacity_handles_full_multi_network_batch(self):
+        # 100 observaciones x 7 destinos: el antiguo tope de 200 fallaba
+        # aunque review() admite legítimamente esta cardinalidad.
+        rows, records = [], []
+        targets = sorted(gate.NETWORKS - {"bluesky"})
+        self.assertEqual(len(targets), 7)
+        for index in range(100):
+            row = trial(identity=f"trial-{index:04d}")
+            original = row["targets"]["mastodon"]
+            row["targets"] = {target: dict(original) for target in targets}
+            rows.append(row)
+            for target in targets:
+                projection = audit_projection(row, target)
+                digest = evidence_digest(row, target)
+                self.assertIsNotNone(projection)
+                self.assertIsNotNone(digest)
+                records.append({**projection, "evidence_sha256": digest})
+        self.assertEqual(len(records), 700)
+        registry = TrustedRegistry(records)
+        self.assertTrue(all(registry.approves(row, target)
+                            for row in rows for target in targets))
+        with self.assertRaisesRegex(ValueError, "registro de auditoría inválido"):
+            TrustedRegistry([{}] * (MAX_REGISTRY_RECORDS + 1))
 
     def test_registry_rejects_ambiguous_assignments_and_duplicates(self):
         a = audited(trial())
