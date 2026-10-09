@@ -1,4 +1,4 @@
-"""Pruebas offline de PR #76: controles y permisos nunca se infieren."""
+"""Pruebas offline de PR #3: controles, permisos y colas nunca se infieren."""
 import datetime as dt
 import json
 from pathlib import Path
@@ -24,8 +24,9 @@ def positive(**overrides):
            "day14_snapshot_complete": True,
            "treatment": {"n": 100, "successes": 70},
            "control": {"n": 100, "successes": 10},
-           "targets": {"mastodon": {"capability": "verified", "permission": "verified",
-                                     "implemented": False, "checked_on": "2026-10-08"}}}
+           "targets": {"mastodon": {"queue": "API", "capability": "verified",
+                                     "permission": "verified", "implemented": False,
+                                     "checked_on": "2026-10-08"}}}
     row.update(overrides)
     return row
 
@@ -48,7 +49,13 @@ class CrossNetworkTests(unittest.TestCase):
         self.assertGreater(out["proposals"][0]["wilson_interval_gap"], 0)
         self.assertTrue(out["proposals"][0]["needs_human_approval"])
         self.assertTrue(out["proposals"][0]["externally_verified"])
+        self.assertEqual(out["proposals"][0]["queue"], "API")
         self.assertFalse(initial["proposals"][0]["externally_verified"])
+        changed_queue = positive(targets={"mastodon": {"queue": "WEB",
+                                 "capability": "verified", "permission": "verified",
+                                 "implemented": False, "checked_on": "2026-10-08"}})
+        self.assertEqual(run(changed_queue, verified={proof})["proposals"][0]["state"],
+                         "verificacion_externa_pendiente")
         modified = positive(treatment={"n": 100, "successes": 71})
         self.assertEqual(run(modified, verified={proof})["proposals"][0]["state"],
                          "verificacion_externa_pendiente")
@@ -82,14 +89,32 @@ class CrossNetworkTests(unittest.TestCase):
 
     def test_unknown_expired_or_denied_permissions_never_suggest_apply(self):
         cases = [({}, "investigar_equivalencia"),
-                 ({"capability": "verified", "permission": "unknown", "checked_on": "2026-10-08"}, "investigar_equivalencia"),
-                 ({"capability": "verified", "permission": "verified", "implemented": False, "checked_on": "2026-01-01"}, "investigar_equivalencia"),
-                 ({"capability": "unsupported", "permission": "unknown"}, "no_transferible"),
-                 ({"permission": "denied"}, "no_transferible")]
+                 ({"queue": "API", "capability": "verified", "permission": "unknown",
+                   "checked_on": "2026-10-08"}, "investigar_equivalencia"),
+                 ({"queue": "API", "capability": "verified", "permission": "verified",
+                   "implemented": False, "checked_on": "2026-01-01"}, "investigar_equivalencia"),
+                 ({"queue": "API", "capability": "unsupported", "permission": "unknown"},
+                  "no_transferible"),
+                 ({"queue": "API", "permission": "denied"}, "no_transferible")]
         for payload, expected in cases:
             with self.subTest(payload=payload):
                 row = positive(targets={"mastodon": payload})
                 self.assertEqual(run(row)["proposals"][0]["state"], expected)
+
+    def test_permissions_and_implementation_are_queue_scoped(self):
+        base = {"capability": "verified", "permission": "verified",
+                "implemented": False, "checked_on": "2026-10-08"}
+        for payload in (base, {**base, "queue": "DESKTOP"},
+                        {**base, "implemented": True},
+                        {"permission": "denied"}):
+            with self.subTest(payload=payload):
+                proposal = run(positive(targets={"mastodon": payload}))["proposals"][0]
+                self.assertEqual(proposal["state"], "investigar_equivalencia")
+                self.assertIsNone(proposal["queue"])
+        implemented = run(positive(targets={"mastodon": {**base, "queue": "WEB",
+                                                         "implemented": True}}))
+        self.assertEqual(implemented["proposals"][0]["state"], "ya_implementado")
+        self.assertEqual(implemented["proposals"][0]["queue"], "WEB")
 
     def test_rejected_or_implemented_history_not_repeated(self):
         for decision in ("rejected", "implemented", "under_review"):
@@ -120,7 +145,7 @@ class CrossNetworkTests(unittest.TestCase):
     def test_conflicting_targets_cannot_use_input_order_to_promote(self):
         proof_row = positive()
         proof = c._evidence_digest(proof_row, "mastodon")
-        denied = positive(targets={"mastodon": {"capability": "unsupported"}})
+        denied = positive(targets={"mastodon": {"queue": "API", "capability": "unsupported"}})
         for rows in ((proof_row, denied), (denied, proof_row)):
             report = run(*rows, verified={proof})
             self.assertEqual(report["proposals"], [])
@@ -140,8 +165,9 @@ class CrossNetworkTests(unittest.TestCase):
 
     def test_never_leak_untrusted_personal_data(self):
         row = positive(text="@private_person", profile="https://example.invalid/person",
-                       targets={"mastodon": {"capability": "verified", "permission": "verified",
-                                              "implemented": False, "checked_on": "2026-10-08",
+                       targets={"mastodon": {"queue": "API", "capability": "verified",
+                                              "permission": "verified", "implemented": False,
+                                              "checked_on": "2026-10-08",
                                               "token": "secretpassword"}})
         output = repr(run(row))
         for secret in ("@private_person", "example.invalid", "secretpassword"):
@@ -157,7 +183,7 @@ class CrossNetworkTests(unittest.TestCase):
         self.assertEqual(len(run(positive(), history=history)["proposals"]), 1)
 
     def test_external_verification_cannot_be_supplied_in_json(self):
-        raw = positive(targets={"mastodon": {"capability": "verified",
+        raw = positive(targets={"mastodon": {"queue": "API", "capability": "verified",
                           "permission": "verified", "implemented": False,
                           "checked_on": "2026-10-08",
                           "externally_verified": True}})
