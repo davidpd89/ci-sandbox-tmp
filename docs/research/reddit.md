@@ -109,7 +109,7 @@ El baseline oficial **no se ejecutó en este mirror**: faltan sus módulos. Por 
 | --- | --- |
 | `Validar herramientas RRSS sin acceso a cuentas`, Ubuntu | **SUCCESS**: 1695 passed, 8 skipped, 8 deselected, 2 warnings, 686 subtests passed; [run 37978740553](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37978740553) |
 | Mismo workflow, Windows | **SUCCESS**: 1698 passed, 5 skipped, 8 deselected, 2 warnings, 686 subtests passed; mismo run |
-| `Validar protocolo de campaña pública`, Ubuntu/Windows | **FAILURE**: índice/protocolo espera 46 PR hijas y el gate encuentra 76; [run 37978747389](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37978747389). Preexistente; no se corrige desde Reddit. |
+| `Validar protocolo de campaña pública`, Ubuntu/Windows (run histórico, SHA anterior) | **FAILURE histórico** [run 37978747389](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37978747389). No extrapolar al HEAD actual: el validador padre se actualizó; la siguiente regresión identificó encabezados obligatorios en el propio informe Reddit, corregidos aquí. |
 | Tests de producción privados / OAuth / DOM / conexión CDP | **NO EJECUTADOS**: no hay fixtures privados ni autorización API en este mirror. |
 
 ### Cobertura de criterios de esta PR
@@ -124,7 +124,7 @@ El baseline oficial **no se ejecutó en este mirror**: faltan sus módulos. Por 
 | Citas, duplicados, idempotencia | `quoted_message_valid`, `quoted_message_missing`, `cited_deleted`, `uncertain_history`; CLI bloquea 429 | PASA offline; persistencia tras envío **pendiente** |
 | Bloqueo de escritura real | No hay enlace al ejecutor privado | PENDIENTE |
 | CI global Ubuntu/Windows | Run 37978740553 | PASA para herramientas (con skips) |
-| Campaña padre, reviews, conflictos | Run 37978747389 y divergencia parent | FALLA (fuera de alcance) |
+| Campaña padre, reviews, conflictos | Gate antiguo fallido; nueva evidencia con esquema completo y checks por SHA final | REVALIDAR HEAD |
 | Privacidad y no interacción real | Diff revisado, fixtures sintéticos | PASA por inspección |
 
 ### BLOQUEOS_PARA_CLAUDE — pasos exactos
@@ -134,8 +134,8 @@ El baseline oficial **no se ejecutó en este mirror**: faltan sus módulos. Por 
 3. Resolver preservación de intentos ambiguos en ledger antes de habilitar escrituras; cotejar con el cambio de #44. No tratar un fallo como si nada hubiese sucedido.
 4. Solo si existen permisos OAuth reales y revisión de términos, conectar lectura de `/comments/<id>.json`, reglas y estado de usuario; de otro modo utilizar señales DOM comprobables sin ampliar acciones automatizadas. Nunca consumir la fixture como dato real.
 5. Ejecutar en el mirror: `python -m compileall -q tools tests` y `python -m pytest tests/test_reddit_snapshot_preflight.py -q -p no:cacheprovider`; luego su workflow global. Ejecutar en el privado **los comandos de tests existentes según sus archivos**, incluyendo `tests/test_reddit_thread_url.py` y `tests/test_r7_reddit_revalidate_under_browser_lock.py` en la rama que realmente los tenga. Probar fallos posteriores al clic, reinicios y dos ejecutores bajo lock. Registrar SHAs y resultados, no inventarlos.
-6. Para el gate de campaña, informar a la PR **padre #10** del drift entre 46/76 y actualizar su índice desde allí. La PR hija tiene base textual correcta, pero su ancestro `4da0584` está anticuado respecto a parent: revisar rebase/merge **solo tras coordinación**, no forzar push.
-7. Bloqueos técnicos vigentes: faltan credenciales/permisos Reddit para confirmar API real; mirror carece del ejecutor/CDP/ledger de producción; checks de campaña fallidos por índice y branch diverged; revisiones y autorización de merge pendientes. No hubo comando de escritura a Reddit ni prueba real de OAuth.
+6. Verificar el gate de campaña sobre el HEAD final. El gate actualizado detectó que faltaban seis encabezados y cuatro campos de evidencia en este informe; se añadieron en esta PR, sin modificar manifiesto ni validador padre. La rama difiere de la base: revisar el merge sintético de GitHub antes de integrar y no forzar push.
+7. Bloqueos técnicos vigentes: no hay sesión autorizada Reddit para probar la adquisición real del snapshot; el mirror carece del ejecutor/CDP/ledger de producción; falta adaptación y canario supervisado en el privado. La compatibilidad GitHub y CI se reevalúan contra cada SHA. No hubo escritura en Reddit ni prueba real de OAuth.
 
 **Veredicto de integración real: BLOQUEADA.** El verificador independiente y sus regresiones sí están listos para revisión de código, pero no debe describirse como protección ya operativa en la cuenta.
 
@@ -158,4 +158,4 @@ El baseline oficial **no se ejecutó en este mirror**: faltan sus módulos. Por 
 
 **Límite residual y segunda pasada:** JSON de snapshot/revisión no firmado; no se acredita ni la procedencia de la API ni la autenticación del revisor, y existe carrera entre la última lectura y el clic. El ejecutor privado fusionado debe adquirir el snapshot bajo lock y registrar/reconciliar cualquier intento ambiguo. Por ello, `allowed=True` sigue significando exclusivamente *apto para revisión manual*. No publicar, reintentar ni votar automáticamente a partir de esta salida.
 
-La PR del espejo sigue sin ser integración en producción. El gate de campaña de la rama padre puede permanecer rojo por su manifiesto desactualizado; resolver en la [PR #10](https://github.com/davidpd89/ci-sandbox-tmp/pull/10), no en esta rama Reddit. Las comprobaciones de Ubuntu/Windows para el último HEAD deben consultarse en Actions antes de integrar.
+La PR del espejo sigue sin ser integración en producción. El fallo observado en un SHA intermedio del gate era **del esquema de evidencias de esta hija**, no un déficit del índice padre: se corrigieron los encabezados/campos exigidos por `check_child_deliverables`. Las comprobaciones Ubuntu/Windows del último HEAD son la evidencia autoritativa. El CLI también devuelve código 2 y JSON estable para entrada ausente, malformada o no UTF-8 sin exponer su ruta ni traceback.
