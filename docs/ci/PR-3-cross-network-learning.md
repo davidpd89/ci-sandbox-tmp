@@ -121,3 +121,30 @@ Se comprobó el repositorio `HypothesisWorks/hypothesis`: proyecto activo (últi
 `_evidence_digest` ata un agregado, su cola y los permisos a un hash determinista. No ata a una identidad independiente de ensayo / manifiesto de asignación: dos ensayos diferentes con exactamente los mismos campos agregados pueden obtener el mismo digest. Esto no autoriza acciones automáticas ni invalida los regresores offline, pero limita la afirmación de que una verificación solo puede emplearse una vez. Para resolverlo se requiere un identificador auditable de experimento, vinculación a fuente independiente y migración compatible de consumidores `schema=1`; no basta con añadir un UUID arbitrario autodeclarado. Es una integración específica para un trabajo posterior, sin duplicar la PR #23 (analítica/IC) ni la #85 (identidad entre usuarios/redes).
 
 La PR #3 no se fusiona automáticamente ni ejecuta canarios reales. La aprobación de merge queda en manos del controlador tras comprobar el HEAD y sus workflows.
+
+
+## Cuarta revisión adversarial — selección de ensayos y validez (09-10-2026)
+
+**Defecto funcional nuevo y corregido:** el detector de duplicados aplicaba el filtro de `_positive()` al recuento de evidencias. Una réplica aleatorizada, madura, con grupo de control y trazabilidad declarada, pero cuyo efecto fuese desfavorable o inconcluso, desaparecía del recuento. La rama podía promover una hipótesis ganadora ignorando un ensayo independiente contradictorio de la misma red/táctica/cola: sesgo de selección de resultados.
+
+Corrección: `_eligible_trial` valida metodología, fechas, población y ambos brazos **sin exigir un efecto positivo**; `_positive_effect` calcula después el resultado favorable. El detector de conflictos cuenta TODOS los ensayos elegibles y bloquea la promoción cuando dos ensayos de la misma red, táctica, destino y cola discrepan o se solapan. El resultado no favorable no genera propuesta y sí cuenta como `non_positive_trials`. Se conserva también el anterior contador `invalid_or_unproven` de `schema=1`, cuyo significado histórico incluía las evidencias no concluyentes, para no alterar consumidores previos.
+
+**Segundo defecto corregido:** una fila con `targets` que mezclaba redes conocidas y otras no instrumentadas podía producir una propuesta para la parte conocida e ignorar silenciosamente una red errónea. La validación de destinos ahora rechaza las claves de red desconocidas, los conjuntos vacíos y las observaciones que solo apuntan a la red de origen; sí permite la clave de origen junto con un destino válido por compatibilidad con el contrato anterior. No se considera un resultado sobre Instagram, que conserva su trabajo independiente en #16.
+
+Pruebas deterministas añadidas: réplica desfavorable que veta un resultado inicialmente verificable en ambos órdenes, independencia WEB frente a réplica API, rechazo de claves de red desconocidas sin bloquear un ensayo válido, conservación de contadores. Todo permanece offline y sin escritura.
+
+### Repositorios públicos recontrastados
+
+Metadatos consultados en GitHub el 09-10-2026:
+- [statsmodels](https://github.com/statsmodels/statsmodels): BSD-3-Clause; último push observado 08-10-2026; soporte Python 3.11. Implementa comparaciones entre dos proporciones, potencia y ajustes de múltiples tests; útil para un informe causal formal, pero introduce NumPy/SciPy y otras dependencias no necesarias en este gate conservador.
+- [GrowthBook Python](https://github.com/growthbook/growthbook-python): MIT; último push observado 05-10-2026; Python >=3.9 con 3.11 explícito; depende de `cryptography`, `typing_extensions`, `urllib3`, `aiohttp`. Implementa asignación determinista de variantes y tracking de exposición: candidato para el motor de experimentos de la PR #80, pero no reemplaza la auditoría independiente ni el filtro offline de PR #3.
+- [Hypothesis](https://github.com/HypothesisWorks/hypothesis): MPL-2.0 confirmada en `LICENSE.txt`, último push 05-10-2026, Python >=3.10 con Windows y 3.11 explícitos; `sortedcontainers`. Apropiado para fuzzing/property-based testing de #30, sin necesidad de añadirlo a esta PR.
+- [Zalando ExpAn](https://github.com/zalando/expan): MIT, último push observado 11-04-2023; el `setup.py` todavía referencia Python 2 y pytest 3.0.7. No es una opción mantenida/competitiva para Windows y Python 3.11 en 2026.
+
+**Decisión de reutilización:** se mantiene el gate mínimo con las funciones existentes y Python estándar. No se copia código ni se agrega dependencia de terceros; el código público comparable aporta más valor a la implementación específica de las otras PR ya abiertas. No abrir trabajo duplicado.
+
+### Limitación que permanece
+
+Se exige una sola evidencia favorable no contradicha **dentro del lote disponible**, no se afirma haber inspeccionado la totalidad de experimentos externos. La integridad del historial de ensayos y la identidad auditada de cada ensayo deben verificarse en la PR #91. La ausencia de datos contradictorios en un JSON autodeclarado no es prueba de inexistencia real. Claude deberá revisar la integración con el repo privado y no confundir CI sintética con validación real.
+
+El resultado exacto de la nueva ejecución Ubuntu/Windows se verificará contra el HEAD final de esta ronda; los éxitos de commits anteriores no se atribuyen a código posterior.
