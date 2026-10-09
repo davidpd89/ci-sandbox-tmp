@@ -5,6 +5,7 @@ Only Git metadata is read. No blob contents, shell, network, or Git writes.
 from __future__ import annotations
 
 from pathlib import Path
+import os
 import re
 import subprocess
 
@@ -17,9 +18,12 @@ class HistoryError(ValueError):
 
 
 def git(root: Path, *args: str) -> bytes:
+    env = os.environ.copy()
+    env.update({"GIT_NO_LAZY_FETCH": "1", "GIT_TERMINAL_PROMPT": "0",
+                "GIT_NO_REPLACE_OBJECTS": "1"})
     process = subprocess.run(
         ["git", "--no-optional-locks", "-C", str(root), *args],
-        capture_output=True, check=False,
+        capture_output=True, check=False, env=env,
     )
     if process.returncode:
         # Git stderr may contain attacker-controlled paths; do not log it.
