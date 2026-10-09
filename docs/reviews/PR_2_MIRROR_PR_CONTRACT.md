@@ -224,3 +224,74 @@ Integrar la #2 solo tras revisar la CI del último HEAD y contrastar la rama
 checkout del merge sintético de `pull_request`, no del head de la rama.
 No afirmar garantías absolutas: el pipeline de #2 protege rutas del árbol
 final, mientras #87, #88, #89, #90 y #92 cubren responsabilidades adicionales.
+
+
+## Quinta revisión: integridad de los logs y mantenimiento de dependencias (09/10/2026)
+
+### Hallazgo y corrección
+
+El programa mostraba directamente nombres devueltos por Git con
+`print(f"  - {path}")`. Git permite nombres de fichero que contienen
+saltos de línea y secuencias de control en plataformas compatibles; si se
+muestran sin escapar pueden generar **líneas falsas o visualizaciones
+equívocas en los logs**. GitHub Actions reconoce instrucciones especiales
+en las líneas de salida con prefijo `::`. No se atribuye a este caso un
+escalado de privilegios, pero sí una debilidad en la fidelidad del diagnóstico.
+
+La corrección imprime los nombres rechazados con `{path!r}` y los mensajes
+de fallo Git con `{str(exc)!r}`. Así se representan los caracteres de control
+con secuencias visibles y se preserva **una sola línea de diagnóstico por
+elemento**. No cambia la política de rutas ni los resultados admitido/rechazado.
+
+Se añadieron dos pruebas con cadenas completamente sintéticas y
+`unittest.mock.patch`:
+
+- Un nombre `.env` seguido de salto de línea, una falsa anotación de
+  workflow y un escape ANSI, sin imprimir ni ejecutar dichas secuencias.
+- Un error de Git con salto de línea seguido de una supuesta advertencia,
+  verificando que permanece escapado.
+
+La lógica permanece en la biblioteca estándar: no requiere bibliotecas de
+red, nuevos procesos ni compatibilidad especial con ninguna red social.
+
+Fuente primaria sobre comandos del runner:
+https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands
+Fuente del formato de rutas de Git:
+https://git-scm.com/docs/git-diff
+
+### Revisión de reutilización pública actualizada
+
+El análisis adicional de la PR #90 encontró una diferencia de mantenimiento
+relevante, comprobada en GitHub el 09/10/2026:
+
+- `rhysd/actionlint` (MIT, licencia `LICENSE.txt`): último commit
+  observado **19/04/2026**; se ha señalado en el propio repositorio que
+  existe un fork mantenido.
+- `kjanat/actionlint` (MIT, licencia `LICENSE.txt`): último commit
+  observado **04/10/2026**, con desarrollo activo y evolución del formato
+  de resultados. Evaluar releases, binarios Linux/Windows, sumas de
+  integridad y posibles cambios incompatibles antes de fijar versión.
+- `zizmorcore/zizmor` (MIT): actividad verificada **08/10/2026**;
+  complementa auditoría de seguridad, no reemplaza necesariamente todos
+  los análisis de sintaxis/expresiones de actionlint.
+- `betterleaks/betterleaks`: actividad verificada **08/10/2026**;
+  investigarlo en la PR #87 relativa a contenido, no integrarlo aquí.
+
+Se **mantiene el comprobador local de rutas**, porque el defecto detectado se
+corrige en dos representaciones de salida y no justifica instalar software
+externo. La comparación del fork se añade como criterio de selección para
+la PR #90 ya abierta; no se crea otro encargo duplicado.
+
+### Limitaciones y segunda mirada sobre este cambio
+
+Los tests usan cadenas simuladas, no nombres con caracteres de control en el
+sistema de ficheros de Windows, donde esas rutas pueden no ser representables.
+La verificación GitHub-hosted Ubuntu y Windows demuestra el comportamiento
+del código en ambos runners, no la ejecución de un canario sobre un PC
+Windows real. La excepción del error Git podría contener datos inesperados;
+por eso también se escapan saltos de línea, aunque no se promete redactar
+datos arbitrarios que Git pudiera incluir en un mensaje.
+
+No se han realizado operaciones de publicación ni de interacción sobre
+X, Threads, Facebook, Pinterest, Reddit, Bluesky, Mastodon, TikTok o Instagram.
+La revisión se limita al contrato del mirror y a fixtures sintéticos.
