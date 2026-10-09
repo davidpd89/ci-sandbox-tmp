@@ -95,6 +95,7 @@ def check_pr(reader, repo: str, number: int, head: str, base: str) -> tuple[int,
 
     count = _snapshot(reader, repo, number, head, base)
     active = []
+    unique_paths = set()
     seen = 0
     page = 1
     while seen < count:
@@ -107,8 +108,11 @@ def check_pr(reader, repo: str, number: int, head: str, base: str) -> tuple[int,
             path, status = item.get("filename"), item.get("status")
             if not isinstance(path, str) or not path or len(path) > 4096:
                 raise HygieneError("Invalid changed filename")
-            if status not in _ACTIVE | {"removed"}:
+            if not isinstance(status, str) or status not in _ACTIVE | {"removed"}:
                 raise HygieneError("Unexpected changed-file status")
+            if path in unique_paths:
+                raise HygieneError("Duplicate changed filename in PR metadata")
+            unique_paths.add(path)
             if status != "removed":
                 active.append(path)
         seen += len(batch)
