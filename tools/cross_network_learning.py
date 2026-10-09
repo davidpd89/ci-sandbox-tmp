@@ -155,7 +155,8 @@ def review(data, *, today=None, trusted_verifications=None):
                 and h.get("decision") in ("implemented", "rejected", "under_review")):
             # Un histórico antiguo sin cola sigue siendo una decisión global;
             # un histórico nuevo solo suprime su propia cola.
-            if "queue" in h and h["queue"] not in QUEUES:
+            if "queue" in h and (not isinstance(h["queue"], str)
+                                 or h["queue"] not in QUEUES):
                 continue
             queue = h.get("queue")
             suppressed.add((h["origin"], h["feature"], h["target"], queue))
