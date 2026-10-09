@@ -211,13 +211,18 @@ def main(argv=None):
     parser.add_argument("--snapshot", required=True)
     parser.add_argument("--review", required=True)
     args = parser.parse_args(argv)
-    with open(args.plan, encoding="utf-8") as f:
-        plan = json.load(f)
-    with open(args.snapshot, encoding="utf-8") as f:
-        snapshot = json.load(f)
-    with open(args.review, encoding="utf-8") as f:
-        review = json.load(f)
-    outcome = evaluate(plan, snapshot, review)
+    try:
+        with open(args.plan, encoding="utf-8") as f:
+            plan = json.load(f)
+        with open(args.snapshot, encoding="utf-8") as f:
+            snapshot = json.load(f)
+        with open(args.review, encoding="utf-8") as f:
+            review = json.load(f)
+        outcome = evaluate(plan, snapshot, review)
+    except (OSError, UnicodeError, ValueError, RecursionError) as exc:
+        # Un JSON malformado nunca debe dar salida que parezca aprobación;
+        # tampoco se imprimen rutas, cuerpos de usuario ni excepciones sensibles.
+        outcome = Decision(False, f"entrada ilegible: {type(exc).__name__}")
     print(json.dumps({"allowed": outcome.allowed, "reason": outcome.reason}, ensure_ascii=False))
     return 0 if outcome.allowed else 2
 
