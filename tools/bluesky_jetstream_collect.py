@@ -172,6 +172,21 @@ def get_state(db, key):
     return row[0] if row else None
 
 
+def _saved_positive_int(db, key):
+    """Valida checkpoints persistidos antes de mutar la base."""
+    value = get_state(db, key)
+    if value is None:
+        return None
+    if not value.isascii() or not value.isdecimal():
+        raise ValueError(f"Checkpoint Jetstream inválido: {key}")
+    try:
+        if int(value) <= 0:
+            raise ValueError(f"Checkpoint Jetstream inválido: {key}")
+    except ValueError:
+        raise ValueError(f"Checkpoint Jetstream inválido: {key}") from None
+    return value
+
+
 def set_state(db, key, value):
     db.execute(
         """
@@ -517,8 +532,13 @@ async def collect(
     is_v2 = _is_v2_endpoint(endpoint)
     stream_identity = _stream_identity(endpoint) if is_v2 else None
     db = init_db(db_path)
-    saved_seq = get_state(db, "last_seq") if is_v2 else None
-    saved_stream = get_state(db, "last_seq_stream") if is_v2 else None
+    try:
+        saved_seq = _saved_positive_int(db, "last_seq") if is_v2 else None
+        saved_time = _saved_positive_int(db, "last_time_us")
+        saved_stream = get_state(db, "last_seq_stream") if is_v2 else None
+    except ValueError:
+        db.close()
+        raise RuntimeError("Jetstream: checkpoint persistido inválido; caché intacta") from None
     if saved_seq and saved_stream and saved_stream != stream_identity:
         db.close()
         raise RuntimeError(
@@ -544,7 +564,6 @@ async def collect(
     retry_delay = 1.0
     unrecovered_stream_error = False
 
-    saved_time = get_state(db, "last_time_us")
     stream_confirmed = bool(saved_stream)
     cursor = _resume_cursor(
         is_v2=is_v2,
