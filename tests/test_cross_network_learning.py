@@ -74,6 +74,31 @@ class CrossNetworkTests(unittest.TestCase):
                          c.STATE_ADAPTERS)
         self.assertEqual(out["proposals"], [])
 
+    def test_same_gate_for_every_network_pair_and_queue(self):
+        """La regla es común: 8 orígenes × 7 destinos × 3 colas."""
+        destinations = sorted(c.NETWORKS)
+        self.assertEqual(len(destinations), 8)
+        for origin in destinations:
+            for target in destinations:
+                if origin == target:
+                    continue
+                for queue in sorted(c.QUEUES):
+                    with self.subTest(origin=origin, target=target, queue=queue):
+                        row = positive(origin=origin, targets={
+                            target: {"queue": queue, "capability": "verified",
+                                     "permission": "verified", "implemented": False,
+                                     "checked_on": "2026-10-08"}})
+                        pending = run(row)
+                        self.assertEqual(len(pending["proposals"]), 1)
+                        self.assertEqual(pending["proposals"][0]["state"],
+                                         "verificacion_externa_pendiente")
+                        self.assertEqual(pending["proposals"][0]["queue"], queue)
+                        proof = c._evidence_digest(row, target)
+                        approved = run(row, verified={proof})
+                        self.assertEqual(approved["proposals"][0]["state"],
+                                         "proponer_ensayo_manual")
+                        self.assertFalse(approved["writes"])
+
     def test_missing_control_and_partial_provenance_do_not_promote(self):
         for row in (positive(control=None), positive(outcome_link="legacy"),
                     positive(human_reviewed=False), positive(design="matched"),
