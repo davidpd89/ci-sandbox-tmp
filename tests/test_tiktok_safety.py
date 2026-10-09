@@ -265,6 +265,26 @@ class TikTokSafetyTests(unittest.TestCase):
         self.assertEqual(session.attempted, 0)
         self.assertEqual(session.deadline, deadline)
 
+    def test_legacy_breaker_corrupt_or_manual_hold_fails_closed(self):
+        class Rng:
+            def randint(self, a, b):
+                return a
+
+        with tempfile.TemporaryDirectory() as folder:
+            cache = pathlib.Path(folder) / "cache"
+            cache.mkdir()
+            breaker_path = cache / "breaker.json"
+            for payload in ("{", '{"manual_hold":true}'):
+                with self.subTest(payload=payload):
+                    breaker_path.write_text(payload, encoding="utf-8")
+                    session = bulk.Session(
+                        None, None, Rng(), max_follows=10,
+                        deadline=bulk.time.time() + 300, done=set(),
+                    )
+                    with mock.patch.object(bulk, "ROOT", str(folder)):
+                        self.assertTrue(session.over)
+                    self.assertTrue(session.external_hold)
+
     def test_official_breaker_preflight_takes_precedence(self):
         class Rng:
             def randint(self, a, b):
