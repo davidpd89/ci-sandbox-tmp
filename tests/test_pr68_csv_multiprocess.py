@@ -166,6 +166,90 @@ class RoundCsvAtomicity(unittest.TestCase):
         rows = self.read_rows()
         self.assertEqual([row[1] for row in rows[1:]], ["mastodon"])
 
+    def test_reader_waits_for_writer_to_finish_a_real_process(self):
+        import datetime as dt
+        ready = Path(self.temp.name) / "writer-ready.txt"
+        success = self.row("x")
+        success[5] = "ok"
+        q._append_round_csv(success)
+        script = (
+            "import os,sys,time;"
+            "sys.path.insert(0,sys.argv[1]);"
+            "import round_queue as q;"
+            "q.LOG=sys.argv[2];"
+            "ctx=q._recovery_guard(q.LOG+'.writer');"
+            "assert ctx.__enter__();"
+            "f=open(q.LOG,'ab');"
+            "f.write(b'2026-10-09,bluesky,14:00:00,14:00:01,0.0,ok');"
+            "f.flush();os.fsync(f.fileno());"
+            "open(sys.argv[3],'w',encoding='ascii').write('READY');"
+            "time.sleep(0.5);"
+            "f.write(b',{},0,0,0\\r\\n');f.flush();os.fsync(f.fileno());"
+            "f.close();ctx.__exit__(None,None,None)"
+        )
+        proc = subprocess.Popen(
+            [sys.executable, "-c", script, str(ROOT / "tools"),
+             str(self.path), str(ready)],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, encoding="utf-8",
+        )
+        try:
+            deadline = time.monotonic() + 5
+            while not ready.exists() and proc.poll() is None and time.monotonic() < deadline:
+                time.sleep(0.05)
+            self.assertTrue(ready.exists(), "writer did not reach guarded append")
+            start = time.monotonic()
+            done = q.done_today(dt.date(2026, 10, 9))
+            self.assertGreaterEqual(time.monotonic() - start, 0.2)
+            self.assertEqual(done, {"x": 1, "bluesky": 1})
+            out, err = proc.communicate(timeout=5)
+            self.assertEqual(proc.returncode, 0, out + err)
+        finally:
+            if proc.poll() is None:
+                proc.kill()
+                proc.communicate(timeout=5)
+
+    def test_relaunch_snapshot_is_taken_after_chain_ownership(self):
+        events = []
+        fake_output = mock.Mock()
+        def lock(chain):
+            events.append("lock")
+            return True
+        def snapshot():
+            events.append("snapshot")
+            return {}
+        def run(*args, **kwargs):
+            events.append("run")
+            return 0
+        def release(chain):
+            events.append("release")
+            return True
+        with (mock.patch.object(q.sys, "stdout", fake_output),
+              mock.patch.object(q, "rounds_target", return_value=1),
+              mock.patch.object(q, "take_chain_lock", side_effect=lock),
+              mock.patch.object(q, "done_today", side_effect=snapshot),
+              mock.patch.object(q, "_run_chains", side_effect=run),
+              mock.patch.object(q, "release_chain_lock", side_effect=release),
+              mock.patch.object(q, "control_signal", return_value=None)):
+            self.assertEqual(q.main(["--only", "web"]), 0)
+        self.assertEqual(events, ["lock", "snapshot", "run", "release"])
+
+    def test_bad_snapshot_releases_owned_chain_without_relaunch(self):
+        fake_output = mock.Mock()
+        with (mock.patch.object(q.sys, "stdout", fake_output),
+              mock.patch.object(q, "rounds_target", return_value=1),
+              mock.patch.object(q, "take_chain_lock", return_value=True),
+              mock.patch.object(q, "done_today", side_effect=OSError("bad CSV")),
+              mock.patch.object(q, "release_chain_lock", return_value=True) as release,
+              mock.patch.object(q, "control_signal", return_value="recargar"),
+              mock.patch.object(q, "relaunch") as relaunch,
+              mock.patch.object(q, "_run_chains") as run):
+            with self.assertRaises(OSError):
+                q.main(["--only", "web"])
+            release.assert_called_once_with("web")
+            relaunch.assert_not_called()
+            run.assert_not_called()
+
     def test_skip_does_not_increment_or_reset_failure_count_after_restart(self):
         import datetime as dt
         fake_day = dt.datetime(2026, 10, 9, 10, 45, 0)
