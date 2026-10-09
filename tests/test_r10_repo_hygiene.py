@@ -146,6 +146,14 @@ class FileHygieneTests(unittest.TestCase):
             self.assertEqual(paths, [".env.local/settings.py"])
             self.assertEqual(rh.violations_for_paths(paths), paths)
 
+    def test_valid_utf8_git_path_retains_spanish_characters(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = pathlib.Path(tmp)
+            path = "docs/niñez_y_canción.md"
+            _synthetic_pr_merge(repo, path)
+            self.assertEqual(rh.changed_paths("HEAD^1", root=repo), [path])
+            self.assertEqual(rh.violations_for_paths([path]), [])
+
     def test_git_path_decoding_rejects_invalid_utf8_instead_of_replacement(self):
         result = subprocess.CompletedProcess(
             args=["git"], returncode=0,
