@@ -127,7 +127,7 @@ class MastodonAccountSearchContractTests(unittest.TestCase):
 
     def test_malformed_accounts_response_fails_closed(self):
         for payload in ({"hashtags": [], "statuses": []}, {"accounts": None}, {"accounts": "oops"},
-                        {"accounts": [{"acct": "sinid@example.test"}]},
+                        {"accounts": [{"acct": "sinid@example.com"}]},
                         {"accounts": [{"id": ["no-es-un-id"]}]},
                         {"accounts": [{"id": True}]},
                         {"accounts": [{"id": "  "}]}):
@@ -162,7 +162,7 @@ class MastodonAccountSearchContractTests(unittest.TestCase):
             observed.append(params["offset"])
             if len(observed) == 2:
                 raise TimeoutError("segundo lote sin respuesta")
-            return {"accounts": [{"id": str(i), "acct": f"u{i}@example.test"}
+            return {"accounts": [{"id": str(i), "acct": f"u{i}@example.com"}
                                   for i in range(40)]}
 
         with patch.object(m, "_get_v2", side_effect=server_search):
