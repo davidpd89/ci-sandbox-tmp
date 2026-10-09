@@ -312,8 +312,10 @@ def recorded_actions(path, *, today=None):
                     continue
                 # Sin ID: no suponer que un 'confirmado' posterior resuelve un
                 # pending anterior, porque pudo proceder de otra ejecución.
-                if result not in ("confirmado", "publicado", "pendiente_verificacion"):
+                if result not in ("confirmado", "publicado", "pendiente_verificacion", "pendiente_aprobacion"):
                     continue
+                if result == "pendiente_aprobacion" and kind != "follow":
+                    raise SafetyStateError("aprobación pendiente incompatible con acción")
                 if result == "pendiente_verificacion":
                     pending.add(key)
                 if (row.get("fecha") or "")[:10] == today.isoformat():
