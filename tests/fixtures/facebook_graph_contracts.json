@@ -11,7 +11,7 @@
         ],
         "paging": {
           "cursors": {"after": "cursor-comments-2"},
-          "next": "https://graph.facebook.com/v26.0/post-1/comments?after=cursor-comments-2&access%5Ftoken=SYNTHETIC_NEVER_REAL"
+          "next": "https://graph.facebook.com/v26.0/post-1/comments?after=cursor-comments-2&opaque=SYNTHETIC_NEVER_REAL"
         }
       },
       "cursor-comments-2": {
@@ -26,7 +26,7 @@
         "data": [{"id": "r-other", "from": {"id": "reader-4"}}],
         "paging": {
           "cursors": {"after": "cursor-replies-2"},
-          "next": "https://graph.facebook.com/v26.0/c-answered/comments?after=cursor-replies-2&access%5Ftoken=SYNTHETIC_NEVER_REAL"
+          "next": "https://graph.facebook.com/v26.0/c-answered/comments?after=cursor-replies-2&opaque=SYNTHETIC_NEVER_REAL"
         }
       },
       "cursor-replies-2": {
