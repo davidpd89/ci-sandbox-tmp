@@ -61,3 +61,30 @@ Las PR 01-09 cubren plataformas. Las restantes cubren capacidades comunes que
 pueden beneficiar a varias redes. Se pueden ejecutar en paralelo, pero una PR
 debe reutilizar hallazgos ya publicados por otra y evitar portar dos soluciones
 para el mismo problema.
+
+## Indice de encargos
+
+| PR | Encargo |
+| --- | --- |
+| [#11](https://github.com/davidpd89/ci-sandbox-tmp/pull/11) | Bluesky y AT Protocol |
+| [#12](https://github.com/davidpd89/ci-sandbox-tmp/pull/12) | Mastodon y Fediverse |
+| [#13](https://github.com/davidpd89/ci-sandbox-tmp/pull/13) | X |
+| [#14](https://github.com/davidpd89/ci-sandbox-tmp/pull/14) | Threads |
+| [#15](https://github.com/davidpd89/ci-sandbox-tmp/pull/15) | Facebook |
+| [#16](https://github.com/davidpd89/ci-sandbox-tmp/pull/16) | Instagram |
+| [#17](https://github.com/davidpd89/ci-sandbox-tmp/pull/17) | Pinterest |
+| [#18](https://github.com/davidpd89/ci-sandbox-tmp/pull/18) | Reddit |
+| [#19](https://github.com/davidpd89/ci-sandbox-tmp/pull/19) | TikTok |
+| [#20](https://github.com/davidpd89/ci-sandbox-tmp/pull/20) | Publicacion y programacion |
+| [#21](https://github.com/davidpd89/ci-sandbox-tmp/pull/21) | Descubrimiento, escucha y ranking |
+| [#22](https://github.com/davidpd89/ci-sandbox-tmp/pull/22) | Respuestas, contexto y memoria |
+| [#23](https://github.com/davidpd89/ci-sandbox-tmp/pull/23) | Analitica, atribucion y experimentos |
+| [#24](https://github.com/davidpd89/ci-sandbox-tmp/pull/24) | Dashboard y observabilidad |
+| [#25](https://github.com/davidpd89/ci-sandbox-tmp/pull/25) | Comunidad, CRM y fidelizacion |
+| [#26](https://github.com/davidpd89/ci-sandbox-tmp/pull/26) | Colas, idempotencia y recuperacion |
+| [#27](https://github.com/davidpd89/ci-sandbox-tmp/pull/27) | Navegador y movil |
+| [#28](https://github.com/davidpd89/ci-sandbox-tmp/pull/28) | Contenido, media y assets |
+| [#29](https://github.com/davidpd89/ci-sandbox-tmp/pull/29) | Agentes, skills y orquestacion |
+| [#30](https://github.com/davidpd89/ci-sandbox-tmp/pull/30) | Testing, fuzzing y contratos |
+| [#31](https://github.com/davidpd89/ci-sandbox-tmp/pull/31) | Seguridad, privacidad y supply chain |
+| [#32](https://github.com/davidpd89/ci-sandbox-tmp/pull/32) | Datos, almacenamiento e informes |
