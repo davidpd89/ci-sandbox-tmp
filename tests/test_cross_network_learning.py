@@ -93,9 +93,10 @@ class CrossNetworkTests(unittest.TestCase):
                    "checked_on": "2026-10-08"}, "investigar_equivalencia"),
                  ({"queue": "API", "capability": "verified", "permission": "verified",
                    "implemented": False, "checked_on": "2026-01-01"}, "investigar_equivalencia"),
-                 ({"queue": "API", "capability": "unsupported", "permission": "unknown"},
-                  "no_transferible"),
-                 ({"queue": "API", "permission": "denied"}, "no_transferible")]
+                 ({"queue": "API", "capability": "unsupported", "permission": "unknown",
+                   "checked_on": "2026-10-08"}, "no_transferible"),
+                 ({"queue": "API", "permission": "denied", "checked_on": "2026-10-08"},
+                  "no_transferible")]
         for payload, expected in cases:
             with self.subTest(payload=payload):
                 row = positive(targets={"mastodon": payload})
@@ -115,6 +116,15 @@ class CrossNetworkTests(unittest.TestCase):
                                                          "implemented": True}}))
         self.assertEqual(implemented["proposals"][0]["state"], "ya_implementado")
         self.assertEqual(implemented["proposals"][0]["queue"], "WEB")
+        stale_states = (
+            {"queue": "API", "permission": "denied", "checked_on": "2026-01-01"},
+            {"queue": "API", "capability": "unsupported", "checked_on": "2026-01-01"},
+            {"queue": "WEB", "implemented": True, "checked_on": "2026-01-01"},
+        )
+        for payload in stale_states:
+            with self.subTest(stale=payload):
+                proposal = run(positive(targets={"mastodon": payload}))["proposals"][0]
+                self.assertEqual(proposal["state"], "investigar_equivalencia")
 
     def test_rejected_or_implemented_history_not_repeated(self):
         for decision in ("rejected", "implemented", "under_review"):
