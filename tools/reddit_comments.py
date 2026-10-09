@@ -451,10 +451,12 @@ def engage_user(pg, username, log=print):
         created: e.getAttribute('created-timestamp') || '', permalink: e.getAttribute('permalink') || '', type: e.getAttribute('post-type') || '',
         body: ((e.querySelector('[slot="text-body"]') || {}).innerText || '').trim().slice(0, 600)}))""")
     allowed = {n.casefold() for n in active_subs()}
+    import post_age_policy as age_policy
+    max_age_h = age_policy.MAX_AGE_DAYS["comment"] * 24
     used = recent_texts()
     for post in posts:
         age = _age_hours(post.get("created"))
-        if age is None or age > 120 or post["sub"].casefold() not in allowed or not post["permalink"]:
+        if age is None or age > max_age_h or post["sub"].casefold() not in allowed or not post["permalink"]:
             continue
         intent = classify(post["title"], post.get("type"))
         if not intent:
@@ -467,8 +469,24 @@ def engage_user(pg, username, log=print):
         written = _gpt_comment(post["sub"], text, username, log, context=context)
         if not written:
             continue                      # sin texto de ChatGPT no se comenta (el follow ya esta hecho)
-        return followed, {"url": f"https://www.reddit.com{post['permalink']}", "text": written, "intent": intent, "title": post["title"]}
+        return followed, {"url": f"https://www.reddit.com{post['permalink']}", "text": written,
+                          "post_created_at": post["created"], "intent": intent,
+                          "title": post["title"]}
     return followed, None
+
+
+def _publish_profile_comment(extra, *, log=print, publish=None):
+    """Apply the shared policy immediately before the secondary comment."""
+    import conversation_turn_policy as ctp
+    permitted, reason = ctp.check_execution("reddit", extra)
+    if not permitted:
+        log(f"[reddit] comentario en perfil omitido: {reason}")
+        return False
+    if publish is None:
+        import reddit_interact as ri
+        publish = ri.comment
+    publish(extra["url"], extra["text"])
+    return True
 
 
 def run_replies(pg, max_replies=4, apply=False, rng=None, log=print):
@@ -527,7 +545,9 @@ def run_replies(pg, max_replies=4, apply=False, rng=None, log=print):
                             if followed == "seguido":
                                 csv.writer(stream).writerow([datetime.date.today().isoformat(), f"u/{item['author']}", "", "seguir_usuario", "", "confirmado", "karma:autor_de_comentario"])
                         if extra:
-                            r.comment(extra["url"], extra["text"])
+                            if not _publish_profile_comment(extra, log=log, publish=r.comment):
+                                extra = None
+                        if extra:
                             with open(REGISTRO, "a", newline="", encoding="utf-8") as stream:
                                 csv.writer(stream).writerow([datetime.date.today().isoformat(), "r/" + extra["url"].split("/r/")[1].split("/")[0], extra["url"], "comentario", extra["text"], "confirmado",
                                                              f"karma:perfil:{extra['intent']}"])

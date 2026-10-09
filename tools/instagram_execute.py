@@ -174,6 +174,11 @@ def run_plan(plan, *, prevalidated=False):
     for i, item in enumerate(plan):
         kind = item["kind"]
         handle = item["handle"].lstrip("@")
+        import conversation_turn_policy as ctp
+        permitted, reason = ctp.check_execution("instagram", item)
+        if not permitted:
+            results.append({**item, "resultado": f"saltado_cierre_conversacion:{reason}"})
+            continue
         print(f"=== {i+1}/{len(plan)}: {kind} -> @{handle} ===")
         try:
             if kind == "follow":
