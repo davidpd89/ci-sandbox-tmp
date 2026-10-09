@@ -118,8 +118,7 @@ def _target_ref(item, network=None):
         keys = ("status_id", "_target_uri", "post_uri", "target_post_id", "url", "post_url", "permalink")
     for key in keys:
         if item.get(key):
-            return str(item[key])
-    return ""
+            yield str(item[key])
 
 
 def _explicit_post_datetime(item):
@@ -158,17 +157,21 @@ def post_datetime(network, item):
     declared = _explicit_post_datetime(item)
     if declared is not None:
         return declared
-    ref = _target_ref(item, network)
-    when = None
-    if network == "x":
-        match = re.search(r"/status/(\d+)", ref) or re.fullmatch(r"(\d+)", ref)
-        when = _snowflake_x(match.group(1)) if match else None
-    elif network == "bluesky":
-        when = _tid_bluesky(ref.rstrip("/").rsplit("/", 1)[-1])
-    elif network == "threads":
-        match = re.search(r"/post/([A-Za-z0-9_-]{8,14})", ref)
-        when = _threads_shortcode(match.group(1)) if match else None
-    return when
+    # Un identificador auxiliar puede no contener fecha; probar las restantes
+    # referencias al destino antes de declarar edad desconocida.
+    for ref in _target_ref(item, network):
+        when = None
+        if network == "x":
+            match = re.search(r"/status/(\\d+)", ref) or re.fullmatch(r"(\\d+)", ref)
+            when = _snowflake_x(match.group(1)) if match else None
+        elif network == "bluesky":
+            when = _tid_bluesky(ref.rstrip("/").rsplit("/", 1)[-1])
+        elif network == "threads":
+            match = re.search(r"/post/([A-Za-z0-9_-]{8,14})", ref)
+            when = _threads_shortcode(match.group(1)) if match else None
+        if when is not None:
+            return when
+    return None
 
 
 def _plausible(when, now):
