@@ -135,6 +135,32 @@ class VersionedEvidenceTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             TrustedRegistry([a, b])
 
+    def test_same_experiment_id_cannot_change_audited_identity(self):
+        baseline = trial()
+        for mutate in (
+            lambda x: x["experiment"].update(design_sha256="f" * 64),
+            lambda x: x["experiment"].update(assignment_sha256="e" * 64),
+            lambda x: x["treatment"].update(n=101),
+            lambda x: x.update(origin="x"),
+            lambda x: x.update(feature="account_search"),
+        ):
+            with self.subTest(mutation=str(mutate)):
+                other = copy.deepcopy(baseline)
+                other["targets"]["mastodon"]["queue"] = "WEB"
+                mutate(other)
+                with self.assertRaisesRegex(ValueError, "identidad de ensayo inconsistente"):
+                    TrustedRegistry([audited(baseline), audited(other)])
+
+    def test_same_identity_may_have_separately_audited_queues(self):
+        api, web = trial(), trial(queue="WEB")
+        registry = TrustedRegistry([audited(api), audited(web)])
+        self.assertTrue(registry.approves(api, "mastodon"))
+        self.assertTrue(registry.approves(web, "mastodon"))
+        self.assertEqual(run(api, registry=registry)["proposals"][0]["state"],
+                         "proponer_ensayo_manual")
+        self.assertEqual(run(web, registry=registry)["proposals"][0]["state"],
+                         "proponer_ensayo_manual")
+
     def test_reviewed_manifest_mismatch_is_not_approved(self):
         row = trial()
         r = audited(row)
@@ -223,6 +249,8 @@ class VersionedEvidenceTests(unittest.TestCase):
         key = next(iter(registry._entries))
         with self.assertRaises(TypeError):
             registry._entries[key]["evidence_sha256"] = "0" * 64
+        with self.assertRaises(AttributeError):
+            registry._entries = {}
 
     def test_unhashable_queue_or_malformed_targets_never_crashes(self):
         for invalid_queue in ([], {}, ["API"], None, 42):
