@@ -153,10 +153,16 @@ def review(data, *, today=None, trusted_verifications=None):
                 and h["origin"] in NETWORKS and h["feature"] in FEATURES
                 and h["target"] in NETWORKS
                 and h.get("decision") in ("implemented", "rejected", "under_review")):
-            suppressed.add((h["origin"], h["feature"], h["target"]))
+            # Un histórico antiguo sin cola sigue siendo una decisión global;
+            # un histórico nuevo solo suprime su propia cola.
+            if "queue" in h and h["queue"] not in QUEUES:
+                continue
+            queue = h.get("queue")
+            suppressed.add((h["origin"], h["feature"], h["target"], queue))
 
-    # Conflictos no se resuelven por orden: una segunda evidencia sobre el
-    # mismo destino invalida AMBAS, aunque el segundo registro sea distinto.
+    # Conflictos no se resuelven por orden: una segunda evidencia en la
+    # misma cola invalida ambas. Una cola desconocida es ambigua y bloquea
+    # las verificaciones concretas de esa red/táctica hasta su reconciliación.
     counts = Counter()
     for row in items:
         if not isinstance(row, dict):
@@ -166,9 +172,9 @@ def review(data, *, today=None, trusted_verifications=None):
                 or not isinstance(feature, str) or feature not in FEATURES
                 or not isinstance(targets, dict)):
             continue
-        for target in targets:
+        for target, entry in targets.items():
             if isinstance(target, str) and target in NETWORKS and target != origin:
-                counts[(origin, feature, target)] += 1
+                counts[(origin, feature, target, _queue(entry))] += 1
 
     report = {"schema": 1, "as_of": today.isoformat(),
               "coverage": {n: ("partial" if n in STATE_ADAPTERS else "unverified")
@@ -190,17 +196,18 @@ def review(data, *, today=None, trusted_verifications=None):
         for target in sorted(targets):
             if target not in NETWORKS or target == origin:
                 continue
-            key = (origin, feature, target)
-            if counts[key] > 1:
+            entry = targets[target]
+            queue = _queue(entry)
+            key = (origin, feature, target, queue)
+            legacy_key = (origin, feature, target, None)
+            if counts[key] > 1 or (queue is not None and counts[legacy_key]):
                 report["suppressed"] += 1
                 report["duplicate_evidence"] += 1
                 continue
-            if key in seen or key in suppressed:
+            if key in seen or key in suppressed or legacy_key in suppressed:
                 report["suppressed"] += 1
                 continue
             seen.add(key)
-            entry = targets[target]
-            queue = _queue(entry)
             state = "investigar_equivalencia"
             # Capacidad, permiso e implementación solo tienen significado
             # operativo si vienen acotados a una de las tres colas reales.
