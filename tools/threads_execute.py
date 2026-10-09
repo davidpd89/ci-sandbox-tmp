@@ -231,7 +231,12 @@ def run_plan(plan, *, prevalidated=False, on_result=None):
             elif kind == "reply" and item.get("reply_to_id"):
                 import threads_api as api
                 env = api._env()
-                api.publish_reply(env["THREADS_ACCESS_TOKEN"], env["THREADS_USER_ID"], item["reply_to_id"], item["text"])
+                try:
+                    api.publish_reply(env["THREADS_ACCESS_TOKEN"], env["THREADS_USER_ID"], item["reply_to_id"], item["text"])
+                except api.ReplyPublishUncertain:
+                    # POST enviado: nunca marcar como fallo reintentable ni ir al navegador.
+                    results.append({**item, "resultado": "pendiente_verificacion"})
+                    continue
             elif kind == "reply":
                 if _already_replied_via_api(item["text"]):
                     # 03/10: una ronda cortada dejo la respuesta publicada sin registrar y el reintento la
