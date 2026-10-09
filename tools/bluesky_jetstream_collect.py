@@ -563,6 +563,7 @@ async def collect(
     last_error = None
     retry_delay = 1.0
     unrecovered_stream_error = False
+    failed_database = False
 
     stream_confirmed = bool(saved_stream)
     cursor = _resume_cursor(
@@ -664,6 +665,12 @@ async def collect(
                     await asyncio.sleep(retry_delay)
                     retry_delay = _next_retry_delay(retry_delay)
             except Exception as exc:
+                if isinstance(exc, sqlite3.Error):
+                    # Una inserción puede haber fallado después de adelantar
+                    # last_seq en memoria; NUNCA confirmar ese cursor.
+                    failed_database = True
+                    db.rollback()
+                    raise
                 # Liberar escrituras pendientes antes de reintentar el socket.
                 if db.in_transaction:
                     _checkpoint(
@@ -671,11 +678,6 @@ async def collect(
                         stream_identity=stream_identity if stream_confirmed else None,
                     )
                     last_commit = time.monotonic()
-                if isinstance(exc, sqlite3.Error):
-                    # No confirmar una transacción que acaba de fallar; el
-                    # siguiente proceso repetirá desde el cursor confirmado.
-                    db.rollback()
-                    raise
                 if isinstance(exc, StreamProtocolError):
                     raise
                 connection_errors += 1
@@ -696,10 +698,13 @@ async def collect(
                     retry_delay = _next_retry_delay(retry_delay)
     finally:
         try:
-            _checkpoint(
-                db, last_seq=last_seq, last_time_us=last_time_us,
-                stream_identity=stream_identity if stream_confirmed else None,
-            )
+            if failed_database:
+                db.rollback()
+            else:
+                _checkpoint(
+                    db, last_seq=last_seq, last_time_us=last_time_us,
+                    stream_identity=stream_identity if stream_confirmed else None,
+                )
         finally:
             db.close()
 
