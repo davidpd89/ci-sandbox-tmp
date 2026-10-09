@@ -83,6 +83,21 @@ class FacebookGraphContractTests(unittest.TestCase):
             with self.assertRaisesRegex(fb.FacebookPaginationError, "limite"):
                 list(fb._paged_rows("T", "p/comments", max_pages=1))
 
+    def test_anonymous_or_missing_author_is_not_offered_a_reply(self):
+        def fake_get(base, path, token, **params):
+            if path.endswith("/posts"):
+                return {"data": [{"id": "post-x", "message": "Texto"}]}
+            return {"data": [
+                {"id": "c-private", "message": "¿Dónde?", "from": None,
+                 "created_time": "2026-10-09", "comment_count": 0},
+                {"id": "c-no-id", "message": "¿Cuándo?", "from": {"name": "Sin ID"},
+                 "created_time": "2026-10-09", "comment_count": 0},
+                {"id": "c-page", "message": "¿Y ahora?", "from": {"id": "PAGE"},
+                 "created_time": "2026-10-09", "comment_count": 0},
+            ]}
+        with mock.patch.object(fb.mc, "graph_get", side_effect=fake_get):
+            self.assertEqual(fb.comments_pending("T", "PAGE"), [])
+
     def test_global_read_budget_aborts_instead_of_reporting_partials(self):
         repeating = {"data": [], "paging": {"next": "https://graph.facebook.com/next",
                                             "cursors": {"after": "second"}}}
