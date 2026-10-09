@@ -77,12 +77,12 @@ def main() -> int:
         )
         offenders = repo_hygiene.violations_for_paths(paths)
     except (OSError, ValueError, json.JSONDecodeError, RuntimeError) as exc:
-        print(f"HIGIENE PUSH ERROR: {exc}", file=sys.stderr)
+        print(f"HIGIENE PUSH ERROR: {str(exc)!r}", file=sys.stderr)
         return 2
     if offenders:
         print("HIGIENE PUSH FALLIDA: rutas operativas nuevas o modificadas:", file=sys.stderr)
         for path in offenders:
-            print(f"  - {path}", file=sys.stderr)
+            print(f"  - {path!r}", file=sys.stderr)
         return 1
     print("HIGIENE PUSH OK: rutas comprobadas respecto al before real.")
     return 0
