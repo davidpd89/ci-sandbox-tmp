@@ -2,6 +2,35 @@
 Fecha de consulta: **2026-10-09**. Rama: `research/08-reddit` (mirror público).
 Decisión: **C — patrón propio mínimo, sin añadir SDK ni publicar**.
 
+## Problema
+
+El preflight operativo original no verificaba un snapshot estructurado de hilo, comentarios y revisión humana antes del envío. Una aprobación de subreddit se podía reutilizar con otro texto o hilo; los `t1` tampoco acreditaban por sí solos pertenecer al `t3` previsto.
+
+## Alternativas
+
+Se contrastaron PRAW 8.0.3 y Async PRAW 8.0.3 (BSD-2-Clause), RedditWarp (MIT; último commit principal verificado de julio de 2024), Devvit y continuidad del CDP actual. Ninguna dependencia externa aportaba un preflight offline mejor con coste operativo inferior. La matriz, versiones, procedencias y alternativas rechazadas están desarrolladas más abajo.
+
+## Licencias y procedencia
+
+Fuente primaria: https://www.reddit.com/dev/api/
+Fecha de consulta: 2026-10-09
+Licencia SPDX: NOASSERTION
+Referencia inmutable: N/A (sin codigo incorporado)
+
+No se reutilizan archivos ni dependencias de Reddit/PRAW/RedditWarp/Devvit. El análisis de la forma pública del objeto `Listing` inspira validaciones propias implementadas con biblioteca estándar; las licencias concretas de los candidatos figuran en la comparación detallada.
+
+## Decisión
+
+Salida **C**: conservar el ejecutor/CDP existente y añadir un comprobador offline puro, sin comunicación con Reddit. Toda aprobación está ligada a post, texto y revisión reciente; el resultado positivo **no concede permiso para publicar**. En el repositorio oficial, la integración bajo bloqueo y la reconciliación de intentos permanecen pendientes.
+
+## Pruebas
+
+`python -m compileall -q tools tests` y `python -m pytest tests -q -p no:cacheprovider` (en CI con ocho tests generales expresamente deseleccionados por dependencias históricas del mirror). Casos sintéticos de identidad, anidamiento, censura, estado HTTP, caducidad y CLI inválido. Ver [workflow del HEAD](https://github.com/davidpd89/ci-sandbox-tmp/actions/workflows/validate-social-tools.yml) y resultados específicos de la PR; nunca se prueba aquí una sesión de producción.
+
+## Retirada
+
+Revertir el módulo, la fixture, ambos archivos de tests y este informe en la rama del mirror. No hay base de datos modificada, cambios en estados operativos ni red. Si se adapta al oficial en el futuro, mantener ese cambio como integración separada y reversible con test de bloqueo antes de escritura.
+
 ## Problema y reproducción
 
 El mirror `davidpd89/ci-sandbox-tmp` no incluye los ejecutores `tools/reddit_*.py`. Se inspeccionó el repositorio oficial **privado**, rama `main`, commit `db0edb9328358e0181e67573fa1bd71c55b04fec` (09-10-2026): `tools/reddit_scan.py`, `tools/reddit_execute.py`, `tools/reddit_interact.py`, `SISTEMA_DIARIO_REDDIT/{PROCESO,REGLAS,ESTADO}.md`, `tests/test_reddit_thread_url.py`, `AI_REVIEWER_BRIEF.md` y los puntos de entrada generales. El mirror solo reproduce parte del código anonimizado; no se portan fuentes privadas ni identificadores personales.
