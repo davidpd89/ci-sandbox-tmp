@@ -210,3 +210,27 @@ ejecutada.
 No se abre ninguna. Los huecos derivados tienen ya trabajo abierto y específico:
 #19 (reutilización pública TikTok), #26 (idempotencia/recuperación), #39
 (concurrencia) y #5 (CSV multiproceso). Crear otra PR duplicaría alcance.
+
+## Tercera revisión independiente — correcciones de control (09/10/2026)
+
+- El campo `manual_review` pasaba la validación si era `0`, `1`,
+  `0.0` o `1.0` por la igualdad booleana implícita de Python. Un `1`
+  se podía interpretar como valor permitido sin activar la revisión manual
+  (se comprueba `is True`). Ahora se exige el tipo `bool` real y se
+  prueba con JSON numérico.
+- El presupuesto de la sesión se comprobaba contra `followed` (ACK
+  confirmados), pero no contra las reservas previas al tap. Tras un intento
+  incierto, se podía abrir otra intención aunque el presupuesto fuera uno.
+  Ahora `attempted` cuenta las reservas persistidas y limita la sesión;
+  `followed` sigue siendo la métrica de éxito, no de consumo.
+- El bulk tenía un `COOLDOWN_PATH` independiente que ignoraba el override
+  `RRSS_TIKTOK_COOLDOWN_PATH` utilizado por la barrera y otras rutas.
+  Usa el mismo valor importado desde `tiktok_safety`, con regresión offline.
+
+Estas correcciones se limitan al alcance de la PR y preservan el formato del
+CSV. Se validan con regresiones offline y CI; un canario móvil y la aplicación
+en otras redes siguen fuera de alcance. Para evolución común consultar las PR
+#5 (CSV multiproceso), #26 (idempotencia) y #39 (concurrencia). SQLite dispone
+de transacciones atómicas y `portalocker` de locks multiplataforma, pero
+introducirlos aquí sin migración de todos los escritores dividiría el contrato;
+se propone evaluar una interfaz común de reserva-ACK con adaptadores por red.
