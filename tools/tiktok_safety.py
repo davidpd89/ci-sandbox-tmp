@@ -64,7 +64,7 @@ def _read(path=None):
         raise SafetyStateError("estado de TikTok inválido")
     if value.get("scope") not in (None, "follow"):
         raise SafetyStateError("ámbito de pausa inválido")
-    if value.get("manual_review") not in (None, False, True):
+    if value.get("manual_review") is not None and type(value["manual_review"]) is not bool:
         raise SafetyStateError("manual_review inválido")
     if value.get("until") is not None:
         _date(value["until"])
