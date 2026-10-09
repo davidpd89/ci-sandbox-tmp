@@ -477,8 +477,11 @@ def _append_round_csv(row):
     """Append one durable row, recovering a crashed writer's partial tail."""
     if len(row) != len(ROUND_CSV_COLUMNS):
         raise ValueError("Fila de tiempos_rondas.csv con columnas incorrectas")
+    if any("\r" in str(value) or "\n" in str(value) for value in row):
+        raise ValueError("Fila CSV con saltos de linea internos incompatibles con recuperacion")
     directory = os.path.dirname(LOG)
-    os.makedirs(directory, exist_ok=True)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
     deadline = time.monotonic() + ROUND_CSV_LOCK_TIMEOUT_SECONDS
     with _write_lock:
         while True:
@@ -944,6 +947,7 @@ def main(argv=None):
         return 0
     heartbeat_stop = threading.Event()
     heartbeat = None
+    heartbeat_started = False
     reload_allowed = False
     try:
         # Snapshot DESPUÉS de adquirir la propiedad, no antes: un propietario
@@ -952,11 +956,12 @@ def main(argv=None):
         print(f"[cola] objetivos {targets}; ya hechas hoy {done}; hasta {until:%H:%M}", flush=True)
         heartbeat = threading.Thread(target=_heartbeat_owned_locks, args=(tuple(mine), heartbeat_stop), daemon=True)
         heartbeat.start()
+        heartbeat_started = True
         reload_allowed = True
         return _run_chains(argv, until, targets, done, only=mine)
     finally:
         heartbeat_stop.set()
-        if heartbeat is not None:
+        if heartbeat_started:
             heartbeat.join(timeout=2)
         released = {chain: release_chain_lock(chain) for chain in mine}
         if reload_allowed and control_signal() == "recargar" and all(released.values()):
