@@ -263,7 +263,7 @@ class KPITests(unittest.TestCase):
         self.write("facebook", "metricas.csv", [["2026-09-01", "234"], ["2026-10-09", "1.2k"]])
         r = k.build_report(self.root, self.day)["networks"]["facebook"]
         self.assertIsNone(r["followers_net"])
-        self.assertEqual(r["followers_coverage"], "sin_snapshot_del_dia")
+        self.assertEqual(r["followers_coverage"], "snapshot_del_dia_invalido")
 
     def test_old_baseline_is_not_daily_gain(self):
         self.write("facebook", "metricas.csv", [["2026-09-01", "234"], ["2026-10-09", "244"]])
