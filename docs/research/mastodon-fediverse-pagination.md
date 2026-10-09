@@ -2,7 +2,9 @@
 
 Consulta: **2026-10-09 (Europe/Madrid)**. Alcance: solo `tools/mastodon_interact.py::search_accounts_pages` y pruebas offline. **Sin tráfico ni escrituras contra cuentas reales**. El espejo es público y anonimizado; no se copiaron datos del repositorio privado.
 
-## Diagnóstico y prueba de reproducción
+## Problema
+
+### Diagnóstico y prueba de reproducción
 
 Fuente de trabajo: espejo `davidpd89/ci-sandbox-tmp`, rama `research/02-mastodon-fediverse`, head inicial `0077e868ddc99ad927fa9add359a07f363c0fd36`. Código comparable del privado `davidpd89/rrss-davidporto-CODE`, `main` en `db0edb9328358e0181e67573fa1bd71c55b04fec` al consultar; **no son snapshots idénticos**.
 
@@ -27,19 +29,29 @@ Fallos principales: autenticación/429 bloquean acciones; una búsqueda de estad
 
 En otros adaptadores, distinguir ID de origen del ID operativo local y realizar deduplicación antes de escribir es una pauta reusable; **no se modifica código compartido** en esta PR.
 
-## Comparativa y decisión
+## Alternativas
+
+### Comparativa
 
 | Baseline | Candidato 1 | Candidato 2 | Elección | Motivo | Riesgo residual |
 | --- | --- | --- | --- | --- | --- |
 | REST propio con `requests`; bug de stride; 0 dependencias nuevas | [Mastodon.py v2.2.2](https://github.com/halcy/Mastodon.py/tree/v2.2.2), **MIT**, publicado 2026-08-03; capa Python completa | [Megalodon v10.3.0](https://github.com/h3poteto/megalodon/tree/v10.3.0), **MIT**, publicado 2026-04-18; cliente JS/TS multi-servidor | **C: adaptar el contrato con cambio mínimo**, sin incorporar SDK | Una línea de límite + comprobación/dedupe cubre el fallo; sustituir todo el transporte aumenta superficie y dependencias | Los forks y los backends de búsqueda no obedecen todos idénticamente; falta ejecución real autorizada |
 
+## Licencias y procedencia
+
 Se comprobó actividad pública de Mastodon.py y Megalodon, incluyendo releases; **no se incorporaron ni se copiaron sus fuentes**. Mastodon.py v2.2.2 declara `requests`, `python-dateutil` y `decorator` como dependencias obligatorias en [pyproject.toml](https://github.com/halcy/Mastodon.py/blob/v2.2.2/pyproject.toml). Para el bug preciso, migrar cliente completo añadiría más superficie de actualización que valor. Megalodon es TypeScript y requeriría otro runtime, improcedente para una función Python pequeña. Licencias de ambos: MIT. SDK no adoptado: sin dependencias transitivas nuevas en este cambio.
 
 Puntos de verificación de terceros: [origen y commit de distribución Mastodon.py v2.2.2](https://github.com/halcy/Mastodon.py/tree/b9f2effbb5a9f07ebca3807466f4130e69b1614c), [releases Megalodon](https://github.com/h3poteto/megalodon/releases/tag/v10.3.0), [licencia Mastodon.py](https://github.com/halcy/Mastodon.py/blob/v2.2.2/LICENSE), [licencia Megalodon](https://github.com/h3poteto/megalodon/blob/v10.3.0/LICENSE). No se ha llevado a cabo una auditoría exhaustiva de advisories para versiones que no se instalan. Regla de selección y cadena de suministro: [OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Software_Supply_Chain_Security_Cheat_Sheet.html).
 
+## Decisión
+
+**Elección C:** corregir el adaptador REST existente, sin adoptar paquetes, conservando los límites y reglas actuales. La cobertura adicional se restringe a llamadas paginadas de cuentas.
+
 Capacidades investigadas, sin ampliar alcance: [paginación Link](https://docs.joinmastodon.org/api/guidelines/), [streaming y host configurable](https://docs.joinmastodon.org/methods/streaming/), [filtros v2](https://docs.joinmastodon.org/methods/filters/), [bookmarks](https://docs.joinmastodon.org/methods/bookmarks/), [notificaciones](https://docs.joinmastodon.org/methods/notifications/), [rate limits](https://docs.joinmastodon.org/api/rate-limits/). No se presupone paridad entre Mastodon, GoToSocial u otras variantes. Los límites por defecto publicados (300/5 minutos para REST por cuenta e IP) **no sustituyen las cabeceras observadas de la instancia**; un servidor puede tener una política distinta.
 
-## Riesgos, coste, control y reversión
+## Retirada
+
+### Riesgos, coste, control y reversión
 
 - **Acceso/TOS:** únicamente REST oficial y tokens autorizados. Sin scraping, saltos de restricciones ni respuestas automáticas.
 - **Privacidad:** fixtures con dominios reservados `.example` y handles sintéticos; nunca se incorpora CSV operativo, tokens, snapshots de seguidores, ni identidades reales del repositorio privado.
@@ -48,7 +60,9 @@ Capacidades investigadas, sin ampliar alcance: [paginación Link](https://docs.j
 - **Reversión:** revertir únicamente el diff de `tools/mastodon_interact.py::search_accounts_pages` del commit [`3b32b62`](https://github.com/davidpd89/ci-sandbox-tmp/commit/3b32b62b6ad251cba00f4d7d924930b05a679174). No hay cambios de base de datos ni flags que migrar. La pérdida de cobertura anterior reaparecería.
 - **Espejo / código privado:** el README del espejo indica que un sync de CI puede **sobrescribir sus archivos**. Antes de llevar el cambio a producción, aplicar el parche mínimo y las regresiones (sin anonimización inversa) sobre el `main` privado actualizado; después regenerar el mirror conforme al procedimiento oficial. No hacer merge de la rama de investigación contra `main` del espejo ni interpretar el verde del espejo como validación del privado.
 
-## Verificación y revisión adversarial
+## Pruebas
+
+### Verificación y revisión adversarial
 
 Archivos de pruebas:
 - `tests/test_mastodon_search_contract_p12.py`: offsets exactos y truncamiento, cuenta repetida por backend que ignora offset, ausencia de índice textual, JSON ausente/malformado, timeout de segunda página, URLs remotas con misma cola numérica e ID local distinto, y dos alias remotos para el mismo ID local (rechazo en preflight).
