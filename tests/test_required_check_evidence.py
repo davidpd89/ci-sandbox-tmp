@@ -130,6 +130,20 @@ class LiveEvidenceTests(unittest.TestCase):
         with self.assertRaises(p.AuditError):
             e.pages(Short({"check_runs": []}), "/x", "check_runs")
 
+    def test_malformed_nested_live_api_records_are_rejected(self):
+        for field, value in (("app", None), ("check_suite", None)):
+            with self.subTest(field=field):
+                r = SyntheticReader()
+                r.checks[0][field] = value
+                with self.assertRaises(p.AuditError):
+                    self.verify(r)
+        r = SyntheticReader()
+        r.records["/repos/" + REPO + "/actions/runs/201"]["pull_requests"] = [
+            {"number": 96, "head": None}
+        ]
+        with self.assertRaises(p.AuditError):
+            self.verify(r)
+
     def test_invalid_arguments_no_network(self):
         reader = SyntheticReader()
         with self.assertRaises(p.AuditError):
