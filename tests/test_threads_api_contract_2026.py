@@ -305,5 +305,28 @@ class ThreadsTransportTests(unittest.TestCase):
             self.assertEqual(plan[0]["target_created_at"], "2026-10-08T12:00:00Z")
 
 
+    def test_pool_uncertain_result_is_persistently_non_retriable(self):
+        import sqlite3
+        import threads_pool as pool
+        self.assertEqual(
+            executor._pool_post_status({"resultado": "pendiente_verificacion"}),
+            "pending_verification",
+        )
+        self.assertEqual(executor._pool_post_status({"resultado": "confirmado"}), "done")
+        self.assertIsNone(executor._pool_post_status({"resultado": "no_intentado"}))
+        db = sqlite3.connect(":memory:")
+        try:
+            db.execute("CREATE TABLE posts (permalink TEXT PRIMARY KEY, status TEXT, acted_at TEXT)")
+            db.execute("INSERT INTO posts (permalink, status) VALUES (?, ?)",
+                       ("https://www.threads.com/@test/post/test12345", "new"))
+            pool.mark(db, "https://www.threads.com/@test/post/test12345",
+                      executor._pool_post_status({"resultado": "pendiente_verificacion"}))
+            row = db.execute("SELECT status FROM posts").fetchone()
+            self.assertEqual(row[0], "pending_verification")
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM posts WHERE status = 'new'").fetchone()[0], 0)
+        finally:
+            db.close()
+
+
 if __name__ == "__main__":
     unittest.main()
