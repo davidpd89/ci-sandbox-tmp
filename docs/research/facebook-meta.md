@@ -45,6 +45,21 @@ Se utiliza exclusivamente el código existente del proyecto y un patrón conocid
 
 Un token de Página no autoriza por sí solo todas las operaciones. Distinguir `pages_read_engagement`, `pages_read_user_content`, `pages_manage_engagement`, `pages_manage_posts`, `pages_messaging` y los productos de Messenger/Instagram y la revisión de aplicaciones según tipo de cuenta, acceso a activos, modo desarrollo/producción y aprobaciones reales. No se ha validado ninguna concesión activa con tokens reales; permisos, webhooks y DMs **no están activados por esta PR**. El modo desarrollo/rol administrador no justifica acceso general a terceros. La frase antigua «token de Página no caduca» no debe usarse como garantía operativa: los tokens pueden invalidarse o perder permisos por varias causas; falta preflight autenticado autorizado.
 
+### Matriz de capacidad, identidad y acceso pendiente de validar
+
+| Identidad y operación | Capacidad posible | Permiso/producto sujeto a validación | Decisión en #15 |
+| --- | --- | --- | --- |
+| Página administrada: publicaciones propias | Lectura de posts, comentarios, reacciones | `pages_read_engagement`, `pages_read_user_content` según tipo de contenido y endpoint; token de Página habilitado | Solo lectura paginada de comentarios |
+| Página administrada: responder/reaccionar | POST autorizado en contenido de la Página | `pages_manage_engagement` y acceso suficiente al activo; errores 200/190/429 posibles | No alterar el POST ni automatizarlo |
+| Página administrada: publicar fotos/feeds | Feed, álbum y media de la propia Página | `pages_manage_posts`, autorización editorial, formato endpoint | Fuera de alcance |
+| Página: insights | Analítica de Página/publicaciones propias | Permisos de insights específicos (`read_insights` u otros según endpoint/producto), disponibilidad de métricas | Sin ampliar métricas |
+| Página: mensajes privados | Inbox / Messenger | Producto Messenger, `pages_messaging`, acceso a Page y revisión según modo/uso | No habilitar ni recopilar DMs |
+| Página: webhooks | Notificaciones de eventos suscritos | Suscripción a los campos disponibles, verificación de firma y configuración de app, posibles requisitos `pages_manage_metadata` | No habilitar webhook |
+| Cuenta personal, grupo o publicación ajena | Operaciones con superficies distintas de una Página propia | No derivar permisos de un token de Página; dependen de producto, revisión y políticas de Meta | No intentar ni simular autorizaciones |
+| Instagram/Threads | APIs y tipos de identidad separados | Permisos y tokens de Instagram Login/Threads API no intercambiables automáticamente con Página | Sin cambio |
+
+Esta tabla identifica **permisos candidatos**, no concesiones verificadas: la documentación primaria de Meta no se pudo consultar de forma íntegra durante esta sesión y no se ejecutó una llamada `debug_token` con credenciales reales. Para cualquier ampliación es obligatorio contrastar endpoint, versión de Graph, modo de aplicación, rol de la cuenta, producto, autorización efectiva del token y App Review cuando corresponda. Los límites y cuotas numéricos **no se presumen**.
+
 La API puede devolver error 190 por token inválido/caducado, error 200 por permisos, timeouts o límites de tasa. Los fixtures reproducen la envoltura `error` sin guardar valores reales. En fallos de lectura no debe fabricarse `pending=[]` como resultado válido sin aviso; `meta_inbox` informa `error`. Los campos `from`, `message` y texto de usuarios son datos personales: no crear corpus públicos ni registrar cuerpos en trazas. `paging.next` contiene posibles credenciales y no se imprime. Los fixtures de esta PR son sintéticos y no contienen identificadores de personas ni tokens operativos.
 
 **Coste:** cero dependencias nuevas, cero escrituras nuevas, pero más lecturas cuando existan múltiples páginas; límite máximo de 100 GET por barrido (`1 + 99`, sin reintentos). La API puede facturar o limitar consumo según acceso/tipo de operación; no se garantiza gratuidad ni volumen permitido. Un presupuesto excedido produce aviso y no una lista parcial.
