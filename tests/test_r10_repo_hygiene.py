@@ -3,11 +3,14 @@
 Los casos unitarios de nombres usan RUTAS ficticias. Los casos de Git crean un
 repositorio temporal con datos sintéticos; nunca leen ni tocan cuentas reales.
 """
+import contextlib
+import io
 import pathlib
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -162,6 +165,33 @@ class FileHygieneTests(unittest.TestCase):
             _git(repo, "rm", "secrets.json")
             _git(repo, "commit", "-m", "remove obsolete sensitive path")
             self.assertEqual(rh.changed_paths("HEAD^1", root=repo), [])
+
+    def test_rejected_paths_escape_control_characters_in_logs(self):
+        # Git on Unix supports these names; logs must remain one line per path.
+        filename = ".env\\n::error::falsa-anotacion\\x1b[31m"
+        error_output = io.StringIO()
+        with patch.object(rh, "changed_paths", return_value=[filename]):
+            with contextlib.redirect_stderr(error_output):
+                status = rh.main(["--base", "HEAD^1"])
+        message = error_output.getvalue()
+        self.assertEqual(status, 1)
+        self.assertIn(repr(filename), message)
+        self.assertNotIn(chr(27), message)
+        self.assertNotIn(chr(10) + "::error", message)
+        self.assertNotIn(chr(10) + chr(10), message)
+
+    def test_git_failure_diagnostic_cannot_inject_log_lines(self):
+        error_output = io.StringIO()
+        with patch.object(
+            rh, "changed_paths",
+            side_effect=RuntimeError("revision no disponible\\n::warning::falsa-alerta"),
+        ):
+            with contextlib.redirect_stderr(error_output):
+                status = rh.main(["--base", "HEAD^1"])
+        message = error_output.getvalue()
+        self.assertEqual(status, 2)
+        self.assertIn(r"\\n::warning::", message)
+        self.assertNotIn(chr(10) + "::warning::", message)
 
     def test_only_changed_paths_are_considered_not_old_repository_history(self):
         workflow = (ROOT / ".github/workflows/validate-social-tools.yml").read_text("utf-8")
