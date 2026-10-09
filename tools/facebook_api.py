@@ -22,23 +22,72 @@ BASE = "https://graph.facebook.com/v26.0/"
 COMMENT_MAX = 8000
 
 
-def comments_pending(token, page_id, posts_limit=10):
-    posts = mc.graph_get(BASE, f"{page_id}/posts", token, fields="id,message,created_time", limit=posts_limit)
-    answered, pending = set(), []
-    for post in posts.get("data", []):
-        data = mc.graph_get(BASE, f"{post['id']}/comments", token,
-                            fields="id,message,from,created_time,comment_count", filter="toplevel", limit=50)
-        rows = [{"id": c["id"], "text": c.get("message", ""), "username": (c.get("from") or {}).get("name", ""),
-                 "timestamp": c.get("created_time", ""), "post": (post.get("message") or "")[:80]}
-                for c in data.get("data", [])]
-        for comment in data.get("data", []):
-            if comment.get("comment_count"):
-                replies = mc.graph_get(BASE, f"{comment['id']}/comments", token, fields="from")
-                if any((r.get("from") or {}).get("id") == page_id for r in replies.get("data", [])):
-                    answered.add(comment["id"])
-        pending += mc.unanswered(rows, [], answered)
-    return pending
+class FacebookPaginationError(RuntimeError):
+    """Lectura incompleta: no convertirla en sugerencias de respuesta."""
 
+
+def _paged_rows(token, path, *, max_pages=10, **params):
+    """Recorre cursores Graph sin seguir URLs `paging.next` con tokens incluidos.
+
+    Un error o paginacion incompleta aborta la lectura completa; no se devuelven
+    pendientes parciales. Limite finito para evitar loops y consumo inesperado.
+    """
+    if not isinstance(max_pages, int) or isinstance(max_pages, bool) or max_pages < 1:
+        raise ValueError("max_pages debe ser positivo")
+    seen, after = set(), None
+    for _ in range(max_pages):
+        query = dict(params)
+        if after is not None:
+            query["after"] = after
+        response = mc.graph_get(BASE, path, token, **query)
+        if not isinstance(response, dict) or "error" in response or not isinstance(response.get("data"), list):
+            raise FacebookPaginationError("Graph devolvio una pagina invalida o un error")
+        for row in response["data"]:
+            if not isinstance(row, dict):
+                raise FacebookPaginationError("Graph devolvio un elemento invalido")
+            yield row
+        paging = response.get("paging") or {}
+        if not isinstance(paging, dict):
+            raise FacebookPaginationError("Graph devolvio paginacion invalida")
+        if not paging.get("next"):
+            return
+        cursors = paging.get("cursors") or {}
+        after = cursors.get("after") if isinstance(cursors, dict) else None
+        if not isinstance(after, str) or not after or len(after) > 1024:
+            raise FacebookPaginationError("Graph indica otra pagina sin cursor after valido")
+        if after in seen:
+            raise FacebookPaginationError("Graph repitio un cursor de paginacion")
+        seen.add(after)
+    raise FacebookPaginationError("Graph excedio el limite de paginas: lectura incompleta")
+
+
+def comments_pending(token, page_id, posts_limit=10):
+    """Preguntas externas realmente sin respuesta; fallo cerrado si Graph no permite verificar."""
+    posts = mc.graph_get(BASE, f"{page_id}/posts", token, fields="id,message,created_time", limit=posts_limit)
+    if not isinstance(posts, dict) or "error" in posts or not isinstance(posts.get("data"), list):
+        raise FacebookPaginationError("Graph devolvio posts invalidos")
+    pending, seen_ids = [], set()
+    for post in posts["data"]:
+        for comment in _paged_rows(token, f"{post['id']}/comments",
+                                   fields="id,message,from,created_time,comment_count",
+                                   filter="toplevel", limit=50):
+            cid = comment.get("id")
+            author = comment.get("from") or {}
+            if not cid or cid in seen_ids or not isinstance(author, dict):
+                continue
+            seen_ids.add(cid)
+            if author.get("id") == page_id or "?" not in (comment.get("message") or ""):
+                continue
+            # Si Graph omite comment_count, tampoco se asume que no hay respuestas.
+            if comment.get("comment_count") != 0:
+                if any((reply.get("from") or {}).get("id") == page_id
+                       for reply in _paged_rows(token, f"{cid}/comments", fields="id,from", limit=50)):
+                    continue
+            pending.append({"id": cid, "text": comment.get("message", ""),
+                            "username": author.get("name", ""),
+                            "timestamp": comment.get("created_time", ""),
+                            "post": (post.get("message") or "")[:80]})
+    return mc.unanswered(pending, [], ())
 
 def comments_to_like(token, page_id, posts_limit=10):
     """Comentarios ajenos (de otras personas) en nuestros posts que la Pagina aun no ha marcado con me gusta."""
