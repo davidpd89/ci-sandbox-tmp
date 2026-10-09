@@ -28,6 +28,24 @@ class PinterestOrientationTests(unittest.TestCase):
                                      (100, 150) if swapped else (150, 100))
                     self.assertEqual(result["aspect_2_3"], swapped)
 
+    def test_visible_dimensions_match_pillow_reference_for_other_formats(self):
+        # Pillow puede aplicar orientación TIFF automáticamente: no asumir que
+        # todas las extensiones almacenan la misma matriz y etiqueta EXIF.
+        from PIL import ImageOps
+        with tempfile.TemporaryDirectory() as tmp:
+            for fmt in ("JPEG", "PNG", "TIFF"):
+                for orientation in (3, 6, 8):
+                    with self.subTest(format=fmt, orientation=orientation):
+                        image_path = pathlib.Path(tmp) / ("photo." + fmt.lower())
+                        im = Image.new("RGB", (150, 100))
+                        exif = Image.Exif()
+                        exif[274] = orientation
+                        im.save(image_path, format=fmt, exif=exif)
+                        with Image.open(image_path) as source:
+                            expected = ImageOps.exif_transpose(source).size
+                        measured = validate_web_pin_image(image_path)
+                        self.assertEqual((measured["width"], measured["height"]), expected)
+
     def test_image_without_exif_remains_unchanged(self):
         with tempfile.TemporaryDirectory() as tmp:
             image_path = pathlib.Path(tmp) / "ordinary.png"
