@@ -72,6 +72,11 @@ class RedditDirectAgeTests(unittest.TestCase):
                                                      publish=publish))
         self.assertEqual(events, [(recent["url"], recent["text"])])
 
+    def test_malformed_or_naive_timestamp_does_not_break_round(self):
+        for stamp_value in ("invalid", "2026-10-09T12:00:00", [], 1700000000, None):
+            with self.subTest(stamp=repr(stamp_value)):
+                self.assertIsNone(rc._age_hours(stamp_value))
+
     def test_scanner_extracts_comment_not_root_creation(self):
         self.assertIn("created-timestamp", rc._JS_COMMENTS)
         self.assertIn("time[datetime]", rc._JS_COMMENTS)
