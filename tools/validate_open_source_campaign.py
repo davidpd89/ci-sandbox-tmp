@@ -122,6 +122,12 @@ def check_live(doc, live):
     parent = live.get(10)
     if parent is None or parent['base']['ref'] != 'main' or parent['head']['ref'] != PARENT or parent['state'] != 'open':
         errors.append('#10: changed parent/base or missing parent PR')
+    expected = {item['number'] for item in doc['children']}
+    discovered = {n for n, pr in live.items()
+                  if isinstance(n, int) and n > 10
+                  and pr.get('base', {}).get('ref') == PARENT}
+    for n in sorted(discovered - expected):
+        errors.append(f'#{n}: unindexed live child PR; update protocol and manifest')
     for item in doc['children']:
         n = item['number']
         p = live.get(n)
