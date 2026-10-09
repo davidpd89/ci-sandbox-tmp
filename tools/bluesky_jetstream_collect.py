@@ -450,6 +450,18 @@ def _apply_frame(db, event, event_cursor, mode, terms, last_seq):
     return stored, last_seq, False
 
 
+def _fatal_stream_status(exc):
+    """HTTP no recuperable en handshake: retry idéntico crea un bucle inútil.
+
+    En Jetstream v2 HTTP 400 puede significar CursorTooOld; no reiniciar
+    silenciosamente el cursor porque ocultaría una brecha en la ingesta.
+    HTTP 429 y 5xx mantienen el backoff de reconexión.
+    """
+    response = getattr(exc, "response", None)
+    status = getattr(response, "status_code", None)
+    return status if status in (400, 401, 403, 404, 410) else None
+
+
 def _next_retry_delay(delay):
     """Backoff exponencial acotado para reconexiones de una escucha larga."""
     return min(60.0, max(1.0, float(delay) * 2.0))
@@ -573,6 +585,12 @@ async def collect(
             except Exception as exc:
                 connection_errors += 1
                 last_error = f"{type(exc).__name__}: {str(exc)[:200]}"
+                fatal_status = _fatal_stream_status(exc) if is_v2 else None
+                if fatal_status:
+                    raise RuntimeError(
+                        f"Jetstream v2 rechazó conexión HTTP {fatal_status}; "
+                        "revisar endpoint y cursor persistido antes de reanudar"
+                    ) from exc
                 if time.monotonic() < deadline:
                     reconnects += 1
                     if connected_at is not None and time.monotonic() - connected_at >= 60:
