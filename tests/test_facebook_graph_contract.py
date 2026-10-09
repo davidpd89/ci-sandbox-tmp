@@ -83,6 +83,25 @@ class FacebookGraphContractTests(unittest.TestCase):
             with self.assertRaisesRegex(fb.FacebookPaginationError, "limite"):
                 list(fb._paged_rows("T", "p/comments", max_pages=1))
 
+    def test_global_read_budget_aborts_instead_of_reporting_partials(self):
+        repeating = {"data": [], "paging": {"next": "https://graph.facebook.com/next",
+                                            "cursors": {"after": "second"}}}
+        with mock.patch.object(fb.mc, "graph_get", return_value=repeating) as get:
+            with self.assertRaisesRegex(fb.FacebookPaginationError, "global"):
+                list(fb._paged_rows("T", "p/comments", max_pages=10, budget=[1]))
+        self.assertEqual(get.call_count, 1)
+
+    def test_before_after_on_same_fixture_not_a_speed_benchmark(self):
+        pages = CASES["pagination"]
+        first = pages["post-1/comments"]["first"]["data"]
+        # Baseline previo: solo la primera pagina de comentarios y respuestas.
+        old_reply_ids = [r["from"]["id"] for r in pages["c-answered/comments"]["first"]["data"]]
+        baseline_false_pending = [c["id"] for c in first if "?" in c["message"]
+                                  and c["comment_count"] and "page-1" not in old_reply_ids]
+        self.assertEqual(baseline_false_pending, ["c-answered"])
+        # El contrato nuevo se comprueba integralmente en test_pages_and_nested_replies...
+        self.assertNotIn("c-pending", [c["id"] for c in first])
+
     def test_timeout_after_reply_dispatch_is_not_retried(self):
         # Error incierto: la escritura pudo haber llegado; no confirmar ni reintentar.
         with mock.patch.object(fb.mc, "graph_post", side_effect=TimeoutError("respuesta perdida")) as post:
