@@ -38,5 +38,29 @@ class PinterestOrientationTests(unittest.TestCase):
             self.assertTrue(result["aspect_2_3"])
 
 
+
+class PinterestMetadataTypeTests(unittest.TestCase):
+    """Los inputs de una ficha malformada nunca pueden lanzar TypeError ni abrir CDP."""
+
+    def test_invalid_types_are_rejected_by_publisher_before_browser(self):
+        from unittest.mock import patch
+        import pinterest_publish as publisher
+        with tempfile.TemporaryDirectory() as tmp:
+            image_path = pathlib.Path(tmp) / "good.png"
+            Image.new("RGB", (100, 150)).save(image_path)
+            good = [str(image_path), "Título", "Descripción",
+                    "https://example.org/recursos", "Alt de imagen",
+                    publisher.KNOWN_BOARDS[0]]
+            for position, value in ((1, None), (2, None), (4, None),
+                                    (1, 123), (2, 123), (5, 456),
+                                    (1, "x" * 101), (2, "x" * 801)):
+                with self.subTest(position=position, invalid_type=type(value).__name__):
+                    args = good.copy()
+                    args[position] = value
+                    with patch.object(publisher, "sync_playwright",
+                                      side_effect=AssertionError("nunca abrir navegador")):
+                        with self.assertRaises(publisher.PinterestPublishError):
+                            publisher.publish_pin(*args, apply=True)
+
 if __name__ == "__main__":
     unittest.main()
