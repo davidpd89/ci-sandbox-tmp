@@ -291,6 +291,9 @@ def collect(root: str | pathlib.Path, *, now: dt.datetime | None = None,
             pid_alive=None) -> dict:
     """Informe agregado, sin copiar mensajes privados ni handles."""
     root = pathlib.Path(root)
+    # El canario conserva su reloj local para ventanas de horas/minutos; el
+    # detector diario debe resolver Madrid cuando no se inyectó un instante.
+    injected_now = now
     now = now or dt.datetime.now()
     if pid_alive is None:
         from mobile_runtime import _pid_alive
@@ -343,7 +346,7 @@ def collect(root: str | pathlib.Path, *, now: dt.datetime | None = None,
     from plan_failure_events import collect_alerts
     alerts.extend(collect_alerts(root, now=now))
     from growth_anomaly import collect as collect_growth
-    alerts.extend(collect_growth(root, now=now))
+    alerts.extend(collect_growth(root, now=injected_now))
     return {
         "schema": 1, "generated_at": now.isoformat(timespec="seconds"),
         "window_minutes": LOOKBACK_MINUTES, "by_network": per_network, "alerts": alerts,
