@@ -12,7 +12,7 @@ import re
 from collections import defaultdict
 from collections.abc import Mapping
 
-NETWORKS = ("bluesky", "mastodon", "x", "threads", "facebook",
+NETWORKS = ("bluesky", "mastodon", "x", "threads", "facebook", "instagram",
             "pinterest", "reddit", "tiktok")
 # Only these networks currently have a follower-list reader in growth_attribution.
 SUPPORTED_SNAPSHOTS = frozenset(("bluesky", "mastodon"))
@@ -167,19 +167,19 @@ def rank_cohorts(cohorts, *, min_sample=40, min_age_days=3,
                           if r["reason"] == "insufficient_sample"]
         cursor = exploration_cursor.get(net) if exploration_cursor is not None else None
         exploration_candidates = None
-        if cursor is not None and explore is not None:
+        if explore is not None and (explore == 0 or not eligible_small):
+            # No cursor is needed when there is nothing to rotate or reserve.
+            exploration_candidates = []
+        elif cursor is not None and explore is not None:
             # Deterministic cyclic preview; rotation state MUST live upstream.
-            if eligible_small:
-                start = cursor % len(eligible_small)
-                rotation = eligible_small[start:] + eligible_small[:start]
-                exploration_candidates = rotation[:explore]
-            else:
-                exploration_candidates = []
+            start = cursor % len(eligible_small)
+            rotation = eligible_small[start:] + eligible_small[:start]
+            exploration_candidates = rotation[:explore]
         out[net] = {"capability": ("reader_in_code_access_unverified" if net in SUPPORTED_SNAPSHOTS
                                    else "not_instrumented"),
                     "ranked": ranked[net], "unranked": unranked[net],
                     "exploration_slots_reserved": explore,
-                    "exploration_cursor_required": explore is not None and cursor is None,
+                    "exploration_cursor_required": bool(explore and eligible_small) and cursor is None,
                     "exploration_candidates": exploration_candidates,
                     "ranking_slots_available": slots - explore if slots is not None else None}
     return {"metric": "observed_followers_at_snapshot_not_incremental_conversion",
