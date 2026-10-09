@@ -634,5 +634,111 @@ class JetstreamCollectorTests(unittest.TestCase):
             db.close()
 
 
+
+    def test_v2_persistent_handshake_outage_marks_window_incomplete(self):
+        class Websockets:
+            calls = 0
+
+            def connect(self, *_args, **_kwargs):
+                self.calls += 1
+                raise OSError("synthetic-offline")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = pathlib.Path(tmp) / "cache.sqlite3"
+            config = pathlib.Path(tmp) / "config.json"
+            config.write_text(json.dumps(self.config()), encoding="utf-8")
+            transport = Websockets()
+            with patch.dict(sys.modules, {"websockets": transport}):
+                with self.assertRaisesRegex(RuntimeError, "ingesta incompleta"):
+                    asyncio.run(js.collect(
+                        db_path=str(cache), config_path=str(config),
+                        endpoint=js.DEFAULT_ENDPOINT, minutes=0.001,
+                        resume_overlap_seconds=5,
+                    ))
+            self.assertEqual(transport.calls, 1)
+            db = js.init_db(str(cache))
+            self.assertIsNone(js.get_state(db, "last_seq"))
+            db.close()
+
+    def test_v2_bad_json_fails_with_protocol_error_without_echoing_raw(self):
+        class Socket:
+            async def recv(self):
+                return "bad-json-synthetic-sentinel"
+
+        class Connection:
+            async def __aenter__(self):
+                return Socket()
+
+            async def __aexit__(self, *_):
+                return False
+
+        class Websockets:
+            calls = 0
+
+            def connect(self, *_a, **_kw):
+                self.calls += 1
+                return Connection()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = pathlib.Path(tmp) / "cache.sqlite3"
+            config = pathlib.Path(tmp) / "config.json"
+            config.write_text(json.dumps(self.config()), encoding="utf-8")
+            transport = Websockets()
+            with patch.dict(sys.modules, {"websockets": transport}):
+                with self.assertRaises(js.StreamProtocolError) as captured:
+                    asyncio.run(js.collect(
+                        db_path=str(cache), config_path=str(config),
+                        endpoint=js.DEFAULT_ENDPOINT, minutes=0.001,
+                        resume_overlap_seconds=5,
+                    ))
+            self.assertNotIn("synthetic-sentinel", str(captured.exception))
+            self.assertEqual(transport.calls, 1)
+            db = js.init_db(str(cache))
+            self.assertIsNone(js.get_state(db, "last_seq"))
+            db.close()
+
+    def test_v2_recovery_after_drop_does_not_fail_window(self):
+        class Socket:
+            def __init__(self, broken):
+                self.broken = broken
+
+            async def recv(self):
+                if self.broken:
+                    raise OSError("synthetic-drop")
+                await asyncio.sleep(20)
+
+        class Connection:
+            def __init__(self, socket):
+                self.socket = socket
+
+            async def __aenter__(self):
+                return self.socket
+
+            async def __aexit__(self, *_):
+                return False
+
+        class Websockets:
+            calls = 0
+
+            def connect(self, *_args, **_kwargs):
+                self.calls += 1
+                return Connection(Socket(broken=self.calls == 1))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = pathlib.Path(tmp) / "cache.sqlite3"
+            config = pathlib.Path(tmp) / "config.json"
+            config.write_text(json.dumps(self.config()), encoding="utf-8")
+            transport = Websockets()
+            with patch.dict(sys.modules, {"websockets": transport}):
+                result = asyncio.run(js.collect(
+                    db_path=str(cache), config_path=str(config),
+                    endpoint=js.DEFAULT_ENDPOINT, minutes=0.045,
+                    resume_overlap_seconds=5,
+                ))
+            self.assertGreaterEqual(transport.calls, 2)
+            self.assertEqual(result["connection_errors"], 1)
+            self.assertEqual(result["last_error"], "OSError")
+
+
 if __name__ == "__main__":
     unittest.main()
