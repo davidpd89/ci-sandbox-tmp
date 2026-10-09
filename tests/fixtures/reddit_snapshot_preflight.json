@@ -42,7 +42,8 @@
                   "parent_id": "t3_abc123",
                   "body": "¿Qué os parece?",
                   "author": "lector02",
-                  "replies": ""
+                  "replies": "",
+                  "link_id": "t3_abc123"
                 }
               }
             ]
@@ -60,7 +61,10 @@
       "history_state": "none",
       "subreddit_type": "public",
       "account_name": "autor_demo",
-      "account_approved": false
+      "account_approved": false,
+      "post_id": "abc123",
+      "plan_sha256": "50e0164f09e6c48c1fdfe692148f95266f774cca90cb9a21a7724c9d85c1b685",
+      "context_checked_at": "2026-10-09T19:04:30Z"
     }
   },
   "cases": {
@@ -83,7 +87,8 @@
             "parent_id": "t3_abc123",
             "body": "[removed]",
             "author": "autor_demo",
-            "replies": ""
+            "replies": "",
+            "link_id": "t3_abc123"
           }
         }
       ]
@@ -156,7 +161,8 @@
             "parent_id": "t3_abc123",
             "body": "[deleted]",
             "author": "lector02",
-            "replies": ""
+            "replies": "",
+            "link_id": "t3_abc123"
           }
         }
       ]
@@ -170,7 +176,8 @@
             "parent_id": "t3_abc123",
             "author": "AutoModerator",
             "body": "Your submission has been removed due to subreddit rules.",
-            "replies": ""
+            "replies": "",
+            "link_id": "t3_abc123"
           }
         }
       ]
