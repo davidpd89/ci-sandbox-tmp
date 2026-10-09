@@ -255,3 +255,48 @@ no existe prueba retrospectiva de la instancia que generó el valor.
 - Cliente oficial TS, [README](https://github.com/bluesky-social/bsky/blob/bc6737a4b52dd2458c7aecbc296ec660e068af89/packages/jetstream/README.md): no intercambiar cursores v1/v2.
 - SDK Python, [pyproject](https://github.com/MarshalX/atproto/blob/4c17895c97f6d42ecb9c41dc5c2fb450ab9c6ac8/pyproject.toml): licencia MIT, matriz de Python y dependencias.
 - [OWASP Software Supply Chain Security](https://cheatsheetseries.owasp.org/cheatsheets/Software_Supply_Chain_Security_Cheat_Sheet.html), [GitHub Protected Branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches).
+
+
+## Cuarta revisión adversarial: avisos v2 de pérdida de continuidad (09-10-2026)
+
+**Hallazgo respaldado por la lexicon oficial fijada**:
+[subscribeEvents.json](https://github.com/bluesky-social/jetstream/blob/f42df08ba0ca9e4287020139aefbcfe24506d1ef/lexicons/network/bsky/jetstream/subscribeEvents.json)
+y [contrato de cursor](https://github.com/bluesky-social/jetstream/blob/f42df08ba0ca9e4287020139aefbcfe24506d1ef/docs/README.md#52-the-v2-stream-networkbskyjetstreamsubscribeevents).
+
+Un cursor heredado en microsegundos puede resultar anterior a la ventana
+disponible y **ser recortado sin HTTP 400**: el servidor envía un mensaje
+`#info` con `name=OutdatedCursor`. Asimismo un cursor `seq` futuro
+puede comenzar directamente en live tras `#info FutureCursor`. El collector
+anterior ignoraba ambos avisos porque no eran commits; podía finalizar
+satisfactoriamente a pesar de un salto. Los frames terminales
+`{"$type":"error", ...}` tampoco eran interpretados explícitamente y
+una envoltura legacy v1 podía procesarse a través del endpoint v2.
+
+**Corrección localizada y sin librerías nuevas:** el endpoint v2 exige la
+envoltura `message/payload`, rechaza con `StreamProtocolError` ambos
+avisos de discontinuidad y los frames `error` terminales, sin incorporar
+mensajes remotos a logs. No asume que un socket conectado implique
+continuidad. El cursor y los posts válidos ya procesados conservan
+checkpoint transaccional; un aviso no adelanta la secuencia. El endpoint
+legacy v1 conserva su contrato.
+
+**Pruebas offline, con WebSocket sintético:**
+`test_v2_cursor_notices_and_errors_fail_loud_without_mutation` cubre
+OutdatedCursor, FutureCursor, error terminal y envoltura v1 imprevista,
+verificando ausencia de mutación y de filtración del mensaje remoto.
+`test_v2_valid_commit_before_terminal_error_is_checkpointed` verifica
+durabilidad del frame válido anterior al error.
+
+**Generalización:** las demás redes deben exponer estados equivalentes
+`OK | GAP_DETECTED | TERMINAL_ERROR` para discovery y observabilidad,
+pero su parser y sus cursores pertenecen al adaptador de plataforma.
+La PR #95 de taste puede importar esta validación v2 o extraer un
+módulo Jetstream compartido; no copiar el mismo parser en paralelo.
+Mantener separada la máquina de resultados general, que debe ser
+independiente del protocolo ATProto.
+
+**Pendiente:** un error explícito no repara el hueco: backfill y handoff
+archive→live corresponden a #94. La reversión de estos commits no
+requiere migración, pero reintroduce pérdidas silenciosas. Los CI
+anteriores no acreditan esta nueva cobertura: revisar el HEAD
+final en ambos workflows, Linux y Windows.
