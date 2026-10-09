@@ -2,13 +2,13 @@
 
 Investigación e implementación **09/10/2026** · PR hija [#19](https://github.com/davidpd89/ci-sandbox-tmp/pull/19). Base `research/public-reuse-parent`. No ejecuta acciones en cuentas.
 
-## Hueco real verificado
+## Problema: hueco real verificado
 
 Se inspeccionaron en **`davidpd89/rrss-davidporto-CODE`**, rama `integracion/crecimiento-2026-10` (repo privado, no copiar datos operativos), `tools/mobile_client.py`, `mobile_runtime.py`, `tiktok_mobile_nav.py`, `tiktok_mobile_interact.py`, `tiktok_mobile_execute.py`, `tiktok_safety.py`, `tiktok_source_evidence.py` y `tests/test_pr152_tiktok_intent_reconciliation.py`. El mirror contiene ya `mobilecli`, árbol UI y navegación de TikTok. Las intenciones write-ahead, los locks y pausas de TikTok **ya están implementados**; [PR #7](https://github.com/davidpd89/ci-sandbox-tmp/pull/7) los examina por separado. Duplicarlos introduciría divergencia.
 
 La navegación existente confía en selectores semánticos de UI española, pero carecía de una huella **estructural, comparable y minimizada** para distinguir cambios de disposición de fallos de dispositivo/estado. Almacenar capturas o dumps textuales expondría identificadores. El problema concreto elegido es **observar la deriva de UI sin guardar contenido de usuarios**, no ejecutar más acciones ni reintentar acciones inciertas.
 
-## Candidatos comprobados
+## Alternativas: candidatos comprobados
 
 | Candidato | Procedencia y mantenimiento observado | Licencia | Encaje Windows/Python 3.11 | Decisión |
 | --- | --- | --- | --- | --- |
@@ -17,16 +17,25 @@ La navegación existente confía en selectores semánticos de UI española, pero
 | `openatx/adbutils` | [v2.12.0, 12/11/2025](https://github.com/openatx/adbutils/releases/tag/2.12.0), [código del tag](https://github.com/openatx/adbutils/tree/2.12.0) | [MIT](https://github.com/openatx/adbutils/blob/2.12.0/LICENSE) | Python >=3.8 y Windows, requiere ADB | Complementa dispositivos/transferencias, no aporta un detector de deriva semántica; no copiar. |
 | TikTok Display / Posting / Research APIs | [Display](https://developers.tiktok.com/docs/en/display-api-overview), [Posting](https://developers.tiktok.com/products/content-posting-api), [Research](https://developers.tiktok.com/docs/en/research-api-get-started) | API remota (no librería libre candidata) | Implica autenticación y redes; CI offline incompatible | Útiles para vídeos propios/publicación/estudios, **no** reemplazan la inspección de botones Android ni verifican un estado de la app. |
 
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/mobile-next/mobilecli/tree/1.0.17
+Fecha de consulta: 2026-10-09
+Licencia SPDX: NOASSERTION
+Referencia inmutable: N/A (sin codigo incorporado)
+
+`NOASSERTION` describe **el código nuevo de este mirror, que no incorpora código externo**; no reclasifica las licencias upstream: `uiautomator2` y `adbutils` son MIT, mientras que `mobilecli` tiene FSL 1.1 con licencia futura Apache-2.0. Los tags/commits exactos de cada candidato figuran en la tabla. Se reutiliza únicamente la interfaz de lectura ya presente.
+
 Las bibliotecas externas no aportan más a este hueco que la lectura ya disponible. Se **reutiliza el contrato existente** de `TikTokNavigator.tree()`; implementación nueva mínima solo de reducción, comparación y validación. No se copia código de terceros ni hay cambios de dependencias, pagos, permisos o credenciales.
 
-## Entrega
+## Decisión y entrega
 
 - `tools/mobile_ui_diagnostics.py`: función pura `diagnose(tree)` sobre jerarquías JSON sintéticas, cota de 3000 nodos y 32 niveles; roles enumerados, cuatro zonas verticales relativas, palabras de navegación en una lista cerrada. No registra texto arbitrario, coordenadas crudas, IDs, identificadores Android, paquetes, vídeos ni capturas. Descarta nodos con rectángulos no válidos.
 - `compare(reference, current)`: contrato schema=1 y comprobación de integridad SHA-256 de las *características permitidas*; similitud Jaccard ponderada con recuentos, entradas/salidas observadas. El SHA **no autentica al productor ni demuestra UI real**; solo detecta ediciones accidentales del resumen.
 - `TikTokNavigator.diagnose_current_ui(reference=...)`: un `tree()` de solo lectura, sin taps, sin `--apply`, sin estado persistente. Únicamente bajo invocación explícita; no afecta al ejecutor ni aumenta volumen.
 - CLI reproducible: `python -B tools/mobile_ui_diagnostics.py /ruta/arbol-sintetico.json --reference /ruta/arbol-base-sintetico.json`. Entrada local <=1 MB. La salida puede guardarse como baseline **siempre que se valide la procedencia de la muestra**; no almacenar árboles reales en el repositorio.
 
-## Medición y pruebas
+## Pruebas y medición
 
 Comandos offline, sin móvil, red ni cuentas:
 
@@ -39,7 +48,7 @@ Regresiones previstas: sustitución de texto privado con idéntica huella (sin f
 
 Comparación antes/después (criterio funcional, datos sintéticos): antes no existía `diagnose_current_ui` ni comparación; después se puede comparar huella permitida sin retener dumps. No hay evidencia de aumento de interacciones, detección fiable de todas las versiones de TikTok ni ganancia de tiempo en dispositivo; no se inventan benchmarks.
 
-## Límites, falsos positivos, despliegue y reversión
+## Retirada, límites, despliegue y reversión
 
 Un selector textual de otra lengua, una pantalla distinta con las mismas clases y distribuciones o un texto dinámico idéntico a una etiqueta permitida producen falsos positivos/negativos. Cambios benignos de distribución causan alarma; un árbol alterado para conservar características queda invisible. La comparación **no valida identidad de cuenta, edad de posts, integridad criptográfica externa ni éxito de acciones**. Mantener tales verificaciones en sus módulos existentes. Sin baseline real permitido, esto es **solo prueba simulada**, no canario supervisado.
 
