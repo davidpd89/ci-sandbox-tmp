@@ -313,14 +313,15 @@ class TikTokSafetyTests(unittest.TestCase):
     def test_legacy_private_follow_request_consumes_daily_quota(self):
         with tempfile.TemporaryDirectory() as folder:
             path = pathlib.Path(folder) / "registro.csv"
-            path.write_text(
-                "fecha,cuenta,tipo,post_resumen,texto_usado,resultado,notas\\n"
-                "2026-10-09,@privada,follow,,,pendiente_aprobacion,sin-id\\n".replace("\\\\n", "\\n"),
-                encoding="utf-8",
-            )
+            lines = [
+                "fecha,cuenta,tipo,post_resumen,texto_usado,resultado,notas",
+                "2026-10-09,@privada,follow,,,pendiente_aprobacion,sin-id",
+            ]
+            path.write_text("\n".join(lines) + "\n", encoding="utf-8")
             used, pending = safety.recorded_actions(str(path), today=dt.date(2026, 10, 9))
             self.assertEqual(used["follow"], 1)
             self.assertEqual(pending, set())
+
 
     def test_pending_approval_is_historical_no_retry_target(self):
         with tempfile.TemporaryDirectory() as folder:
