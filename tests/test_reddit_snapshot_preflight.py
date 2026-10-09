@@ -1,5 +1,6 @@
 """Pruebas offline del contrato de dos Listings Reddit; sin OAuth ni red."""
 import copy
+import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -82,6 +83,7 @@ class RedditSnapshotPreflightTests(unittest.TestCase):
     def test_missing_quote_provenance_blocks_markdown_quote(self):
         item = scenario()
         item["plan"]["text"] = "> Mensaje citado\\nMi respuesta"
+        item["review"]["plan_sha256"] = hashlib.sha256(item["plan"]["text"].encode("utf-8")).hexdigest()
         result = evaluate(item["plan"], item["snapshot"], item["review"],
                           now=datetime(2026, 10, 9, 19, 5, tzinfo=timezone.utc))
         self.assertFalse(result.allowed)
