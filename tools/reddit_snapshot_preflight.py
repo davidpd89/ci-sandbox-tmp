@@ -7,6 +7,8 @@ antes de una escritura real ni acredita permisos de API.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import json
@@ -29,9 +31,14 @@ def _instant(value):
     if isinstance(value, bool):
         raise ValueError("fecha inválida")
     if isinstance(value, (int, float)):
+        if not math.isfinite(value):
+            raise ValueError("fecha no finita")
         return datetime.fromtimestamp(value, tz=timezone.utc)
     if isinstance(value, str):
-        return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if dt.tzinfo is None or dt.utcoffset() is None:
+            raise ValueError("fecha sin zona horaria")
+        return dt.astimezone(timezone.utc)
     raise ValueError("fecha ausente")
 
 
@@ -49,26 +56,56 @@ def _identity(url):
     return match.group(1).casefold(), match.group(2).casefold()
 
 
-def _comment_nodes(listing):
-    """Rechaza 'more' e hijos ocultos: no acredita lectura completa."""
-    if not isinstance(listing, dict) or listing.get("kind") != "Listing":
-        raise ValueError("Listing de comentarios inválido")
-    children = listing["data"]["children"]
-    if not isinstance(children, list):
-        raise ValueError("children no es una lista")
-    for entry in children:
-        if entry.get("kind") == "more":
-            raise ValueError("comentarios plegados sin leer")
-        if entry.get("kind") != "t1":
-            raise ValueError("tipo de comentario no reconocido")
-        data = entry["data"]
-        yield data
-        replies = data.get("replies")
-        if replies not in ("", None):
-            if not isinstance(replies, dict):
-                raise ValueError("replies desconocidas")
-            yield from _comment_nodes(replies)
+def _comment_nodes(listing, post_id):
+    """Recorre el árbol sin recursión y verifica pertenencia y estructura.
 
+    Cada hijo debe señalar a su padre y al t3 del hilo; sin esa unión,
+    una cita o un autor de otro hilo podría autorizarse por accidente.
+    """
+    stack = [(listing, f"t3_{post_id}", 0)]
+    seen = set()
+    count = 0
+    while stack:
+        node, parent_id, depth = stack.pop()
+        if depth > 64:
+            raise ValueError("árbol de comentarios excesivamente profundo")
+        if not isinstance(node, dict) or node.get("kind") != "Listing":
+            raise ValueError("Listing de comentarios inválido")
+        data = node.get("data")
+        if not isinstance(data, dict) or not isinstance(data.get("children"), list):
+            raise ValueError("children no es una lista")
+        for entry in data["children"]:
+            if not isinstance(entry, dict):
+                raise ValueError("comentario mal formado")
+            if entry.get("kind") == "more":
+                raise ValueError("comentarios plegados sin leer")
+            if entry.get("kind") != "t1":
+                raise ValueError("tipo de comentario no reconocido")
+            comment = entry.get("data")
+            if not isinstance(comment, dict):
+                raise ValueError("datos de comentario inválidos")
+            comment_id = comment.get("id")
+            if (not isinstance(comment_id, str)
+                    or not re.fullmatch(r"[a-z0-9]+", comment_id, re.I)):
+                raise ValueError("ID de comentario inválido")
+            thing_id = f"t1_{comment_id.casefold()}"
+            if thing_id in seen:
+                raise ValueError("comentario duplicado en Listing")
+            seen.add(thing_id)
+            count += 1
+            if count > 10000:
+                raise ValueError("demasiados comentarios para revisión completa")
+            if (str(comment.get("parent_id", "")).casefold() != parent_id
+                    or str(comment.get("link_id", "")).casefold() != f"t3_{post_id}"
+                    or not isinstance(comment.get("author"), str)
+                    or not isinstance(comment.get("body"), str)):
+                raise ValueError("comentario ajeno, huérfano o incompleto")
+            replies = comment.get("replies", object())
+            if replies != "":
+                if not isinstance(replies, dict):
+                    raise ValueError("replies desconocidas")
+                stack.append((replies, thing_id, depth + 1))
+            yield comment
 
 def evaluate(plan, snapshot, review, *, now=None):
     """Fail-closed ante campos ausentes, incoherentes o datos caducados."""
@@ -119,6 +156,15 @@ def evaluate(plan, snapshot, review, *, now=None):
                 or review.get("rules_allow_comment") is not True
                 or review.get("history_state") != "none"):
             return Decision(False, "revisión humana, reglas o historial insuficientes")
+        # La revisión debe identificar tanto el hilo como el borrador exacto.
+        # El hash documenta la vinculación, pero NO autentica al revisor.
+        expected_digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        if (review.get("post_id") != post_id
+                or review.get("plan_sha256") != expected_digest):
+            return Decision(False, "revisión no vinculada a este hilo y texto")
+        context_checked = _instant(review["context_checked_at"])
+        if context_checked < checked or context_checked > now or now - context_checked > MAX_SNAPSHOT_AGE:
+            return Decision(False, "lectura humana desactualizada respecto al snapshot")
         rules_checked = _instant(review["rules_checked_at"])
         if rules_checked > now or now - rules_checked > MAX_RULE_AGE:
             return Decision(False, "revisión de normas caducada")
@@ -126,7 +172,7 @@ def evaluate(plan, snapshot, review, *, now=None):
             return Decision(False, "tipo de subreddit desconocido")
         if review["subreddit_type"] != "public" and review.get("account_approved") is not True:
             return Decision(False, "comunidad restringida sin autorización acreditada")
-        comments = list(_comment_nodes(comments_listing))
+        comments = list(_comment_nodes(comments_listing, post_id))
         # num_comments puede ser aproximado; si supera lo leído, fallar cerrado.
         count = post.get("num_comments")
         if isinstance(count, bool) or not isinstance(count, int) or count > len(comments) or count < 0:
