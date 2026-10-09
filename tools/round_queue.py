@@ -426,7 +426,16 @@ def _read_round_csv_rows():
     Never substitute an empty ledger for lock failure or corruption: that
     could cause a previously confirmed round to be replayed after restart.
     """
+    directory = os.path.dirname(LOG)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
     deadline = time.monotonic() + ROUND_CSV_LOCK_TIMEOUT_SECONDS
+    with _write_lock:
+        return _read_round_csv_rows_locked(deadline)
+
+
+def _read_round_csv_rows_locked(deadline):
+    """Read with the in-process mutex already held."""
     while True:
         with _recovery_guard(LOG + ".writer") as locked:
             if locked:
