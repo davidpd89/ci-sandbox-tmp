@@ -76,3 +76,8 @@ Esa ventana merece un trabajo separado de idempotencia/ledger; no debe ocultarse
 ## Estado de merge
 
 No se hizo merge. La PR queda para revisión e integración por Claude/controlador.
+
+
+## Follow-up
+
+No se abrió una PR nueva para la ventana «acción remota confirmada -> ledger durable» porque ya existe una PR abierta que cubre colas, idempotencia y recuperación: https://github.com/davidpd89/ci-sandbox-tmp/pull/26. Abrir otra habría duplicado trabajo, contra el mandato de esta ronda.
