@@ -12,6 +12,8 @@ from PIL import Image, UnidentifiedImageError
 
 MAX_WEB_IMAGE_BYTES = 20_000_000  # límite web conservador: 20 MB decimales
 WEB_FORMATS = frozenset({"BMP", "JPEG", "PNG", "TIFF", "WEBP"})
+# EXIF Orientation 5-8 intercambia ejes al mostrarse; la foto no se modifica.
+EXIF_SWAPPED_AXES = frozenset({5, 6, 7, 8})
 
 
 class PinPreflightError(ValueError):
@@ -19,7 +21,7 @@ class PinPreflightError(ValueError):
 
 
 def validate_web_pin_image(path):
-    """Lee cabecera y decodificación de una imagen; devuelve datos comprobados."""
+    """Lee cabecera y decodificación; devuelve dimensiones visuales con EXIF."""
     if not isinstance(path, (str, os.PathLike)) or not os.fspath(path):
         raise PinPreflightError("imagen: ruta local vacía o inválida")
     try:
@@ -33,11 +35,12 @@ def validate_web_pin_image(path):
             warnings.simplefilter("error", Image.DecompressionBombWarning)
             with Image.open(path) as source:
                 fmt = source.format
-                width, height = source.size
+                pixel_width, pixel_height = source.size
                 if fmt not in WEB_FORMATS:
                     raise PinPreflightError("imagen: tipo no admitido para Pin web")
-                if width <= 0 or height <= 0:
+                if pixel_width <= 0 or pixel_height <= 0:
                     raise PinPreflightError("imagen: dimensiones inválidas")
+                orientation = source.getexif().get(274, 1)
                 source.verify()
             # verify() comprueba la estructura, pero un JPEG truncado puede
             # superarla y fallar después al cargar los píxeles. Decodificarlo.
@@ -48,8 +51,13 @@ def validate_web_pin_image(path):
         if isinstance(exc, PinPreflightError):
             raise
         raise PinPreflightError("imagen: formato ilegible, truncado o sospechoso") from exc
+    width, height = ((pixel_height, pixel_width)
+                     if isinstance(orientation, int) and orientation in EXIF_SWAPPED_AXES
+                     else (pixel_width, pixel_height))
     return {"format": fmt, "bytes": size, "width": width,
-            "height": height, "aspect_2_3": width * 3 == height * 2}
+            "height": height, "aspect_2_3": width * 3 == height * 2,
+            "pixel_width": pixel_width, "pixel_height": pixel_height,
+            "exif_orientation": orientation}
 
 
 def validate_web_pin_fields(title, description, link, alt):
