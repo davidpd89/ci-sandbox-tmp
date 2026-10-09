@@ -1,0 +1,128 @@
+{
+  "id": "IG-02_WRITING_CHECKLISTS_v1",
+  "series": "IG-02 — Checklists de escritura que se usan, no se admiran",
+  "network": "Instagram",
+  "pillar": "20% proceso/oficio útil",
+  "canvas": [1080, 1350],
+  "brand": "AUTORA DEMO DÍAZ",
+  "license_url": "https://www.pexels.com/license/",
+  "production_route": "stock_real_directo_con_crops_deterministas",
+  "schedule_rule": "Las fechas son propuestas. Revalidar planner y Best Time; no programar sin autorización expresa de David.",
+  "gate_items": ["ig02_01", "ig02_02"],
+  "posts": [
+    {
+      "id": "ig02_01",
+      "date_proposed": "2026-10-03T18:00:00+02:00",
+      "reference_url": "https://www.pexels.com/photo/a-person-marking-a-composition-7968067/",
+      "asset": "ig02_01_ref.jpg",
+      "kicker": "REVISIÓN",
+      "caption": "“¿Está bien escrito?” te deja responder casi cualquier cosa. “¿Puedes borrar el primer párrafo?” ya te obliga a tocar la página.",
+      "hashtags": ["#EscrituraCreativa", "#Escritores", "#PrimerCapítulo", "#RevisiónLiteraria"],
+      "slides": [
+        {"kind":"hero","title":"7 preguntas antes de dar por bueno tu primer capítulo","body":"Ábrelo al lado del manuscrito y contesta una por una.","crop_y":42},
+        {"kind":"check","title":"1. ¿Al final ha cambiado algo?","body":"Una decisión, una información, una relación, un objetivo o un riesgo. Si todo queda igual, revisa para qué existe el capítulo.","crop_y":48},
+        {"kind":"check","title":"2. ¿Hay una pregunta que empuje?","body":"No hace falta un misterio. Basta con que el lector quiera saber qué hará alguien, qué significa algo o qué puede salir mal.","crop_y":38},
+        {"kind":"check","title":"3. ¿Tu personaje quiere algo visible?","body":"No “ser feliz”. Algo que pueda intentar conseguir en escena: entrar, ocultar, convencer, evitar, encontrar, salir.","crop_y":52},
+        {"kind":"check","title":"4. ¿Explicas antes de que importe?","body":"Subraya contexto, historia y mundo. Si una explicación llega antes de que el lector necesite esa información, prueba a moverla.","crop_y":44},
+        {"kind":"check","title":"5. ¿Repites después de mostrar?","body":"Busca el patrón acción → explicación de la acción. Si el gesto ya se entiende, corta la frase que lo traduce.","crop_y":55},
+        {"kind":"check","title":"6. ¿Hay algo concreto que solo pertenezca a esta escena?","body":"Un ruido, una costumbre, una incomodidad física, un objeto usado de verdad. No decoración: algo que interfiera.","crop_y":40},
+        {"kind":"check","title":"7. ¿Puedes empezar más tarde?","body":"Prueba a borrar mentalmente el primer párrafo. Luego el segundo. Quédate con el primer punto donde ya está pasando algo.","crop_y":50},
+        {"kind":"final","title":"Guárdalo y pásalo sobre tu capítulo, no sobre una idea abstracta.","cta":"GUARDA PARA TU PRÓXIMA REVISIÓN","crop_y":46}
+      ]
+    },
+    {
+      "id": "ig02_02",
+      "date_proposed": "2026-10-07T18:00:00+02:00",
+      "reference_url": "https://www.pexels.com/photo/casual-conversation-in-cafe-with-natural-light-30692467/",
+      "asset": "ig02_02_ref.jpg",
+      "kicker": "DIÁLOGO",
+      "caption": "Un diálogo puede estar perfectamente escrito y seguir sonando raro por una razón muy simple: los dos personajes están colaborando demasiado con la escena.",
+      "hashtags": ["#EscrituraCreativa", "#Escritores", "#Diálogos", "#EscribirNovela"],
+      "slides": [
+        {"kind":"hero","title":"6 pruebas para un diálogo que suena demasiado escrito","body":"No para hacerlo “realista”. Para quitarle la sensación de guion de información.","crop_y":45},
+        {"kind":"check","title":"1. ¿Todos contestan exactamente a lo preguntado?","body":"En conversación real se esquiva, se responde tarde, se cambia de asunto y se contesta a lo que uno cree que le están preguntando.","crop_y":40},
+        {"kind":"check","title":"2. ¿Se cuentan cosas que ambos ya saben?","body":"“Como sabes, llevamos diez años aquí…” suele existir para el lector. Busca otra forma de hacer necesaria esa información.","crop_y":50},
+        {"kind":"check","title":"3. ¿Todas las frases tienen el mismo ritmo?","body":"Si cada turno ocupa dos líneas limpias, rompe la regularidad: uno corta, otro se alarga, otro deja algo sin terminar.","crop_y":42},
+        {"kind":"check","title":"4. ¿El cuerpo ha desaparecido?","body":"La conversación ocurre mientras alguien sirve café, busca llaves, evita una mirada o pierde el autobús. Deja que la tarea compita con las palabras.","crop_y":55},
+        {"kind":"check","title":"5. ¿Los dos quieren lo mismo de la charla?","body":"Uno puede querer cerrar el tema y el otro abrirlo. Uno información y el otro perdón. Esa diferencia genera fricción sin fabricar pelea.","crop_y":38},
+        {"kind":"check","title":"6. ¿El diálogo termina demasiado limpio?","body":"No todo queda resuelto cuando termina la escena. Deja un dato mal entendido, una respuesta pendiente o una emoción que llega después.","crop_y":48},
+        {"kind":"final","title":"Haz estas seis preguntas sobre una conversación concreta.","cta":"GUARDA PARA CUANDO TOQUE REESCRIBIR DIÁLOGO","crop_y":52}
+      ]
+    },
+    {
+      "id": "ig02_03",
+      "date_proposed": "2026-10-11T18:00:00+02:00",
+      "reference_url": "https://www.pexels.com/photo/person-hand-holding-old-coin-12689958/",
+      "asset": "ig02_03_ref.jpg",
+      "kicker": "WORLDBUILDING",
+      "caption": "Una moneda que te rechazan en un mostrador explica bastante del mundo sin que nadie tenga que empezar por “hace trescientos años…”.",
+      "hashtags": ["#EscrituraCreativa", "#Worldbuilding", "#EscrituraFantástica", "#Fantasía"],
+      "slides": [
+        {"kind":"hero","title":"5 formas de meter worldbuilding sin parar la escena","body":"La regla existe. La pregunta es cuándo necesita verla el lector.","crop_y":45},
+        {"kind":"check","title":"1. Haz que alguien choque con la regla","body":"Una norma se entiende mejor cuando impide entrar, obliga a pagar, retrasa un viaje o pone a alguien en peligro.","crop_y":38},
+        {"kind":"check","title":"2. Enseña primero el coste","body":"Antes de explicar el sistema mágico, muestra qué pierde alguien por usarlo. El lector ya tendrá una razón para querer entenderlo.","crop_y":52},
+        {"kind":"check","title":"3. Convierte la información en trámite","body":"Un billete, un permiso, una cola, una moneda que no aceptan. El mundo se nota en lo que obliga a hacer.","crop_y":42},
+        {"kind":"check","title":"4. Deja que dos personajes discrepen","body":"Una institución puede ser normal para uno y abusiva para otro. Así aparece contexto sin una voz neutral explicándolo todo.","crop_y":55},
+        {"kind":"check","title":"5. Permite que alguien se equivoque","body":"El lector no necesita recibir siempre la versión correcta a la primera. Una mala interpretación también construye mundo.","crop_y":40},
+        {"kind":"final","title":"El mundo pesa más cuando interfiere.","cta":"GUARDA PARA TU PRÓXIMA ESCENA DE EXPOSICIÓN","crop_y":48}
+      ]
+    },
+    {
+      "id": "ig02_04",
+      "date_proposed": "2026-10-15T18:00:00+02:00",
+      "reference_url": "https://www.pexels.com/photo/man-looking-at-a-woman-walking-out-of-the-apartment-6643025/",
+      "asset": "ig02_04_ref.jpg",
+      "kicker": "PODA",
+      "caption": "La escena difícil de cortar no suele ser la mala. Esa se ve venir. La peligrosa es la que funciona sola y, aun así, no deja nada que la novela necesite después.",
+      "hashtags": ["#EscrituraCreativa", "#RevisiónLiteraria", "#EstructuraNarrativa", "#EscribirNovela"],
+      "slides": [
+        {"kind":"hero","title":"6 pruebas para saber si una escena se puede cortar","body":"No preguntes si te gusta. Pregunta qué deja detrás.","crop_y":45},
+        {"kind":"check","title":"1. ¿Alguien entra y sale igual?","body":"Misma información, mismo objetivo, misma relación, mismo riesgo. Si nada cambia, la escena tiene que justificar muy bien su espacio.","crop_y":40},
+        {"kind":"check","title":"2. ¿Empieza antes de la fricción?","body":"Llegadas, saludos, sentarse, pedir café. Prueba a entrar justo donde aparece la decisión, el problema o la información relevante.","crop_y":52},
+        {"kind":"check","title":"3. ¿La decisión ya ocurrió en otra escena?","body":"Si aquí solo vuelves a explicar por qué alguien hará algo que ya decidió, quizá estás repitiendo una conclusión.","crop_y":42},
+        {"kind":"check","title":"4. ¿La información existe en otro sitio?","body":"Marca qué datos nuevos aporta. Si todos aparecen antes o después de forma más natural, esta escena pierde una de sus funciones.","crop_y":55},
+        {"kind":"check","title":"5. ¿Deja un residuo?","body":"Un objeto, una deuda, una sospecha, una herida, una frase mal entendida. Algo debe poder reaparecer porque esta escena sucedió.","crop_y":38},
+        {"kind":"check","title":"6. ¿Puede fusionarse con una tarea que ya existe?","body":"A veces la conversación necesaria no necesita escena propia. Puede ocurrir mientras los personajes hacen algo que ya empuja la historia.","crop_y":48},
+        {"kind":"final","title":"Cortar no es acelerar. Es dejar solo lo que produce consecuencias.","cta":"GUARDA PARA TU PRÓXIMA PODA","crop_y":50}
+      ]
+    },
+    {
+      "id": "ig02_05",
+      "date_proposed": "2026-10-19T18:00:00+02:00",
+      "reference_url": "https://www.pexels.com/photo/a-couple-walking-on-the-street-while-having-conversation-5779567/",
+      "asset": "ig02_05_ref.jpg",
+      "kicker": "ROMANCE",
+      "caption": "Dos personas pueden quererse muchísimo y seguir teniendo una madre que llama en mal momento, una deuda, un turno de trabajo o un plan que no cabe en la vida del otro.",
+      "hashtags": ["#EscrituraCreativa", "#Romance", "#Romantasy", "#EscribirNovela"],
+      "slides": [
+        {"kind":"hero","title":"6 comprobaciones para que el romance no viva solo de química","body":"Atracción puede iniciar una relación. No debería ser toda su arquitectura.","crop_y":45},
+        {"kind":"check","title":"1. ¿Cada uno quiere algo que existiría sin el otro?","body":"Trabajo, familia, seguridad, reconocimiento, huida. Si todos sus objetivos son románticos, el mundo se encoge alrededor de la pareja.","crop_y":40},
+        {"kind":"check","title":"2. ¿Sus planes pueden chocar sin que nadie sea idiota?","body":"Dos objetivos razonables e incompatibles producen conflicto más resistente que un malentendido que una frase resolvería.","crop_y":52},
+        {"kind":"check","title":"3. ¿Hay cosas que no dicen?","body":"No por misterio artificial. Porque admitirlas tendría coste: ceder poder, revelar miedo, romper una promesa o cambiar la relación.","crop_y":42},
+        {"kind":"check","title":"4. ¿Estar juntos les cuesta algo?","body":"Tiempo, posición, seguridad, una alianza, una imagen de sí mismos. Sin coste, la decisión romántica pierde peso.","crop_y":55},
+        {"kind":"check","title":"5. ¿Siguen teniendo gente alrededor?","body":"Amigos, rivales, familia, compañeros. Las relaciones externas evitan que la pareja funcione como un planeta con dos habitantes.","crop_y":38},
+        {"kind":"check","title":"6. ¿El final romántico resuelve también problemas que no le pertenecen?","body":"Encontrar pareja no cura automáticamente trauma, dinero, familia, identidad o culpa. Decide qué continúa después del beso.","crop_y":48},
+        {"kind":"final","title":"La química abre la puerta. Las consecuencias hacen que importe.","cta":"GUARDA PARA REVISAR TU SUBTRAMA ROMÁNTICA","crop_y":50}
+      ]
+    },
+    {
+      "id": "ig02_06",
+      "date_proposed": "2026-10-23T18:00:00+02:00",
+      "reference_url": "https://www.pexels.com/photo/hands-holding-illuminated-ball-at-night-12848234/",
+      "asset": "ig02_06_ref.jpg",
+      "kicker": "MAGIA",
+      "caption": "Si cada problema puede resolverse inventando una excepción nueva, el lector deja de mirar el peligro y empieza a mirar al autor.",
+      "hashtags": ["#EscrituraCreativa", "#SistemaDeMagia", "#EscrituraFantástica", "#Fantasía"],
+      "slides": [
+        {"kind":"hero","title":"6 preguntas para un sistema de magia con consecuencias","body":"No necesitas veinte reglas. Necesitas reglas que alguien tenga que vivir.","crop_y":45},
+        {"kind":"check","title":"1. ¿Qué cuesta usarla?","body":"Dinero, tiempo, cuerpo, memoria, reputación, acceso. El coste no tiene que ser mortal; tiene que condicionar decisiones.","crop_y":40},
+        {"kind":"check","title":"2. ¿Qué NO puede hacer?","body":"Un límite claro crea soluciones interesantes. Si la magia siempre puede añadir una excepción nueva, el conflicto pierde suelo.","crop_y":52},
+        {"kind":"check","title":"3. ¿Quién tiene acceso y quién no?","body":"Si una capacidad da ventaja real, alguien intentará controlarla, venderla, prohibirla, heredársela a otro o falsificarla.","crop_y":42},
+        {"kind":"check","title":"4. ¿Qué cambió en la sociedad?","body":"Trabajo, transporte, medicina, delito, educación, religión. Una magia cotidiana debería haber dejado huellas fuera de las peleas.","crop_y":55},
+        {"kind":"check","title":"5. ¿Cómo se equivoca la gente al usarla?","body":"No solo fallos técnicos. Malas decisiones, supersticiones, atajos, información incompleta y personas que creen dominar más de lo que dominan.","crop_y":38},
+        {"kind":"check","title":"6. ¿Qué relación rompe o complica?","body":"Poder oculto, deuda, desigualdad, dependencia. La regla mágica gana fuerza cuando altera cómo dos personas pueden tratarse.","crop_y":48},
+        {"kind":"final","title":"Una regla útil es una regla que obliga a elegir.","cta":"GUARDA PARA TU PRÓXIMA REVISIÓN DE MAGIA","crop_y":50}
+      ]
+    }
+  ]
+}

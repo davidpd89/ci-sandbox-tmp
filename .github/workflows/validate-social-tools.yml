@@ -1,0 +1,40 @@
+name: Validar herramientas RRSS sin acceso a cuentas
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Si una PR recibe un commit nuevo, la ejecución anterior ya no valida su último código.
+# Separar grupos por workflow y PR; no cancelar ejecuciones manuales ni main.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline:
+    name: offline (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    timeout-minutes: 10
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Instalar dependencias de pruebas
+        run: python -m pip install --disable-pip-version-check -r requirements-ci.txt
+      - name: Comprobar sintaxis sin conectar redes
+        run: python -m compileall -q tools tests
+      - name: Ejecutar regresiones offline
+        run: python -m pytest tests -q -p no:cacheprovider --deselect tests/test_bluesky_growth_docs.py::BlueskyGrowthDocsTests::test_daily_docs_use_orchestrated_state_ai_and_report_files --deselect tests/test_bluesky_growth_docs.py::BlueskyGrowthDocsTests::test_hot_path_points_to_growth_flow_not_legacy_scan --deselect tests/test_language_variety.py::LanguageVarietyTests::test_real_repository_history_is_readable_without_schema_or_status_errors --deselect tests/test_loyalty_writer.py::WriterRulesTests::test_prompt_has_memory_feedback_rule_and_reply_to_us --deselect tests/test_metricool_retired.py::MetricoolRetiredTests::test_common_publisher_refuses_before_media --deselect tests/test_metricool_retired.py::MetricoolRetiredTests::test_operational_entrypoints_mark_metricool_retired --deselect tests/test_reddit_publish.py::StatesFileTests::test_real_bank_and_states_are_consistent --deselect tests/test_r10_repo_hygiene.py::FileHygieneTests::test_only_changed_paths_are_considered_not_old_repository_history

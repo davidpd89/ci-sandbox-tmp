@@ -1,0 +1,17 @@
+{
+  "id":"ig08_06",
+  "character_version":"LECTOR_A_v1",
+  "reference_url":"https://www.pexels.com/photo/a-person-reading-a-book-in-bed-7128187/",
+  "source_license":"https://www.pexels.com/es-es/license/",
+  "keep":["lectura en cama","libro abierto","intimidad"],
+  "change":["identidad","habitación","ropa","libro"],
+  "panels":[
+    {"setting":"bed","action":"bed_pages","expression":"neutral"},
+    {"setting":"bed","action":"bed_close","expression":"resignado"},
+    {"setting":"bed","action":"bed_tea","expression":"neutral"},
+    {"setting":"bed","action":"bed_reopen","expression":"resignado","bubble":"Todavía no.","tail_x":540,"tail_y":600}
+  ],
+  "caption":"Quedan doce páginas y de repente preparar té parece una tarea urgente.",
+  "hashtags":["#Bookstagram","#Lectores","#FinalDeLibro","#LibrosEnEspañol"],
+  "first_comment":null
+}

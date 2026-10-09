@@ -1,0 +1,1334 @@
+{
+  "version": 1,
+  "budgets": {
+    "max_read_requests": 1800,
+    "max_candidates": 5000,
+    "profile_batch_limit": 25,
+    "max_profiles_to_vet": 120,
+    "author_feed_posts": 6,
+    "thread_seeds": 12,
+    "engager_seeds": 10,
+    "similar_actor_seeds": 10,
+    "custom_feeds": 2,
+    "custom_feed_posts": 30,
+    "post_search_limit": 60,
+    "actor_search_limit": 50,
+    "graph_neighbor_seeds": 6,
+    "graph_neighbor_limit": 40,
+    "starter_pack_seeds": 6,
+    "starter_pack_items": 100,
+    "own_likes_limit": 100,
+    "reply_search_limit": 50,
+    "starter_pack_queries_per_round": 6,
+    "starter_pack_search_limit": 30,
+    "saved_feed_posts": 30,
+    "actor_menu_seeds": 4,
+    "lists_per_actor": 1,
+    "actor_feeds_per_actor": 1,
+    "known_followers_checks": 6,
+    "jetstream_cache_posts": 75,
+    "dynamic_tags_per_round": 5,
+    "suggested_accounts_limit": 75,
+    "thread_depth": 3,
+    "engager_likes_limit": 40,
+    "engager_reposts_limit": 30,
+    "engager_quotes_limit": 25,
+    "thread_posts_limit": 100,
+    "own_network_limit": 100,
+    "own_posts_limit": 12,
+    "own_engagement_seeds": 10,
+    "jetstream_retention_hours": 72,
+    "valued_history_records": 100,
+    "valued_history_seeds": 10,
+    "jetstream_active_authors": 25,
+    "jetstream_min_author_posts": 2,
+    "activity_subscriptions_limit": 100,
+    "bookmarks_limit": 100,
+    "relationship_exclusion_pages": 5,
+    "profile_review_reserve": 400,
+    "actionability_profiles": 150,
+    "personalized_suggestions_limit": 50,
+    "personalized_starter_packs_limit": 25,
+    "personalized_pack_expansions": 3,
+    "taste_listener_dids": 50,
+    "taste_cache_posts": 75,
+    "taste_min_paths": 1,
+    "taste_retention_hours": 168,
+    "second_wave_seeds": 4,
+    "second_wave_min_new_handles": 2,
+    "second_wave_depth": 3,
+    "second_wave_profiles_per_depth": 4,
+    "joined_starter_pack_expansions": 2,
+    "vet_gap_profiles": 300
+  },
+  "coverage": {
+    "post_queries_per_family": 2,
+    "actor_queries_total": 5,
+    "required_surfaces": [
+      "own_post_engagers",
+      "own_network",
+      "notifications",
+      "activity_subscriptions",
+      "bookmarks",
+      "relationship_exclusions",
+      "valued_history",
+      "timeline",
+      "suggested_accounts",
+      "post_search",
+      "actor_search",
+      "thread_commenters",
+      "engagers",
+      "similar_accounts",
+      "graph_neighbors",
+      "reply_search",
+      "starter_pack_search",
+      "own_likes",
+      "saved_feeds",
+      "post_actionability",
+      "author_feed",
+      "second_wave"
+    ],
+    "replies_only_queries_total": 6,
+    "tag_queries_per_round": 5,
+    "preference_interest_queries": 4,
+    "popular_feed_queries_per_round": 4,
+    "optional_surfaces": [
+      "curated_lists",
+      "actor_feeds",
+      "joined_starter_pack",
+      "popular_feed_search",
+      "trending_topics"
+    ]
+  },
+  "shortlist": {
+    "profiles": 400,
+    "posts_per_profile": 3,
+    "acquisition_min": 100,
+    "community_target": 50,
+    "seen_window_days": 7,
+    "acquisition_cooldown_days": 7,
+    "community_cooldown_days": 2,
+    "acquisition_actionable_min": 50,
+    "acquisition_high_value_min": 20,
+    "auto_follow_score_min": 14.0,
+    "auto_like_score_min": 10.0,
+    "like_max_age_days": 45,
+    "like_max_age_acquisition_days": 21,
+    "follow_max_followers": 20000
+  },
+  "query_families": [
+    {
+      "name": "lectura_general",
+      "queries": [
+        "lectura",
+        "leyendo",
+        "leyendo ahora",
+        "qué estás leyendo",
+        "qué leer",
+        "libro recomendado",
+        "recomiendo este libro",
+        "terminé de leer",
+        "próxima lectura",
+        "club de lectura",
+        "lectura actual",
+        "ahora estoy leyendo",
+        "acabo de empezar",
+        "acabo de terminar",
+        "lectura conjunta",
+        "reto de lectura",
+        "maratón de lectura",
+        "tbr libros",
+        "currently reading libros",
+        "mis lecturas",
+        "libros pendientes",
+        "libros por leer",
+        "libro del mes",
+        "cinco estrellas libro",
+        "5 estrellas libro",
+        "reseña sin spoilers",
+        "libro que me sorprendió",
+        "me enganchó este libro",
+        "lectura abandonada",
+        "dnf libro",
+        "buddy read",
+        "lectura compartida"
+      ]
+    },
+    {
+      "name": "fantasia_romantasy",
+      "queries": [
+        "fantasía",
+        "fantasía juvenil",
+        "romantasy",
+        "alta fantasía",
+        "fantasía urbana",
+        "saga fantástica",
+        "worldbuilding",
+        "dragones novela",
+        "fantasía épica",
+        "fantasía oscura",
+        "dark fantasy",
+        "fantasy romance",
+        "fantasía romántica",
+        "enemies to lovers libro",
+        "found family fantasía",
+        "magia novela",
+        "sistema de magia",
+        "personajes fantasía",
+        "mapa fantasía",
+        "saga de fantasía",
+        "young adult fantasy",
+        "cozy fantasy",
+        "grimdark",
+        "academia mágica",
+        "brujas fantasía",
+        "fae fantasía",
+        "fantasía española",
+        "fantasía en español",
+        "fantasía autoconclusiva",
+        "slow burn fantasía",
+        "friends to lovers libro"
+      ]
+    },
+    {
+      "name": "escritura_autores",
+      "queries": [
+        "estoy escribiendo",
+        "escribiendo novela",
+        "escritor",
+        "escritora",
+        "novela en proceso",
+        "manuscrito",
+        "borrador novela",
+        "autor indie",
+        "publicar novela",
+        "bloqueo escritor",
+        "escribiendo fantasía",
+        "escribiendo mi libro",
+        "escribiendo mi novela",
+        "terminé el manuscrito",
+        "corrigiendo novela",
+        "editando novela",
+        "proyecto literario",
+        "wip novela",
+        "wordcount",
+        "nanowrimo",
+        "worldbuilding escritor",
+        "creando personajes",
+        "escritura creativa",
+        "lectores beta",
+        "beta readers",
+        "corrección manuscrito",
+        "revisión novela",
+        "escritores españoles",
+        "autores españoles",
+        "escritor indie español"
+      ]
+    },
+    {
+      "name": "resenas_comunidad",
+      "queries": [
+        "reseña libro",
+        "reseñas de libros",
+        "booksky",
+        "book club",
+        "librería",
+        "biblioteca",
+        "recomendaciones libros",
+        "libros favoritos",
+        "me ha gustado este libro",
+        "book review",
+        "book recommendation",
+        "recomendación de libros",
+        "book haul",
+        "wrap up lecturas",
+        "club lectura",
+        "lectores",
+        "comunidad lectora",
+        "bookstagram",
+        "booktok",
+        "booktube",
+        "reseñando",
+        "reseña fantasía",
+        "currently reading",
+        "am reading",
+        "book community",
+        "fantasy readers",
+        "indie books",
+        "indie author",
+        "buddy read libros"
+      ]
+    },
+    {
+      "name": "generos_adyacentes",
+      "queries": [
+        "ciencia ficción",
+        "terror novela",
+        "ficción especulativa",
+        "novela coral",
+        "saga familiar",
+        "juvenil libros",
+        "misterio novela",
+        "distopía",
+        "fantasía histórica",
+        "realismo mágico",
+        "aventura novela",
+        "thriller fantástico",
+        "urban fantasy",
+        "space opera",
+        "dark academia libro",
+        "mitología novela",
+        "retelling",
+        "cuento fantástico",
+        "relato fantástico",
+        "novela juvenil"
+      ]
+    },
+    {
+      "name": "intencion_conversacional",
+      "queries": [
+        "recomiéndame un libro",
+        "recomendadme un libro",
+        "busco libro",
+        "qué libro leo",
+        "qué novela recomiendas",
+        "necesito lectura",
+        "opiniones sobre este libro",
+        "alguien ha leído",
+        "qué estáis leyendo",
+        "qué estás leyendo ahora",
+        "recomendaciones de fantasía",
+        "me recomendáis libros",
+        "busco fantasía",
+        "quiero empezar a leer",
+        "libro para salir del bloqueo",
+        "qué os ha parecido",
+        "opiniones de lectores",
+        "recomendadme fantasía",
+        "algún libro parecido",
+        "qué autor recomendáis"
+      ]
+    },
+    {
+      "name": "gpt_intencion_recomendacion",
+      "queries": [
+        "recomendadme algo para leer",
+        "recomendame algo para leer",
+        "necesito recomendaciones",
+        "necesito un libro",
+        "necesito nueva lectura",
+        "no sé qué leer",
+        "no se que leer",
+        "qué leo después",
+        "que leo despues",
+        "quiero leer fantasía",
+        "alguna recomendación de fantasía",
+        "libros parecidos a",
+        "algo parecido a",
+        "si me gustó",
+        "libro que enganche",
+        "libro que atrape",
+        "salir del bloqueo lector",
+        "reading slump"
+      ],
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "name": "gpt_intencion_terminado",
+      "queries": [
+        "acabo de acabar",
+        "lo acabo de terminar",
+        "necesito hablar de este libro",
+        "no supero este libro",
+        "no puedo superar este libro",
+        "me ha destrozado",
+        "me dejó pensando",
+        "menudo final",
+        "necesito la segunda parte",
+        "necesito el siguiente",
+        "cinco estrellas",
+        "lectura terminada"
+      ],
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "name": "gpt_resenas_seguimiento",
+      "queries": [
+        "mini reseña",
+        "mini reseña sin spoilers",
+        "reseña con spoilers",
+        "mis lecturas del mes",
+        "lecturas de octubre",
+        "wrap up",
+        "wrap-up",
+        "tbr del mes",
+        "mi tbr",
+        "tbr octubre",
+        "bookhaul",
+        "unboxing libros",
+        "novedades editoriales",
+        "últimas lecturas",
+        "mejores lecturas",
+        "favoritos del mes",
+        "libros del mes"
+      ],
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "name": "gpt_escritura_intencion",
+      "queries": [
+        "empiezo novela",
+        "empecé a escribir",
+        "quiero escribir una novela",
+        "tengo una idea para una novela",
+        "nuevo wip",
+        "mi wip",
+        "avance del manuscrito",
+        "palabras escritas hoy",
+        "sesión de escritura",
+        "sprint de escritura",
+        "writing sprint",
+        "primer borrador",
+        "segundo borrador",
+        "reescribiendo novela",
+        "terminé el primer borrador",
+        "busco lector beta",
+        "busco lectores beta",
+        "busco beta readers",
+        "enviando manuscrito",
+        "editoriales para enviar",
+        "autopublicar",
+        "voy a autopublicar"
+      ],
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "name": "gpt_fantasia_senales",
+      "queries": [
+        "magia dura",
+        "magia blanda",
+        "construcción de mundo",
+        "lore de mi mundo",
+        "lore de mi novela",
+        "mapa de mi novela",
+        "mapa de mi mundo",
+        "panteón",
+        "dioses de mi mundo",
+        "criaturas fantásticas",
+        "reinos ficticios",
+        "lengua ficticia",
+        "fantasy wip",
+        "romantasy wip",
+        "dark fantasy wip"
+      ],
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "name": "gpt_tropes",
+      "queries": [
+        "enemies to lovers",
+        "friends to lovers",
+        "slow burn",
+        "found family",
+        "chosen one",
+        "morally grey",
+        "villain romance",
+        "forbidden romance",
+        "magic academy",
+        "retelling mitológico"
+      ],
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "name": "adyacente_rol",
+      "queries": [
+        "juegos de rol",
+        "rol de mesa",
+        "partida de rol",
+        "director de juego",
+        "máster de rol",
+        "campaña de rol",
+        "TTRPG",
+        "Pathfinder",
+        "Call of Cthulhu",
+        "dungeons and dragons"
+      ],
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "name": "adyacente_worldbuilding",
+      "queries": [
+        "construcción de mundos",
+        "mapa fantástico",
+        "mapa de fantasía",
+        "lore",
+        "bestario"
+      ],
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "name": "adyacente_comic_manga",
+      "queries": [
+        "cómic",
+        "novela gráfica",
+        "manga",
+        "mangaka",
+        "salón del manga",
+        "Manga Barcelona"
+      ],
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "name": "adyacente_videojuegos_narrativos",
+      "queries": [
+        "JRPG",
+        "videojuego narrativo",
+        "juegos narrativos",
+        "Baldur's Gate",
+        "Dragon Age",
+        "Final Fantasy",
+        "The Witcher"
+      ],
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "name": "adyacente_mitologia_historia",
+      "queries": [
+        "mitología",
+        "mitología griega",
+        "mitología nórdica",
+        "folclore",
+        "leyendas",
+        "historia medieval",
+        "Edad Media",
+        "medievalismo"
+      ],
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "name": "adyacente_ilustracion_podcast",
+      "queries": [
+        "ilustración fantástica",
+        "fantasy art",
+        "character design",
+        "concept art fantasy",
+        "podcast libros",
+        "podcast literatura",
+        "podcast fantasía"
+      ],
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "name": "reciprocidad_apoyo_gpt",
+      "queries": [
+        "escritores apoyémonos",
+        "autores apoyémonos",
+        "apoyo mutuo escritores",
+        "apoyo mutuo autores",
+        "autores emergentes",
+        "escritores emergentes",
+        "presenta tu libro",
+        "presenta tu cuenta de escritor",
+        "deja tu libro en comentarios",
+        "deja tu usuario en comentarios",
+        "sígueme y te sigo escritores",
+        "sigamos escritores",
+        "sigo de vuelta escritores",
+        "te sigo de vuelta autores",
+        "follow back escritores",
+        "f4f escritores",
+        "sfs escritores",
+        "comunidad de escritores",
+        "comunidad de autores",
+        "autores noveles",
+        "escritores noveles",
+        "starter pack escritores español",
+        "starter pack autores español",
+        "starter pack libros español",
+        "feed escritores español",
+        "feed libros español",
+        "feed fantasía español",
+        "lista autores español",
+        "booksky español",
+        "writersky español"
+      ]
+    }
+  ],
+  "actor_queries": [
+    "lector",
+    "lectora",
+    "escritor",
+    "escritora",
+    "autor fantasía",
+    "autora fantasía",
+    "romantasy",
+    "reseñas libros",
+    "club de lectura",
+    "booksky",
+    "biblioteca",
+    "librería",
+    "lector fantasía",
+    "lectora fantasía",
+    "escritor fantasía",
+    "escritora fantasía",
+    "autor romantasy",
+    "autora romantasy",
+    "reseñador libros",
+    "reseñadora libros",
+    "book reviewer",
+    "book blogger",
+    "editorial independiente",
+    "librero",
+    "librera",
+    "corrector literario",
+    "editor literario",
+    "book club",
+    "fantasy writer"
+  ],
+  "tag_queries": [
+    {
+      "tag": "BookSky",
+      "query": "lectura"
+    },
+    {
+      "tag": "WriterSky",
+      "query": "escribir"
+    },
+    {
+      "tag": "ReaderSky",
+      "query": "libros"
+    },
+    {
+      "tag": "fantasy",
+      "query": "fantasía"
+    },
+    {
+      "tag": "romantasy",
+      "query": "romantasy"
+    },
+    {
+      "tag": "Libros",
+      "query": "libros"
+    },
+    {
+      "tag": "Lectura",
+      "query": "lectura"
+    },
+    {
+      "tag": "Literatura",
+      "query": "literatura"
+    },
+    {
+      "tag": "Fantasia",
+      "query": "fantasía"
+    },
+    {
+      "tag": "FantasiaJuvenil",
+      "query": "fantasía juvenil"
+    },
+    {
+      "tag": "Escritores",
+      "query": "escritores"
+    },
+    {
+      "tag": "Escritura",
+      "query": "escritura"
+    },
+    {
+      "tag": "BookClub",
+      "query": "libros"
+    },
+    {
+      "tag": "BookReview",
+      "query": "reseña"
+    },
+    {
+      "tag": "BookRecommendations",
+      "query": "libros"
+    },
+    {
+      "tag": "Bookstagram",
+      "query": "libros"
+    },
+    {
+      "tag": "BookTok",
+      "query": "libros"
+    },
+    {
+      "tag": "FantasyBooks",
+      "query": "fantasía"
+    },
+    {
+      "tag": "FantasyWriter",
+      "query": "fantasía"
+    },
+    {
+      "tag": "WritingCommunity",
+      "query": "escribir"
+    },
+    {
+      "tag": "Worldbuilding",
+      "query": "worldbuilding"
+    },
+    {
+      "tag": "CienciaFiccion",
+      "query": "ciencia ficción"
+    },
+    {
+      "tag": "Terror",
+      "query": "terror"
+    },
+    {
+      "tag": "YoungAdult",
+      "query": "juvenil"
+    },
+    {
+      "tag": "CurrentlyReading",
+      "query": "lectura"
+    },
+    {
+      "tag": "AmReading",
+      "query": "lectura"
+    },
+    {
+      "tag": "BookCommunity",
+      "query": "libros"
+    },
+    {
+      "tag": "FantasyReaders",
+      "query": "fantasía"
+    },
+    {
+      "tag": "ReadersOfBluesky",
+      "query": "libros"
+    },
+    {
+      "tag": "WritersOfBluesky",
+      "query": "escritura"
+    },
+    {
+      "tag": "IndieAuthor",
+      "query": "autor indie"
+    },
+    {
+      "tag": "IndieBooks",
+      "query": "libros"
+    },
+    {
+      "tag": "CozyFantasy",
+      "query": "cozy fantasy"
+    },
+    {
+      "tag": "Grimdark",
+      "query": "grimdark"
+    },
+    {
+      "tag": "RomanceBooks",
+      "query": "romantasy"
+    },
+    {
+      "tag": "BookBlogger",
+      "query": "reseña libro"
+    },
+    {
+      "tag": "FantasySky",
+      "query": "FantasySky",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "BlueSkyBooks",
+      "query": "BlueSkyBooks",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "IndieAuthors",
+      "query": "IndieAuthors",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "LibrosEnEspañol",
+      "query": "LibrosEnEspañol",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "LiteraturaEnEspañol",
+      "query": "LiteraturaEnEspañol",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "AutoresIndie",
+      "query": "AutoresIndie",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "AutoresIndependientes",
+      "query": "AutoresIndependientes",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "Autopublicacion",
+      "query": "Autopublicacion",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "EscritoresEnEspañol",
+      "query": "EscritoresEnEspañol",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "LectoresDeFantasia",
+      "query": "LectoresDeFantasia",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "RecomendacionDeLibros",
+      "query": "RecomendacionDeLibros",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "RecomendacionesDeLibros",
+      "query": "RecomendacionesDeLibros",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "Reseñas",
+      "query": "Reseñas",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "TBR",
+      "query": "TBR",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "DNF",
+      "query": "DNF",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "BookHaul",
+      "query": "BookHaul",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "WrapUp",
+      "query": "WrapUp",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "ReadingWrapUp",
+      "query": "ReadingWrapUp",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "DarkFantasy",
+      "query": "DarkFantasy",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "EpicFantasy",
+      "query": "EpicFantasy",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "UrbanFantasy",
+      "query": "UrbanFantasy",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "HistoricalFantasy",
+      "query": "HistoricalFantasy",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "FantasyRomance",
+      "query": "FantasyRomance",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "RomantasyBooks",
+      "query": "RomantasyBooks",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "HorrorBooks",
+      "query": "HorrorBooks",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "HorrorSky",
+      "query": "HorrorSky",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "SciFiBooks",
+      "query": "SciFiBooks",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "ScienceFiction",
+      "query": "ScienceFiction",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "SpeculativeFiction",
+      "query": "SpeculativeFiction",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "YoungAdultBooks",
+      "query": "YoungAdultBooks",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "YAFantasy",
+      "query": "YAFantasy",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "AmWriting",
+      "query": "AmWriting",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "AmWritingFantasy",
+      "query": "AmWritingFantasy",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "WritingFantasy",
+      "query": "WritingFantasy",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "WIP",
+      "query": "WIP",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "WIPWednesday",
+      "query": "WIPWednesday",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "WorldbuildingWednesday",
+      "query": "WorldbuildingWednesday",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "MagicSystem",
+      "query": "MagicSystem",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "BetaReaders",
+      "query": "BetaReaders",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "JuegosDeRol",
+      "query": "JuegosDeRol",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "RolEnEspañol",
+      "query": "RolEnEspañol",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "TTRPG",
+      "query": "TTRPG",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "Manga",
+      "query": "Manga",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "Comic",
+      "query": "Comic",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "Comics",
+      "query": "Comics",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "NovelaGrafica",
+      "query": "NovelaGrafica",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "Mitologia",
+      "query": "Mitologia",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "Mythology",
+      "query": "Mythology",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "HistoriaMedieval",
+      "query": "HistoriaMedieval",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "FantasyArt",
+      "query": "FantasyArt",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "Celsius232",
+      "query": "Celsius232",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "Hispacon",
+      "query": "Hispacon",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "PremiosIgnotus",
+      "query": "PremiosIgnotus",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "FeriaDelLibroMadrid",
+      "query": "FeriaDelLibroMadrid",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "FLMadrid",
+      "query": "FLMadrid",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "SantJordi",
+      "query": "SantJordi",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "MangaBarcelona",
+      "query": "MangaBarcelona",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "FILGuadalajara",
+      "query": "FILGuadalajara",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "FILGDL",
+      "query": "FILGDL",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "FILBo",
+      "query": "FILBo",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "FILSA",
+      "query": "FILSA",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "FILima",
+      "query": "FILima",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "FeriaDelLibroCordoba",
+      "query": "FeriaDelLibroCordoba",
+      "vocab": "vocab_gpt_2026-10-05"
+    },
+    {
+      "tag": "apoyomutuo",
+      "query": "libros"
+    },
+    {
+      "tag": "apoyoescritores",
+      "query": "libros"
+    },
+    {
+      "tag": "apoyoautores",
+      "query": "libros"
+    },
+    {
+      "tag": "autoresemergentes",
+      "query": "libros"
+    },
+    {
+      "tag": "escritoresemergentes",
+      "query": "libros"
+    },
+    {
+      "tag": "comunidaddeescritores",
+      "query": "libros"
+    },
+    {
+      "tag": "presentatulibro",
+      "query": "libros"
+    },
+    {
+      "tag": "presentatucuenta",
+      "query": "libros"
+    },
+    {
+      "tag": "siguemeytesigo",
+      "query": "libros"
+    },
+    {
+      "tag": "sdv",
+      "query": "libros"
+    },
+    {
+      "tag": "followback",
+      "query": "libros"
+    },
+    {
+      "tag": "f4f",
+      "query": "libros"
+    },
+    {
+      "tag": "sfs",
+      "query": "libros"
+    },
+    {
+      "tag": "authorsky",
+      "query": "libros"
+    },
+    {
+      "tag": "booktokespanol",
+      "query": "libros"
+    },
+    {
+      "tag": "booktokespana",
+      "query": "libros"
+    },
+    {
+      "tag": "lectores",
+      "query": "libros"
+    },
+    {
+      "tag": "lectoresespanoles",
+      "query": "libros"
+    },
+    {
+      "tag": "librosrecomendados",
+      "query": "libros"
+    },
+    {
+      "tag": "resenasdelibros",
+      "query": "libros"
+    },
+    {
+      "tag": "clubdelectura",
+      "query": "libros"
+    },
+    {
+      "tag": "amantesdeloslibros",
+      "query": "libros"
+    },
+    {
+      "tag": "escritoresespanoles",
+      "query": "libros"
+    }
+  ],
+  "starter_pack_queries": [
+    "libros",
+    "lectura",
+    "literatura",
+    "fantasía",
+    "romantasy",
+    "escritores",
+    "escritura",
+    "booksky",
+    "book club",
+    "fantasy",
+    "ciencia ficción",
+    "terror",
+    "escritores en español",
+    "fantasía en español",
+    "literatura española",
+    "rol en español",
+    "lectores en español",
+    "poesía",
+    "autores independientes",
+    "editorial",
+    "booksky español",
+    "libros español",
+    "lectores español",
+    "escritores español",
+    "autores españoles",
+    "autores latinoamericanos",
+    "fantasía española",
+    "fantasía latinoamericana",
+    "ciencia ficción española",
+    "editoriales españolas",
+    "editoriales independientes",
+    "bookstagram español",
+    "booktube español",
+    "rol español",
+    "manga español",
+    "autores español",
+    "fantasía español",
+    "autopublicación",
+    "escritura creativa"
+  ],
+  "feed_queries": [
+    "books",
+    "reading",
+    "fantasy",
+    "writers",
+    "booksky",
+    "romantasy",
+    "literature",
+    "writing",
+    "fantasy books",
+    "science fiction",
+    "horror",
+    "romance",
+    "young adult",
+    "YA books",
+    "indie authors",
+    "Spanish books",
+    "libros",
+    "libros español",
+    "literatura",
+    "lectura",
+    "escritores",
+    "fantasía",
+    "ciencia ficción",
+    "terror",
+    "rol",
+    "manga",
+    "cómic",
+    "BookSky Directory",
+    "escritores español",
+    "fantasía español",
+    "writersky"
+  ],
+  "jetstream": {
+    "db_path": "SISTEMA_DIARIO_BLUESKY/cache/jetstream.sqlite3",
+    "collector_minutes": 20,
+    "resume_overlap_seconds": 5,
+    "max_recent_posts": 75,
+    "initial_lookback_minutes": 30,
+    "taste_collector_minutes": 5,
+    "taste_lookback_hours": 6
+  },
+  "mined_terms": [
+    "FantasySky",
+    "BlueSkyBooks",
+    "IndieAuthors",
+    "LibrosEnEspañol",
+    "LiteraturaEnEspañol",
+    "AutoresIndie",
+    "AutoresIndependientes",
+    "Autopublicacion",
+    "EscritoresEnEspañol",
+    "LectoresDeFantasia",
+    "RecomendacionDeLibros",
+    "RecomendacionesDeLibros",
+    "Reseñas",
+    "TBR",
+    "DNF",
+    "BookHaul",
+    "WrapUp",
+    "ReadingWrapUp",
+    "BookRecommendations",
+    "DarkFantasy",
+    "EpicFantasy",
+    "UrbanFantasy",
+    "HistoricalFantasy",
+    "FantasyRomance",
+    "RomantasyBooks",
+    "HorrorBooks",
+    "HorrorSky",
+    "SciFiBooks",
+    "ScienceFiction",
+    "SpeculativeFiction",
+    "YoungAdultBooks",
+    "YAFantasy",
+    "AmWriting",
+    "AmWritingFantasy",
+    "WritingFantasy",
+    "WIP",
+    "WIPWednesday",
+    "WorldbuildingWednesday",
+    "MagicSystem",
+    "BetaReaders",
+    "JuegosDeRol",
+    "RolEnEspañol",
+    "TTRPG",
+    "Manga",
+    "Comic",
+    "Comics",
+    "NovelaGrafica",
+    "Mitologia",
+    "Mythology",
+    "HistoriaMedieval",
+    "FantasyArt",
+    "Celsius232",
+    "Hispacon",
+    "PremiosIgnotus",
+    "FeriaDelLibroMadrid",
+    "FLMadrid",
+    "SantJordi",
+    "MangaBarcelona",
+    "FILGuadalajara",
+    "FILGDL",
+    "FILBo",
+    "FILSA",
+    "FILima",
+    "FeriaDelLibroCordoba",
+    "📚💙",
+    "booksky",
+    "blue sky books",
+    "no sé qué leer",
+    "recomendadme algo",
+    "necesito recomendaciones",
+    "acabo de terminar",
+    "no supero este libro",
+    "menudo final",
+    "mis lecturas del mes",
+    "mini reseña",
+    "unboxing libros",
+    "primer borrador",
+    "nuevo wip",
+    "busco lectores beta",
+    "construcción de mundos",
+    "lore de mi novela",
+    "mapa de mi mundo",
+    "juegos de rol",
+    "partida de rol",
+    "historia medieval",
+    "retelling mitológico",
+    "Celsius 232",
+    "Premios Ignotus",
+    "Sant Jordi",
+    "Feria del Libro de Madrid",
+    "FIL Guadalajara",
+    "Feria del Libro de Buenos Aires",
+    "Manga Barcelona"
+  ],
+  "domain_queries": [
+    "goodreads.com",
+    "casadellibro.com",
+    "lecturalia.com",
+    "amazon.es",
+    "fnac.es",
+    "bookshop.org",
+    "wattpad.com",
+    "todostuslibros.com",
+    "iberlibro.com",
+    "ivoox.com",
+    "autorademodiaz.com",
+    "planetadelibros.com"
+  ],
+  "domains_per_round": 4
+}

@@ -1,0 +1,66 @@
+{
+  "series": "IG-16 — Libros que hacen cosas raras",
+  "gate_items": ["ig16_01", "ig16_02"],
+  "posts": [
+    {
+      "id":"ig16_01","date":"2027-02-17T18:00:00+01:00","caption":"El libro tiene una imagen que solo existe mientras lo fuerzas a cambiar de forma. Bastante mejor que una sobrecubierta con brillo.","hashtags":["#HistoriaDelLibro","#LibrosRaros","#Encuadernación","#Curiosidades"],
+      "slides":[
+        {"mode":"image_title","image":"ig16_01.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Childe_Harold%27s_Pilreimage_Fore-Edge_Painting.jpg","fit":"contain","kicker":"LIBRO-OBJETO","title":"La pintura está ahí.\nPero cerrada desaparece.","credit":"Fore-edge painting · dominio público","cue":"swipe"},
+        {"mode":"image_body","image":"ig16_01.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Childe_Harold%27s_Pilreimage_Fore-Edge_Painting.jpg","fit":"contain","kicker":"CÓMO FUNCIONA","body":"Se llama fore-edge painting: aparece al abanicar el canto de las páginas.","footer":"Childe Harold’s Pilgrimage · Lord Byron","cue":"swipe"},
+        {"mode":"text","kicker":"MECÁNICA","title":"La imagen se esconde al cerrar","body":"La imagen se pinta sobre el borde con las hojas desplazadas. Al cerrar el bloque vuelve a ocultarse. Este tipo de decoración se popularizó especialmente a partir del siglo XVIII.","footer":"Fore-edge painting · historia de la encuadernación","cue":"swipe"},
+        {"mode":"image_body","image":"ig16_01.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Childe_Harold%27s_Pilreimage_Fore-Edge_Painting.jpg","fit":"contain","kicker":"QUÉ MIRAR","body":"Al abanicar el canto aparece una imagen que el bloque cerrado oculta. El cambio no está en la ilustración: está en la posición física de las hojas.","footer":"La imagen depende de la forma física del libro","cue":"swipe"},
+        {"mode":"source_image","image":"ig16_01.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Childe_Harold%27s_Pilreimage_Fore-Edge_Painting.jpg","fit":"contain","kicker":"FUENTE","body":"Childe Harold’s Pilgrimage · Lord Byron · ejemplar con pintura en el canto.","footer":"Wikimedia Commons · reproducción en dominio público","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig16_02","date":"2027-02-24T18:00:00+01:00","caption":"Una interfaz de usuario hecha con pergamino y un pasador.","hashtags":["#Manuscritos","#HistoriaDelLibro","#Diseño","#Curiosidades"],
+      "slides":[
+        {"mode":"image_title","image":"ig16_02.jpg","source_url":"https://picryl.com/media/volvelle-from-bl-sloane-702-ff-21v-22-4299a8","fit":"contain","kicker":"LIBRO-OBJETO","title":"Este libro tiene piezas que giran.","credit":"BL Sloane 702, ff.21v–22 · c.1482","cue":"swipe"},
+        {"mode":"image_body","image":"ig16_02.jpg","source_url":"https://picryl.com/media/volvelle-from-bl-sloane-702-ff-21v-22-4299a8","fit":"contain","kicker":"CÓMO FUNCIONA","body":"No es decoración: es una volvelle.","footer":"Discos de papel/pergamino alrededor de un pivote","cue":"swipe"},
+        {"mode":"text","kicker":"MECÁNICA","title":"Información que se mueve","body":"Las volvelles son discos de papel o pergamino superpuestos alrededor de un pivote. Se usaron para relacionar datos y hacer cálculos visuales —por ejemplo, de tiempo, astronomía o astrología— dentro del propio manuscrito.","footer":"Procedencia: British Library · imagen exacta: Europeana, Public Domain","cue":"swipe"},
+        {"mode":"image_body","image":"ig16_02.jpg","source_url":"https://picryl.com/media/volvelle-from-bl-sloane-702-ff-21v-22-4299a8","fit":"contain","kicker":"QUÉ MIRAR","body":"El pivote central convierte una página en un pequeño mecanismo: al girar los discos, cambian las relaciones entre los datos impresos.","footer":"Sloane MS 702 · ff.21v–22","cue":"swipe"},
+        {"mode":"source_image","image":"ig16_02.jpg","source_url":"https://picryl.com/media/volvelle-from-bl-sloane-702-ff-21v-22-4299a8","fit":"contain","kicker":"FUENTE","body":"Sloane MS 702 · ff.21v–22 · c.1482 · British Library.","footer":"Procedencia: British Library Archives & Manuscripts · Europeana: Public Domain","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig16_03","date":"2027-03-03T18:00:00+01:00","caption":"La palabra “mini” aquí no significa resumen. Significa que alguien decidió imprimir y encuadernar igual, pero muchísimo más pequeño.","hashtags":["#LibrosRaros","#Bibliotecas","#HistoriaDelLibro","#MiniatureBooks"],
+      "slides":[
+        {"mode":"image_title","image":"ig16_03.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Miniature_book_in_the_Edward_Gorey_collection_from_the_Rare_Book_and_Special_Collections_Division_of_the_Library_of_Congress_on_8_May_2025.jpg","fit":"contain","kicker":"LIBRO-OBJETO","title":"No es una maqueta.\nEs un libro.","credit":"Library of Congress · foto CC0","cue":"swipe"},
+        {"mode":"image_body","image":"ig16_03.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Miniature_book_in_the_Edward_Gorey_collection_from_the_Rare_Book_and_Special_Collections_Division_of_the_Library_of_Congress_on_8_May_2025.jpg","fit":"contain","kicker":"ESCALA","body":"Los libros miniatura pueden contener textos completos en encuadernaciones diminutas.","footer":"Miniature Book Collection · Library of Congress","cue":"swipe"},
+        {"mode":"text","kicker":"COLECCIÓN","title":"Más de 1.400 en la Library of Congress","body":"La Rare Book and Special Collections Division conserva más de 1.400 libros miniatura. La colección recorre siglos e incluye diccionarios, libros infantiles, clásicos, textos religiosos y libros de artista.","footer":"Guía LOC actualizada en enero de 2026","cue":"swipe"},
+        {"mode":"image_body","image":"ig16_03.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Miniature_book_in_the_Edward_Gorey_collection_from_the_Rare_Book_and_Special_Collections_Division_of_the_Library_of_Congress_on_8_May_2025.jpg","fit":"contain","kicker":"QUÉ MIRAR","body":"La escala se entiende al comparar el objeto con manos, estuche o elementos de la propia fotografía. Sigue siendo un libro completo, solo muchísimo más pequeño.","footer":"Miniature Book Collection · Library of Congress","cue":"swipe"},
+        {"mode":"source_image","image":"ig16_03.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Miniature_book_in_the_Edward_Gorey_collection_from_the_Rare_Book_and_Special_Collections_Division_of_the_Library_of_Congress_on_8_May_2025.jpg","fit":"contain","kicker":"FUENTE","body":"Miniature Book Collection · Library of Congress.","footer":"https://guides.loc.gov/miniature-books · foto seleccionada CC0","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig16_04","date":"2027-03-10T18:00:00+01:00","caption":"Una pantalla fija que no se actualizaba nunca y aun así cumplía perfectamente su función.","hashtags":["#HistoriaDeLaLectura","#Libros","#Educación","#Curiosidades"],
+      "slides":[
+        {"mode":"image_title","image":"ig16_04.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Hornbook_written.jpg","fit":"contain","kicker":"LIBRO-OBJETO","title":"Esto enseñaba a leer.\nY no era un libro.","credit":"Hornbook · dominio público","cue":"swipe"},
+        {"mode":"image_body","image":"ig16_04.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Hornbook_written.jpg","fit":"contain","kicker":"CÓMO FUNCIONA","body":"Una hoja con letras fijada a una tablilla: hornbook.","footer":"Objeto de aprendizaje y consulta","cue":"swipe"},
+        {"mode":"text","kicker":"MECÁNICA","title":"Leer desde una tabla","body":"Los hornbooks servían como herramientas básicas de aprendizaje: alfabeto, sílabas y textos cortos protegidos sobre una superficie rígida. Eran objetos de uso, más cercanos a una pequeña tabla de consulta que a un volumen encuadernado.","footer":"Herramienta básica para aprender a leer","cue":"swipe"},
+        {"mode":"image_body","image":"ig16_04.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Hornbook_written.jpg","fit":"contain","kicker":"QUÉ MIRAR","body":"El mango, la superficie rígida y la zona de texto explican el uso mejor que una recreación moderna.","footer":"Ejemplar reproducido en History of the Horn-Book (1896)","cue":"swipe"},
+        {"mode":"source_image","image":"ig16_04.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Hornbook_written.jpg","fit":"contain","kicker":"FUENTE","body":"Ejemplar manuscrito tardío, probablemente finales del XVIII · reproducido en History of the Horn-Book (1896).","footer":"Wikimedia Commons · dominio público","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig16_05","date":"2027-03-17T18:00:00+01:00","caption":"Un libro, un diorama y una pequeña ilusión óptica en el mismo objeto.","hashtags":["#BookArts","#HistoriaDelLibro","#Diseño","#LibrosRaros"],
+      "slides":[
+        {"mode":"image_title","image":"ig16_05.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Bodleian_Libraries,_Thames_Tunnel.jpg","fit":"contain","kicker":"LIBRO-OBJETO","title":"Lo abres y aparece un escenario.","credit":"Thames Tunnel peep show · 1843 · CC BY 4.0","cue":"swipe"},
+        {"mode":"image_body","image":"ig16_05.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Bodleian_Libraries,_Thames_Tunnel.jpg","fit":"contain","kicker":"CÓMO FUNCIONA","body":"Es un tunnel book / peep-show book.","footer":"Capas recortadas separadas en profundidad","cue":"swipe"},
+        {"mode":"text","kicker":"MECÁNICA","title":"Un escenario dentro del libro","body":"Varias capas recortadas se separan en profundidad y construyen una escena tridimensional al desplegarse. El ejemplar del Thames Tunnel de Bodleian, fechado en 1843, tiene varias vistas y un fondo.","footer":"Thames Tunnel peep show · Bodleian Libraries · 1843","cue":"swipe"},
+        {"mode":"image_body","image":"ig16_05.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Bodleian_Libraries,_Thames_Tunnel.jpg","fit":"contain","kicker":"QUÉ MIRAR","body":"La profundidad nace de la separación física entre capas. Cada plano recortado ocupa una distancia distinta y el ojo los combina como una escena.","footer":"John Johnson Collection · Bodleian Libraries","cue":"swipe"},
+        {"mode":"source_image","image":"ig16_05.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Bodleian_Libraries,_Thames_Tunnel.jpg","fit":"contain","kicker":"FUENTE","body":"Thames Tunnel peep show · 1843 · John Johnson Collection · Bodleian Libraries.","footer":"Wikimedia Commons · CC BY 4.0","credit":"Bodleian Libraries · CC BY 4.0","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig16_06","date":"2027-03-24T18:00:00+01:00","caption":"La solución antirrobo más literal posible también cambió la forma de colocar los libros en la estantería.","hashtags":["#Bibliotecas","#HistoriaDelLibro","#LibrosRaros","#Curiosidades"],
+      "slides":[
+        {"mode":"image_title","image":"ig16_06.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Postcard_of_The_Chained_Library._Hereford_Cathedral_(undated)_cropped.jpg","fit":"contain","kicker":"LIBRO-OBJETO","title":"No podías llevártelo.\nLiteralmente.","credit":"Hereford Chained Library · pellethepoet · CC BY 2.0","cue":"swipe"},
+        {"mode":"image_body","image":"ig16_06.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Postcard_of_The_Chained_Library._Hereford_Cathedral_(undated)_cropped.jpg","fit":"contain","kicker":"CÓMO FUNCIONA","body":"El libro estaba unido al estante por una cadena.","footer":"Sistema histórico de seguridad bibliotecaria","cue":"swipe"},
+        {"mode":"text","kicker":"MECÁNICA","title":"Leer sí. Llevártelo no.","body":"En Hereford la cadena va desde la cubierta hasta una barra del estante. Puedes bajar el libro y leerlo en el pupitre, pero no sacarlo de la librería.","footer":"Fuente factual: Hereford Cathedral","cue":"swipe"},
+        {"mode":"text","kicker":"CONSECUENCIA","title":"Hasta cambió la estantería","body":"Muchos libros se colocaban con el canto, no el lomo, hacia el lector. Así podían sacarse y abrirse sin girarlos ni enredar la cadena.","footer":"La forma de guardar también responde al mecanismo","cue":"swipe"},
+        {"mode":"source_image","image":"ig16_06.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Postcard_of_The_Chained_Library._Hereford_Cathedral_(undated)_cropped.jpg","fit":"contain","kicker":"FUENTE","body":"Chained Library · Hereford Cathedral · sistema conservado del siglo XVII.","footer":"Hecho: herefordcathedral.org/chained-library · foto: pellethepoet / Flickr vía Wikimedia Commons · CC BY 2.0","credit":"Foto: pellethepoet · CC BY 2.0","cue":"none"}
+      ]
+    }
+  ]
+}

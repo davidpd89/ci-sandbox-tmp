@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@600;700&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:1080px; height:1920px; background: transparent; overflow:hidden; }
+  .stage {
+    width:1080px; height:1920px; position:relative;
+    font-family:'Inter', sans-serif;
+  }
+  .text {
+    position:absolute;
+    left:64px; right:64px; top:780px;
+    text-align:center;
+    font-family:'Playfair Display', serif;
+    font-weight:800;
+    font-size:84px;
+    line-height:1.12;
+    color:#f7f1e8;
+    text-shadow: 0 4px 18px rgba(0,0,0,0.55), 0 1px 4px rgba(0,0,0,0.5);
+  }
+  .watermark {
+    position:absolute;
+    right:56px; top:56px;
+    text-align:right;
+    font-family:'Inter', sans-serif;
+    font-weight:700;
+    font-size:30px;
+    letter-spacing: 1px;
+    color:#f7f1e8;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  }
+  .watermark .dom { color:#c4783f; }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="text" id="text"></div>
+    <div class="watermark">AUTORA DEMO D&Iacute;AZ<span class="dom">.com</span></div>
+  </div>
+<script>
+  document.getElementById('text').innerHTML = window.__TEXT__ || '';
+</script>
+</body>
+</html>

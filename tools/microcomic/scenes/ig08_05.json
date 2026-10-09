@@ -1,0 +1,17 @@
+{
+  "id":"ig08_05",
+  "character_version":"LECTOR_A_v1",
+  "reference_url":"https://www.pexels.com/photo/a-man-sitting-on-a-sofa-reading-a-book-8933542/",
+  "source_license":"https://www.pexels.com/es-es/license/",
+  "keep":["persona sentada leyendo","lectura doméstica"],
+  "change":["identidad","ropa","mobiliario","libro"],
+  "panels":[
+    {"setting":"sofa","action":"sofa_read","expression":"neutral","bubble":"Arkhadion. Vale.","tail_x":540,"tail_y":530},
+    {"setting":"notes","action":"phone_note","expression":"neutral","note":"Arkhadion = general (?)"},
+    {"setting":"sofa","action":"sofa_read","expression":"sospecha","bubble":"¿Y Varek quién era?","tail_x":540,"tail_y":530},
+    {"setting":"sofa","action":"sofa_read","expression":"resignado","bubble":"Página 4.","tail_x":540,"tail_y":530}
+  ],
+  "caption":"Arkhadion: apuntado. Varek: página 4. Aún no ha empezado la batalla.",
+  "hashtags":["#Bookstagram","#Fantasía","#HumorLector","#PrimerCapítulo"],
+  "first_comment":null
+}

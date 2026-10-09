@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1080,height=1350,initial-scale=1">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;900&family=Inter:wght@500;600;700&display=swap');
+*{box-sizing:border-box} html,body{margin:0;width:1080px;height:1350px;overflow:hidden;background:#0f0c0b}
+body{font-family:Inter,Arial,sans-serif}.slide{position:relative;width:1080px;height:1350px;overflow:hidden;background:#0f0c0b;color:#f7f1e8}
+.photo{position:absolute;inset:0;background-image:url('{{IMAGE_DATA}}');background-size:cover;background-position:center}
+.veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,12,11,.14) 0%,rgba(15,12,11,.28) 35%,rgba(15,12,11,.82) 74%,rgba(15,12,11,.97) 100%)}
+.top{position:absolute;left:64px;right:64px;top:56px;display:flex;justify-content:space-between;align-items:center;gap:24px}
+.brand{font-size:24px;font-weight:700;letter-spacing:.08em}.brand small{font-size:15px;opacity:.68;margin-left:5px;letter-spacing:.02em}
+.counter{font-size:22px;font-weight:650;padding:10px 16px;border-radius:999px;background:rgba(15,12,11,.56);border:1px solid rgba(247,241,232,.25)}
+.content{position:absolute;left:64px;right:64px;bottom:130px}.kicker{display:inline-block;background:#c4783f;color:#17120b;padding:10px 16px;border-radius:5px;font-size:23px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:24px}
+.title{max-width:900px;font-family:'Playfair Display',Georgia,serif;font-size:68px;line-height:1.03;font-weight:700;letter-spacing:-.02em;text-shadow:0 2px 14px rgba(0,0,0,.38)}
+.cue{position:absolute;right:64px;bottom:45px;font-size:22px;font-weight:700;letter-spacing:.045em;display:flex;gap:17px;align-items:center}.cue.save{gap:12px;font-size:20px}.cue span{white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="photo"></div><div class="veil"></div>
+  <div class="top"><div class="brand">AUTORA DEMO DÍAZ<small>.com</small></div><div class="counter">{{COUNTER}}</div></div>
+  <div class="content"><div class="kicker">{{KICKER}}</div><div class="title">{{TITLE}}</div></div>
+  <div class="cue {{CUE_CLASS}}">{{CUE_HTML}}</div>
+</div>
+</body>
+</html>

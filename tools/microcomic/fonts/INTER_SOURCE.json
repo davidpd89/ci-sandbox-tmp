@@ -1,0 +1,12 @@
+{
+  "font": "Inter",
+  "version": "4.1",
+  "source": "RSMS / GitHub release",
+  "download_url": "https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip",
+  "zip_sha256": "9883FDD4A49D4FB66BD8177BA6625EF9A64AA45899767DDE3D36AA425756B11E",
+  "license": "SIL Open Font License 1.1",
+  "license_file": "Inter-4.1/LICENSE.txt",
+  "runtime_file": "Inter-4.1/InterVariable.ttf",
+  "added_for": "IG-08 / TT-04 microcomic renderer",
+  "verified_on": "2026-08-31"
+}

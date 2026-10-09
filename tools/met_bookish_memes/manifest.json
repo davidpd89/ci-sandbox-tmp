@@ -1,0 +1,104 @@
+{
+  "series": "IG-12 — Cuadros con problemas de lector",
+  "source": "The Metropolitan Museum of Art Open Access API",
+  "api_template": "https://collectionapi.metmuseum.org/public/collection/v1/objects/{object_id}",
+  "items": [
+    {
+      "id": "ig12_01",
+      "object_id": 435991,
+      "title": "A Woman Reading",
+      "artist": "Camille Corot",
+      "date_label": "1869–1870",
+      "source_url": "https://www.metmuseum.org/art/collection/search/435991",
+      "meme_lines": [
+        "YO: «DIEZ MINUTOS Y A DORMIR.»",
+        "02:47 · QUEDAN 61 PÁGINAS."
+      ],
+      "caption": "El plan era dormir. El error fue mirar cuántas páginas quedaban.\n\n#Bookstagram #Lectores #Arte",
+      "alt": "Pintura de una mujer leyendo al aire libre, de Camille Corot, usada en un meme sobre seguir leyendo de madrugada.",
+      "publish_date": "2026-11-05",
+      "publish_time": "18:00"
+    },
+    {
+      "id": "ig12_02",
+      "object_id": 437193,
+      "title": "The Reader",
+      "artist": "Eglon van der Neer",
+      "date_label": "s. XVII",
+      "source_url": "https://www.metmuseum.org/art/collection/search/437193",
+      "meme_lines": [
+        "CUANDO TE HABLAN JUSTO EN LA FRASE",
+        "QUE EXPLICABA TODO"
+      ],
+      "caption": "Y luego toca volver tres párrafos atrás fingiendo que no pasa nada.\n\n#Bookstagram #Lectores #Arte",
+      "alt": "Pintura de una joven que levanta la mirada de su lectura, de Eglon van der Neer.",
+      "publish_date": "2026-11-12",
+      "publish_time": "18:00"
+    },
+    {
+      "id": "ig12_03",
+      "object_id": 437842,
+      "title": "Teasing a Sleeping Girl",
+      "artist": "Gaspare Traversi",
+      "date_label": "ca. 1760",
+      "source_url": "https://www.metmuseum.org/art/collection/search/437842",
+      "meme_lines": [
+        "EL LIBRO QUE IBAS A TERMINAR HOY",
+        "TÚ, 23:18"
+      ],
+      "caption": "A las seis de la tarde parecía un plan perfectamente razonable.\n\n#Bookstagram #Lectores #Arte",
+      "alt": "Escena pintada por Gaspare Traversi con una joven dormida y otra figura intentando despertarla.",
+      "publish_date": "2026-11-19",
+      "publish_time": "18:00"
+    },
+    {
+      "id": "ig12_04",
+      "object_id": 13210,
+      "title": "Arrangement in Black: Girl Reading",
+      "artist": "James McNeill Whistler",
+      "date_label": "ca. 1880–1890",
+      "source_url": "https://www.metmuseum.org/art/collection/search/13210",
+      "meme_lines": [
+        "CUARTA VEZ LEYENDO LA MISMA FRASE.",
+        "SIGO SIN HABERLA LEÍDO."
+      ],
+      "caption": "Los ojos avanzan. La cabeza se ha ido a otro sitio.\n\n#Bookstagram #Lectores #Arte",
+      "alt": "Pequeña pintura oscura de una mujer leyendo, de James McNeill Whistler.",
+      "publish_date": "2026-11-26",
+      "publish_time": "18:00"
+    },
+    {
+      "id": "ig12_05",
+      "object_id": 13176,
+      "title": "Anna Dwight Weir Reading a Letter",
+      "artist": "Julian Alden Weir",
+      "date_label": "ca. 1890",
+      "source_url": "https://www.metmuseum.org/art/collection/search/13176",
+      "meme_lines": [
+        "LLEGA UNA CARTA.",
+        "NADIE EN ESTE LIBRO SABE TOMAR BUENAS DECISIONES."
+      ],
+      "caption": "Una carta en ficción rara vez llega para bajar la tensión.\n\n#Bookstagram #Lectores #Arte",
+      "alt": "Acuarela de Anna Dwight Weir leyendo una carta, pintada por Julian Alden Weir.",
+      "publish_date": "2026-12-03",
+      "publish_time": "18:00"
+    },
+    {
+      "id": "ig12_06",
+      "object_id": 446582,
+      "title": "Women Conversing",
+      "artist": "Autor no identificado en ficha",
+      "display_artist": "",
+      "date_label": "India · siglo XVII",
+      "source_url": "https://www.metmuseum.org/art/collection/search/446582",
+      "meme_lines": [
+        "CLUB DE LECTURA: «SIN SPOILERS.»",
+        "30 SEGUNDOS DESPUÉS:"
+      ],
+      "caption": "La expresión «sin spoilers» tiene una vida útil sorprendentemente corta.\n\n#Bookstagram #Lectores #Arte",
+      "alt": "Miniatura india del siglo XVII con varias mujeres conversando.",
+      "publish_date": "2026-12-10",
+      "publish_time": "18:00"
+    }
+  ]
+}

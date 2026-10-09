@@ -1,0 +1,12 @@
+{
+  "series_id": "IG-14_LIBROS_QUE_NO_EXISTEN_v1",
+  "status": "COPY_READY_NOT_SCHEDULED",
+  "items": [
+    {"id":"ig14_01","caption":"El género de terror tiene subcategorías muy específicas.","hashtags":["#Bookstagram","#HumorLector","#PrestarLibros","#LibrosEnEspañol"],"first_comment":null},
+    {"id":"ig14_02","caption":"La nota en el móvil termina en «(?)». Ahí empieza la documentación.","hashtags":["#Bookstagram","#HumorLector","#Fantasía","#PrimerCapítulo"],"first_comment":null},
+    {"id":"ig14_03","caption":"Tres días fuera requieren, por prudencia, unas mil doscientas páginas.","hashtags":["#Bookstagram","#HumorLector","#Lectores","#LibrosEnEspañol"],"first_comment":null},
+    {"id":"ig14_04","caption":"Una contraportada también puede saber cuándo callarse.","hashtags":["#Bookstagram","#Sinopsis","#HumorLector","#LibrosEnEspañol"],"first_comment":null},
+    {"id":"ig14_05","caption":"Doce páginas son suficientes para posponerlas cuarenta minutos.","hashtags":["#Bookstagram","#HumorLector","#FinalDeLibro","#Lectores"],"first_comment":null},
+    {"id":"ig14_06","caption":"Mirar es gratis. La logística posterior no siempre.","hashtags":["#Bookstagram","#HumorLector","#Librerías","#LibrosEnEspañol"],"first_comment":null}
+  ]
+}

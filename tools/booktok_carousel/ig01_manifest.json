@@ -1,0 +1,572 @@
+{
+  "series": "IG-01 — BookTok verificable: elige qué leer",
+  "canvas": [
+    1080,
+    1350
+  ],
+  "brand": "AUTORA DEMO DÍAZ",
+  "palette": {
+    "bg": "#0f0c0b",
+    "accent": "#c4783f",
+    "text": "#f7f1e8",
+    "muted": "#c9bfb4"
+  },
+  "soft_backgrounds": {
+    "library_warm": {
+      "url": "https://www.pexels.com/photo/books-in-brown-wooden-book-shelves-8707056/",
+      "direct_image_url": "https://images.pexels.com/photos/8707056/pexels-photo-8707056.jpeg?cs=srgb&dl=pexels-onbab-8707056.jpg&fm=jpg",
+      "asset": "ig01_bg_library_warm.jpg",
+      "description": "estanteria de libros calida y desenfocada"
+    },
+    "library_stack": {
+      "url": "https://www.pexels.com/photo/books-on-the-bookcase-14575351/",
+      "direct_image_url": "https://images.pexels.com/photos/14575351/pexels-photo-14575351.jpeg?auto=compress&cs=tinysrgb&w=1600",
+      "asset": "ig01_bg_library_stack.jpg",
+      "description": "libros apilados en biblioteca oscura"
+    },
+    "ice_rink": {
+      "url": "https://www.pexels.com/photo/empty-ice-rink-6539279/",
+      "direct_image_url": "https://images.pexels.com/photos/6539279/pexels-photo-6539279.jpeg?cs=srgb&dl=pexels-pavel-danilyuk-6539279.jpg&fm=jpg",
+      "asset": "ig01_bg_ice_rink.jpg",
+      "description": "pista de hielo vacia, suave para hockey"
+    },
+    "rugby_pitch": {
+      "url": "https://www.pexels.com/photo/rugby-ball-on-grass-pitch-16566965/",
+      "direct_image_url": "https://images.pexels.com/photos/16566965/pexels-photo-16566965.jpeg?auto=compress&cs=tinysrgb&w=1600",
+      "asset": "ig01_bg_rugby_pitch.jpg",
+      "description": "balon de rugby en cesped"
+    },
+    "rugby_field": {
+      "url": "https://www.pexels.com/photo/rugby-player-preparing-for-kick-on-field-29715713/",
+      "direct_image_url": "https://images.pexels.com/photos/29715713/pexels-photo-29715713.jpeg?auto=compress&cs=tinysrgb&w=1600",
+      "asset": "ig01_bg_rugby_field.jpg",
+      "description": "campo de rugby con luces, usado desenfocado"
+    }
+  },
+  "default_soft_background_cycle": [
+    "library_warm",
+    "ice_rink",
+    "rugby_pitch",
+    "rugby_field",
+    "library_stack"
+  ],
+  "covers": {
+    "mas_que_rivales": {
+      "title": "Más que rivales",
+      "expected_page_title": "Más que rivales",
+      "source_type": "publisher",
+      "url": "https://www.penguinlibros.com/es/libros-romanticos-juveniles/517941-libro-mas-que-rivales-game-changers-9791387972561",
+      "asset": "ig01_mas_que_rivales_cover.jpg"
+    },
+    "cambiar_el_juego": {
+      "title": "Cambiar el juego",
+      "expected_page_title": "Cambiar el juego",
+      "source_type": "publisher",
+      "url": "https://www.penguinlibros.com/es/libros-romanticos-juveniles/555650-libro-cambiar-el-juego-game-changers-1-9791387972554",
+      "asset": "ig01_cambiar_el_juego_cover.jpg"
+    },
+    "alas_de_sangre": {
+      "title": "Alas de sangre",
+      "expected_page_title": "Alas de sangre",
+      "source_type": "publisher",
+      "url": "https://www.planetadelibros.com/libro-alas-de-sangre-empireo-1/384147",
+      "asset": "ig01_alas_de_sangre_cover.jpg"
+    },
+    "binding_13": {
+      "title": "Binding 13",
+      "expected_page_title": "Binding 13",
+      "source_type": "publisher",
+      "url": "https://www.penguinlibros.com/es/libros-romanticos-juveniles/337359-libro-binding-13-los-chicos-de-tommen-1-9788419357373",
+      "asset": "ig01_binding_13_cover.jpg"
+    },
+    "keeping_13": {
+      "title": "Keeping 13",
+      "expected_page_title": "Keeping 13",
+      "source_type": "publisher",
+      "url": "https://www.penguinlibros.com/es/libros-romanticos-juveniles/339581-libro-keeping-13-los-chicos-de-tommen-2-9788419746993",
+      "asset": "ig01_keeping_13_cover.jpg"
+    },
+    "saving_6": {
+      "title": "Saving 6",
+      "expected_page_title": "Saving 6",
+      "source_type": "publisher",
+      "url": "https://www.penguinlibros.com/es/libros-romanticos-juveniles/341601-libro-saving-6-los-chicos-de-tommen-3-9788419746979",
+      "asset": "ig01_saving_6_cover.jpg"
+    },
+    "redeeming_6": {
+      "title": "Redeeming 6",
+      "expected_page_title": "Redeeming 6",
+      "source_type": "publisher",
+      "url": "https://www.penguinlibros.com/es/libros-romanticos-juveniles/350269-libro-redeeming-6-los-chicos-de-tommen-4-9788410298316",
+      "asset": "ig01_redeeming_6_cover.jpg"
+    },
+    "si_fueramos_eternos": {
+      "title": "Si fuéramos eternos",
+      "expected_page_title": "Si fuéramos eternos",
+      "source_type": "publisher",
+      "url": "https://www.planetadelibros.com/libro-si-fueramos-eternos/443038",
+      "asset": "ig01_si_fueramos_eternos_cover.jpg"
+    },
+    "hasta_estrellas": {
+      "title": "Hasta que nos quedemos sin estrellas",
+      "expected_page_title": "Hasta que nos quedemos sin estrellas",
+      "source_type": "publisher",
+      "url": "https://www.planetadelibros.com/libro-hasta-que-nos-quedemos-sin-estrellas/346028?soporte=346028",
+      "asset": "ig01_hasta_estrellas_cover.jpg"
+    },
+    "amor_fuera_serie": {
+      "title": "Amor fuera de serie",
+      "expected_page_title": "Amor fuera de serie",
+      "source_type": "publisher",
+      "url": "https://www.planetadelibros.com/libro-amor-fuera-de-serie/445253?soporte=445253",
+      "asset": "ig01_amor_fuera_serie_cover.jpg"
+    },
+    "wild_love": {
+      "title": "Wild Love: Amor salvaje",
+      "expected_page_title": "Wild Love",
+      "source_type": "publisher",
+      "url": "https://contraluzeditorial.es/libro/contraluz/wild-love-amor-salvaje-elsie-silver-9791387810658/",
+      "asset": "ig01_wild_love_cover.jpg"
+    },
+    "dorayaki": {
+      "title": "Dorayaki",
+      "source_type": "google_books",
+      "book_id": "INqqEQAAQBAJ",
+      "url": "https://books.google.com/books/about/Dorayaki.html?id=INqqEQAAQBAJ",
+      "asset": "ig01_dorayaki_cover.jpg"
+    }
+  },
+  "travel_backgrounds": {
+    "cork": {
+      "url": "https://www.pexels.com/photo/cork-28378380/",
+      "backup": "https://www.pexels.com/photo/traffic-on-city-road-10811532/",
+      "asset": "ig01_cork_ref.jpg",
+      "final_asset": "ig01_cork.jpg",
+      "visual_json": {
+        "shot": "calle urbana vertical",
+        "camera": "35 mm aprox., altura peatonal",
+        "geometry": "fachadas laterales + fuga de calle",
+        "light": "día nublado/luz suave",
+        "keep": [
+          "fuga",
+          "densidad urbana",
+          "escala",
+          "luz real"
+        ],
+        "change": [
+          "personas",
+          "vehículos",
+          "comercios no identificables"
+        ]
+      }
+    },
+    "rockies": {
+      "url": "https://www.pexels.com/photo/mountain-near-a-lake-11415487/",
+      "backup": "https://www.pexels.com/photo/scenic-mountain-lake-in-the-canadian-rockies-36182788/",
+      "asset": "ig01_rockies_ref.jpg",
+      "final_asset": "ig01_rockies.jpg",
+      "visual_json": {
+        "shot": "paisaje vertical amplio",
+        "camera": "24-35 mm",
+        "layers": "agua/vegetación/montaña/cielo",
+        "light": "natural limpia",
+        "keep": [
+          "capas",
+          "escala geológica",
+          "agua",
+          "luz"
+        ],
+        "change": [
+          "nubes",
+          "primer plano",
+          "encuadre"
+        ]
+      }
+    },
+    "tokyo": {
+      "url": "https://www.pexels.com/photo/quiet-residential-street-in-tokyo-neighborhood-37533032/",
+      "backup": "https://www.pexels.com/photo/street-scene-in-a-japanese-urban-neighborhood-36824966/",
+      "asset": "ig01_tokyo_ref.jpg",
+      "final_asset": "ig01_tokyo.jpg",
+      "visual_json": {
+        "shot": "calle residencial vertical",
+        "camera": "35-50 mm, altura humana",
+        "geometry": "calle estrecha con fuga",
+        "light": "día natural",
+        "keep": [
+          "cotidianidad",
+          "proporciones urbanas",
+          "fachadas",
+          "luz"
+        ],
+        "change": [
+          "personas",
+          "bicicletas/vehículos",
+          "detalles de fachadas"
+        ]
+      }
+    }
+  },
+  "posts": [
+    {
+      "id": "ig01_01",
+      "date": "2026-09-11T18:00:00+02:00",
+      "caption": "Hockey, rugby y dos formas bastante distintas de meter el deporte dentro del romance. Los tres aparecieron en la primera lista oficial española de #BookTok.",
+      "hashtags": [
+        "#Bookstagram",
+        "#LibrosEnEspañol",
+        "#RomanceDeportivo",
+        "#BookTok"
+      ],
+      "slides": [
+        {
+          "type": "multi_cover",
+          "background": "library_warm",
+          "kicker": "BOOKTOK ESPAÑA · MARZO 2026",
+          "title": "3 romances deportivos de la primera lista oficial #BookTok España",
+          "covers": [
+            "mas_que_rivales",
+            "binding_13",
+            "keeping_13"
+          ]
+        },
+        {
+          "type": "book",
+          "background": "ice_rink",
+          "cover": "mas_que_rivales",
+          "title": "Hockey + rivalidad pública",
+          "body": "Shane e Ilya compiten sobre el hielo. Fuera de él mantienen una relación que no puede hacerse pública.",
+          "label": "GAME CHANGERS 2"
+        },
+        {
+          "type": "book",
+          "background": "rugby_pitch",
+          "cover": "binding_13",
+          "title": "Rugby + primer amor",
+          "body": "El inicio de Los chicos de Tommen: romance deportivo, instituto y una historia emocional de largo recorrido.",
+          "label": "TOMMEN 1"
+        },
+        {
+          "type": "book",
+          "background": "rugby_field",
+          "cover": "keeping_13",
+          "title": "Cuando enamorarse no era lo difícil",
+          "body": "Continúa Binding 13: lesión, inseguridad, secretos y lo que ocurre después de elegir estar juntos.",
+          "label": "TOMMEN 2"
+        },
+        {
+          "type": "multi_cover",
+          "background": "library_stack",
+          "title": "¿Por dónde entrar?",
+          "body": "Rivalidad → Más que rivales · Empezar Tommen → Binding 13 · Continuar Tommen → Keeping 13",
+          "covers": [
+            "mas_que_rivales",
+            "binding_13",
+            "keeping_13"
+          ]
+        },
+        {
+          "type": "text",
+          "background": "library_warm",
+          "title": "Guárdalo para la próxima vez que quieras deporte + romance.",
+          "cta": "GUARDA"
+        }
+      ],
+      "review_slug": "IG-01-01 - 3 romances deportivos del Top BookTok"
+    },
+    {
+      "id": "ig01_02",
+      "date": "2026-09-15T18:00:00+02:00",
+      "caption": "La lista de marzo tenía varios volúmenes intermedios. Este carrusel sirve para una cosa menos emocionante pero bastante útil: no empezar una saga por el libro que estaba más arriba en el ranking.",
+      "hashtags": [
+        "#Bookstagram",
+        "#LibrosEnEspañol",
+        "#SagasDeLibros",
+        "#BookTok"
+      ],
+      "slides": [
+        {
+          "type": "multi_cover",
+          "kicker": "BOOKTOK ESPAÑA · MARZO 2026",
+          "title": "3 sagas de la lista #BookTok y el libro por el que se entra",
+          "covers": [
+            "cambiar_el_juego",
+            "alas_de_sangre",
+            "binding_13"
+          ]
+        },
+        {
+          "type": "book",
+          "cover": "cambiar_el_juego",
+          "title": "Game Changers",
+          "body": "Empieza aquí. Es el volumen 1. Más que rivales, el gran fenómeno del ranking, es el volumen 2."
+        },
+        {
+          "type": "book",
+          "cover": "alas_de_sangre",
+          "title": "Empíreo",
+          "body": "Empieza aquí. Violet llega al Colegio de Guerra de Basgiath y al mundo de los jinetes."
+        },
+        {
+          "type": "book",
+          "cover": "binding_13",
+          "title": "Los chicos de Tommen",
+          "body": "Empieza aquí. Johnny y Shannon abren una saga que después continúa con Keeping 13."
+        },
+        {
+          "type": "text",
+          "title": "Si quieres varias semanas de lectura…",
+          "body": "Game Changers → hockey · Empíreo → fantasía militar · Tommen → romance deportivo y drama emocional."
+        },
+        {
+          "type": "text",
+          "title": "Error fácil de evitar",
+          "body": "No empezar Game Changers por Más que rivales solo porque sea el título que más aparece en el ranking."
+        },
+        {
+          "type": "text",
+          "title": "Si empiezas una, empieza por aquí.",
+          "cta": "GUARDA · COMENTA"
+        }
+      ],
+      "review_slug": "IG-01-02 - 3 sagas para empezar por el libro correcto"
+    },
+    {
+      "id": "ig01_03",
+      "date": "2026-09-19T18:00:00+02:00",
+      "caption": "En la primera lista española había sitio para Emma Gil, Inma Rubiales y Nerea Pascual entre nombres internacionales. Ese dato envejece mejor si se cuenta con mes y año: marzo de 2026.",
+      "hashtags": [
+        "#Bookstagram",
+        "#LibrosEnEspañol",
+        "#AutorasEspañolas",
+        "#BookTok"
+      ],
+      "slides": [
+        {
+          "type": "multi_cover",
+          "kicker": "BOOKTOK ESPAÑA · MARZO 2026",
+          "title": "3 autoras españolas en la primera lista oficial #BookTok España",
+          "covers": [
+            "si_fueramos_eternos",
+            "hasta_estrellas",
+            "amor_fuera_serie"
+          ]
+        },
+        {
+          "type": "book",
+          "cover": "si_fueramos_eternos",
+          "title": "Emma Gil",
+          "body": "Clean romance sobre amistad, promesas y volver a empezar. Apareció en el Top 10 oficial de marzo de 2026."
+        },
+        {
+          "type": "book",
+          "cover": "hasta_estrellas",
+          "title": "Inma Rubiales",
+          "body": "Romántica juvenil contemporánea. Maia y Liam llegan desde dos vidas que no están precisamente en orden."
+        },
+        {
+          "type": "book",
+          "cover": "amor_fuera_serie",
+          "title": "Nerea Pascual",
+          "body": "Comedia romántica contemporánea: strangers to lovers, Nueva York, música y dos puntos de vista."
+        },
+        {
+          "type": "text",
+          "title": "Tres entradas distintas",
+          "body": "Promesas y segunda oportunidad · romance emocional · comedia romántica contemporánea."
+        },
+        {
+          "type": "text",
+          "title": "El ranking no es solo traducción anglosajona.",
+          "cta": "GUARDA · COMENTA"
+        }
+      ],
+      "review_slug": "IG-01-03 - 3 autoras espanolas en el Top BookTok"
+    },
+    {
+      "id": "ig01_04",
+      "date": "2026-09-23T18:00:00+02:00",
+      "caption": "En los tres, la relación llega cuando los personajes ya cargan con algo. Estar con otra persona no hace desaparecer la familia, la adicción, la inseguridad o el resto de la vida.",
+      "hashtags": [
+        "#Bookstagram",
+        "#LibrosEnEspañol",
+        "#RomanceJuvenil",
+        "#BookTok"
+      ],
+      "slides": [
+        {
+          "type": "multi_cover",
+          "kicker": "BOOKTOK ESPAÑA · MARZO 2026",
+          "title": "3 libros de la lista de marzo con personajes intentando recomponerse",
+          "covers": [
+            "saving_6",
+            "redeeming_6",
+            "hasta_estrellas"
+          ]
+        },
+        {
+          "type": "book",
+          "cover": "saving_6",
+          "title": "Salvar a los demás no te salva a ti",
+          "body": "Joey carga con una familia rota, demasiado deber y una espiral de adicción. Aoife intenta entrar sin poder arreglarlo todo."
+        },
+        {
+          "type": "book",
+          "cover": "redeeming_6",
+          "title": "Salir también tiene coste",
+          "body": "El desenlace de Joey y Aoife: alejarse de un entorno que amenaza con destruir lo que intenta construir."
+        },
+        {
+          "type": "book",
+          "cover": "hasta_estrellas",
+          "title": "Dos vidas que llegan tocadas",
+          "body": "Liam ha perdido su pasión por las redes; Maia tampoco atraviesa precisamente una etapa sencilla."
+        },
+        {
+          "type": "text",
+          "title": "No son la misma historia",
+          "body": "Comparten una cosa: el romance no borra automáticamente lo que los personajes traen de antes."
+        },
+        {
+          "type": "text",
+          "title": "El romance no borra lo que ya traían encima.",
+          "cta": "GUARDA · COMENTA"
+        }
+      ],
+      "review_slug": "IG-01-04 - 3 libros con personajes reconstruyendose"
+    },
+    {
+      "id": "ig01_05",
+      "date": "2026-09-27T18:00:00+02:00",
+      "caption": "Cork es escenario. Rose Hill es ficticio, pero TikTok lo sitúa en las Rocosas. Tokio entra por la vida cotidiana de Dorayaki. Tres maneras distintas de que un libro te deje un sitio en la cabeza.",
+      "hashtags": [
+        "#Bookstagram",
+        "#LibrosEnEspañol",
+        "#TurismoLiterario",
+        "#BookTok"
+      ],
+      "slides": [
+        {
+          "type": "multi_cover",
+          "kicker": "BOOKTOK + VIAJES · JULIO 2026",
+          "title": "3 libros de BookTok que vienen con destino incluido",
+          "covers": [
+            "binding_13",
+            "wild_love",
+            "dorayaki"
+          ]
+        },
+        {
+          "type": "place",
+          "background": "cork",
+          "cover": "binding_13",
+          "kicker": "CORK · IRLANDA",
+          "title": "Los chicos de Tommen",
+          "body": "Los chicos de Tommen está ambientada en Cork. TikTok la señala como uno de los destinos literarios del verano 2026."
+        },
+        {
+          "type": "text",
+          "title": "Qué te llevas",
+          "body": "Instituto, rugby, primer amor y una ciudad irlandesa que no funciona como mero decorado."
+        },
+        {
+          "type": "place",
+          "background": "rockies",
+          "cover": "wild_love",
+          "kicker": "MONTAÑAS ROCOSAS · CANADÁ",
+          "title": "Wild Love: Amor salvaje",
+          "body": "Rose Hill es ficticio; TikTok lo sitúa imaginariamente entre las Montañas Rocosas canadienses."
+        },
+        {
+          "type": "place",
+          "background": "tokyo",
+          "cover": "dorayaki",
+          "kicker": "TOKIO · JAPÓN",
+          "title": "Dorayaki",
+          "body": "TikTok vincula la novela con Tokio, sus mercados, templos, gastronomía y vida cotidiana."
+        },
+        {
+          "type": "text",
+          "title": "Lectura + viaje funciona por una razón",
+          "body": "TikTok señala que el 73% de su comunidad española de BookTok incluye también los viajes entre sus intereses."
+        },
+        {
+          "type": "text",
+          "title": "Cork · Rocosas · Tokio",
+          "body": "¿Dónde aterrizarías primero?",
+          "cta": "GUARDA · COMENTA"
+        }
+      ],
+      "review_slug": "IG-01-05 - 3 libros que te llevan de viaje"
+    },
+    {
+      "id": "ig01_06",
+      "date": "2026-10-01T18:00:00+02:00",
+      "caption": "Rivalidad. Dragones. Primer amor. Volver a empezar. Comedia romántica. Cinco libros de la primera lista oficial española y cinco puertas bastante distintas.",
+      "hashtags": [
+        "#Bookstagram",
+        "#LibrosEnEspañol",
+        "#RecomendacionesDeLibros",
+        "#BookTok"
+      ],
+      "slides": [
+        {
+          "type": "text",
+          "kicker": "BOOKTOK ESPAÑA · MARZO 2026",
+          "title": "Elige entre 5 libros de la primera lista #BookTok España",
+          "body": "Sin nota. Sin estrellas. Solo qué ofrece cada uno."
+        },
+        {
+          "type": "choice",
+          "cover": "mas_que_rivales",
+          "title": "¿Quieres rivalidad + hockey?",
+          "body": "Más que rivales",
+          "label": "GAME CHANGERS 2"
+        },
+        {
+          "type": "choice",
+          "cover": "alas_de_sangre",
+          "title": "¿Quieres dragones + colegio de guerra?",
+          "body": "Alas de sangre",
+          "label": "EMPÍREO 1"
+        },
+        {
+          "type": "choice",
+          "cover": "binding_13",
+          "title": "¿Quieres primer amor + rugby?",
+          "body": "Binding 13",
+          "label": "TOMMEN 1"
+        },
+        {
+          "type": "choice",
+          "cover": "si_fueramos_eternos",
+          "title": "¿Quieres clean romance + promesas + volver a empezar?",
+          "body": "Si fuéramos eternos"
+        },
+        {
+          "type": "choice",
+          "cover": "amor_fuera_serie",
+          "title": "¿Quieres comedia romántica + Nueva York + música?",
+          "body": "Amor fuera de serie"
+        },
+        {
+          "type": "multi_cover",
+          "title": "Si quieres seguir una historia que ya empezaste",
+          "body": "Binding 13 → Keeping 13 · Saving 6 → Redeeming 6",
+          "covers": [
+            "binding_13",
+            "keeping_13",
+            "saving_6",
+            "redeeming_6"
+          ]
+        },
+        {
+          "type": "text",
+          "title": "Guárdalo hasta que llegue la pregunta: “¿y ahora qué leo?”",
+          "cta": "GUARDA · COMENTA"
+        }
+      ],
+      "review_slug": "IG-01-06 - Elige tu proximo BookTok en 20 segundos"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "id":"ig08_04",
+  "character_version":"LECTOR_A_v1",
+  "reference_url":"https://www.pexels.com/photo/person-inside-a-bookstore-3952079/",
+  "source_license":"https://www.pexels.com/es-es/license/",
+  "keep":["persona con libro en librería","estanterías laterales"],
+  "change":["identidad","ropa","posición exacta","lomos y portadas"],
+  "panels":[
+    {"setting":"bookstore","action":"bookstore_read","expression":"neutral"},
+    {"setting":"bookstore","action":"bookstore_read","expression":"alarma","bubble":"Ah.","tail_x":540,"tail_y":460},
+    {"setting":"bookstore","action":"bookstore_close","expression":"resignado"},
+    {"setting":"bookstore","action":"bookstore_return","expression":"resignado","bubble":"Bueno. Gracias por contarme el capítulo 17.","tail_x":520,"tail_y":500}
+  ],
+  "caption":"La sinopsis podía haberse detenido tres líneas antes.",
+  "hashtags":["#Bookstagram","#Sinopsis","#HumorLector","#LibrosEnEspañol"],
+  "first_comment":null
+}

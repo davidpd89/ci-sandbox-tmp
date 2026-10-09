@@ -1,0 +1,67 @@
+{
+  "series":"IG-20 — Seis archivos que te ahorran horas de documentación",
+  "gate_items":["ig20_01","ig20_03"],
+  "production_qa":"Los recuentos de los catálogos son vivos: no congelar una cifra en el copy. Revalidar la ficha y, cuando aporte algo, el recuento solo durante QA de producción.",
+  "posts":[
+    {
+      "id":"ig20_01","date":"2027-09-01T18:00:00+02:00","caption":"Para escribir una época, una noticia pequeña de ese año suele contar más que veinte listas de “cosas típicas de 1910”.","hashtags":["#Escritura","#Documentación","#BNE","#Escritores"],
+      "slides":[
+        {"mode":"text","dark":true,"kicker":"DOCUMENTACIÓN REAL","title":"¿Cómo hablaba un periódico en 1910?","body":"","footer":"Hemeroteca Digital · Biblioteca Nacional de España","cue":"swipe"},
+        {"mode":"text","kicker":"QUÉ HAY","title":"Prensa histórica española digitalizada","body":"Prensa política, satírica, científica, literaria, deportiva, ilustrada y local. Acceso público al material digitalizado disponible.","footer":"https://www.bne.es/es/catalogos/hemeroteca-digital","cue":"swipe"},
+        {"mode":"text","kicker":"PRUEBA ESTO","title":"Ciudad + años + palabra concreta","body":"Ejemplo: `Pontevedra` + 1900–1920. Después, en un PDF con OCR, busca `reloj`, `ferrocarril`, `fiesta`, `accidente` o el objeto/tema que de verdad necesitas.","footer":"La búsqueda dentro del texto depende de que exista OCR.","cue":"swipe"},
+        {"mode":"text","kicker":"ÚSALO PARA","title":"Que la época deje de ser decorado","body":"Vocabulario real · anuncios y precios · noticias locales · nombres de calles/negocios · preocupaciones que sí ocupaban titulares entonces.","footer":"Una búsqueda concreta ahorra más que navegar sin pregunta.","cue":"swipe"},
+        {"mode":"text","dark":true,"kicker":"DERECHOS","title":"Consultar no significa poder republicar cualquier cosa","body":"Para imágenes de obras en dominio público, la BNE indica CC BY 4.0 o equivalente y pide citar la procedencia de sus fondos. Abre siempre la ficha concreta antes de reutilizar.","footer":"Guía: https://www.bne.es/catalogos/hemeroteca-digital/guias-ayuda-usuario-hemeroteca-digital","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig20_02","date":"2027-09-08T18:00:00+02:00","caption":"“Una tienda antigua” es una idea. Un catálogo, un cartel y una foto del mismo periodo ya empiezan a ser un lugar.","hashtags":["#Escritura","#Archivo","#BNE","#Documentación"],
+      "slides":[
+        {"mode":"text","dark":true,"kicker":"DOCUMENTACIÓN REAL","title":"No busques “ambiente victoriano”.\nBusca el objeto.","body":"","footer":"BNE Digital","cue":"swipe"},
+        {"mode":"text","kicker":"QUÉ HAY","title":"Mucho más que libros escaneados","body":"Libros impresos del XV al XX, manuscritos, dibujos, carteles, grabados, fotografías, mapas, atlas, partituras, audio y otros materiales digitalizados.","footer":"BNE Digital integra la antigua Biblioteca Digital Hispánica.","cue":"swipe"},
+        {"mode":"text","kicker":"PRUEBA ESTO","title":"Material + fecha","body":"`reloj` + fotografías · `Pontevedra` + mapas · `etiqueta` + carteles · `manual` + siglo XIX. La pregunta concreta va antes que la estética.","footer":"https://bnedigital.bne.es/","cue":"swipe"},
+        {"mode":"text","kicker":"ÚSALO PARA","title":"Detalles que sí existían","body":"Forma de un objeto · tipografía · ropa · mobiliario · calles · lenguaje visual. Sirve para transformar ambientación genérica en referencias verificables.","footer":"El catálogo sigue creciendo; importa la ficha concreta, no un contador.","cue":"swipe"},
+        {"mode":"text","dark":true,"kicker":"DERECHOS","title":"El panel de derechos manda","body":"El contenido abierto puede consultarse sin registro; los títulos en dominio público pueden descargarse libremente. Antes de publicar una imagen, abre siempre los derechos del objeto concreto.","footer":"https://www.bne.es/es/catalogos/biblioteca-digital-hispanica","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig20_03","date":"2027-09-15T18:00:00+02:00","caption":"A veces la mejor búsqueda no es encontrar la foto. Es encontrar qué archivo llevaba años guardándola.","hashtags":["#Europeana","#Archivo","#Escritura","#Historia"],
+      "slides":[
+        {"mode":"text","dark":true,"kicker":"DOCUMENTACIÓN REAL","title":"No sabes qué museo tiene la imagen.\nDa igual.","body":"","footer":"Europeana","cue":"swipe"},
+        {"mode":"text","kicker":"QUÉ HAY","title":"Busca en miles de instituciones","body":"Europeana busca a la vez en miles de bibliotecas, museos, archivos y galerías europeos.","footer":"La colección cambia continuamente; la utilidad no depende de una cifra fija.","cue":"swipe"},
+        {"mode":"text","kicker":"PRUEBA ESTO","title":"Término → tipo → siglo → derechos","body":"Ejemplos: `clock shop`, `reading room`, `coastal town`, `postcard`, `Galicia`. Filtra por tipo `Image`, periodo y `Can I use it?`; después abre SIEMPRE la ficha del proveedor.","footer":"https://www.europeana.eu/en","cue":"swipe"},
+        {"mode":"text","kicker":"ÚSALO PARA","title":"Encontrar el archivo correcto","body":"Referencias visuales reales · comparar países/épocas · descubrir qué biblioteca, museo o archivo tiene el material y continuar allí la investigación.","footer":"La búsqueda multilingüe ayuda cuando el término cambia por país.","cue":"swipe"},
+        {"mode":"text","dark":true,"kicker":"DERECHOS","title":"No existe una licencia única de Europeana","body":"Cada objeto lleva su propio rights statement. El badge del item manda; el hecho de poder verlo no implica que puedas republicarlo.","footer":"FAQ/derechos: https://www.europeana.eu/en/faq","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig20_04","date":"2027-09-22T18:00:00+02:00","caption":"La parte aburrida de buscar una imagen histórica suele ser descubrir si puedes usarla. Aquí esa pregunta ya viene medio contestada.","hashtags":["#LibraryOfCongress","#DominioPúblico","#Escritura","#Archivo"],
+      "slides":[
+        {"mode":"text","dark":true,"kicker":"DOCUMENTACIÓN REAL","title":"Si te preocupan los derechos,\nempieza aquí.","body":"","footer":"Library of Congress · Free to Use and Reuse","cue":"swipe"},
+        {"mode":"text","kicker":"QUÉ HAY","title":"Conjuntos temáticos ya seleccionados","body":"Writers and Writing · Clocks & Calendars · Libraries · Maps of Cities · Main Streets · Historical Travel Pictures · Poster Parade · Maritime Life…","footer":"Colecciones seleccionadas por la propia Library of Congress.","cue":"swipe"},
+        {"mode":"text","kicker":"PRUEBA ESTO","title":"Empieza por el tema, no por todo LOC","body":"Abre el conjunto que ya se aproxima a tu problema y después baja al item concreto. Ahorras ruido y empiezas en material seleccionado para uso/reutilización.","footer":"https://www.loc.gov/free-to-use/","cue":"swipe"},
+        {"mode":"text","kicker":"ÚSALO PARA","title":"Documentar y producir la creatividad","body":"La misma búsqueda puede darte referencias históricas y assets que, tras revisar la ficha, puedan acabar en una pieza social sin necesidad de generar una escena falsa.","footer":"Conserva siempre el credit line del item.","cue":"swipe"},
+        {"mode":"text","dark":true,"kicker":"DERECHOS","title":"“Free to Use and Reuse” no elimina el QA","body":"LOC reúne material de dominio público, sin copyright conocido o autorizado para uso público, pero recomienda revisar el rights statement del item concreto.","footer":"https://www.loc.gov/free-to-use/","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig20_05","date":"2027-09-29T18:00:00+02:00","caption":"El mejor filtro de una colección digital no siempre es “fecha”. A veces es “esto lo puedo usar después”.","hashtags":["#NYPL","#DominioPúblico","#Archivos","#Escritura"],
+      "slides":[
+        {"mode":"text","dark":true,"kicker":"DOCUMENTACIÓN REAL","title":"Pon el filtro antes de enamorarte de la foto.","body":"","footer":"NYPL Digital Collections","cue":"swipe"},
+        {"mode":"text","kicker":"QUÉ HAY","title":"Activa «Search only public domain»","body":"El filtro devuelve una colección muy amplia de objetos marcados Public Domain y permite trabajar desde el principio con material potencialmente reutilizable.","footer":"El catálogo cambia; usa el filtro Public Domain y abre la ficha concreta.","cue":"swipe"},
+        {"mode":"text","kicker":"PRUEBA ESTO","title":"Término + filtro Public Domain","body":"`bookstore` · `street market` · `reader` · `hotel lobby` · `map` · `costume`. Activa `Search only public domain` antes de decidir qué asset usar.","footer":"https://digitalcollections.nypl.org/search/index?filters=%5Brights%3DpublicDomain%5D","cue":"swipe"},
+        {"mode":"text","kicker":"ÚSALO PARA","title":"Referencia que luego sí puedes reutilizar","body":"Fotografías · impresos · mapas · manuscritos · diseño gráfico histórico. Muy útil cuando la documentación y el asset social pueden salir del mismo objeto.","footer":"Abre la ficha individual antes de descargar.","cue":"swipe"},
+        {"mode":"text","dark":true,"kicker":"DERECHOS","title":"Public Domain: sin permiso de NYPL","body":"La NYPL indica que no exige permiso y no impone restricciones de uso sobre los elementos marcados Public Domain.","footer":"https://www.nypl.org/research/resources/public-domain-collections","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig20_06","date":"2027-10-06T18:00:00+02:00","caption":"Para describir un objeto, poder girarlo suele ser bastante más útil que leer diez adjetivos sobre él.","hashtags":["#Smithsonian","#OpenAccess","#Escritura","#Documentación"],
+      "slides":[
+        {"mode":"text","dark":true,"kicker":"DOCUMENTACIÓN REAL","title":"¿Y si la referencia no fuera una foto?","body":"","footer":"Smithsonian Open Access","cue":"swipe"},
+        {"mode":"text","kicker":"QUÉ HAY","title":"Assets 2D y 3D","body":"Museos, bibliotecas, archivos, centros de investigación y otras unidades del Smithsonian publican imágenes, datos y, en algunos casos, modelos 3D dentro de Open Access.","footer":"El catálogo Open Access sigue creciendo; busca el objeto concreto.","cue":"swipe"},
+        {"mode":"text","kicker":"PRUEBA ESTO","title":"Busca el objeto, no el adjetivo","body":"`pocket watch` · `typewriter` · `dress` · `printing press` · `navigation` · `bookbinding`. Abre el objeto y comprueba qué archivos 2D/3D están disponibles.","footer":"https://www.si.edu/openaccess","cue":"swipe"},
+        {"mode":"text","kicker":"ÚSALO PARA","title":"Forma y proporción verificables","body":"Estudiar un objeto desde varios ángulos · usar imágenes abiertas · entender mecanismo/proporción con 3D cuando existe, sin inventar detalles para rellenar una descripción.","footer":"Formatos pueden incluir JPG/TIFF y glTF/glb/obj.","cue":"swipe"},
+        {"mode":"text","dark":true,"kicker":"DERECHOS","title":"Open Access = CC0 en los assets marcados","body":"Se pueden usar, transformar y compartir para cualquier propósito sin pedir permiso al Smithsonian. Aun así, evita logos/marcas y revisa contextos culturales sensibles.","footer":"FAQ: https://www.si.edu/openaccess/faq","cue":"none"}
+      ]
+    }
+  ]
+}

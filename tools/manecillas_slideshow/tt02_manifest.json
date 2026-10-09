@@ -1,0 +1,95 @@
+{
+  "id": "TT-02_MANECILLAS_FRAGMENTS_v1",
+  "series": "TT-02 — Fragmentos reales de Las manecillas del recuerdo",
+  "network": "TikTok",
+  "pillar": "10% libro/promoción",
+  "canvas": [1080, 1920],
+  "brand": "AUTORA DEMO DÍAZ",
+  "canonical_source": {
+    "drive_id": "1CtjHvvy7BxBm-H7I5CXh5p7wK3QcykCt",
+    "name": "28_MANECILLAS_FRAGMENTOS_POSTS_Y_PAGINAS_2026-08-16.md",
+    "rule": "No ampliar ninguna cita fuera de los tres fragmentos verificados."
+  },
+  "cover": {
+    "drive_id": "1SClEck69kTqbqorViNxks1t1Axwu-Vy1",
+    "asset": "portada-las-manecillas-del-recuerdo-1024x1536.png",
+    "width": 1024,
+    "height": 1536,
+    "sha256": "1361ed45dad7cfea9f9e07de08369ef4e656867f9ecc370c429571cfba0b1e8b",
+    "title": "LAS MANECILLAS DEL RECUERDO",
+    "author": "Autora Demo Díaz",
+    "publisher": "Monza Ediciones"
+  },
+  "license_url": "https://www.pexels.com/license/",
+  "production_route": "stock_real_directo_9_crops_mas_portada_real",
+  "schedule_rule": "Fechas y 10:00 son propuestas históricas. Revalidar Best Time y planner; no programar sin autorización expresa de David.",
+  "gate_items": ["tt02_01"],
+  "posts": [
+    {
+      "id": "tt02_01",
+      "date_proposed": "2026-10-04T10:00:00+02:00",
+      "reference_url": "https://www.pexels.com/photo/a-grandfather-and-grandson-looking-at-each-other-while-sitting-in-kitchen-during-breakfast-10388455/",
+      "backup_reference_url": "https://www.pexels.com/photo/a-grandfather-making-breakfast-to-his-grandson-sitting-at-kitchen-table-10388459/",
+      "asset": "tt02_01_ref.jpg",
+      "caption": "Siete miradas al reloj. El chocolate intacto. Tomás no necesita que su abuelo diga “estoy preocupado” para enterarse.",
+      "hashtags": ["#LasManecillasDelRecuerdo", "#BookTok", "#BookTokEspañol", "#FragmentoLiterario"],
+      "cover_support": "Tomás cuenta siete miradas durante un desayuno.",
+      "slides": [
+        {"kind":"hook","text":"Un niño cuenta cuántas veces su abuelo mira el reloj durante el desayuno.","note":"Fragmento real · Las manecillas del recuerdo","crop_y":46,"zoom":1.00},
+        {"kind":"quote","text":"Tomás contó las siete veces que su abuelo miró el reloj durante el desayuno.","crop_y":43,"zoom":1.04},
+        {"kind":"quote","text":"Los domingos normales, Manuel apenas lo miraba; el tiempo con los nietos era otra cosa, más despacio.","crop_y":49,"zoom":1.07},
+        {"kind":"quote","text":"Pero hoy cada minuto se veía venir desde lejos y el niño ya sabía por qué: mañana era la cita con el cardiólogo.","crop_y":41,"zoom":1.10},
+        {"kind":"quote","text":"El sol se colaba por las cortinas gastadas, formando manchas doradas que bailaban sobre la mesa de nogal.","crop_y":54,"zoom":1.12},
+        {"kind":"quote","text":"En la cocina del abuelo Manuel, el chocolate de los domingos tenía su propio orden: primero el cacao, después el azúcar, después el silencio.","crop_y":47,"zoom":1.14},
+        {"kind":"quote","text":"Este domingo el chocolate llevaba cinco minutos en la mesa y ninguno de los dos lo había tocado.","crop_y":56,"zoom":1.16},
+        {"kind":"quote","text":"Tomás, que acababa de cumplir once años, balanceaba las piernas sin apartar los ojos de su abuelo.","crop_y":39,"zoom":1.18},
+        {"kind":"quote","text":"Van siete veces, pensó.","note":"El fragmento se corta aquí.","crop_y":45,"zoom":1.20},
+        {"kind":"cover"}
+      ]
+    },
+    {
+      "id": "tt02_02",
+      "date_proposed": "2026-10-11T10:00:00+02:00",
+      "reference_url": "https://www.pexels.com/photo/window-display-of-an-antique-shop-14355677/",
+      "backup_reference_url": "https://www.pexels.com/photo/antique-shop-14020942/",
+      "asset": "tt02_02_ref.jpg",
+      "caption": "Ramón no toca el reloj. Le basta con cambiar la historia que cuenta alrededor. En unos segundos, tres personas quieren saber cuánto vale.",
+      "hashtags": ["#LasManecillasDelRecuerdo", "#BookTok", "#BookTokEspañol", "#Novela"],
+      "cover_support": "Ramón convierte un reloj corriente en una historia.",
+      "slides": [
+        {"kind":"hook","text":"Un reloj deja de ser corriente en cuanto alguien pregunta cuánto vale.","note":"Fragmento real · Las manecillas del recuerdo","crop_y":48,"zoom":1.00},
+        {"kind":"quote","text":"Mientras tanto, la mujer examina el reloj de la vitrina principal como si fuera el Santo Grial.","crop_y":44,"zoom":1.04},
+        {"kind":"quote","text":"—¿Este reloj también está en venta?","crop_y":52,"zoom":1.07},
+        {"kind":"quote","text":"—Ese no se toca. —Ramón se pone serio—. Ese es especial.","crop_y":41,"zoom":1.10},
+        {"kind":"quote","text":"«Aquí está. La primera que muerde el anzuelo».","crop_y":55,"zoom":1.12},
+        {"kind":"quote","text":"Los tres clientes se acercan a la vitrina, moscas a la miel. Sonríe por dentro.","crop_y":47,"zoom":1.14},
+        {"kind":"quote","text":"—Perteneció a alguien muy famoso. No puedo dar detalles.","crop_y":53,"zoom":1.16},
+        {"kind":"quote","text":"—¿Cuánto vale?\n—No está en venta. Es una pieza de museo.","crop_y":43,"zoom":1.18},
+        {"kind":"quote","text":"«Mentira número uno. Ahora a inflar la demanda».","crop_y":49,"zoom":1.20},
+        {"kind":"cover"}
+      ]
+    },
+    {
+      "id": "tt02_03",
+      "date_proposed": "2026-10-18T10:00:00+02:00",
+      "reference_url": "https://www.pexels.com/photo/close-up-of-a-person-holding-a-wristwatch-18023772/",
+      "backup_reference_url": "https://www.pexels.com/photo/man-holding-a-wristwatch-11745346/",
+      "asset": "tt02_03_ref.jpg",
+      "caption": "Martín tiene que acercarse el reloj al oído. En su generación las horas llegan por pantalla; el tic-tac es un sonido nuevo.",
+      "hashtags": ["#LasManecillasDelRecuerdo", "#BookTok", "#BookTokEspañol", "#FicciónEspeculativa"],
+      "cover_support": "Martín descubre que un reloj puede sonar.",
+      "slides": [
+        {"kind":"hook","text":"Martín se acerca un reloj al oído. Nunca había oído una hora sonar.","note":"Fragmento real · Las manecillas del recuerdo","crop_y":47,"zoom":1.00},
+        {"kind":"quote","text":"—¿Ese reloj es analógico?\n—Sí.","crop_y":43,"zoom":1.04},
+        {"kind":"quote","text":"—¿Puedo?","crop_y":51,"zoom":1.07},
+        {"kind":"quote","text":"Dudó un momento, luego se lo quitó y se lo pasó. Martín lo examinó con fascinación.","crop_y":40,"zoom":1.10},
+        {"kind":"quote","text":"—Es increíble. En un mundo donde todo se actualiza constantemente, donde todo es Smart, esto simplemente… es.","crop_y":55,"zoom":1.12},
+        {"kind":"quote","text":"—Escuchó el tic-tac—. ¿Sabe? Mi generación no conoce este sonido.","crop_y":46,"zoom":1.14},
+        {"kind":"quote","text":"Para nosotros, las horas son silenciosas. Digitales.","crop_y":53,"zoom":1.16},
+        {"kind":"quote","text":"—¿Qué notas con el sonido?","crop_y":42,"zoom":1.18},
+        {"kind":"quote","text":"—Suena… honesto. Como si no tuviera nada que demostrar. Como si cada segundo valiera por sí mismo.","crop_y":48,"zoom":1.20},
+        {"kind":"cover"}
+      ]
+    }
+  ]
+}

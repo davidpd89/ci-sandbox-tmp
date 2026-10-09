@@ -1,0 +1,66 @@
+{
+  "series":"IG-21 — Una técnica dentro de una página real",
+  "gate_items":["ig21_01","ig21_02"],
+  "posts":[
+    {
+      "id":"ig21_01","date":"2027-09-12T18:00:00+02:00","caption":"Todavía no hemos visto una calle y la ciudad ya está durmiendo la siesta.","hashtags":["#Escritura","#TécnicaNarrativa","#LaRegenta","#Escritores"],
+      "slides":[
+        {"mode":"text","dark":true,"kicker":"PÁGINA REAL","title":"«La heroica ciudad dormía la siesta.»","body":"Clarín · La Regenta","footer":"Fragmento breve literal · dominio público","cue":"swipe"},
+        {"mode":"text","kicker":"UNA DECISIÓN","title":"“Heroica” promete grandeza.\n“Dormía la siesta” la pincha inmediatamente.","body":"Antes de describir calles o edificios ya hay una fricción en la forma de mirar la ciudad.","footer":"Describir el efecto visible; no afirmar intención autoral no documentada.","cue":"swipe"},
+        {"mode":"text","kicker":"EFECTO","title":"La ciudad no entra como una ficha de escenario","body":"“Heroica” levanta el tono; “dormía la siesta” lo baja inmediatamente. Antes de describir calles o edificios ya hay una fricción en la forma de mirarla.","footer":"Una técnica concreta: caracterizar un lugar mediante acción + contradicción.","cue":"swipe"},
+        {"mode":"text","kicker":"PRUEBA DE REVISIÓN","title":"Borra el nombre de tu ciudad","body":"¿Queda en la primera página alguna acción o contradicción que solo podría pertenecerle a ella?","footer":"No es una norma: es una prueba para detectar escenario genérico.","cue":"swipe"},
+        {"mode":"text","dark":true,"kicker":"FUENTE","title":"La Regenta","body":"Leopoldo Alas «Clarín» · 1884–1885","footer":"Texto: https://www.cervantesvirtual.com/obra-visor/la-regenta--1/html/ff0eb4a0-82b1-11df-acc7-002185ce6064_8.html","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig21_02","date":"2027-09-19T18:00:00+02:00","caption":"Sabemos bastante de alguien por cómo baja una cuesta cuando no controla el caballo.","hashtags":["#Escritura","#PardoBazán","#Narrativa","#Escritores"],
+      "slides":[
+        {"mode":"text","dark":true,"kicker":"PÁGINA REAL","title":"«...el peludo rocín seguía empeñándose en bajar la cuesta a un trote cochinero que descuadernaba los intestinos...»","body":"Emilia Pardo Bazán · Los pazos de Ulloa","footer":"Fragmento breve literal · dominio público","cue":"swipe"},
+        {"mode":"text","kicker":"UNA DECISIÓN","title":"Presentar mientras algo sale mal","body":"Antes de explicar quién es el jinete, Pardo Bazán lo mete en un cuerpo incómodo: caballo, cuesta y esfuerzo ya lo obligan a reaccionar.","footer":"La acción hace trabajo de presentación.","cue":"swipe"},
+        {"mode":"text","kicker":"EFECTO","title":"Paisaje y personaje llegan juntos","body":"La información física no aparece en una pausa biográfica. El camino y el caballo presentan el lugar a la vez que fuerzan una respuesta del personaje.","footer":"Una operación concreta, no una regla universal.","cue":"swipe"},
+        {"mode":"text","kicker":"PRUEBA DE REVISIÓN","title":"Quita una frase descriptiva","body":"¿Puedes presentar esa misma característica mediante algo que el personaje intenta hacer —y no mediante una frase que lo explica?","footer":"Si no mejora la escena, no forzar el cambio.","cue":"swipe"},
+        {"mode":"text","dark":true,"kicker":"FUENTE","title":"Los pazos de Ulloa","body":"Emilia Pardo Bazán · 1886","footer":"Texto: https://www.cervantesvirtual.com/obra-visor/los-pazos-de-ulloa--0/html/fedba772-82b1-11df-acc7-002185ce6064_2.html","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig21_03","date":"2027-09-26T18:00:00+02:00","caption":"“Me lo contó alguien” cambia una historia. De repente también existe la posibilidad de recordar mal.","hashtags":["#Escritura","#Galdós","#Narradores","#TécnicaNarrativa"],
+      "slides":[
+        {"mode":"text","dark":true,"kicker":"PÁGINA REAL","title":"«Las noticias más remotas que tengo de la persona que lleva este nombre me las ha dado Jacinto María Villalonga...»","body":"Benito Pérez Galdós · Fortunata y Jacinta","footer":"Fragmento breve literal · dominio público","cue":"swipe"},
+        {"mode":"text","kicker":"UNA DECISIÓN","title":"El narrador cita a su informante","body":"No finge acceso limpio a todo. Nos dice de quién le llegó esa parte de la historia.","footer":"La procedencia de la información también entra en escena.","cue":"swipe"},
+        {"mode":"text","kicker":"EFECTO","title":"La información ya tiene distancia","body":"La historia gana una capa de rumor, memoria y circulación entre personas. No solo importa qué sabemos; también quién dice saberlo.","footer":"No asumir que el informante miente: basta con que exista mediación.","cue":"swipe"},
+        {"mode":"text","kicker":"PRUEBA DE REVISIÓN","title":"Pregunta quién podría saberlo","body":"Cuando un personaje cuenta un hecho pasado, ¿sabe realmente todo lo que tu escena le permite afirmar?","footer":"Si la respuesta es no, la fuente puede formar parte de la voz.","cue":"swipe"},
+        {"mode":"text","dark":true,"kicker":"FUENTE","title":"Fortunata y Jacinta","body":"Benito Pérez Galdós · 1887","footer":"Texto: https://www.cervantesvirtual.com/obra-visor/fortunata-y-jacinta-dos-historias-de-casadas--0/html/ff34d4e6-82b1-11df-acc7-002185ce6064_4.html","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig21_04","date":"2027-10-03T18:00:00+02:00","caption":"Lázaro no empieza por su nacimiento porque sí: está respondiendo a alguien que le ha pedido cuentas.","hashtags":["#Escritura","#LazarilloDeTormes","#Narrador","#Literatura"],
+      "slides":[
+        {"mode":"text","dark":true,"kicker":"PÁGINA REAL","title":"«...Vuestra Merced escribe se le escriba y relate el caso muy por extenso...»","body":"Lazarillo de Tormes","footer":"Fragmento breve literal · dominio público","cue":"swipe"},
+        {"mode":"text","kicker":"UNA DECISIÓN","title":"La vida se cuenta porque alguien pide una explicación","body":"La autobiografía no aparece al vacío. Existe un destinatario y existe un “caso” que debe ser explicado.","footer":"Motivo narrativo antes que memoria sin dirección.","cue":"swipe"},
+        {"mode":"text","kicker":"EFECTO","title":"El pasado tiene una agenda presente","body":"Lázaro selecciona y ordena lo que cuenta para llegar a una explicación. El destinatario cambia la dirección de la voz autobiográfica.","footer":"No hace falta convertir la técnica en una regla para toda primera persona.","cue":"swipe"},
+        {"mode":"text","kicker":"PRUEBA DE REVISIÓN","title":"¿Qué quiere conseguir al terminar?","body":"Si un personaje cuenta algo largo, ¿qué necesita que entienda, crea o haga quien escucha cuando termine?","footer":"Si no necesita nada, quizá la escena esté contando para el lector y no para la persona presente.","cue":"swipe"},
+        {"mode":"text","dark":true,"kicker":"FUENTE","title":"La vida de Lazarillo de Tormes","body":"Anónimo · 1554","footer":"Texto: https://www.cervantesvirtual.com/obra-visor/la-vida-de-lazarillo-de-tormes-y-de-sus-fortunas-y-adversidades--0/html/fedb2f54-82b1-11df-acc7-002185ce6064_2.html","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig21_05","date":"2027-10-10T18:00:00+02:00","caption":"Decir “da miedo” informa. Girarse porque cruje una ventana ya hace otra cosa.","hashtags":["#Escritura","#Bécquer","#Terror","#TécnicaNarrativa"],
+      "slides":[
+        {"mode":"text","dark":true,"kicker":"PÁGINA REAL","title":"«...la he escrito volviendo algunas veces la cabeza con miedo cuando sentía crujir los cristales de mi balcón...»","body":"Gustavo Adolfo Bécquer · El Monte de las Ánimas","footer":"Fragmento breve literal · dominio público","cue":"swipe"},
+        {"mode":"text","kicker":"UNA DECISIÓN","title":"El miedo aparece antes que la leyenda","body":"La historia todavía no ha empezado y el narrador ya está mirando hacia atrás cuando crujen los cristales.","footer":"Conducta antes que etiqueta emocional.","cue":"swipe"},
+        {"mode":"text","kicker":"EFECTO","title":"El marco contamina lo que viene","body":"Antes de conocer la causa, ya vemos el residuo: contar la leyenda ha afectado a quien escribe. No promete “esto da miedo”; muestra una reacción.","footer":"Una consecuencia puede anticipar mejor que una declaración.","cue":"swipe"},
+        {"mode":"text","kicker":"PRUEBA DE REVISIÓN","title":"Muestra el residuo antes de la causa","body":"Si quieres anticipar una emoción, ¿puedes hacer visible lo que deja en alguien antes de explicar por qué está ahí?","footer":"No usar siempre: funciona cuando el residuo crea una pregunta real.","cue":"swipe"},
+        {"mode":"text","dark":true,"kicker":"FUENTE","title":"El Monte de las Ánimas","body":"Gustavo Adolfo Bécquer","footer":"Texto: https://www.cervantesvirtual.com/obra-visor/obras-de-gustavo-a-becquer--0/html/ff0ed3e0-82b1-11df-acc7-002185ce6064_5.html","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig21_06","date":"2027-10-17T18:00:00+02:00","caption":"Una despensa y un armario pueden hacer caracterización sin pedir permiso a un párrafo de descripción.","hashtags":["#Escritura","#Cervantes","#DonQuijote","#Narrativa"],
+      "slides":[
+        {"mode":"text","dark":true,"kicker":"PÁGINA REAL","title":"«...lanza en astillero, adarga antigua, rocín flaco y galgo corredor.»","body":"Miguel de Cervantes · Don Quijote de la Mancha","footer":"Fragmento breve literal · dominio público","cue":"swipe"},
+        {"mode":"text","kicker":"UNA DECISIÓN","title":"Cuatro cosas antes que una explicación psicológica","body":"Lanza, adarga, rocín, galgo. El personaje empieza a existir materialmente a través de lo que posee y usa.","footer":"Después llegarán comida, ropa y casa.","cue":"swipe"},
+        {"mode":"text","kicker":"EFECTO","title":"La propiedad también caracteriza","body":"Los objetos sitúan al hidalgo en una vida concreta antes de que una descripción abstracta nos diga cómo es.","footer":"No convertirlo en “haz siempre inventarios”. Importa qué objetos selecciona la escena.","cue":"swipe"},
+        {"mode":"text","kicker":"PRUEBA DE REVISIÓN","title":"Cinco cosas que toca en una semana","body":"Elige cinco objetos que tu personaje usa de verdad. ¿Dicen algo que su descripción física todavía no dice?","footer":"Si no dicen nada, cambiar el objeto es más útil que añadir adjetivos.","cue":"swipe"},
+        {"mode":"text","dark":true,"kicker":"FUENTE","title":"Don Quijote de la Mancha","body":"Miguel de Cervantes · 1605","footer":"Texto: https://www.cervantesvirtual.com/obra-visor/el-ingenioso-hidalgo-don-quijote-de-la-mancha--13/html/ff0dcf4a-82b1-11df-acc7-002185ce6064_3.html","cue":"none"}
+      ]
+    }
+  ]
+}

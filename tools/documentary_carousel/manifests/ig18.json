@@ -1,0 +1,67 @@
+{
+  "series":"IG-18 — Sí, esto es una biblioteca",
+  "gate_items":["ig18_01","ig18_03","ig18_06"],
+  "posts":[
+    {
+      "id":"ig18_01","date":"2027-05-09T18:00:00+02:00","caption":"Hay edificios que intentan desaparecer detrás de los libros. Este hace justo lo contrario: te obliga a mirar dónde estás.","hashtags":["#Bibliotecas","#Arquitectura","#Libros","#Stuttgart"],
+      "slides":[
+        {"mode":"image_title","image":"ig18_01.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Innen_Stadtbibliothek_Stuttgart.jpg","fit":"cover","kicker":"BIBLIOTECAS REALES","title":"Por dentro parece una escalera infinita.","credit":"Stadtbibliothek Stuttgart · Pablodbds · CC0","cue":"swipe"},
+        {"mode":"image_body","image":"ig18_01.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Innen_Stadtbibliothek_Stuttgart.jpg","fit":"cover","kicker":"STUTTGART","body":"Stadtbibliothek Stuttgart · Alemania","footer":"Misma foto real · crop limpio para mirar la geometría","cue":"swipe"},
+        {"mode":"text","kicker":"CÓMO ESTÁ HECHA","title":"Un cubo de unos 40 metros","body":"El edificio deja un gran espacio vacío en el centro y, alrededor, las galerías blancas suben en niveles abiertos.","footer":"Fuente: ciudad de Stuttgart · inaugurada en 2011","cue":"swipe"},
+        {"mode":"text","kicker":"POR QUÉ SE VE ASÍ","title":"Casi cada nivel mira a otro nivel","body":"La geometría abierta hace que desde muchos puntos del interior veas escaleras, galerías y vacíos a distinta altura. Por eso la foto parece más laberinto que sala de lectura.","footer":"Fuente: Stadtbibliothek Stuttgart","cue":"swipe"},
+        {"mode":"source_image","image":"ig18_01.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Innen_Stadtbibliothek_Stuttgart.jpg","fit":"cover","kicker":"FUENTE","body":"Stadtbibliothek am Mailänder Platz · Stuttgart · 2011.","footer":"Datos: stuttgart.de/en/tourismus/sehenswuerdigkeiten/stadtbibliothek · Foto: Pablodbds · Wikimedia Commons · CC0","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig18_02","date":"2027-05-16T18:00:00+02:00","caption":"Una biblioteca donde cuesta distinguir qué es mueble, qué es pasarela y qué es edificio.","hashtags":["#Bibliotecas","#Arquitectura","#México","#Libros"],
+      "slides":[
+        {"mode":"image_title","image":"ig18_02.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Interior_de_la_Biblioteca_Vasconcelos.jpg","fit":"cover","kicker":"BIBLIOTECAS REALES","title":"Las estanterías parecen flotar.\nNo es un truco.","credit":"Biblioteca Vasconcelos · Padaguan · CC BY-SA 4.0","cue":"swipe"},
+        {"mode":"image_body","image":"ig18_02.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Interior_de_la_Biblioteca_Vasconcelos.jpg","fit":"cover","kicker":"CIUDAD DE MÉXICO","body":"Biblioteca Vasconcelos","footer":"Foto real · sin generación de arquitectura","cue":"swipe"},
+        {"mode":"text","kicker":"CÓMO ESTÁ HECHA","title":"Acero, concreto y vidrio","body":"Dentro, la estructura interior está colgada de la estructura exterior, lo que deja una planta libre y grandes vacíos entre niveles.","footer":"Fuente: Biblioteca Vasconcelos oficial","cue":"swipe"},
+        {"mode":"text","kicker":"POR QUÉ SE VE ASÍ","title":"Los libros forman parte de la estructura","body":"No estás mirando una sala con muebles aislados: las estanterías y pasarelas construyen visualmente otra estructura dentro del edificio.","footer":"Fuente: Biblioteca Vasconcelos oficial","cue":"swipe"},
+        {"mode":"source_image","image":"ig18_02.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Interior_de_la_Biblioteca_Vasconcelos.jpg","fit":"cover","kicker":"FUENTE","body":"Biblioteca Vasconcelos · Ciudad de México.","footer":"Datos: bibliotecavasconcelos.gob.mx/info_detalle.php?id=61 · Foto: Padaguan · Wikimedia Commons · CC BY-SA 4.0","credit":"Atribuir e indicar cambios/crop; ShareAlike si aplica adaptación","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig18_03","date":"2027-05-23T18:00:00+02:00","caption":"Una pared que tiene que hacer dos cosas a la vez: proteger un libro de la luz y seguir dejando entrar el día.","hashtags":["#Bibliotecas","#Arquitectura","#LibrosRaros","#Yale"],
+      "slides":[
+        {"mode":"image_title","image":"ig18_03.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Beinecke_Library_interior.JPG","fit":"cover","kicker":"BIBLIOTECAS REALES","title":"Las paredes son de mármol.\nY dejan pasar luz.","credit":"Beinecke Library · foto dominio público","cue":"swipe"},
+        {"mode":"image_body","image":"ig18_03.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Beinecke_Library_interior.JPG","fit":"cover","kicker":"YALE","body":"Beinecke Rare Book & Manuscript Library","footer":"Foto real del interior","cue":"swipe"},
+        {"mode":"text","kicker":"CÓMO ESTÁ HECHA","title":"Mármol translúcido de Vermont","body":"Los paneles exteriores tienen 1,25 pulgadas de espesor: filtran y difunden la luz para proteger las colecciones de la luz solar directa dañina.","footer":"Fuente: Yale Beinecke Library","cue":"swipe"},
+        {"mode":"text","kicker":"EN EL CENTRO","title":"Una torre de vidrio de seis plantas","body":"La torre central guarda parte de la colección de libros raros. El edificio convierte la conservación en algo visible desde la sala.","footer":"Diseño de Gordon Bunshaft / SOM · inaugurada en 1963","cue":"swipe"},
+        {"mode":"source_image","image":"ig18_03.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Beinecke_Library_interior.JPG","fit":"cover","kicker":"FUENTE","body":"Beinecke Rare Book & Manuscript Library · Yale University · 1963.","footer":"Datos: beinecke.library.yale.edu/about/history-architecture/about-building · Foto: Wikimedia Commons · dominio público","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig18_04","date":"2027-05-30T18:00:00+02:00","caption":"Una biblioteca puede guardar libros y, al mismo tiempo, prestar espacio para hacer cosas que no caben en una estantería.","hashtags":["#Bibliotecas","#Helsinki","#Arquitectura","#Lectura"],
+      "slides":[
+        {"mode":"image_title","image":"ig18_04.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Oodi_library.jpg","fit":"cover","kicker":"BIBLIOTECAS REALES","title":"Aquí la biblioteca no empieza por las estanterías.","credit":"Oodi · Helsinki · CC BY-SA 4.0","cue":"swipe"},
+        {"mode":"image_body","image":"ig18_04.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Oodi_library.jpg","fit":"cover","kicker":"HELSINKI","body":"Helsinki Central Library Oodi","footer":"Edificio de vidrio, acero y fachada de madera","cue":"swipe"},
+        {"mode":"text","kicker":"TRES PLANTAS","title":"Tres atmósferas distintas","body":"La planta baja es activa y abierta; la segunda se dedica a trabajo, actividades y aprendizaje; la tercera concentra el espacio más tranquilo de libros y lectura.","footer":"Fuente: Oodi oficial","cue":"swipe"},
+        {"mode":"text","kicker":"FUNCIÓN","title":"Leer es una función, no la única","body":"La arquitectura trata la biblioteca como infraestructura pública: gran parte del edificio está dedicada a estar, trabajar, crear y encontrarse, no solo a almacenar libros.","footer":"Fuente: Oodi oficial","cue":"swipe"},
+        {"mode":"source_image","image":"ig18_04.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Oodi_library.jpg","fit":"cover","kicker":"FUENTE","body":"Helsinki Central Library Oodi · Finlandia.","footer":"Datos: oodihelsinki.fi/en/what-is-oodi/architecture/ · Foto: Wikimedia Commons · CC BY-SA 4.0","credit":"Atribuir e indicar cambios/crop; ShareAlike si aplica adaptación","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig18_05","date":"2027-06-06T18:00:00+02:00","caption":"Dos mil personas leyendo pueden ser, también, una forma de arquitectura.","hashtags":["#Bibliotecas","#Alejandría","#Arquitectura","#Libros"],
+      "slides":[
+        {"mode":"image_title","image":"ig18_05.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Inside_Bibliotheca_Alexandrina_(2007-05-027).jpg","fit":"cover","kicker":"BIBLIOTECAS REALES","title":"La sala de lectura baja por siete niveles.","credit":"Bibliotheca Alexandrina · Argenberg · CC BY 2.0","cue":"swipe"},
+        {"mode":"image_body","image":"ig18_05.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Inside_Bibliotheca_Alexandrina_(2007-05-027).jpg","fit":"cover","kicker":"ALEJANDRÍA","body":"Bibliotheca Alexandrina","footer":"Sala principal escalonada","cue":"swipe"},
+        {"mode":"text","kicker":"CÓMO ESTÁ HECHA","title":"Siete niveles escalonados","body":"Desde arriba, las mesas parecen continuar hacia abajo en vez de terminar en una única planta. La gran sala principal se distribuye por siete niveles.","footer":"Fuente: Bibliotheca Alexandrina oficial","cue":"swipe"},
+        {"mode":"text","kicker":"CAPACIDAD","title":"Hasta 2.000 personas","body":"La institución indica que la zona de lectura puede acoger hasta 2.000 lectores al mismo tiempo.","footer":"Fuente: Bibliotheca Alexandrina oficial · capacidad de la zona de lectura","cue":"swipe"},
+        {"mode":"source_image","image":"ig18_05.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Inside_Bibliotheca_Alexandrina_(2007-05-027).jpg","fit":"cover","kicker":"FUENTE","body":"Bibliotheca Alexandrina · Egipto.","footer":"Datos: bibalex.org/Libraries/presentation/static/156b0.aspx · Foto: Argenberg · Wikimedia Commons · CC BY 2.0","credit":"Atribución obligatoria; indicar cambios/crop","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig18_06","date":"2027-06-13T18:00:00+02:00","caption":"Hay formas más discretas de esconder un aparcamiento. Esta claramente no era una de ellas.","hashtags":["#Bibliotecas","#KansasCity","#Arquitectura","#Libros"],
+      "slides":[
+        {"mode":"image_title","image":"ig18_06.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Library_(17010263631).jpg","fit":"contain","kicker":"BIBLIOTECAS REALES","title":"Esto no es una librería gigante.\nEs el parking.","credit":"Community Bookshelf · Dean Hochman · CC BY 2.0","cue":"swipe"},
+        {"mode":"image_body","image":"ig18_06.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Library_(17010263631).jpg","fit":"contain","kicker":"KANSAS CITY","body":"Community Bookshelf","footer":"Foto real del aparcamiento · no recortar los lomos hasta volverlos irreconocibles","cue":"swipe"},
+        {"mode":"text","kicker":"QUÉ HICIERON","title":"22 lomos gigantes","body":"La fachada del aparcamiento se convirtió en una estantería de 22 lomos gigantes. La biblioteca la llama Community Bookshelf.","footer":"Fuente: Kansas City Public Library · Community Bookshelf","cue":"swipe"},
+        {"mode":"text","kicker":"QUIÉN ELIGIÓ","title":"Los lectores propusieron títulos","body":"Lectores de Kansas City enviaron sugerencias y el consejo de la biblioteca hizo la selección final. Los lomos miden aproximadamente 25 pies de alto por 9 de ancho.","footer":"Completado en 2004","cue":"swipe"},
+        {"mode":"source_image","image":"ig18_06.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Library_(17010263631).jpg","fit":"contain","kicker":"FUENTE","body":"Community Bookshelf · Kansas City Public Library · 2004.","footer":"Hecho: kclibrary.org/locations/central/parking · Foto: Dean Hochman / Flickr vía Wikimedia Commons · CC BY 2.0","credit":"Atribución obligatoria; indicar crop/adaptación si se modifica","cue":"none"}
+      ],
+      "asset_backup":{"source_url":"https://commons.wikimedia.org/wiki/File:Community_Bookshelf_-_Library_District.jpg","credit":"Noah Bohland · CC BY-SA 4.0","note":"Solo si el gate visual demuestra que la orientación vertical compone mejor; menor resolución 655×875."}
+    }
+  ]
+}

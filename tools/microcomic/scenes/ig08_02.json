@@ -1,0 +1,17 @@
+{
+  "id":"ig08_02",
+  "character_version":"LECTOR_A_v1",
+  "reference_url":"https://www.pexels.com/photo/anonymous-person-reading-book-in-light-room-3847690/",
+  "source_license":"https://www.pexels.com/es-es/license/",
+  "keep":["persona con varios libros","sensación de acumulación"],
+  "change":["identidad","libros","habitación","títulos"],
+  "panels":[
+    {"setting":"stack","action":"stand_stack","expression":"neutral","bubble":"¿No tenías ya demasiados pendientes?","tail_x":820,"tail_y":600,"stack_new_book":true},
+    {"setting":"stack","action":"stack_look","expression":"resignado","bubble":"Sí.","tail_x":540,"tail_y":520},
+    {"setting":"stack","action":"stack_open","expression":"neutral","bubble":"Entonces, ¿por qué otro?","tail_x":820,"tail_y":560},
+    {"setting":"stack","action":"stack_open","expression":"contento","bubble":"Porque este no estaba pendiente hasta hoy.","tail_x":540,"tail_y":560}
+  ],
+  "caption":"La pila tenía ocho. Ahora tiene nueve. Matemáticamente, esto va mal.",
+  "hashtags":["#Bookstagram","#TBR","#HumorLector","#LibrosEnEspañol"],
+  "first_comment":null
+}

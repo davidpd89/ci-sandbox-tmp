@@ -1,0 +1,48 @@
+{
+  "id": "LECTOR_A_v1",
+  "public_name": null,
+  "palette": {
+    "line": "#241D18",
+    "skin": "#D4A077",
+    "hair": "#2C211B",
+    "sweatshirt": "#E7DDCA",
+    "trousers": "#32302F",
+    "socks": "#F4F0E9",
+    "accent": "#C27937",
+    "background": "#F6F0E6",
+    "background_secondary": "#CBD3D7"
+  },
+  "geometry": {
+    "stroke_px": 12,
+    "head_width_px": 132,
+    "head_height_px": 144,
+    "normal_eye_diameter_px": 12,
+    "alarm_eye_diameter_px": 16,
+    "mouth_min_px": 28,
+    "mouth_max_px": 44,
+    "torso_width_px": 250,
+    "torso_height_px": 300,
+    "limb_stroke_px": 36,
+    "book_width_px": 130,
+    "book_height_px": 200,
+    "head": "simple oval",
+    "eyes": "two dots",
+    "nose": "none",
+    "mouth": "single line/curve",
+    "hair": "single solid mass",
+    "hands": "mittens, no fingers",
+    "book": "generic thin paperback, approx 13x20 cm, 14-20 mm spine"
+  },
+  "wardrobe_locked": true,
+  "expressions": ["neutral", "cansado", "alarma", "sospecha", "contento", "resignado"],
+  "forbidden": [
+    "realistic fingers",
+    "realistic nose",
+    "3D shading",
+    "gradients on character",
+    "AI texture",
+    "anime eyes",
+    "brand logos",
+    "invented real-book cover"
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "id": "IG-09_LA_PUERTA_4B_v1",
+  "assets": {
+    "door": {
+      "filename": "ep1_door.jpg",
+      "source_url": "https://www.pexels.com/photo/door-2524160/",
+      "license": "https://www.pexels.com/es-es/license/"
+    },
+    "old_photo": {
+      "filename": "ep2_old_photo.jpg",
+      "source_url": "https://www.pexels.com/photo/old-photograph-lying-on-desk-9258338/",
+      "license": "https://www.pexels.com/es-es/license/"
+    },
+    "station": {
+      "filename": "ep3_station.jpg",
+      "source_url": "https://www.pexels.com/photo/photo-of-empty-train-station-platform-1536302/",
+      "license": "https://www.pexels.com/es-es/license/"
+    },
+    "album": {
+      "filename": "ep4_album.jpg",
+      "source_url": "https://www.pexels.com/photo/hand-on-photo-album-on-desk-10272685/",
+      "license": "https://www.pexels.com/es-es/license/"
+    }
+  },
+  "episodes": [
+    {
+      "id": "ig09_ep01",
+      "asset": "door",
+      "kicker": "LA PUERTA 4B · 1/4",
+      "slides": [
+        {"n": 1, "body": "El 4B lleva vacío tres años.\n\nEsta mañana hay luz debajo de la puerta.", "overlay": 0.52},
+        {"n": 2, "body": "En el suelo hay una llave.\n\nLa etiqueta dice: 6B.\n\nMi piso.", "overlay": 0.58},
+        {"n": 3, "body": "Pegado al pomo hay un papel doblado:\n\nNO LA USES AQUÍ.", "emphasis": "NO LA USES AQUÍ.", "overlay": 0.60},
+        {"n": 4, "body": "¿QUÉ HACES?", "choice_a": "Probar la llave en el 4B.", "choice_b": "Subir al 6B y comprobar tu cerradura.", "footer": "Responde A o B · cierro domingo 20:00.", "overlay": 0.70}
+      ]
+    },
+    {
+      "id": "ig09_ep02",
+      "asset": "old_photo",
+      "kicker": "LA PUERTA 4B · 2/4",
+      "slides": [
+        {
+          "n": 1,
+          "variants": {
+            "A": {"body": "La llave gira en el 4B.\n\nDetrás no hay un piso.\n\nHay una habitación con un escritorio y una foto boca abajo.", "overlay": 0.58},
+            "B": {"body": "La llave no entra en mi cerradura.\n\nCuando vuelvo al 4B, la puerta está abierta.\n\nDentro hay un escritorio y una foto boca abajo.", "overlay": 0.58}
+          }
+        },
+        {"n": 2, "body": "La foto es de este mismo pasillo.\n\nDetrás pone:\n14/02/1987 · 18:20.", "overlay": 0.48},
+        {"n": 3, "body": "Al fondo de la foto hay un reloj de estación.\n\nMarca 18:20.", "overlay": 0.60, "composite_asset": "door", "composite_caption": "PASILLO · 1987"},
+        {"n": 4, "body": "¿AHORA?", "choice_a": "Ir a la estación a las 18:20.", "choice_b": "Buscar quién vivía en el 4B en 1987.", "footer": "A o B · cierro domingo 20:00.", "overlay": 0.70}
+      ]
+    },
+    {
+      "id": "ig09_ep03",
+      "asset": "station",
+      "kicker": "LA PUERTA 4B · 3/4",
+      "slides": [
+        {
+          "n": 1,
+          "variants": {
+            "A": {"body": "A las 18:20 estoy bajo el reloj de la estación.\n\nEn el banco de enfrente hay un sobre.\n\nTiene escrito: 6B.", "overlay": 0.55},
+            "B": {"body": "El archivo de 1987 no tiene ningún 4B.\n\nSolo una nota en el plano:\n“Consigna 4 · Estación Central · 18:20”.", "overlay": 0.58}
+          }
+        },
+        {"n": 2, "body": "Dentro aparece una fotografía.\n\nEs la misma puerta.\n\nPero está instalada en un andén.", "overlay": 0.62, "composite_asset": "door", "composite_caption": "ANDÉN · SIN FECHA"},
+        {"n": 3, "body": "El reloj de la foto marca 18:20.\n\nEl que tengo encima también.", "small_label": "18:20", "overlay": 0.52},
+        {"n": 4, "body": "ÚLTIMA DECISIÓN.", "choice_a": "Subir al tren que acaba de llegar.", "choice_b": "Mirar debajo del banco.", "footer": "A o B · cierro domingo 20:00.", "overlay": 0.70}
+      ]
+    },
+    {
+      "id": "ig09_ep04",
+      "asset": "album",
+      "kicker": "LA PUERTA 4B · 4/4",
+      "slides": [
+        {
+          "n": 1,
+          "variants": {
+            "A": {"body": "Subo.\n\nEn el primer asiento hay un álbum de fotos.\n\nEn la tapa pone: 6B.", "overlay": 0.58},
+            "B": {"body": "Debajo del banco hay un álbum de fotos.\n\nEn la tapa pone: 6B.", "overlay": 0.58}
+          }
+        },
+        {"n": 2, "body": "Las primeras fotos parecen normales.\n\nLa puerta no.\n\nCambia de edificio, ciudad y década.\n\nSiempre pone 4B.", "overlay": 0.68, "composite_assets": ["door", "old_photo", "station"]},
+        {"n": 3, "body": "", "overlay": 0.70, "empty_photo_caption": "MAÑANA · 6B"},
+        {"n": 4, "body": "La llave sigue en mi bolsillo.", "overlay": 0.78}
+      ]
+    }
+  ]
+}

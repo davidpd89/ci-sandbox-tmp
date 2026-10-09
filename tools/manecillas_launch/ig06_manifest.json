@@ -1,0 +1,70 @@
+{
+  "id": "IG-06_MANECILLAS_LAUNCH_v1",
+  "canvas": [1080, 1350],
+  "status": "RENDERED_NOT_SCHEDULED",
+  "cover": {
+    "drive_id": "1SClEck69kTqbqorViNxks1t1Axwu-Vy1",
+    "filename": "portada-las-manecillas-del-recuerdo-1024x1536.png",
+    "width": 1024,
+    "height": 1536,
+    "sha256": "1361ed45dad7cfea9f9e07de08369ef4e656867f9ecc370c429571cfba0b1e8b"
+  },
+  "canonical_excerpt_drive_id": "1CtjHvvy7BxBm-H7I5CXh5p7wK3QcykCt",
+  "palette": {"ink":"#17120B","walnut":"#4C351A","leather":"#6A4C28","bronze":"#936631","copper":"#C27937","gold":"#CF9246","grey":"#595248","blue":"#6E8EC5","paper":"#F5EFE5"},
+  "fonts": {"headline":"Playfair Display 700","body":"Inter 500/600"},
+  "metricool_substitutions": [
+    {"date":"2026-09-03","time":"18:00","timezone":"Europe/Madrid","existing_post_id":348656152,"episode":"ig06_01"},
+    {"date":"2026-09-05","time":"18:00","timezone":"Europe/Madrid","existing_post_id":348656248,"episode":"ig06_02"},
+    {"date":"2026-09-07","time":"18:00","timezone":"Europe/Madrid","existing_post_id":348657759,"episode":"ig06_03"}
+  ],
+  "episodes": [
+    {
+      "id":"ig06_01",
+      "title":"CUANDO LA HORA DEJÓ DE SER SILENCIOSA",
+      "source":{"type":"commons","filename":"Trench_watch_1916_gold.jpg","page_url":"https://commons.wikimedia.org/wiki/File:Trench_watch_1916_gold.jpg","factual_url":"https://www.si.edu/object/elgin-wristwatch%3Anmah_851776","expected_license":"Public domain"},
+      "slides":[
+        {"kind":"archive","kicker":"UNA COSA TAN NORMAL COMO MIRAR LA MUÑECA","title":"No siempre fue una forma «normal» de saber la hora."},
+        {"kind":"archive","title":"Hacia 1880, el reloj de pulsera seguía asociado sobre todo a mujeres.","body":"Los hombres, por lo general, no llevaban relojes de pulsera: los consideraban joyería femenina.","footer":"Fuente: Smithsonian"},
+        {"kind":"archive","title":"La utilidad cambió la costumbre.","body":"En guerra, consultar la hora de un vistazo tenía más sentido que sacar un reloj del bolsillo.","timeline":"1880 → 1914–1918"},
+        {"kind":"archive","title":"El reloj salió del bolsillo y se quedó a la vista.","body":"Consultar la hora dejó de exigir sacar, abrir y guardar un objeto cada vez."},
+        {"kind":"bridge","body":"¿Y si un día dejáramos de escuchar el tiempo del todo?"},
+        {"kind":"excerpt","quote":"Para nosotros, las horas son silenciosas. Digitales.","secondary":"Suena… honesto. Como si no tuviera nada que demostrar. Como si cada segundo valiera por sí mismo.","footer":"Fragmento de Las manecillas del recuerdo · pág. 239"},
+        {"kind":"book","title":"LAS MANECILLAS DEL RECUERDO","support":"Publicado hoy · Monza Ediciones","question":"¿Hay algún sonido cotidiano que te daría pena perder?"}
+      ],
+      "caption":"Un reloj de agujas no solo se ve distinto: hace ruido. En la novela ese detalle importa porque Martín ha crecido con horas digitales y tiene que acercárselo al oído para descubrirlo.",
+      "hashtags":["#LasManecillasDelRecuerdo","#LibrosEnEspañol","#HistoriaDelTiempo","#Novela"]
+    },
+    {
+      "id":"ig06_02",
+      "title":"UN RELOJ, UN IMPUESTO Y DOS PRECIOS",
+      "source":{"type":"met","object_id":199408,"page_url":"https://www.metmuseum.org/art/collection/search/199408","expected_title":"Pocket watch","expected_public_domain":true},
+      "slides":[
+        {"kind":"archive","title":"En 1797, tener un reloj en Reino Unido pasó a implicar un impuesto anual."},
+        {"kind":"archive","title":"El Parlamento creó un impuesto anual sobre relojes y clocks.","body":"La intención era recaudar en un contexto de gasto militar.","footer":"Fuente: The Metropolitan Museum of Art"},
+        {"kind":"archive","kicker":"CONTRABANDO","body":"El Met resume una consecuencia bastante humana: apareció un comercio clandestino y aumentó el incentivo para ocultar la posesión."},
+        {"kind":"archive","kicker":"1797 → 1798","body":"La medida duró aproximadamente un año antes de ser derogada."},
+        {"kind":"bridge","body":"Ponerle precio es fácil. Desprenderte de él puede ser otra cosa."},
+        {"kind":"excerpt","quote":"En la calle todo tiene dos precios: lo que cuesta y lo que te cuesta desprenderte de ello.","footer":"Fragmento de Las manecillas del recuerdo · pág. 229"},
+        {"kind":"book","support":"El reloj cambia de manos. El valor no viaja igual con cada dueño.","question":"Hay objetos baratos hasta que toca dejarlos ir."}
+      ],
+      "caption":"El Met cuenta un impuesto anual sobre relojes que duró de 1797 a 1798. El fragmento añade otro precio, bastante menos fácil de cobrar: el que aparece cuando desprenderte de un objeto cuesta más de lo que alguien pagaría por él.",
+      "hashtags":["#LasManecillasDelRecuerdo","#Historia","#ObjetosConHistoria","#LibrosEnEspañol"]
+    },
+    {
+      "id":"ig06_03",
+      "title":"EL MENSAJE QUE LINCOLN LLEVÓ SIN SABERLO",
+      "source":{"type":"commons","filename":"Abraham_Lincoln's_pocket_watch_and_fob,_c._1850,_etched_in_1861_by_watchmaker_Jonathan_Dillon_in_Washington,_DC_-_National_Museum_of_American_History_-_DSC06153.JPG","page_url":"https://commons.wikimedia.org/wiki/File:Abraham_Lincoln%27s_pocket_watch_and_fob,_c._1850,_etched_in_1861_by_watchmaker_Jonathan_Dillon_in_Washington,_DC_-_National_Museum_of_American_History_-_DSC06153.JPG","factual_url":"https://americanhistory.si.edu/explore/stories/secret-message-inside-lincolns-watch","expected_license":"CC0"},
+      "slides":[
+        {"kind":"archive","title":"Lincoln llevó durante años un mensaje dentro de su reloj sin saber que existía."},
+        {"kind":"archive","title":"13 de abril de 1861.","body":"Un relojero llamado Jonathan Dillon estaba reparándolo cuando llegaron noticias del ataque a Fort Sumter."},
+        {"kind":"archive","title":"Dillon abrió el reloj y dejó una inscripción detrás de la esfera.","body":"Después lo cerró. Lincoln siguió usando el reloj."},
+        {"kind":"archive","title":"El secreto sobrevivió al propietario.","body":"En 2009, el Smithsonian abrió el reloj para comprobar una historia conservada en la familia del relojero. Había un mensaje real dentro."},
+        {"kind":"bridge","body":"A veces la historia de un objeto incluye cosas que ninguno de sus dueños llegó a saber."},
+        {"kind":"excerpt","quote":"Los objetos importantes tienen apellido, Ana. Y no siempre el de quienes los poseen.","footer":"Fragmento de Las manecillas del recuerdo · pág. 229"},
+        {"kind":"book","support":"Un reloj. Distintas manos. Historias que no siempre pertenecen a quien las guarda.","question":"¿Te gustaría saber absolutamente todo lo que ha vivido un objeto heredado?"}
+      ],
+      "caption":"Lincoln llevó durante años una inscripción dentro del reloj sin saber que estaba ahí. El propietario famoso no conocía toda la biografía de su propio objeto. Ahí sí hay un puente directo con una novela en la que el reloj pasa de mano en mano.",
+      "hashtags":["#LasManecillasDelRecuerdo","#AbrahamLincoln","#ObjetosConHistoria","#Historia"]
+    }
+  ]
+}

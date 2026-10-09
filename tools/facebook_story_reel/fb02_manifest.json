@@ -1,0 +1,126 @@
+{
+  "series": "FB-02 — Historias de objetos-libro en 30 segundos",
+  "canvas": [1080, 1920],
+  "fps": 30,
+  "items": [
+    {
+      "id": "fb02_01",
+      "date": "2027-01-13T12:00:00+01:00",
+      "asset_file": "fb02_01.jpg",
+      "download": {"type":"commons","file_title":"File:Childe Harold's Pilreimage Fore-Edge Painting.jpg"},
+      "asset_audit": {"license_contains":"public domain"},
+      "source_url": "https://commons.wikimedia.org/wiki/File:Childe_Harold%27s_Pilreimage_Fore-Edge_Painting.jpg",
+      "fact_source": "https://libraries.indiana.edu/lilly-library/fore-edge-paintings-lilly",
+      "license": "Public Domain",
+      "blocks": [
+        "Esta pintura desaparece al cerrar el libro.",
+        "No está en la cubierta. Está en el borde de las páginas.",
+        "Se pinta con las hojas desplazadas. Al abanicar el bloque, la imagen aparece.",
+        "Cuando las páginas vuelven a su posición, la pintura queda escondida.",
+        "Se llama fore-edge painting. La variante oculta ganó popularidad a finales del siglo XVIII.",
+        "Childe Harold’s Pilgrimage · pintura en el canto · reproducción en dominio público."
+      ],
+      "caption": "La imagen necesita que el libro cambie de forma para poder verse.",
+      "hashtags": ["#HistoriaDelLibro","#LibrosRaros","#Encuadernación"]
+    },
+    {
+      "id": "fb02_02",
+      "date": "2027-01-20T12:00:00+01:00",
+      "asset_file": "fb02_02.jpg",
+      "download": {"type":"og_image","page_url":"https://picryl.com/media/volvelle-from-bl-sloane-702-ff-21v-22-4299a8"},
+      "source_url": "https://picryl.com/media/volvelle-from-bl-sloane-702-ff-21v-22-4299a8",
+      "fact_source": "https://pro.europeana.eu/index.php/tags/manuscripts",
+      "license": "Public Domain — revalidar British Library + Europeana antes de producir",
+      "blocks": [
+        "Este manuscrito tenía una pieza que giraba.",
+        "Un disco de papel o pergamino, sujeto por un pivote.",
+        "Las volvelles permitían relacionar datos dentro de la propia página.",
+        "Se usaron, entre otras cosas, para cálculos de tiempo, astronomía o astrología.",
+        "Sloane 702 es de finales del siglo XV. La interfaz no necesitaba pantalla: necesitaba un pasador.",
+        "Sloane MS 702, ff. 21v–22 · c. 1482 · British Library / Europeana · Public Domain."
+      ],
+      "caption": "Una interfaz hecha de pergamino, un pivote y bastante paciencia.",
+      "hashtags": ["#Manuscritos","#HistoriaDelLibro","#LibrosRaros"]
+    },
+    {
+      "id": "fb02_03",
+      "date": "2027-01-27T12:00:00+01:00",
+      "asset_file": "fb02_03.jpg",
+      "download": {"type":"commons","file_title":"File:Miniature book in the Edward Gorey collection from the Rare Book and Special Collections Division of the Library of Congress on 8 May 2025.jpg"},
+      "asset_audit": {"license_contains":"cc0"},
+      "source_url": "https://commons.wikimedia.org/wiki/File:Miniature_book_in_the_Edward_Gorey_collection_from_the_Rare_Book_and_Special_Collections_Division_of_the_Library_of_Congress_on_8_May_2025.jpg",
+      "fact_source": "https://guides.loc.gov/miniature-books",
+      "license": "CC0",
+      "blocks": [
+        "No es una maqueta. Es un libro.",
+        "Los libros miniatura pueden contener textos completos en encuadernaciones diminutas.",
+        "Lo pequeño es el objeto: papel, tipos, encuadernación.",
+        "La Library of Congress conserva más de 1.400 libros miniatura.",
+        "Hay diccionarios, clásicos, libros infantiles, religiosos y libros de artista. Mini no significa resumen.",
+        "Miniature Book Collection · Library of Congress · guía actualizada 12/01/2026 · foto CC0."
+      ],
+      "caption": "Pequeño no significa abreviado.",
+      "hashtags": ["#LibrosRaros","#Bibliotecas","#HistoriaDelLibro"]
+    },
+    {
+      "id": "fb02_04",
+      "date": "2027-02-03T12:00:00+01:00",
+      "asset_file": "fb02_04.jpg",
+      "download": {"type":"commons","file_title":"File:Hornbook written.jpg"},
+      "asset_audit": {"license_contains":"public domain"},
+      "source_url": "https://commons.wikimedia.org/wiki/File:Hornbook_written.jpg",
+      "fact_source": "https://www.loc.gov/exhibitions/treasures-from-the-library-of-congress/about-this-exhibition/guiding-memory/a-childs-introduction-to-the-alphabet/",
+      "license": "Public Domain",
+      "blocks": [
+        "Esto enseñaba a leer. Y no era un libro.",
+        "Una hoja con letras y textos breves fijada a una superficie rígida.",
+        "Alfabeto, números y pequeñas lecturas: una herramienta de aprendizaje.",
+        "La hoja podía ir protegida por una lámina transparente de cuerno y montada sobre una pequeña pala rígida.",
+        "Se conoce como hornbook. Durante siglos acompañó el aprendizaje elemental de la lectura y el cálculo.",
+        "Ejemplar reproducido en History of the Horn-Book (1896) · dominio público."
+      ],
+      "caption": "Antes del cuaderno escolar hubo objetos pensados para aguantar el uso.",
+      "hashtags": ["#HistoriaDeLaLectura","#Educación","#Libros"]
+    },
+    {
+      "id": "fb02_05",
+      "date": "2027-02-10T12:00:00+01:00",
+      "asset_file": "fb02_05.jpg",
+      "download": {"type":"commons","file_title":"File:Bodleian Libraries, Thames Tunnel.jpg"},
+      "asset_audit": {"license_contains":"cc by 4.0"},
+      "source_url": "https://commons.wikimedia.org/wiki/File:Bodleian_Libraries,_Thames_Tunnel.jpg",
+      "fact_source": "https://www.vam.ac.uk/articles/paper-peepshows",
+      "license": "CC BY 4.0",
+      "blocks": [
+        "Lo abres y aparece un escenario.",
+        "Varias hojas recortadas están separadas entre sí.",
+        "Al desplegarse, las capas construyen profundidad de verdad.",
+        "Este peep-show del Thames Tunnel está fechado en 1843.",
+        "El libro no dibuja la profundidad. La fabrica al abrirse.",
+        "Thames Tunnel peep show · 1843 · Bodleian Libraries · CC BY 4.0."
+      ],
+      "caption": "Un libro, un diorama y una pequeña ilusión óptica en el mismo objeto.",
+      "hashtags": ["#BookArts","#HistoriaDelLibro","#LibrosRaros"]
+    },
+    {
+      "id": "fb02_06",
+      "date": "2027-02-17T12:00:00+01:00",
+      "asset_file": "fb02_06.jpg",
+      "download": {"type":"commons","file_title":"File:Postcard of The Chained Library. Hereford Cathedral (undated) cropped.jpg"},
+      "asset_audit": {"license_contains":"cc by 2.0","artist_contains":"pellethepoet"},
+      "source_url": "https://commons.wikimedia.org/wiki/File:Postcard_of_The_Chained_Library._Hereford_Cathedral_(undated)_cropped.jpg",
+      "fact_source": "https://www.herefordcathedral.org/chained-library",
+      "license": "CC BY 2.0 — pellethepoet / Wikimedia Commons; conservar atribución si se adapta",
+      "blocks": [
+        "Este libro estaba atado a la estantería.",
+        "La cadena unía la cubierta a una barra del mueble.",
+        "Podías bajarlo y leerlo allí. Llevártelo, no.",
+        "Fue un sistema de seguridad usado durante siglos en bibliotecas europeas.",
+        "Y cambió hasta cómo se colocaban: muchos mostraban el canto hacia fuera para no retorcer la cadena.",
+        "Chained Library · Hereford Cathedral · foto pellethepoet · CC BY 2.0 · Wikimedia Commons."
+      ],
+      "caption": "La solución antirrobo más literal terminó cambiando también el aspecto de la estantería.",
+      "hashtags": ["#Bibliotecas","#HistoriaDelLibro","#LibrosRaros"]
+    }
+  ]
+}

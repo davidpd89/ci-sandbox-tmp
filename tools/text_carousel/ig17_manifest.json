@@ -1,0 +1,81 @@
+{
+  "series": "IG-17 — Una palabra, un viaje",
+  "canvas": [1080, 1350],
+  "format": "typographic_documentary",
+  "ai": false,
+  "source_authority": "RAE-ASALE · DLE",
+  "posts": [
+    {
+      "id": "ig17_01",
+      "date": "2027-03-31T18:00:00+02:00",
+      "word": "OJALÁ",
+      "sub": "Una palabra de deseo que llegó desde el árabe.",
+      "chain": "árabe hispánico wa šá lláh → ojalá",
+      "body": "El DLE remite “ojalá” al árabe hispánico wa šá lláh, ‘y Dios ha querido’. Hoy la define como una interjección que expresa un vivo deseo de que algo suceda.",
+      "today": "Hoy: interjección para expresar un deseo intenso.",
+      "source": "https://dle.rae.es/ojalá",
+      "caption": "Decimos “ojalá” sin pensar en el viaje que hizo la palabra antes de llegar a una frase tan normal como “ojalá mañana no llueva”.",
+      "hashtags": ["#Etimología", "#Palabras", "#Español", "#Lengua"]
+    },
+    {
+      "id": "ig17_02",
+      "date": "2027-04-07T18:00:00+02:00",
+      "word": "PERSONA",
+      "sub": "En la historia de la palabra también hay una máscara.",
+      "chain": "griego prósōpon → etrusco φersu → latín persōna → persona",
+      "body": "El DLE remonta “persona” al latín persōna y recoge en esa voz sentidos como ‘máscara de actor’, ‘personaje teatral’, ‘personalidad’ y ‘persona’; después la vincula al etrusco y al griego. La fuente no obliga a convertir esa cadena en una evolución lineal más limpia de lo que fue.",
+      "today": "Hoy: ‘individuo de la especie humana’, entre otras acepciones.",
+      "source": "https://dle.rae.es/persona",
+      "caption": "Una palabra tan básica como “persona” lleva una máscara dentro de su historia.",
+      "hashtags": ["#Etimología", "#HistoriaDeLasPalabras", "#Español", "#Libros"]
+    },
+    {
+      "id": "ig17_03",
+      "date": "2027-04-14T18:00:00+02:00",
+      "word": "ROBOT",
+      "sub": "La palabra empezó hablando de trabajo.",
+      "chain": "checo robota ‘trabajo / prestación personal’ → robot → español robot",
+      "body": "El DLE hace pasar la palabra por el inglés y la remonta al checo robota. Antes de nombrar máquinas programables, la raíz estaba vinculada al trabajo o a una prestación personal.",
+      "today": "Hoy: máquina programable; también bot de red y, figuradamente, persona que actúa mecánicamente.",
+      "source": "https://dle.rae.es/robot",
+      "caption": "La tecnología cambió muchísimo. La palabra llegó con una idea bastante menos futurista: trabajo.",
+      "hashtags": ["#Etimología", "#Tecnología", "#Palabras", "#Español"]
+    },
+    {
+      "id": "ig17_04",
+      "date": "2027-04-21T18:00:00+02:00",
+      "word": "NOSTALGIA",
+      "sub": "En su nombre ya están el regreso y el dolor.",
+      "chain": "griego nóstos ‘regreso’ + -algía → latín moderno nostalgia → nostalgia",
+      "body": "El DLE descompone su origen en la idea griega de ‘regreso’ y el elemento -algia. Una palabra que hoy usamos para una melancolía por lo perdido nació con el regreso metido en su estructura.",
+      "today": "Hoy: pena por la ausencia o tristeza melancólica por una dicha perdida.",
+      "source": "https://dle.rae.es/nostalgia",
+      "caption": "Hay palabras cuya etimología parece una definición paralela. “Nostalgia” es una de ellas.",
+      "hashtags": ["#Etimología", "#Palabras", "#Lengua", "#Curiosidades"]
+    },
+    {
+      "id": "ig17_05",
+      "date": "2027-04-28T18:00:00+02:00",
+      "word": "ALGORITMO",
+      "sub": "La palabra es mucho más vieja que Instagram.",
+      "chain": "árabe clásico ḥisābu lḡubār → latín tardío *algobarismus → algoritmo",
+      "body": "El DLE marca la etimología con ‘quizá’: la relaciona con una expresión árabe para el cálculo mediante cifras arábigas, pasada después al latín tardío. No hace falta inventarle un origen más redondo.",
+      "today": "Hoy: conjunto ordenado y finito de operaciones para resolver un problema.",
+      "source": "https://dle.rae.es/algoritmo",
+      "caption": "El algoritmo no nació para decidir qué Reel ves después. La palabra ya llevaba siglos hablando de cálculo.",
+      "hashtags": ["#Etimología", "#Algoritmos", "#Palabras", "#Historia"]
+    },
+    {
+      "id": "ig17_06",
+      "date": "2027-05-05T18:00:00+02:00",
+      "word": "AZAHAR",
+      "sub": "La palabra para una flor vino de ‘flores’.",
+      "chain": "árabe clásico zahr ‘flores’ → árabe hispánico azzahár → azahar",
+      "body": "La etimología del DLE es casi circular: la palabra española para la flor blanca de ciertos cítricos llega de una forma árabe cuyo sentido era, simplemente, ‘flores’.",
+      "today": "Hoy: flor blanca, especialmente la del naranjo, limonero y cidro.",
+      "source": "https://dle.rae.es/azahar",
+      "caption": "A veces una palabra viaja siglos y conserva algo muy simple en el equipaje.",
+      "hashtags": ["#Etimología", "#Español", "#Palabras", "#Azahar"]
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "series":"IG-19 — Mapas que no se parecen al mundo",
+  "gate_items":["ig19_01","ig19_05","ig19_06"],
+  "posts":[
+    {
+      "id":"ig19_01","date":"2027-06-20T18:00:00+02:00","caption":"Un error cartográfico puede durar bastante más que una mala indicación del GPS.","hashtags":["#MapasAntiguos","#Cartografía","#Historia","#Curiosidades"],
+      "slides":[
+        {"mode":"image_title","image":"ig19_01.jpg","source_url":"https://www.loc.gov/resource/g3291s.mf000074/","fit":"contain","kicker":"MAPAS REALES","title":"Aquí California es una isla.","credit":"Joan Vinckeboons · c.1650 · Library of Congress","cue":"swipe"},
+        {"mode":"image_body","image":"ig19_01.jpg","source_url":"https://www.loc.gov/resource/g3291s.mf000074/","fit":"contain","kicker":"QUÉ MIRAR","body":"California aparece completamente separada de Norteamérica.","footer":"Detalle: separación de California respecto al continente.","cue":"swipe"},
+        {"mode":"text","kicker":"CONTEXTO","title":"No era una fantasía decorativa","body":"Este mapa neerlandés de hacia 1650 dibuja California como una isla. Esa forma apareció en cartografía seria durante décadas.","footer":"Fuente factual: Library of Congress","cue":"swipe"},
+        {"mode":"text","kicker":"QUÉ FALTABA POR SABER","title":"La duda duró décadas","body":"La Library of Congress señala que todavía pasaría alrededor de medio siglo antes de que exploradores españoles establecieran con certeza que California estaba unida al continente.","footer":"Fuente: Library of Congress · historia cartográfica de California","cue":"swipe"},
+        {"mode":"source_image","image":"ig19_01.jpg","source_url":"https://www.loc.gov/resource/g3291s.mf000074/","fit":"contain","kicker":"FUENTE","body":"Joan Vinckeboons · c.1650 · Library of Congress.","footer":"Registro: loc.gov/item/99443375 · material libre de uso/reutilización","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig19_02","date":"2027-06-27T18:00:00+02:00","caption":"Si esto apareciera hoy en la primera página de una novela de fantasía, nadie preguntaría de dónde salió la idea.","hashtags":["#Cartografía","#MapasAntiguos","#Ártico","#Historia"],
+      "slides":[
+        {"mode":"image_title","image":"ig19_02.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Mercator_north_pole_1595.jpg","fit":"contain","kicker":"MAPAS REALES","title":"Mercator puso cuatro islas en el Polo Norte.","credit":"Gerard Mercator · 1595 · dominio público","cue":"swipe"},
+        {"mode":"image_body","image":"ig19_02.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Mercator_north_pole_1595.jpg","fit":"contain","kicker":"QUÉ MIRAR","body":"Cuatro masas alrededor del polo, separadas por grandes corrientes, y una gran roca oscura en el centro.","footer":"Detalle del Polo Norte en la edición ampliada de 1595","cue":"swipe"},
+        {"mode":"text","kicker":"CONTEXTO","title":"Un Ártico todavía sin cerrar","body":"La edición ampliada de 1595 representa el Polo Norte como cuatro islas separadas por cuatro ríos. En el centro aparece la Rupes Nigra, una gran roca negra.","footer":"Fuente factual: Library of Congress, Mapping Magnetism (2025)","cue":"swipe"},
+        {"mode":"text","kicker":"OTRA GEOGRAFÍA","title":"También aparece Frisland","body":"El mismo mapa incluye Frisland, una isla hoy considerada mítica. Ver un mapa antiguo es ver también qué información todavía no estaba resuelta.","footer":"Contexto: cartografía histórica del Ártico","cue":"swipe"},
+        {"mode":"source_image","image":"ig19_02.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Mercator_north_pole_1595.jpg","fit":"contain","kicker":"FUENTE","body":"Gerard Mercator · Septentrionalium Terrarum · 1595.","footer":"Wikimedia Commons · reproducción en dominio público","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig19_03","date":"2027-07-04T18:00:00+02:00","caption":"Antes de separar “dato” y “leyenda” con la seguridad de ahora, ambos podían compartir la misma costa.","hashtags":["#MapasAntiguos","#MonstruosMarinos","#Historia","#Cartografía"],
+      "slides":[
+        {"mode":"image_title","image":"ig19_03.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Carta_Marina_detail.jpeg","fit":"contain","kicker":"MAPAS REALES","title":"El mar estaba cartografiado.\nTambién los monstruos.","credit":"Carta Marina · Olaus Magnus · dominio público","cue":"swipe"},
+        {"mode":"image_body","image":"ig19_03.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Carta_Marina_detail.jpeg","fit":"contain","kicker":"QUÉ MIRAR","body":"Criaturas extraordinarias ocupan el mismo mar que costas, nombres y rutas.","footer":"Detalle de la Carta Marina","cue":"swipe"},
+        {"mode":"text","kicker":"CONTEXTO","title":"No era un mapa fantástico","body":"La Carta Marina de Olaus Magnus fue una de las primeras representaciones cartográficas detalladas de Escandinavia. En sus mares conviven abundante información geográfica y criaturas extraordinarias.","footer":"Original de 1539; edición consultada por LOC: 1572","cue":"swipe"},
+        {"mode":"text","kicker":"HUELLA VISUAL","title":"Las criaturas siguieron viajando","body":"La Geography & Map Division de la Library of Congress señala que muchos monstruos marinos de mapas posteriores de Islandia derivaron de la Carta Marina.","footer":"Fuente factual: Library of Congress, Mapping the Land of Fire and Ice","cue":"swipe"},
+        {"mode":"source_image","image":"ig19_03.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Carta_Marina_detail.jpeg","fit":"contain","kicker":"FUENTE","body":"Olaus Magnus · Carta Marina · original 1539 / edición 1572.","footer":"Registro LOC: loc.gov/item/2021668418 · detalle Wikimedia Commons · dominio público","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig19_04","date":"2027-07-11T18:00:00+02:00","caption":"Cuando falta información, un mapa también cuenta qué esperaba encontrar quien lo dibujó.","hashtags":["#Cartografía","#MapasAntiguos","#Historia","#Geografía"],
+      "slides":[
+        {"mode":"image_title","image":"ig19_04.jpg","source_url":"https://commons.wikimedia.org/wiki/File:1570_Typus_Ortelius_cropped.jpg","fit":"contain","kicker":"MAPAS REALES","title":"Aquí el sur lo ocupa un continente enorme.","credit":"Abraham Ortelius · 1570 · dominio público","cue":"swipe"},
+        {"mode":"image_body","image":"ig19_04.jpg","source_url":"https://commons.wikimedia.org/wiki/File:1570_Typus_Ortelius_cropped.jpg","fit":"contain","kicker":"QUÉ MIRAR","body":"Una enorme Terra Australis ocupa buena parte del extremo sur del mapamundi.","footer":"Terra Australis · extremo sur del mapamundi","cue":"swipe"},
+        {"mode":"text","kicker":"CONTEXTO","title":"Una masa austral conjetural","body":"En el mapamundi de Ortelius de 1570, una enorme Terra Australis ocupa buena parte del sur. Era una masa conjetural: la geografía europea seguía suponiendo un gran continente austral que aún no conocía directamente.","footer":"Fuente de contexto: British Library","cue":"swipe"},
+        {"mode":"text","kicker":"LO INTERESANTE","title":"El hueco también se dibuja","body":"El mapa muestra cómo podía representarse una parte del mundo cuando la observación disponible todavía no alcanzaba para cerrarla.","footer":"Fuente de contexto: British Library","cue":"swipe"},
+        {"mode":"source_image","image":"ig19_04.jpg","source_url":"https://commons.wikimedia.org/wiki/File:1570_Typus_Ortelius_cropped.jpg","fit":"contain","kicker":"FUENTE","body":"Abraham Ortelius · Typus Orbis Terrarum · 1570.","footer":"Registro LOC: loc.gov/item/98687183 · reproducción en dominio público","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig19_05","date":"2027-07-18T18:00:00+02:00","caption":"A veces el problema no es inventar un dato. Es que el siguiente mapa confíe demasiado en el anterior.","hashtags":["#MapasAntiguos","#Historia","#Geografía","#Curiosidades"],
+      "slides":[
+        {"mode":"image_title","image":"ig19_05.jpg","source_url":"https://commons.wikimedia.org/wiki/File:1813_Pinkerton_Map_of_Western_Africa_(Niger_Valley_-_Mountains_of_Kong)_-_Geographicus_-_WesternAfrica-pinkerton-1813.jpg","fit":"contain","kicker":"MAPAS REALES","title":"Esta cordillera no existía.\nEl mapa sí.","credit":"John Pinkerton · Western Africa · 1813 · dominio público","cue":"swipe"},
+        {"mode":"image_body","image":"ig19_05.jpg","source_url":"https://commons.wikimedia.org/wiki/File:1813_Pinkerton_Map_of_Western_Africa_(Niger_Valley_-_Mountains_of_Kong)_-_Geographicus_-_WesternAfrica-pinkerton-1813.jpg","fit":"contain","kicker":"QUÉ MIRAR","body":"El mapa de Pinkerton muestra la cadena ‘Mountains of Kong’ atravesando África occidental.","footer":"Mountains of Kong · mapa de John Pinkerton · 1813","cue":"swipe"},
+        {"mode":"text","kicker":"CONTEXTO","title":"Un error con autoridad cartográfica","body":"Bassett y Porter rastrean el origen cartográfico de los Mountains of Kong hasta James Rennell y muestran cómo siguieron apareciendo en mapas del siglo XIX incluso cuando ya había dudas sobre su existencia.","footer":"Journal of African History 32(3), 1991","cue":"swipe"},
+        {"mode":"text","kicker":"PERSISTENCIA","title":"Seguía ahí décadas después","body":"Un atlas escolar neerlandés de 1877 todavía la dibuja. Bassett y Porter relacionan esa persistencia con la autoridad que transmitían los mapas, hasta las exploraciones de Binger a finales de la década de 1880.","footer":"Fuente: Bassett & Porter (1991)","cue":"swipe"},
+        {"mode":"source_image","image":"ig19_05.jpg","source_url":"https://commons.wikimedia.org/wiki/File:1813_Pinkerton_Map_of_Western_Africa_(Niger_Valley_-_Mountains_of_Kong)_-_Geographicus_-_WesternAfrica-pinkerton-1813.jpg","fit":"contain","kicker":"FUENTE","body":"John Pinkerton · Western Africa · 1813.","footer":"Activo: Wikimedia Commons · dominio público · Investigación: Cambridge University Press, Bassett & Porter (1991)","credit":"Evidencia secundaria 1877: Mountains_of_Kong_in_Dutch_atlas_(1877).jpg · dominio público","cue":"none"}
+      ]
+    },
+    {
+      "id":"ig19_06","date":"2027-07-25T18:00:00+02:00","caption":"Hace siglos alguien ya había entendido que, para llegar de A a B, a veces un mapa útil tiene permiso para deformarlo todo.","hashtags":["#Cartografía","#ImperioRomano","#MapasAntiguos","#Historia"],
+      "slides":[
+        {"mode":"image_title","image":"ig19_06.jpg","source_url":"https://commons.wikimedia.org/wiki/File:TabulaPeutingeriana.jpg","fit":"contain","kicker":"MAPAS REALES","title":"Mide casi siete metros.\nY aplasta el mundo.","credit":"Tabula Peutingeriana · dominio público","cue":"swipe"},
+        {"mode":"image_body","image":"ig19_06.jpg","source_url":"https://commons.wikimedia.org/wiki/File:TabulaPeutingeriana.jpg","fit":"contain","kicker":"ESCALA","body":"La copia conservada mide aproximadamente 6,75 metros de largo y unos 34 cm de alto.","footer":"Longitud aproximada de la copia conservada: 6,75 m","cue":"swipe"},
+        {"mode":"text","kicker":"FUNCIÓN","title":"No intenta conservar las formas","body":"La Tabula Peutingeriana estira el mundo conocido en una franja larguísima y estrecha. Su finalidad no era mantener proporciones geográficas, sino mostrar la estructura y la red del cursus publicus.","footer":"Fuente: UNESCO Memory of the World","cue":"swipe"},
+        {"mode":"text","kicker":"COMPARACIÓN FUNCIONAL","title":"Más red que mapa físico","body":"UNESCO compara funcionalmente el esquema con diagramas modernos de metro: importa cómo se conectan los puntos más que la distancia o la geometría real.","footer":"Fuente: UNESCO Memory of the World","cue":"swipe"},
+        {"mode":"source_image","image":"ig19_06.jpg","source_url":"https://commons.wikimedia.org/wiki/File:TabulaPeutingeriana.jpg","fit":"contain","kicker":"FUENTE","body":"Tabula Peutingeriana · copia de finales del s. XII · Austrian National Library, Cod. 324 · 11 segmentos.","footer":"UNESCO Memory of the World · activo: Wikimedia Commons · 26381×2014 · dominio público","cue":"none"}
+      ]
+    }
+  ]
+}

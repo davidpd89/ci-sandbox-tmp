@@ -1,0 +1,84 @@
+{
+  "series": "IG-15 — El margen se salió del guion",
+  "gate_items": ["ig15_01", "ig15_02", "ig15_05"],
+  "posts": [
+    {
+      "id": "ig15_01",
+      "date": "2027-01-10T18:00:00+01:00",
+      "caption": "Alguien se tomó el tiempo de pintar esto en un libro hace unos siete siglos. Lo mínimo es mirarlo un rato.",
+      "hashtags": ["#Manuscritos", "#HistoriaDelLibro", "#EdadMedia", "#Curiosidades"],
+      "asset_note":"Original Commons 446×500 px. detail_card obligatorio; no full-bleed ni AI upscale.",
+      "slides": [
+        {"mode":"image_title","image":"ig15_01.jpg","source_url":"https://commons.wikimedia.org/wiki/File:L3706_-_Chevalier_chargeant_un_escargot.jpg","fit":"contain","detail_card":true,"kicker":"MARGINALIA","title":"Un caballero medieval.\nSu enemigo: un caracol.","credit":"Le Livre du Trésor · c. 1315–1325 · dominio público","cue":"swipe"},
+        {"mode":"image_body","image":"ig15_01.jpg","source_url":"https://commons.wikimedia.org/wiki/File:L3706_-_Chevalier_chargeant_un_escargot.jpg","fit":"contain","detail_card":true,"kicker":"NO ES UN MEME","body":"No es un meme moderno. Está en un manuscrito del siglo XIV.","footer":"Le Livre du Trésor · c. 1315–1325","cue":"swipe"},
+        {"mode":"text","kicker":"CONTEXTO","title":"Caballeros contra caracoles","body":"Las peleas entre caballeros y caracoles aparecen más de una vez en manuscritos medievales. Su significado exacto sigue discutiéndose; no hace falta fingir que existe una explicación única.","footer":"Una rareza real; interpretación abierta.","cue":"swipe"},
+        {"mode":"source_image","image":"ig15_01.jpg","source_url":"https://commons.wikimedia.org/wiki/File:L3706_-_Chevalier_chargeant_un_escargot.jpg","fit":"contain","detail_card":true,"kicker":"FUENTE","body":"Le Livre du Trésor · c. 1315–1325 · manuscrito iluminado.","footer":"Wikimedia Commons · Public Domain Mark / dominio público","credit":"Original sin regenerar","cue":"none"}
+      ]
+    },
+    {
+      "id": "ig15_02",
+      "date": "2027-01-17T18:00:00+01:00",
+      "caption": "Hay márgenes que entendieron internet varios siglos antes que nosotros.",
+      "hashtags": ["#Marginalia", "#Manuscritos", "#Historia", "#Libros"],
+      "asset_note":"Detalle Commons 662×482 px; identidad y manuscrito cruzados con British Library Stowe MS 17. detail_card obligatorio.",
+      "slides": [
+        {"mode":"image_title","image":"ig15_02.png","source_url":"https://commons.wikimedia.org/wiki/File:Maastricht_Book_of_Hours,_BL_Stowe_MS17_f240v_(detail).png","fit":"contain","detail_card":true,"kicker":"MARGINALIA","title":"El conejo ha venido armado.","credit":"Maastricht Book of Hours · c. 1300–1325 · dominio público","cue":"swipe"},
+        {"mode":"image_body","image":"ig15_02.png","source_url":"https://commons.wikimedia.org/wiki/File:Maastricht_Book_of_Hours,_BL_Stowe_MS17_f240v_(detail).png","fit":"contain","detail_card":true,"kicker":"DETALLE","body":"Palo. Escudo. Cero intención de negociar.","footer":"Stowe MS 17 · f.240v","cue":"swipe"},
+        {"mode":"text","kicker":"CONTEXTO","title":"Un combate en el margen","body":"Este pequeño combate aparece en el margen de un libro de horas de principios del siglo XIV. La ficha del detalle señala que estas ilustraciones marginales guardan poca relación con el tema del Oficio de Difuntos que ocupa esa sección.","footer":"Fuente visual Commons + catálogo actual British Library.","cue":"swipe"},
+        {"mode":"source_image","image":"ig15_02.png","source_url":"https://commons.wikimedia.org/wiki/File:Maastricht_Book_of_Hours,_BL_Stowe_MS17_f240v_(detail).png","fit":"contain","detail_card":true,"kicker":"FUENTE","body":"Maastricht Book of Hours · c. 1300–1325 · Stowe MS 17, f.240v.","footer":"Wikimedia Commons · reproducción de obra en dominio público · British Library: Stowe MS 17","cue":"none"}
+      ]
+    },
+    {
+      "id": "ig15_03",
+      "date": "2027-01-24T18:00:00+01:00",
+      "caption": "No todo lo que sobrevivió quinientos años tenía que ser solemne.",
+      "hashtags": ["#HistoriaDelArte", "#Manuscritos", "#Gatos", "#Curiosidades"],
+      "asset_note":"Commons 805×880 px; ficha enlaza al registro State Library Victoria 096 R66HF f.99r. detail_card obligatorio; no AI upscale.",
+      "slides": [
+        {"mode":"image_title","image":"ig15_03.png","source_url":"https://commons.wikimedia.org/wiki/File:CatNun.png","fit":"contain","detail_card":true,"kicker":"MARGINALIA","title":"Sí: es un gato vestido de monja.","credit":"Book of Hours · c. 1490 · dominio público","cue":"swipe"},
+        {"mode":"image_body","image":"ig15_03.png","source_url":"https://commons.wikimedia.org/wiki/File:CatNun.png","fit":"contain","detail_card":true,"kicker":"DETALLE","body":"1490, aproximadamente. Internet todavía tardaría un poco.","footer":"State Library Victoria · 096 R66HF · f.99r","cue":"swipe"},
+        {"mode":"text","kicker":"CONTEXTO","title":"No todo era solemne","body":"La imagen procede de un libro de horas conservado por State Library Victoria. Los márgenes medievales y tardomedievales están llenos de híbridos, animales humanizados y escenas que no encajan con nuestra idea solemne del manuscrito.","footer":"Fuente: State Library Victoria · 096 R66HF","cue":"swipe"},
+        {"mode":"source_image","image":"ig15_03.png","source_url":"https://commons.wikimedia.org/wiki/File:CatNun.png","fit":"contain","detail_card":true,"kicker":"FUENTE","body":"Book of Hours · c. 1490 · State Library Victoria 096 R66HF, f.99r.","footer":"Wikimedia Commons · dominio público · registro SLV enlazado desde la ficha","cue":"none"}
+      ]
+    },
+    {
+      "id": "ig15_04",
+      "date": "2027-01-31T18:00:00+01:00",
+      "caption": "Casi mil doscientos años después, seguimos parándonos cuando aparece un gato en pantalla.",
+      "hashtags": ["#BookOfKells", "#Manuscritos", "#HistoriaDelLibro", "#Gatos"],
+      "asset_note":"Detalle horizontal 1126×569 px; mantener contain/detail_card y no forzar crop vertical.",
+      "slides": [
+        {"mode":"image_title","image":"ig15_04.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Book_of_Kells_48r_-_Katze_und_Maus.jpg","fit":"contain","detail_card":true,"kicker":"MARGINALIA","title":"Un gato y un ratón.\nHacia el año 800.","credit":"Book of Kells · f.48r · dominio público","cue":"swipe"},
+        {"mode":"image_body","image":"ig15_04.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Book_of_Kells_48r_-_Katze_und_Maus.jpg","fit":"contain","detail_card":true,"kicker":"DETALLE","body":"El Book of Kells también tenía sitio para esto.","footer":"Detalle del folio 48r","cue":"swipe"},
+        {"mode":"text","kicker":"CONTEXTO","title":"La página también es imagen","body":"El detalle pertenece al folio 48r del Book of Kells. Entre la ornamentación extremadamente trabajada aparecen animales integrados en la página: el manuscrito no es solo texto, también es una superficie visual completa.","footer":"c. 800","cue":"swipe"},
+        {"mode":"source_image","image":"ig15_04.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Book_of_Kells_48r_-_Katze_und_Maus.jpg","fit":"contain","detail_card":true,"kicker":"FUENTE","body":"Book of Kells · f.48r · c. 800 · autor desconocido.","footer":"Wikimedia Commons · reproducción en dominio público · ficha enlaza a Trinity College Dublin","cue":"none"}
+      ]
+    },
+    {
+      "id": "ig15_05",
+      "date": "2027-02-07T18:00:00+01:00",
+      "caption": "Lo pintaron a finales del siglo XIII. Ahora está en tu móvil. Ya está.",
+      "hashtags": ["#Marginalia", "#EdadMedia", "#HistoriaDelArte", "#Curiosidades"],
+      "asset_note":"Commons 660×745 px, Public Domain Mark. La carga visual procede de fuente secundaria; identidad/procedencia del manuscrito cruzadas con Biblissima + Initiale. detail_card obligatorio.",
+      "slides": [
+        {"mode":"image_title","image":"ig15_05.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Butt-trumpet,_Vincent_of_Beauvais,_Speculum_historiale,_Saint-Omer_c._1294-1297_Boulogne-sur-Mer,_Bibliothèque_municipale,_ms._131,_fol._202r.jpg","fit":"contain","detail_card":true,"kicker":"MARGINALIA","title":"No voy a mejorar el titular.\nMira la imagen.","credit":"Speculum historiale · c. 1294–1297 · dominio público","cue":"swipe"},
+        {"mode":"image_body","image":"ig15_05.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Butt-trumpet,_Vincent_of_Beauvais,_Speculum_historiale,_Saint-Omer_c._1294-1297_Boulogne-sur-Mer,_Bibliothèque_municipale,_ms._131,_fol._202r.jpg","fit":"contain","detail_card":true,"kicker":"DETALLE","body":"Finales del siglo XIII. Sí, ya hacían este tipo de imagen grotesca.","footer":"Speculum historiale · c. 1294–1297","cue":"swipe"},
+        {"mode":"text","kicker":"CONTEXTO","title":"Una escena grotesca en el margen","body":"El detalle pertenece a un Speculum historiale producido hacia 1294–1297 y conservado en Boulogne-sur-Mer. La escena grotesca forma parte de la decoración marginal del manuscrito; no hace falta atribuirle una intención concreta para que resulte extraña hoy.","footer":"Identidad/procedencia: Biblissima + Initiale · imagen: Commons PD.","cue":"swipe"},
+        {"mode":"source_image","image":"ig15_05.jpg","source_url":"https://commons.wikimedia.org/wiki/File:Butt-trumpet,_Vincent_of_Beauvais,_Speculum_historiale,_Saint-Omer_c._1294-1297_Boulogne-sur-Mer,_Bibliothèque_municipale,_ms._131,_fol._202r.jpg","fit":"contain","detail_card":true,"kicker":"FUENTE","body":"Speculum historiale · c. 1294–1297 · Boulogne-sur-Mer, Bibliothèque municipale des Annonciades, Ms.131.","footer":"Visual: Wikimedia Commons · Public Domain Mark · Manuscrito: Biblissima / Initiale","cue":"none"}
+      ]
+    },
+    {
+      "id": "ig15_06",
+      "date": "2027-02-14T18:00:00+01:00",
+      "caption": "Una escena de cortejo que necesita dos páginas para ocurrir: él toca en una; ella responde desde la de enfrente.",
+      "hashtags": ["#HistoriaDelLibro", "#Manuscritos", "#EdadMedia", "#Bibliotecas"],
+      "asset_note":"Sustituye al antiguo Harley MS 2433 por discrepancia de folio. Fuente oficial The Walters; descargar desde Download Image; CC0.",
+      "slides": [
+        {"mode":"image_title","image":"ig15_06.jpg","source_url":"https://art.thewalters.org/object/W.37.21R/","fit":"contain","detail_card":true,"kicker":"MARGINALIA","title":"El margen también tenía banda sonora.","credit":"The Walters · W.37.21R · ca. 1300–1310 · CC0","cue":"swipe"},
+        {"mode":"image_body","image":"ig15_06.jpg","source_url":"https://art.thewalters.org/object/W.37.21R/","fit":"contain","detail_card":true,"kicker":"DETALLE","body":"Él toca una vielle. Ella baila en la página de enfrente.","footer":"La ficha oficial describe una escena repartida entre las dos páginas.","cue":"swipe"},
+        {"mode":"text","kicker":"CONTEXTO","title":"Un cortejo entre dos folios","body":"The Walters describe al músico junto a la inicial de una hoja y a una mujer que lo mira y baila en la página opuesta. La escena se entiende mejor como relación entre páginas que como ilustración aislada.","footer":"Fuente: The Walters · W.37.21R","cue":"swipe"},
+        {"mode":"source_image","image":"ig15_06.jpg","source_url":"https://art.thewalters.org/object/W.37.21R/","fit":"contain","detail_card":true,"kicker":"FUENTE","body":"Leaf from Book of Hours · ca. 1300–1310 · W.37.21R · The Walters Art Museum.","footer":"Ficha e imagen oficial · Creative Commons Zero (CC0)","cue":"none"}
+      ]
+    }
+  ]
+}

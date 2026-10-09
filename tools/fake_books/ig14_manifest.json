@@ -1,0 +1,15 @@
+{
+  "id": "IG-14_LIBROS_QUE_NO_EXISTEN_v1",
+  "canvas": [1080, 1350],
+  "disclosure_cover": "EDICIÓN IMAGINARIA",
+  "disclosure_back": "NO EXISTE. DE MOMENTO.",
+  "brand_line": "ARCHIVO DE PROBLEMAS DE LECTORES · AUTORA DEMO DÍAZ",
+  "episodes": [
+    {"id":"ig14_01","palette":"F","symbol":"bookmark_corner","title":"EL LUNES\nTE LO DEVUELVO","subtitle":"Historias de terror para gente que presta libros","back":"El libro vuelve.\nLa confianza ya veremos.","includes":["una esquina doblada","una mancha que «ya estaba»","cuatro lunes posibles"]},
+    {"id":"ig14_02","palette":"B","symbol":"character_map","title":"¿QUIÉN ERA\nVAREK?","subtitle":"Diccionario de personajes que aparecieron cuatro páginas antes","back":"Lo has visto.\nEso no significa que lo recuerdes.","includes":["generales con nombres parecidos","dos familias que empiezan por Ar-","vuelta gratis a la página 4"]},
+    {"id":"ig14_03","palette":"D","symbol":"suitcase_books","title":"POR SI\nACASO","subtitle":"Cómo meter cuatro libros en una maleta para un viaje de tres días","back":"Leerás uno.\nComprarás otro allí.","includes":["uno corto","uno largo","uno «por si no entra el otro»"]},
+    {"id":"ig14_04","palette":"C","symbol":"redacted_blurb","title":"NO LEAS LA\nCONTRAPORTADA","subtitle":"Guía práctica para llegar al giro sin que te lo cuenten antes","back":"La sinopsis terminaba bien\nhace tres líneas.","includes":["punto de partida","promesa","absolutamente nada sobre la página 180"]},
+    {"id":"ig14_05","palette":"E","symbol":"thin_pages","title":"ME QUEDAN\nDOCE PÁGINAS","subtitle":"Técnicas poco eficaces para retrasar el final","back":"Cerrar el libro no añade páginas.","includes":["hacer té","mirar el móvil","volver al capítulo anterior como si eso cambiara algo"]},
+    {"id":"ig14_06","palette":"A","symbol":"book_bag","title":"SOLO IBA\nA MIRAR","subtitle":"Crónica de una visita a una librería con consecuencias","back":"Entraste sin bolsa.\nEse fue el último dato optimista.","includes":["una edición «demasiado bonita»","un libro que no estaba en la lista","la frase «ya que estoy aquí»"]}
+  ]
+}

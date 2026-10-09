@@ -1,0 +1,17 @@
+{
+  "id": "ig08_01",
+  "character_version": "LECTOR_A_v1",
+  "reference_url": "https://www.pexels.com/photo/photo-of-person-reading-a-book-on-the-bed-7445042/",
+  "source_license": "https://www.pexels.com/es-es/license/",
+  "keep": ["persona leyendo en cama", "intimidad de lectura", "reloj visible"],
+  "change": ["identidad", "ropa", "habitación", "libro", "ángulo exacto"],
+  "panels": [
+    {"setting":"bed","action":"bed_read","expression":"neutral","clock":"23:48","bubble":"Uno más y duermo.","tail_x":500,"tail_y":600},
+    {"setting":"bed","action":"bed_read","expression":"neutral","clock":"00:36"},
+    {"setting":"bed","action":"bed_read_tired","expression":"cansado","clock":"01:52","bubble":"Este capítulo tiene seis páginas.","tail_x":500,"tail_y":600},
+    {"setting":"bed","action":"bed_read_alarm","expression":"alarma","clock":"02:31","bubble":"Tenía seis páginas y una traición.","tail_x":500,"tail_y":600}
+  ],
+  "caption": "02:31. El despertador de mañana no participa en esta negociación.",
+  "hashtags": ["#Bookstagram", "#HumorLector", "#LibrosEnEspañol", "#Lectores"],
+  "first_comment": null
+}

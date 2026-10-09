@@ -1,0 +1,173 @@
+"""API oficial de Threads (03/10/2026), SOLO LECTURA: respuestas recibidas sin contestar.
+
+App `Autora Demo Escritor Tools` en modo desarrollo, token de larga duracion en `.env`
+(THREADS_ACCESS_TOKEN). Meta no ofrece tokens que no caduquen (60 dias): se renuevan solos con la
+tarea programada `RRSS_threads_token` (`refresh --if-due`). Permisos (David, 03/10): threads_basic,
+threads_read_replies, threads_manage_replies, threads_content_publish y estadisticas.
+Contestar por API solo es posible con IDs de la propia API (respuestas a nuestros hilos): los
+permalinks del navegador NO se pueden convertir en ID de API (comprobado 03/10) y
+`threads_keyword_search` sin la revision de Meta solo busca posts propios, asi que el descubrimiento
+y las respuestas a posts ajenos siguen por navegador.
+
+    python tools/threads_api.py me            # comprueba el token y los dias que le quedan
+    python tools/threads_api.py followups     # respuestas a nuestros hilos que no hemos contestado
+    python tools/threads_api.py refresh [--if-due]   # renueva el token (con --if-due solo si quedan <= 30 dias)
+    python tools/threads_api.py build decisions.json plan.json   # decisions: {"actions":[{"id","text"}]}
+
+Misma politica que Bluesky/Mastodon (03/10): una conversacion se contesta una vez; despues solo si
+nos preguntan algo, asi que el listado solo incluye respuestas con pregunta.
+"""
+import datetime
+import json
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+import meta_common as mc
+ROOT = os.path.join(os.path.dirname(__file__), "..")
+BASE = "https://graph.threads.net/v1.0/"
+TOKEN_DAYS = 60
+REFRESH_WHEN_LEFT = 30
+
+
+def _env():
+    return mc.read_env(ROOT)
+
+
+def api_get(path, token, **params):
+    return mc.graph_get(BASE, path, token, **params)
+
+
+def token_days_left(env, today=None):
+    today = today or datetime.date.today()
+    try:
+        created = datetime.date.fromisoformat(env.get("THREADS_TOKEN_CREATED", ""))
+    except ValueError:
+        return None
+    return TOKEN_DAYS - (today - created).days
+
+
+def unanswered(replies, my_username, answered_ids=()):
+    """Respuestas ajenas con pregunta y sin respuesta nuestra (logica comun en meta_common)."""
+    return mc.unanswered(replies, [my_username], answered_ids)
+
+
+def _write_env(updates):
+    mc.write_env(updates, root=ROOT)
+
+
+def refresh(env, today=None, if_due=False):
+    """Renueva el token (valido 60 dias, renovable pasadas 24 h). Devuelve (renovado, mensaje)."""
+    today = today or datetime.date.today()
+    left = token_days_left(env, today)
+    if if_due and left is not None and left > REFRESH_WHEN_LEFT:
+        return False, f"no toca (quedan {left} dias)"
+    data = api_get("refresh_access_token", env["THREADS_ACCESS_TOKEN"], grant_type="th_refresh_token")
+    _write_env({"THREADS_ACCESS_TOKEN": data["access_token"], "THREADS_TOKEN_CREATED": today.isoformat()})
+    return True, f"renovado (expira en {data.get('expires_in')} s)"
+
+
+REPLY_MAX = 500
+
+
+def api_post(path, token, **params):
+    return mc.graph_post(BASE, path, token, **params)
+
+
+class ReplyNotCreated(RuntimeError):
+    """Fallo ANTES de publicar: no hay respuesta en Threads, se puede reintentar o usar el navegador."""
+
+
+def check_reply_text(text):
+    text = (text or "").strip()
+    if not text:
+        raise ValueError("respuesta vacia")
+    if len(text) > REPLY_MAX:
+        raise ValueError(f"{len(text)} caracteres (max {REPLY_MAX})")
+    return text
+
+
+def publish_reply(token, user_id, reply_to_id, text):
+    """Responde a `reply_to_id` (ID de la API). Crea el contenedor y lo publica; un fallo al crear
+    lanza ReplyNotCreated (nada publicado). Si falla el publicado se lanza RuntimeError normal:
+    puede haberse publicado, no reintentar a ciegas."""
+    text = check_reply_text(text)
+    try:
+        container = api_post(f"{user_id}/threads", token, media_type="TEXT", text=text, reply_to_id=reply_to_id)
+    except RuntimeError as exc:
+        raise ReplyNotCreated(str(exc)) from None
+    published = api_post(f"{user_id}/threads_publish", token, creation_id=container["id"])
+    return published["id"]
+
+
+def build_plan(items, decisions):
+    by_id = {item["id"]: item for item in items}
+    plan = []
+    for index, decision in enumerate(decisions.get("actions", [])):
+        item = by_id.get(decision.get("id"))
+        if not item:
+            raise ValueError(f"decision {index}: id desconocido {decision.get('id')!r}")
+        text = check_reply_text(decision.get("text"))
+        if "?" in text and not decision.get("allow_question"):
+            raise ValueError(f"decision {index}: un seguimiento no termina con pregunta (se alargaria el hilo)")
+        plan.append({"handle": item["username"], "kind": "reply", "text": text, "reply_to_id": item["id"],
+                     "post_text": item.get("text", ""), "motivo": "followup API Threads"})
+    return plan
+
+
+def followups(token, my_username, limit_posts=25):
+    mine = api_get("me/threads", token, fields="id,text,timestamp,is_reply,has_replies,replied_to{id}", limit=limit_posts)
+    posts = mine.get("data", [])
+    answered = {(p.get("replied_to") or {}).get("id") for p in posts if p.get("is_reply")}
+    pending = []
+    for post in posts:
+        if not post.get("has_replies"):
+            continue
+        data = api_get(f"{post['id']}/replies", token, fields="id,text,username,timestamp,permalink")
+        for reply in unanswered(data.get("data", []), my_username, answered):
+            reply["a_nuestro"] = (post.get("text") or "")[:100]
+            pending.append(reply)
+    return pending
+
+
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    sys.stdout.reconfigure(encoding="utf-8")
+    env = _env()
+    token = env.get("THREADS_ACCESS_TOKEN")
+    if not token or not argv:
+        print(__doc__)
+        return 2
+    if argv[0] == "me":
+        me = api_get("me", token, fields="id,username")
+        print(f"token valido para @{me['username']}; dias restantes: {token_days_left(env)}")
+        return 0
+    if argv[0] == "refresh":
+        done, message = refresh(env, if_due="--if-due" in argv)
+        print(message)
+        return 0
+    if argv[0] == "build" and len(argv) >= 3:
+        with open(os.path.join(ROOT, "threads_api_followups.json"), encoding="utf-8") as stream:
+            items = json.load(stream)
+        with open(argv[1], encoding="utf-8") as stream:
+            decisions = json.load(stream)
+        plan = build_plan(items, decisions)
+        with open(argv[2], "w", encoding="utf-8") as stream:
+            json.dump(plan, stream, ensure_ascii=False, indent=1)
+        print(f"{argv[2]}: {len(plan)} respuestas (ejecutar con tools/threads_execute.py)")
+        return 0
+    if argv[0] == "followups":
+        me = api_get("me", token, fields="username")
+        pending = followups(token, me["username"])
+        with open(os.path.join(ROOT, "threads_api_followups.json"), "w", encoding="utf-8") as stream:
+            json.dump(pending, stream, ensure_ascii=False, indent=1)
+        print(f"{len(pending)} respuestas con pregunta sin contestar")
+        for item in pending:
+            print(f"@{item['username']} ({item['timestamp'][:10]}): {item['text'][:200]}\n    a: {item['a_nuestro']}\n    {item.get('permalink','')}")
+        return 0
+    print(__doc__)
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,17 @@
+{
+  "id":"ig08_03",
+  "character_version":"LECTOR_A_v1",
+  "reference_url":"https://www.pexels.com/photo/two-persons-holding-a-book-9178822/",
+  "source_license":"https://www.pexels.com/es-es/license/",
+  "keep":["intercambio físico de un libro","dos cuerpos compartiendo objeto"],
+  "change":["identidades","ropa","libro","fondo"],
+  "panels":[
+    {"setting":"handoff","action":"handoff","expression":"neutral","bubble":"Te lo dejo.","tail_x":530,"tail_y":580},
+    {"setting":"handoff","action":"hold_book","expression":"neutral","bubble":"Gracias.","tail_x":840,"tail_y":600},
+    {"setting":"handoff","action":"cling_book","expression":"sospecha","bubble":"Una cosa.","tail_x":530,"tail_y":580},
+    {"setting":"handoff","action":"cling_book","expression":"sospecha","bubble":"Si doblas una esquina, vuelve el libro. Tú ya veremos.","tail_x":530,"tail_y":580}
+  ],
+  "caption":"Se entrega con confianza. Se recupera con inspección de daños.",
+  "hashtags":["#Bookstagram","#HumorLector","#PrestarLibros","#Lectores"],
+  "first_comment":null
+}
