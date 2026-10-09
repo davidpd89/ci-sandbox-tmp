@@ -116,6 +116,18 @@ class TrustedPRHygieneTests(unittest.TestCase):
         with self.assertRaises(gate.HygieneError):
             self.verify([], count=3000)
 
+    def test_duplicate_filenames_cannot_mask_omitted_pages(self):
+        # A stale or repeated page must not count as a complete PR diff.
+        for files in (
+            [item("README.md"), item("README.md")],
+            [item(f"docs/page_{i}.md") for i in range(100)]
+            + [item("docs/page_0.md")],
+        ):
+            with self.subTest(count=len(files)), self.assertRaisesRegex(
+                gate.HygieneError, "Duplicate"
+            ):
+                self.verify(files)
+
     def test_fails_closed_if_head_moves_mid_scan(self):
         with self.assertRaisesRegex(gate.HygieneError, "changed|mismatch"):
             self.verify([item("README.md")], mutate=True)
@@ -123,6 +135,7 @@ class TrustedPRHygieneTests(unittest.TestCase):
     def test_rejects_unknown_file_status_or_records(self):
         for bad in ([{"filename": "safe.md", "status": "mystery"}],
                     [{"filename": "", "status": "added"}],
+                    [{"filename": "safe.md", "status": []}],
                     ["invalid"]):
             with self.subTest(bad=bad), self.assertRaises(gate.HygieneError):
                 self.verify(bad)
