@@ -171,7 +171,8 @@ _TOKEN = None
 def _headers():
     global _TOKEN
     if _TOKEN is None:
-        _TOKEN = _load_token()
+        value = _load_token()
+        _TOKEN = value
     return {"Authorization": f"Bearer {_TOKEN}"}
 
 
