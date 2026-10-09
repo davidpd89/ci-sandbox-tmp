@@ -5,6 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
 import pathlib
 import sys
@@ -204,6 +205,22 @@ class CrossNetworkTests(unittest.TestCase):
             report = run(*rows, verified={proof})
             self.assertEqual(report["proposals"], [])
             self.assertEqual(report["duplicate_evidence"], 2)
+
+    def test_implicit_cutoff_uses_madrid_date_not_runner_date(self):
+        boundary = dt.datetime(2026, 10, 8, 22, 30, tzinfo=dt.timezone.utc)
+        self.assertEqual(boundary.date(), dt.date(2026, 10, 8))
+        self.assertEqual(boundary.astimezone(ZoneInfo("Europe/Madrid")).date(), NOW)
+        with patch.object(c, "_local_today", return_value=NOW) as cutoff:
+            out = c.review({"schema": 1, "observations": [positive()]})
+            self.assertEqual(out["as_of"], NOW.isoformat())
+            cutoff.assert_called_once()
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "synthetic.json"
+            path.write_text(json.dumps({"schema": 1, "observations": []}),
+                            encoding="utf-8")
+            with patch.object(c, "_local_today", return_value=NOW) as cutoff:
+                self.assertEqual(c.main(["--input", str(path)]), 0)
+                cutoff.assert_called_once()
 
     def test_aware_utc_datetime_not_mistaken_for_madrid_date(self):
         instant = dt.datetime(2026, 10, 8, 22, 30, tzinfo=dt.timezone.utc)
