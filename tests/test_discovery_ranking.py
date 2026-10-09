@@ -254,5 +254,38 @@ class RankingTests(unittest.TestCase):
         self.assertEqual(r["networks"]["bluesky"]["ranked"], [])
 
 
+    def test_snapshot_freshness_boundary_and_sample_threshold(self):
+        # Both thresholds are inclusive, including when the clock moves.
+        candidates = [row(key=1, n=39, back=39), row(key=2, n=40, back=0)]
+        accepted = ranking(candidates, as_of=dt.date(2026, 10, 16),
+                           max_snapshot_age_days=7)["networks"]["bluesky"]
+        self.assertEqual([e["source_key"] for e in accepted["ranked"]],
+                         [f"{2:024x}"])
+        self.assertEqual(accepted["unranked"][0]["reason"], "insufficient_sample")
+        expired = ranking([row(key=3)], as_of=dt.date(2026, 10, 17),
+                          max_snapshot_age_days=7)["networks"]["bluesky"]
+        self.assertEqual(expired["ranked"], [])
+        self.assertEqual(expired["unranked"][0]["reason"], "stale_snapshot")
+
+    def test_duplicate_source_only_invalidates_its_own_network(self):
+        candidates = [row(key=7), row("mastodon", 7, n=50, back=20),
+                      row(key=7, snapshot_complete=False)]
+        report = ranking(candidates)["networks"]
+        self.assertEqual(report["bluesky"]["ranked"], [])
+        self.assertEqual(report["bluesky"]["unranked"][0]["reason"],
+                         "duplicate_source_cohort")
+        self.assertEqual([x["source_key"] for x in report["mastodon"]["ranked"]],
+                         [f"{7:024x}"])
+
+    def test_configuration_types_fail_closed(self):
+        for opts in ({"as_of": "2026-10-09"},
+                     {"as_of": dt.datetime(2026, 10, 9)},
+                     {"exploration_fraction": False},
+                     {"exploration_fraction": True},
+                     {"max_snapshot_age_days": True}):
+            with self.subTest(opts=opts), self.assertRaises(ValueError):
+                ranking([], **opts)
+
+
 if __name__ == "__main__":
     unittest.main()
