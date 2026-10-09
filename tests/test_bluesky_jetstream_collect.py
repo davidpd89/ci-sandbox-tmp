@@ -506,7 +506,7 @@ class JetstreamCollectorTests(unittest.TestCase):
             js._stream_identity(base.replace("jetstream.us-east", "JETSTREAM.US-EAST") + "?cursor=1"),
         )
         with self.assertRaises(ValueError):
-            js._stream_identity("wss://name:pass@jetstream.us-east.bsky.network/xrpc/network.bsky.jetstream.subscribeEvents")
+            js._stream_identity("wss://name:pass@example.com/xrpc/network.bsky.jetstream.subscribeEvents")
 
     def test_v2_refuses_foreign_seq_without_pruning_existing_posts(self):
         with tempfile.TemporaryDirectory() as tmp:
