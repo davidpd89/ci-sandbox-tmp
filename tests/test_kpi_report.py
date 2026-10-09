@@ -149,6 +149,25 @@ class KPITests(unittest.TestCase):
         self.assertEqual(r["followers_net"], 6)
         self.assertEqual(r["followers_coverage"], "dos_snapshots_locales")
 
+    def test_reddit_karma_is_not_relabelled_as_followers(self):
+        self.write("reddit", "metricas.csv", [
+            ["fecha", "karma_visible", "notas"],
+            ["2026-10-08", "100", ""],
+            ["2026-10-09", "105", ""],
+        ])
+        r = k.build_report(self.root, self.day)["networks"]["reddit"]
+        self.assertIsNone(r["followers_net"])
+        self.assertEqual(r["followers_coverage"], "sin_columna_seguidores")
+
+    def test_named_followers_column_is_used_by_semantics(self):
+        self.write("x", "metricas.csv", [
+            ["fecha", "posts", "seguidores", "notas"],
+            ["2026-10-08", "200", "100", ""],
+            ["2026-10-09", "201", "104", ""],
+        ])
+        r = k.build_report(self.root, self.day)["networks"]["x"]
+        self.assertEqual(r["followers_net"], 4)
+
     def test_follower_baseline_uses_latest_date_even_if_csv_unsorted(self):
         self.write("x", "metricas.csv", [["2026-10-08", "100"], ["2026-10-07", "20"], ["2026-10-09", "105"]])
         r = k.build_report(self.root, self.day)["networks"]["x"]

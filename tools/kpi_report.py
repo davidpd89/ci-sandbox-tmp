@@ -137,12 +137,26 @@ def _followers(root, net, day):
     rows, error = _rows(path)
     if error:
         return None, error
-    # metricas.csv legacy usa columnas posicionales: [fecha, seguidores, ...]
+
+    # Con cabecera, la semántica manda: Reddit registra karma_visible y no
+    # puede reinterpretarse como seguidores. El legacy sin cabecera conserva
+    # la segunda columna solo en redes cuyo histórico sí era de seguidores.
+    data_rows = rows
+    follower_index = 1
+    if rows and rows[0] and rows[0][0].strip().casefold() == "fecha":
+        names = [name.strip().casefold() for name in rows[0]]
+        if len(names) != len(set(names)) or "seguidores" not in names:
+            return None, "sin_columna_seguidores"
+        follower_index = names.index("seguidores")
+        data_rows = rows[1:]
+    elif net == "reddit":
+        return None, "sin_columna_seguidores"
+
     previous = current = None
-    for row in rows:
-        if len(row) < 2 or row[0].strip().casefold() == "fecha":
+    for row in data_rows:
+        if len(row) <= follower_index:
             continue
-        stamp, value = _local_day(row[0]), _integer(row[1])
+        stamp, value = _local_day(row[0]), _integer(row[follower_index])
         if stamp is None or value is None:
             continue
         if stamp < day and (previous is None or stamp >= previous[0]):
