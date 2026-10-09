@@ -38,6 +38,10 @@ Fuentes: [checkout y fetch-depth](https://github.com/actions/checkout), [documen
 
 **Límites conocidos:** la política detecta rutas, no tokens incrustados en ficheros permitidos ni cambios que solo quedaron en commits inaccesibles de la rama actual tras force-push. CI llega **después del push**: si llegó un secreto real al remoto debe retirarse del historial accesible y rotarse; un check rojo no revierte publicación. Dado que el workflow y script viven en la PR, su inmutabilidad frente a cambios maliciosos es alcance de **#92**, no una garantía que reivindique #89.
 
+## Incidencia real de Windows
+
+La primera suite completa de Windows detectó un fixture no portable: NTFS no admite saltos de línea en nombres físicos. Se corrigió en el commit `4815563c834bdbd932572f8cab9ee9b91b778eb0`: nombre con espacios en Git real y entrada con salto de línea en flujo NUL simulado. El fallo fue del test, no del controlador de Git. La nueva CI debe confirmarlo.
+
 ## Interdependencias y traspaso a Claude
 
 - #2 mantiene control del árbol final; #89 añade la dimensión temporal, no lo reemplaza.
