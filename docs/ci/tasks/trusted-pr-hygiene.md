@@ -36,3 +36,7 @@ una prueba inmutable del contrato si ambos provienen de la rama propuesta.
 Final: código, pruebas, informe adversarial, runners verdes; sin merge.
 Consulta el repo oficial `davidpd89/rrss-davidporto-CODE`
 (`integracion/crecimiento-2026-10`) si falta contexto.
+
+## Implementación
+
+Código, tests e informe adversarial de esta PR: [docs/ci/reports/trusted-pr-hygiene-review.md](../reports/trusted-pr-hygiene-review.md). El gate solo se activa tras instalarlo en `main` y convertirlo en required check; la PR mantiene los ensayos sin ejecutarlo con confianza antes de su instalación.
