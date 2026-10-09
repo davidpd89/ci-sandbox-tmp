@@ -123,6 +123,18 @@ el test \`test_child_diff_uses_merge_base_not_merge_commit\`: el padre
 NO puede satisfacer por sí solo las pruebas y el informe requeridos
 para una hija. Revalidar siempre los checks tras cambiar el base/head.
 
+## Estado real de políticas de repositorio
+
+API `GET /repos/davidpd89/ci-sandbox-tmp/branches/main/protection`:
+**403 Resource not accessible by integration** (2026-10-09).
+API `GET /repos/davidpd89/ci-sandbox-tmp/rulesets`:
+**lista vacía**. No inferir que main esté protegido: Claude o el titular
+deben comprobar las reglas desde su cuenta autorizada.
+
+El CI de una hija usa `--live --child-number <N>` para verificar únicamente
+esa hija y el padre. El CI del padre conserva `--live` global con las 76
+y nuevas hijas. Esto evita que el título de una hermana bloquee otra PR.
+
 ## Incidencias abiertas
 
 | ID | Puerta | Severidad | Bloqueo / condición de desbloqueo |
