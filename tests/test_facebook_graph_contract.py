@@ -44,11 +44,14 @@ class FacebookGraphContractTests(unittest.TestCase):
         self.assertFalse(any("SYNTHETIC_NEVER_REAL" in str(p) for _, p in requests))
 
     def test_graph_200_envelope_does_not_become_fake_empty_inbox(self):
-        with mock.patch.object(fb.mc, "graph_get",
-                               return_value={"data": [], "paging": CASES["permission_denied"]}):
-            # Ill-formed paging is only relevant if a next page is advertised.
-            self.assertEqual(fb.comments_pending("T", "page-1"), [])
         with mock.patch.object(fb.mc, "graph_get", return_value=CASES["permission_denied"]):
+            with self.assertRaises(fb.FacebookPaginationError):
+                fb.comments_pending("T", "page-1")
+        def fake_get(base, path, token, **params):
+            if path.endswith("/posts"):
+                return {"data": [{"id": "post-1"}]}
+            return CASES["permission_denied"]
+        with mock.patch.object(fb.mc, "graph_get", side_effect=fake_get):
             with self.assertRaises(fb.FacebookPaginationError):
                 fb.comments_pending("T", "page-1")
 
@@ -62,7 +65,7 @@ class FacebookGraphContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "API 400") as caught:
                     fb.comments_pending("SYNTHETIC_TOKEN", "page-1")
                 self.assertNotIn("SYNTHETIC_TOKEN", str(caught.exception))
-                self.assertIn(str(CASES[name]["error"]["code"]), str(caught.exception))
+                self.assertIn(CASES[name]["error"]["message"], str(caught.exception))
 
     def test_missing_after_cursor_fails_closed(self):
         bad = {"data": [{"id": "c", "message": "¿Dónde?"}],
