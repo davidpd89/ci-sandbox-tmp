@@ -27,6 +27,19 @@ Este complemento de `docs/CI8_POST_AGE_REVIEW.md` revisa el trabajo **después**
 
 La política no garantiza ningún límite para las reacciones cuya fecha es desconocida, por decisión de compatibilidad/volumen ya presente en #8; **sí** registra `edad_desconocida` en vez de `edad_ok`. Esta decisión merece revisión explícita de producto por Claude y no debe presentarse como prevención completa de necroposting para todos los kinds.
 
+## Paridad adicional confirmada con el repositorio oficial privado
+
+La inspección posterior de `integracion/crecimiento-2026-10` confirmó que el **repositorio oficial ya tenía parte del traspaso temporal** que faltaba al mirror. Se portó al espejo solo el contrato de datos `post_created_at` (sin dependencias/cliente/red), por lo que no se ha escrito una lógica paralela distinta:
+
+- `bluesky_build_plan`: admite `created_at`, `createdAt` o `record.createdAt` de la entrada; se conservan preferencias del repo oficial.
+- `mastodon_build_plan`: `post_created_at` de `created_at` del status.
+- `threads_build_plan`: `build` admite `created_at`/`created_time` de candidato; `build_from_pool` y `build_replies` conservan `created_at` si la fuente lo aporta. **El pool histórico actual no aporta por sí solo esta fecha**, no afirmar frescura en ausencia de ella.
+- `facebook_build_plan`: `build` y `build_from_pool` conservan un timestamp de origen **cuando aparece en la fila**, sin convertir `first_seen` en publicación.
+- `tiktok_growth_scan` y `tiktok_build_plan`: el campo procedente del vídeo (`created_at` / `create_time` / `created_time`) cruza filas → shortlist → auto-like y decisión editorial. **No crea** fechas para vídeos sin metadatos.
+- Tests añadidos: `test_other_network_age_provenance.py` (incluida reconstrucción sintética de shortlist TikTok), más `test_plan_age_provenance.py` para el fallback de records ATProto.
+
+Los módulos del repositorio oficial pueden tener otros cambios independientes; **no** se han copiado indiscriminadamente. La paridad completa debe contrastarse en una PR de integración del repositorio privado tras revisión, y la cobertura real de fechas ausentes corresponde a [#62](https://github.com/davidpd89/ci-sandbox-tmp/pull/62).
+
 ## Reutilización pública actual, con decisión técnica
 
 - [Especificación TID ATProto](https://atproto.com/specs/tid): alfabeto, bits y primer carácter comprobados, además de advertencia de que un TID es un reloj lógico manipulable por el cliente. Documento de referencia, sin código copiado.
