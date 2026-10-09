@@ -66,6 +66,21 @@ def _read(path=None):
         raise SafetyStateError("ámbito de pausa inválido")
     if value.get("manual_review") not in (None, False, True):
         raise SafetyStateError("manual_review inválido")
+    if value.get("until") is not None:
+        _date(value["until"])
+    if value.get("day") is not None:
+        try:
+            dt.date.fromisoformat(value["day"])
+        except (TypeError, ValueError) as exc:
+            raise SafetyStateError("día de pausa inválido") from exc
+    if value.get("strikes") is not None:
+        raw_strikes = value["strikes"]
+        try:
+            strikes = int(raw_strikes)
+        except (TypeError, ValueError) as exc:
+            raise SafetyStateError("strikes inválido") from exc
+        if isinstance(raw_strikes, bool) or strikes < 0 or str(strikes) != str(raw_strikes):
+            raise SafetyStateError("strikes inválido")
     return value
 
 
@@ -246,7 +261,7 @@ def recorded_actions(path, *, today=None):
                 target = ((row.get("cuenta") or "").strip().lstrip("@").casefold() if kind == "follow"
                           else (row.get("post_resumen") or "").strip())
                 if not target:
-                    if result in ("confirmado", "publicado", "pendiente_verificacion"):
+                    if result in ("confirmado", "publicado", "pendiente_verificacion", "pendiente_aprobacion"):
                         raise SafetyStateError("acción registrada sin objetivo")
                     continue
                 key = (kind, target)
