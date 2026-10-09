@@ -103,7 +103,9 @@ def _positive_effect(arms):
         return None
     # Separación descriptiva de los extremos de Wilson, NO un IC válido
     # de la diferencia ni una inferencia causal o ajustada por múltiples tests.
-    # No redondear: con muestras grandes una separación positiva puede\n    # aparecer como 0.0 y romper la coherencia del estado favorable.\n    return {"wilson_interval_gap": lo_a - hi_b,
+    # No redondear: con muestras grandes una separación positiva puede
+    # aparecer como 0.0 y romper la coherencia del estado favorable.
+    return {"wilson_interval_gap": lo_a - hi_b,
             "treatment_n": a["n"], "control_n": b["n"]}
 
 
