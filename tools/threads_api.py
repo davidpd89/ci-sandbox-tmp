@@ -274,20 +274,12 @@ def followups(token, my_username, limit_posts=25):
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
-    sys.stdout.reconfigure(encoding="utf-8")
-    env = _env()
-    auth_value = env.get("THREADS_ACCESS_TOKEN")
-    if not auth_value or not argv:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+    if not argv:
         print(__doc__)
         return 2
-    if argv[0] == "me":
-        me = api_get("me", auth_value, fields="id,username")
-        print(f"token valido para @{me['username']}; dias restantes: {token_days_left(env)}")
-        return 0
-    if argv[0] == "refresh":
-        done, message = refresh(env, if_due="--if-due" in argv)
-        print(message)
-        return 0
+    # Editorial planning must also work without any API authorization or .env.
     if argv[0] == "build" and len(argv) >= 3:
         with open(os.path.join(ROOT, "threads_api_followups.json"), encoding="utf-8") as stream:
             items = json.load(stream)
@@ -297,6 +289,19 @@ def main(argv=None):
         with open(argv[2], "w", encoding="utf-8") as stream:
             json.dump(plan, stream, ensure_ascii=False, indent=1)
         print(f"{argv[2]}: {len(plan)} respuestas (ejecutar con tools/threads_execute.py)")
+        return 0
+    env = _env()
+    auth_value = env.get("THREADS_ACCESS_TOKEN")
+    if not auth_value:
+        print(__doc__)
+        return 2
+    if argv[0] == "me":
+        me = api_get("me", auth_value, fields="id,username")
+        print(f"token valido para @{me['username']}; dias restantes: {token_days_left(env)}")
+        return 0
+    if argv[0] == "refresh":
+        done, message = refresh(env, if_due="--if-due" in argv)
+        print(message)
         return 0
     if argv[0] == "followups":
         me = api_get("me", auth_value, fields="username")
