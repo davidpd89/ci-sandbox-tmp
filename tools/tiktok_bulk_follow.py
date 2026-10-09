@@ -433,17 +433,26 @@ def main(argv=None):
     from tiktok_mobile_interact import MY_HANDLE, TikTokMobileAdapter, TikTokMobileChallenge, TikTokTargetNotFound, TikTokWrongAccount
     from tiktok_mobile_nav import TikTokNavigator
 
-    left = cooldown_left()
-    if left > 0:
-        print(f"[bulk] en descanso por el aviso de TikTok: faltan {left:.0f} min; se omite el seguimiento masivo")
-        return 0
+    try:
+        safety.require_writable(COOLDOWN_PATH)
+    except safety.SafetyBlocked:
+        print("[bulk] restringido: revisión manual pendiente")
+        safety.step_status("restricted")
+        return 4
+    except safety.SafetyStateError:
+        print("FALLO_LOCAL bulk: estado de cooldown corrupto")
+        safety.step_status("local_error")
+        return 2
+
     cfg = load_config()
     done, today_n = followed_before()
     ceiling = int((cfg.get("action_ceiling") or {}).get("follow", 400))
     budget = min(args.max_follows, max(0, ceiling - today_n))
     if budget <= 0:
         print(f"[bulk] techo diario de follows alcanzado ({today_n}/{ceiling})")
+        safety.step_status("no_budget")
         return 0
+
     try:
         seeds_log = json.load(open(SEEDS_PATH, encoding="utf-8"))
     except (OSError, ValueError):
@@ -451,58 +460,145 @@ def main(argv=None):
     rng = random.Random()
     profile = HumanProfile(**cfg["human"]) if cfg.get("human") else HumanProfile()
     modes = [m.strip() for m in args.modes.split(",") if m.strip()]
+    started = time.monotonic()
+
     try:
         with mobile_session_lock():
-            raw = ensure_server(device_id=args.device)
-            client = HumanClient(raw, profile, rng)
-            adapter = TikTokMobileAdapter(client, args.device, allow_writes=True)
-            nav = TikTokNavigator(adapter)
-            adapter.verify_active_account(MY_HANDLE)
-            sess = Session(nav, Pace(profile, rng), rng, max_follows=budget, deadline=time.time() + args.max_minutes * 60, done=done)
             try:
-                if "followback" in modes and not sess.over:
-                    read, back = followback_own(sess)
-                    print(f"[bulk] follow-back a nuevos seguidores: {read} filas, {back} follows", flush=True)
-                if "mutual" in modes and not sess.over:
-                    for query in rng.sample(MUTUAL_QUERIES, min(8, len(MUTUAL_QUERIES))):
-                        if sess.over:
-                            break
-                        try:
-                            n = mine_mutual(sess, query)
-                        except TikTokTargetNotFound as exc:
-                            print(f"(consulta {query!r} omitida: {str(exc)[:80]})", flush=True)
-                            continue
-                        print(f"[bulk] «{query}»: {n} follows", flush=True)
-                if "followers" in modes and not sess.over:
-                    for seed in ([x.strip() for x in args.seeds.split(",") if x.strip()] or pick_seeds(cfg, seeds_log, 12)):
-                        if sess.over:
-                            break
-                        try:
-                            read, mine = mine_followers(sess, seed, args.per_seed)
-                        except TikTokTargetNotFound as exc:
-                            print(f"(semilla @{seed} omitida: {str(exc)[:80]})", flush=True)
-                            continue
-                        entry = seeds_log.setdefault(seed, {})
-                        entry.update({"last": datetime.date.today().isoformat(), "mined": mine, "rows": read})
-                        print(f"[bulk] semilla @{seed}: {read} filas, {mine} follows", flush=True)
-            finally:
+                # El preflight inicial precede al lock: revalidar restricción,
+                # objetivos ya intentados y cuota bajo exclusión antes de tocar el móvil.
+                safety.require_writable(COOLDOWN_PATH)
+                current_usage, _ = safety.recorded_actions(REGISTRO_CSV)
+                locked_done, locked_today = followed_before()
+                done.update(locked_done)
+                current_budget = min(
+                    args.max_follows,
+                    max(0, ceiling - max(current_usage["follow"], locked_today)),
+                )
+                if current_budget <= 0:
+                    safety.step_status("no_budget")
+                    return 0
+                budget = min(budget, current_budget)
+
+                raw = ensure_server(device_id=args.device)
+                client = HumanClient(raw, profile, rng)
+                adapter = TikTokMobileAdapter(client, args.device, allow_writes=True)
+                nav = TikTokNavigator(adapter)
+                adapter.verify_active_account(MY_HANDLE)
+                print(f"[TIKTOK_BULK_SETUP] segundos={time.monotonic() - started:.2f}", flush=True)
+                sess = Session(
+                    nav,
+                    Pace(profile, rng),
+                    rng,
+                    max_follows=budget,
+                    deadline=time.time() + args.max_minutes * 60,
+                    done=done,
+                )
                 try:
-                    nav.return_to_feed()
-                except Exception:
-                    pass
-                with open(SEEDS_PATH, "w", encoding="utf-8") as stream:
-                    json.dump(seeds_log, stream, ensure_ascii=False, indent=1)
-            print(f"[bulk] sesion terminada: {sess.followed} follows nuevos (hoy ya {today_n} antes de la sesion)")
+                    if "followback" in modes and not sess.over:
+                        read, back = followback_own(sess)
+                        print(f"[bulk] follow-back a nuevos seguidores: {read} filas, {back} follows", flush=True)
+                    if "mutual" in modes and not sess.over:
+                        for query in rng.sample(MUTUAL_QUERIES, min(8, len(MUTUAL_QUERIES))):
+                            if sess.over:
+                                break
+                            try:
+                                n = mine_mutual(sess, query)
+                            except TikTokTargetNotFound as exc:
+                                print(f"(consulta {query!r} omitida: {str(exc)[:80]})", flush=True)
+                                continue
+                            print(f"[bulk] «{query}»: {n} follows", flush=True)
+                    if "followers" in modes and not sess.over:
+                        for seed in (
+                            [x.strip() for x in args.seeds.split(",") if x.strip()]
+                            or pick_seeds(cfg, seeds_log, 12)
+                        ):
+                            if sess.over:
+                                break
+                            try:
+                                read, mine = mine_followers(sess, seed, args.per_seed)
+                            except TikTokTargetNotFound as exc:
+                                print(f"(semilla @{seed} omitida: {str(exc)[:80]})", flush=True)
+                                continue
+                            entry = seeds_log.setdefault(seed, {})
+                            entry.update({
+                                "last": datetime.date.today().isoformat(),
+                                "mined": mine,
+                                "rows": read,
+                            })
+                            print(f"[bulk] semilla @{seed}: {read} filas, {mine} follows", flush=True)
+                finally:
+                    # Tras una señal terminal no navegar ni escribir estado auxiliar:
+                    # primero debe persistirse la restricción compartida.
+                    if sys.exc_info()[0] is None:
+                        try:
+                            safety.require_writable(COOLDOWN_PATH)
+                            nav.return_to_feed()
+                        except (
+                            RateLimited,
+                            StopSession,
+                            TikTokMobileChallenge,
+                            TikTokWrongAccount,
+                            MobileCliError,
+                        ):
+                            raise
+                        except Exception:
+                            pass
+                        with open(SEEDS_PATH, "w", encoding="utf-8") as stream:
+                            json.dump(seeds_log, stream, ensure_ascii=False, indent=1)
+
+                print(
+                    f"[bulk] sesion terminada: {sess.followed} follows nuevos "
+                    f"(hoy ya {today_n} antes de la sesion)"
+                )
+                print(f"[TIKTOK_BULK_TOTAL] segundos={time.monotonic() - started:.2f}", flush=True)
+            except (
+                RateLimited,
+                StopSession,
+                TikTokMobileChallenge,
+                TikTokWrongAccount,
+                MobileCliError,
+            ) as exc:
+                # Persistir la barrera ANTES de liberar el lock móvil.
+                reason = (
+                    "challenge" if isinstance(exc, TikTokMobileChallenge)
+                    else "wrong_account" if isinstance(exc, TikTokWrongAccount)
+                    else "follow_limit" if isinstance(exc, RateLimited)
+                    else "uncertain" if isinstance(exc, MobileCliError)
+                    else "warning"
+                )
+                start_cooldown(reason)
+                raise
     except MobileSessionBusy:
         print("MobileSessionBusy: el movil lo usa otra sesion; se omite el seguimiento masivo")
-    except RateLimited as exc:
-        print(f"PARADA TIKTOK: {exc}; descanso de {start_cooldown()} min")
-        return 0
-    except StopSession as exc:
-        print(f"PARADA TIKTOK: {exc}")
-        return 0
-    except (TikTokMobileChallenge, TikTokWrongAccount, MobileCliError) as exc:
-        print(f"PARADA TIKTOK: {exc}")
+        safety.step_status("busy")
+        return 3
+    except (RateLimited, StopSession) as exc:
+        print(f"PARADA TIKTOK: {type(exc).__name__}; revisión humana pendiente")
+        safety.step_status("restricted")
+        return 4
+    except (TikTokMobileChallenge, TikTokWrongAccount) as exc:
+        challenged = isinstance(exc, TikTokMobileChallenge)
+        print(
+            f"PARADA TIKTOK: {type(exc).__name__}; "
+            + ("challenge_required; revisión manual" if challenged else "identidad local no confirmada")
+        )
+        safety.step_status("restricted" if challenged else "local_error")
+        return 4 if challenged else 2
+    except safety.SafetyBlocked:
+        print("PARADA TIKTOK: se ha activado una restricción compartida")
+        safety.step_status("restricted")
+        return 4
+    except safety.SafetyStateError:
+        print("FALLO_LOCAL bulk: estado compartido ilegible durante la sesión")
+        safety.step_status("local_error")
+        return 2
+    except MobileCliError as exc:
+        print(f"PARADA TIKTOK: {type(exc).__name__}; última operación incierta")
+        safety.step_status("uncertain")
+        return 5
+
+    safety.step_status("completed")
     return 0
 
 
@@ -511,6 +607,7 @@ if __name__ == "__main__":
         raise SystemExit(main())
     except SystemExit:
         raise
-    except Exception as exc:                       # nunca tumba la ronda
-        print(f"FALLO bulk: {type(exc).__name__}: {str(exc)[:160]}")
-        raise SystemExit(0)
+    except Exception as exc:
+        print(f"FALLO_LOCAL bulk: {type(exc).__name__}")
+        safety.step_status("local_error")
+        raise SystemExit(2)
