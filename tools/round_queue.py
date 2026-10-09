@@ -490,6 +490,15 @@ def _append_round_csv(row):
                     with open(LOG, "a+b") as stream:
                         stream.seek(0)
                         first_line = stream.readline()
+                        if first_line and b"\n" not in first_line:
+                            # A first writer may crash mid-header before any CSV
+                            # record existed. Repair only an exact prefix of our
+                            # canonical header; preserve other unknown schemas.
+                            expected_header = (",".join(ROUND_CSV_COLUMNS) + "\r\n").encode("utf-8")
+                            if expected_header.startswith(first_line):
+                                _recover_incomplete_csv_tail(stream)
+                                stream.seek(0)
+                                first_line = stream.readline()
                         if first_line:
                             try:
                                 header = next(csv.reader(
