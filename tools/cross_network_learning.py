@@ -170,17 +170,19 @@ def review(data, *, today=None, trusted_verifications=None):
     # Conflictos no se resuelven por orden: una segunda evidencia en la
     # misma cola invalida ambas. Una cola desconocida es ambigua y bloquea
     # las verificaciones concretas de esa red/táctica hasta su reconciliación.
+    # Solo evidencias elegibles cuentan como conflictos. Una fila rota,
+    # sin control o con esquema inválido nunca debe invalidar otra válida.
+    effects = [_positive(row, today) for row in items]
     counts = Counter()
-    for row in items:
-        if not isinstance(row, dict):
+    for row, effect in zip(items, effects):
+        if effect is None:
             continue
-        origin, feature, targets = row.get("origin"), row.get("feature"), row.get("targets")
-        if (not isinstance(origin, str) or origin not in NETWORKS
-                or not isinstance(feature, str) or feature not in FEATURES
-                or not isinstance(targets, dict)):
+        origin, feature, targets = row["origin"], row["feature"], row.get("targets")
+        if (not isinstance(targets, dict) or len(targets) > len(NETWORKS)
+                or any(not isinstance(t, str) for t in targets)):
             continue
         for target, entry in targets.items():
-            if isinstance(target, str) and target in NETWORKS and target != origin:
+            if target in NETWORKS and target != origin:
                 counts[(origin, feature, target, _queue(entry))] += 1
 
     report = {"schema": 1, "as_of": today.isoformat(),
@@ -189,8 +191,7 @@ def review(data, *, today=None, trusted_verifications=None):
               "invalid_or_unproven": 0, "suppressed": 0,
               "duplicate_evidence": 0, "writes": False}
     seen = set()
-    for row in items:
-        effect = _positive(row, today)
+    for row, effect in zip(items, effects):
         if effect is None:
             report["invalid_or_unproven"] += 1
             continue
