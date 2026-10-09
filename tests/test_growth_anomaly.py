@@ -212,6 +212,33 @@ class AnomalyTests(unittest.TestCase):
                           "{'like': 4}", 0, 0, 0])
         self.assertEqual(self.alerts(), [])
 
+    def test_invalid_end_clock_blocks_false_drop_only_for_affected_network(self):
+        self.baseline()
+        self.day(2, amount=1)
+        self.day(1, amount=1)
+        self.baseline(net="mastodon")
+        self.day(2, net="mastodon", amount=1)
+        self.day(1, net="mastodon", amount=1)
+        # En la última fila azul del día anterior se sustituye un fin válido
+        # por una hora imposible sin alterar el resto de la evidencia.
+        bad = next(row for row in self.rows if row[1] == "bluesky"
+                   and row[0] == (NOW.date() - dt.timedelta(days=1)).isoformat())
+        bad[3] = "26:72:00"
+        self.assertEqual([alert["network"] for alert in self.alerts()], ["mastodon"])
+
+    def test_default_clock_uses_madrid_not_machine_utc(self):
+        from unittest import mock
+
+        class ServerClock(dt.datetime):
+            @classmethod
+            def now(cls, tz=None):
+                if tz is None:
+                    return cls(2026, 10, 8, 23, 30, 0)
+                return cls(2026, 10, 9, 1, 30, 0, tzinfo=tz)
+
+        with mock.patch.object(a.dt, "datetime", ServerClock):
+            self.assertEqual(a._today(None), NOW.date())
+
     def test_invalid_calendar_day_and_missing_end_time_block_false_drop(self):
         self.baseline()
         self.day(2, amount=1)

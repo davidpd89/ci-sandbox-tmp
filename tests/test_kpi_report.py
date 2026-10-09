@@ -75,8 +75,19 @@ class KPITests(unittest.TestCase):
     def test_extra_legacy_columns_are_malformed_not_confirmed(self):
         self.write("x", "registro_interacciones.csv", [self.sample() + ["unexpected"]])
         r = k.build_report(self.root, self.day)["networks"]["x"]
-        self.assertEqual(r["confirmed_rows"], 0)
+        self.assertIsNone(r["confirmed_rows"])
         self.assertEqual(r["malformed_rows"], 1)
+        self.assertEqual(r["outbound_coverage"], "registro_parcial_filas_invalidas")
+
+    def test_bad_row_keeps_only_observed_positive_lower_bound(self):
+        self.write("x", "registro_interacciones.csv", [
+            self.sample(), ["2026-10-09", "cuenta"], self.sample("fallo:timeout", "reply")
+        ])
+        r = k.build_report(self.root, self.day)["networks"]["x"]
+        self.assertEqual(r["confirmed_rows"], 1)
+        self.assertEqual(r["failed_logged_rows"], 1)
+        self.assertIsNone(r["pending_unknown_rows"])
+        self.assertEqual(r["outbound_coverage"], "registro_parcial_filas_invalidas")
 
     def test_invalid_named_header_is_unknown_not_zero(self):
         header = ["fecha", "cuenta", "tipo", "post_resumen", "texto", "notas", "fuente"]
@@ -196,6 +207,31 @@ class KPITests(unittest.TestCase):
         self.assertEqual(result["tiktok"]["incoming_coverage"], "sin_cosecha_instrumentada")
         self.assertIsNone(result["reddit"]["incoming_comment_account_days"])
         self.assertEqual(result["x"]["outbound_coverage"], "ausente")
+
+    def test_corrupt_inbound_row_never_masquerades_as_zero(self):
+        p = self.root / "00_OPERATIVO" / "inbound_interacciones.csv"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with p.open("w", encoding="utf-8", newline="") as stream:
+            csv.writer(stream).writerows([
+                ["fecha", "red", "handle", "tipo"],
+                ["2026-10-09", "bluesky", "cuenta"],
+                ["2026-10-09", "bluesky", "otra", "like"],
+            ])
+        r = k.build_report(self.root, self.day)["networks"]["bluesky"]
+        self.assertIsNone(r["incoming_comment_account_days"])
+        self.assertEqual(r["incoming_coverage"], "registro_inbound_parcial")
+
+    def test_unattributable_inbound_row_is_not_silent(self):
+        p = self.root / "00_OPERATIVO" / "inbound_interacciones.csv"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with p.open("w", encoding="utf-8", newline="") as stream:
+            csv.writer(stream).writerows([
+                ["fecha", "red", "handle", "tipo"],
+                ["2026-10-09", "", "cuenta", "comment"],
+            ])
+        r = k.build_report(self.root, self.day)["networks"]["mastodon"]
+        self.assertIsNone(r["incoming_comment_account_days"])
+        self.assertEqual(r["incoming_coverage"], "registro_inbound_parcial")
 
     def test_render_does_not_serialize_none_as_zero(self):
         text = k.render_markdown(k.build_report(self.root, self.day))

@@ -27,7 +27,10 @@ MEASURED_STATES = frozenset(("ok", "parcial"))
 def _today(now):
     """Un instante con zona se interpreta en Madrid, no en la fecha UTC."""
     if now is None:
-        return dt.datetime.now().date()  # reloj local del PC operativo (Madrid)
+        try:
+            return dt.datetime.now(ZoneInfo("Europe/Madrid")).date()
+        except ZoneInfoNotFoundError:
+            return None  # sin tzdata no reinterpretar el día como UTC
     if isinstance(now, dt.datetime):
         if now.tzinfo is not None:
             try:
@@ -88,6 +91,11 @@ def collect(root, *, now=None):
                     continue
                 if state not in MEASURED_STATES:
                     continue  # no deducir cero por pausa/ausencia/error
+                try:
+                    dt.time.fromisoformat(row["fin"])
+                except (TypeError, ValueError):
+                    invalid.add(network)
+                    continue
                 # Un reintento/replay puede repetir exactamente una fila. No
                 # debe convertir una única ronda observada en tres muestras.
                 fingerprint = tuple(row.get(name) for name in reader.fieldnames)

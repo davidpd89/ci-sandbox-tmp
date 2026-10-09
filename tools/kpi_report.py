@@ -181,8 +181,17 @@ def _inbound(root, day):
         return None, schema_error
     counts = Counter()
     seen = set()
+    incomplete = False
     for entry, malformed in mapped:
-        if malformed or _local_day(entry.get("fecha")) != day or entry.get("red") not in NETWORKS:
+        local_day = _local_day(entry.get("fecha"))
+        if malformed or local_day is None:
+            incomplete = True
+            continue
+        if local_day != day:
+            continue
+        if (entry.get("red") not in NETWORKS or not entry.get("handle")
+                or entry.get("tipo") not in ("comment", "like", "repost", "follow")):
+            incomplete = True
             continue
         key = (entry.get("fecha"), entry.get("red"), entry.get("handle"), entry.get("tipo"))
         if key in seen:
@@ -190,6 +199,10 @@ def _inbound(root, day):
         seen.add(key)
         if entry.get("tipo") == "comment":
             counts[entry["red"]] += 1
+    # Una fila indescifrable podría ocultar otro comentario; el cero deja
+    # de ser un valor defendible, incluso si hay otras filas correctas.
+    if incomplete:
+        return None, "registro_inbound_parcial"
     return counts, "cuentas_tipo_dia_solo_harvest"
 
 
@@ -202,18 +215,29 @@ def build_report(root, day):
     for net in NETWORKS:
         statuses, kinds, sources, file_error, duplicates, malformed = _activity(root, net, day)
         follower_delta, follower_coverage = _followers(root, net, day)
-        observed = None if file_error else statuses.get("confirmadas", 0)
+        coverage = (file_error or ("registro_parcial_filas_invalidas"
+                                   if malformed else "registro_legacy_sin_ids"))
+
+        def observed_status(key):
+            if file_error:
+                return None
+            count = statuses.get(key, 0)
+            # Los valores positivos son evidencia parcial (cota inferior).
+            # Si faltan filas, cero no equivale a ausencia de actividad.
+            return None if malformed and count == 0 else count
+
+        observed = observed_status("confirmadas")
         result["networks"][net] = {
             "confirmed_rows": observed,
             "confirmed_by_kind": kinds,
             "confirmed_by_source": sources,
-            "pending_unknown_rows": None if file_error else statuses.get("inciertas", 0),
-            "failed_logged_rows": None if file_error else statuses.get("fallidas_registradas", 0),
-            "omitted_logged_rows": None if file_error else statuses.get("omitidas_registradas", 0),
-            "unclassified_rows": None if file_error else statuses.get("resultado_desconocido", 0),
+            "pending_unknown_rows": observed_status("inciertas"),
+            "failed_logged_rows": observed_status("fallidas_registradas"),
+            "omitted_logged_rows": observed_status("omitidas_registradas"),
+            "unclassified_rows": observed_status("resultado_desconocido"),
             "duplicate_identical_rows": duplicates,
             "malformed_rows": malformed,
-            "outbound_coverage": "registro_legacy_sin_ids" if not file_error else file_error,
+            "outbound_coverage": coverage,
             "incoming_comment_account_days": None if inbound is None or net not in INBOUND_HARVEST_NETWORKS else inbound.get(net, 0),
             "incoming_coverage": inbound_coverage if net in INBOUND_HARVEST_NETWORKS else "sin_cosecha_instrumentada",
             "followers_net": follower_delta,
@@ -233,7 +257,7 @@ def render_markdown(report):
         known = sum(v for k, v in row["confirmed_by_source"].items() if k != "sin_atribucion")
         attribution = f"{known}/{row['confirmed_rows']}" if row["confirmed_rows"] is not None else "ND"
         lines.append(f"| {net} | {fmt(row['confirmed_rows'])} | {fmt(row['pending_unknown_rows'])} | {fmt(row['failed_logged_rows'])} | {fmt(row['incoming_comment_account_days'])} | {fmt(row['followers_net'])} | {attribution} |")
-    lines += ["", "* No son ACK remotos revalidados: son filas de registro; los duplicados idénticos se excluyen. Sin IDs estables no se garantiza unicidad ni cobertura completa.",
+    lines += ["", "* No son ACK remotos revalidados: son filas de registro; los duplicados idénticos se excluyen. Si hay filas malformadas, los recuentos positivos son cotas inferiores y el cero se muestra ND. Sin IDs estables no se garantiza unicidad ni cobertura completa.",
               "** Cuentas/tipo/día registradas por cosecha; no son todas las respuestas ni atribuyen causalidad a acciones propias.",
               "*** Diferencia entre la última observación del día y el último snapshot previo (máximo 7 días); ND no significa cero.",
               "Planes, candidatos, intentos, rechazos y respuestas causadas son ND sin eventos instrumentados. Nunca se deducen del número de rondas."]
