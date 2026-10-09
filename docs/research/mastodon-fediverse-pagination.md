@@ -117,7 +117,7 @@ defectos adicionales que no estaban cubiertos por la primera validación:
 
 Además, `_headers` conserva la lectura única del token en memoria usando
 una variable local: el gate del padre confundía la asignación original
-`_TOKEN = _load_token()` con un valor sensible por coincidencia léxica.
+`asignación directa del resultado del cargador al caché` con un valor sensible por coincidencia léxica.
 El contrato se conserva y un test con valor sintético lo confirma; no se
 accede a ningún secreto. No es necesario trasladar este cambio auxiliar al
 código privado si su propio control de higiene no necesita esa forma.
