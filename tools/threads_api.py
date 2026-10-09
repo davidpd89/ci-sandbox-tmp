@@ -44,7 +44,8 @@ def paginated(path, token, *, fields, limit=50, max_pages=5):
     'paging.next' solo indica que hay otra pagina: se pasa su cursor 'after' al
     endpoint original. Ante truncado/error se aborta antes de producir un plan parcial.
     """
-    if not 1 <= limit <= 100 or max_pages < 1:
+    if (type(limit) is not int or type(max_pages) is not int
+            or not 1 <= limit <= 100 or max_pages < 1):
         raise ValueError("limite de paginacion invalido")
     items, seen_cursors, seen_ids = [], set(), set()
     cursor = None
@@ -64,11 +65,20 @@ def paginated(path, token, *, fields, limit=50, max_pages=5):
         paging = response.get("paging") or {}
         if not isinstance(paging, dict):
             raise RuntimeError("paging Threads invalido")
-        if not paging.get("next"):
+        cursors = paging.get("cursors") or {}
+        if not isinstance(cursors, dict):
+            raise RuntimeError("cursores Threads invalidos")
+        next_cursor = cursors.get("after")
+        # Meta tambien documenta respuestas con solo paging.cursors, sin
+        # paging.next. Una pagina llena puede ocultar mas elementos.
+        has_next = bool(paging.get("next"))
+        full_page = len(response["data"]) >= limit
+        if not has_next and not full_page:
             return items
-        next_cursor = (paging.get("cursors") or {}).get("after")
-        if not isinstance(next_cursor, str) or not next_cursor or next_cursor in seen_cursors:
-            raise RuntimeError("cursor Threads ausente o repetido")
+        if not isinstance(next_cursor, str) or not next_cursor:
+            raise RuntimeError("cursor Threads ausente: paginacion potencialmente incompleta")
+        if next_cursor in seen_cursors:
+            raise RuntimeError("cursor Threads repetido")
         seen_cursors.add(next_cursor)
         cursor = next_cursor
     raise RuntimeError("Threads: paginacion incompleta, revisar limite antes de generar acciones")
@@ -128,21 +138,28 @@ def check_reply_text(text):
 
 
 def publish_reply(token, user_id, reply_to_id, text):
-    """Responde a `reply_to_id` (ID de la API). Crea el contenedor y lo publica; un fallo al crear
-    lanza ReplyNotCreated (nada publicado). Si falla el publicado se lanza RuntimeError normal:
-    puede haberse publicado, no reintentar a ciegas."""
+    """Crea un contenedor sin autopublicarlo; el segundo POST puede quedar incierto.
+
+    Esta variante del mirror no incorpora los certificados y el ledger de la
+    rama privada operativa. No sustituir alli el publicador protegido.
+    """
     text = check_reply_text(text)
     try:
-        container = api_post(f"{user_id}/threads", token, media_type="TEXT", text=text, reply_to_id=reply_to_id)
-    except RuntimeError as exc:
-        raise ReplyNotCreated(str(exc)) from None
-    if not isinstance(container, dict) or not container.get("id"):
-        raise ReplyNotCreated("Threads no devolvio id de contenedor")
+        container = api_post(
+            f"{user_id}/threads", token, media_type="TEXT", text=text,
+            reply_to_id=reply_to_id, auto_publish_text="false",
+        )
+    except Exception as exc:
+        raise ReplyNotCreated("Threads: no se creo contenedor (autopublicacion desactivada)") from exc
+    if (not isinstance(container, dict) or not isinstance(container.get("id"), str)
+            or not container["id"].strip()):
+        raise ReplyNotCreated("Threads no devolvio id de contenedor valido")
     try:
         published = api_post(f"{user_id}/threads_publish", token, creation_id=container["id"])
     except Exception as exc:
         raise ReplyPublishUncertain("publicacion sin confirmacion; reconciliar antes de reintentar") from exc
-    if not isinstance(published, dict) or not published.get("id"):
+    if (not isinstance(published, dict) or not isinstance(published.get("id"), str)
+            or not published["id"].strip()):
         raise ReplyPublishUncertain("Threads acepto la peticion sin id confirmado; reconciliar")
     return published["id"]
 
