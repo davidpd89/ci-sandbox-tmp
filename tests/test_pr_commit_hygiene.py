@@ -183,6 +183,37 @@ class PRHistoryTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             h.scan_pr("0" * 40, self.initial, root=self.root)
 
+    def test_shallow_repository_fails_closed(self):
+        self.topic()
+        self.write("safe.md")
+        self.commit("safe")
+        self.assertEqual(self.audit(), [])
+        # Simulate a valid Git shallow boundary with full local objects, so
+        # even resolvable refs cannot make a partial audit appear complete.
+        shallow = pathlib.Path(
+            self.git("rev-parse", "--git-path", "shallow").stdout.decode().strip()
+        )
+        if not shallow.is_absolute():
+            shallow = self.root / shallow
+        shallow.write_text(self.initial + "\n", encoding="ascii")
+        self.assertEqual(
+            self.git("rev-parse", "--is-shallow-repository").stdout.strip(), b"true"
+        )
+        with self.assertRaisesRegex(ValueError, "Shallow history"):
+            self.audit()
+
+    def test_git_disables_lazy_fetch_and_replacement_refs(self):
+        from unittest import mock
+
+        with mock.patch.object(h.subprocess, "run") as run:
+            run.return_value.returncode = 0
+            run.return_value.stdout = b""
+            h.git(self.root, "rev-parse", "HEAD")
+        env = run.call_args.kwargs["env"]
+        self.assertEqual(env["GIT_NO_LAZY_FETCH"], "1")
+        self.assertEqual(env["GIT_NO_REPLACE_OBJECTS"], "1")
+        self.assertEqual(env["GIT_TERMINAL_PROMPT"], "0")
+
 
 if __name__ == "__main__":
     unittest.main()
