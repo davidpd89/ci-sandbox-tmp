@@ -97,6 +97,14 @@ class CalendarTests(unittest.TestCase):
         self.assertTrue(all("possible_duplicate" in p["issues"] for p in rows))
         self.assertEqual(len({p["id"] for p in rows}), 2)
 
+    def test_historical_published_copy_warns_future_repost(self):
+        past = item(folder="already-posted", state="publicada por la ronda",
+                    when=datetime(2026, 10, 1, 10))
+        pending = item(folder="future", when=datetime(2026, 10, 11, 10))
+        rows = plan({"bluesky": [past, pending]})["items"]
+        future = next(p for p in rows if p["status"] == "future")
+        self.assertIn("possible_duplicate", future["issues"])
+
     def test_reuse_cross_platform_is_allowed(self):
         rows = plan({"bluesky": [item()], "mastodon": [item("mastodon")]})["items"]
         self.assertTrue(all("possible_duplicate" not in p["issues"] for p in rows))
