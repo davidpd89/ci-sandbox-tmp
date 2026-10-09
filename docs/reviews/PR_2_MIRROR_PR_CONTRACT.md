@@ -113,3 +113,32 @@ Después de los cambios:
 
 No se realizó ninguna acción real en redes sociales, no se usaron credenciales
 ni datos de producción y no se hizo merge de la PR.
+
+
+## Tercera revisión independiente — evento push vs. PR (09/10/2026)
+
+**Fallo adicional reproducible por inspección:** el workflow ejecutaba
+`python tools/repo_hygiene.py --base "HEAD^1"` en todos los eventos.
+La semántica `HEAD^1` = primer padre del merge sintético de PR solo es
+aplicable al checkout por defecto de `pull_request`: en `push` compara
+contra el commit anterior, y en `workflow_dispatch` hace algo distinto
+a revisar una PR (o puede carecer de padre).
+
+**Corrección aplicada:** el paso de higiene tiene ahora
+`if: github.event_name == 'pull_request'` y un test de contrato dedicado.
+Esto mantiene las suites de Ubuntu/Windows en `push` y
+`workflow_dispatch`, evitando atribuirles el significado de una PR.
+El control de rutas en merges sigue cubierto por el evento
+`pull_request`; comprobar cambios de `push` por rango de commits
+es un contrato diferente, pendiente de diseñar con el SHA `before`
+y cobertura para primer commit/force push si se considera necesario.
+
+Referencia oficial: https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows
+(`pull_request` usa `refs/pull/<n>/merge` y `GITHUB_SHA` es el
+commit sintético). La documentación oficial de `actions/checkout`
+confirma `fetch-depth: 2` para acceder a `HEAD^`:
+https://github.com/actions/checkout/blob/main/README.md
+
+Revisión cruzada: esto es un contrato de infraestructura reutilizable por
+todas las redes (WEB/API/MOBILE), no se necesitan excepciones por plataforma.
+No añade restricciones a frecuencia, descubrimiento o contenido social.
