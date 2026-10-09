@@ -10,7 +10,7 @@ las validaciones G2 (original) y G3 (promoción) son **pendientes**.
 - PR #10: `main` ← `research/public-reuse-parent`; SHA inicial
   `fc87f73694201f7df4c435128566f11b95f7b79b`; base
   `60aa837fcbe2933928ee69aa395806a3bd5a74d1`.
-- 46 hijas #11–#56: abiertas; las 46 bases
+- 46 hijas originales #11–#56 y 30 adicionales #57–#86: abiertas; las 76 bases
   `research/public-reuse-parent` al observarlas, cabezas y SHA en
   `children.json`, observado 2026-10-09.
 - Original privado: `davidpd89/rrss-davidporto-CODE`, base `main`;
@@ -24,9 +24,9 @@ las validaciones G2 (original) y G3 (promoción) son **pendientes**.
 
 ## Hechos, riesgos y decisiones
 
-1. Cada hija inicialmente añade solo su
+1. Cada una de las 76 hijas inicialmente añade solo su
    `docs/open-source-scouting/tasks/<n>-*.md`. No existen solapamientos
-   exactos de archivos **en esos 46 diffs iniciales**. Los riesgos de
+   exactos de archivos **en esos 76 diffs iniciales**. Los riesgos de
    cambios compartidos están en `COORDINATION.md`; hay que volver a
    analizar diffs al revisar cada implementación.
 2. El README del mirror dice que los snapshots pueden sobrescribirse
@@ -64,7 +64,9 @@ git ls-remote https://github.com/davidpd89/ci-sandbox-tmp.git refs/heads/researc
 No se pudo clonar directamente por DNS en el terminal. Se usó el
 conector GitHub autorizado para **leer PR y escribir ficheros en la
 rama correcta**. Test específico ejecutado localmente como archivos
-sintéticos con Python `unittest`, 15/15 tras arreglar un falso negativo
+sintéticos con Python `unittest`, 15/15 en la primera ola de tests; el
+último código incorpora 22 tests cuyo resultado debe confirmarse en CI,
+tras arreglar un falso negativo
 de `token=...`. **La ejecución remota final y el archivo real del
 manifest se deben comprobar por GitHub checks; los resultados locales
 no sustituyen los remotos.**
@@ -122,6 +124,7 @@ Si el SHA de base ya ha cambiado, NO inventar uno: consultar
 | GOV-04 | G3 | Alta | No hay revisión humana ni manifiesto real de promoción aprobado |
 | GOV-05 | G1 | Media | Revalidar SHA/reviews/checks tras cambios futuros por sincronización de mirror |
 | GOV-06 | G1 | Media | Las hijas sólo llevan fichas iniciales: falta implementación/evaluación verificable |
+| GOV-07 | G1 | Media | Expansión simultánea de #57–#86: se añadió al índice/manifiesto; revalidar cambios de base, nuevos checks y conflictos de código |
 
 Cada nueva incidencia: `ID, fecha, mirror PR, SHA head, puerta,
 archivos afectados, reproducción/resultado (sin datos sensibles),
