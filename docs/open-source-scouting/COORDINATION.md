@@ -103,7 +103,7 @@ la ubicación autorizada del original si pudiera revelar rutas privadas.
 - [ ] Cambio de código mínimo + test offline, o decisión D con control automatizado pertinente; no basta la ficha de scope.
 - [ ] Antes/después con el mismo fixture, casos negativos, timeout, retries, idempotencia y regresiones compartidas si aplican.
 - [ ] Ejecutar `python -m unittest discover -s tests -p test_open_source_campaign.py -v` y `python tools/validate_open_source_campaign.py` en el mirror.
-- [ ] Ejecutar `GITHUB_BASE_REF=research/public-reuse-parent python tools/validate_open_source_campaign.py --changed-base <SHA_BASE>` para la hija (Git local); `--live` consulta enlaces/ramas.
+- [ ] Ejecutar `GITHUB_BASE_REF=research/public-reuse-parent python tools/validate_open_source_campaign.py --changed-base <SHA_BASE> --child-head <SHA_HEAD_HIJA>` para la hija (Git local); `--live` consulta enlaces/ramas.
 - [ ] G2 y G3 verificadas por separado; no publicar ni fusionar sin aprobación humana.
 
 CI de GitHub: `.github/workflows/validate-public-reuse.yml`, sin secretos
@@ -119,7 +119,12 @@ comando y salida resumida / propietario / decisión / condición de desbloqueo`.
 Registrar incidentes concretos en [BLOQUEOS_PARA_CLAUDE.md](BLOQUEOS_PARA_CLAUDE.md);
 nunca pegar credenciales ni salidas identificables.
 
-Antes de promover, registrar componentes, hash, licencia, flags default-off,
+GitHub crea una referencia sintética de merge para cada hija. El validador de la
+hija usa \`git merge-base BASE HEAD_HIJA\` y compara con el SHA del head real:
+no acredita una ficha con los tests del padre ni impone los cambios del padre
+como propios de la hija. Si falta ese SHA, el gate falla cerrado.
+
+Antes de promover, registrar componentes, hash. licencia, flags default-off,
 migraciones, señales de salud, smoke test, propietario, comando de reversión
 y punto de recuperación. En fallo: **deshabilitar flag → detener escrituras
 → comprobar ledger/idempotencia → restaurar estado aprobado → repetir tests
