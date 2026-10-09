@@ -151,7 +151,8 @@
         17,
         26,
         49,
-        55
+        55,
+        83
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/20"
     },
@@ -168,7 +169,13 @@
         11,
         12,
         23,
-        25
+        25,
+        63,
+        64,
+        65,
+        66,
+        70,
+        71
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/21"
     },
@@ -185,7 +192,15 @@
         13,
         18,
         25,
-        26
+        26,
+        67,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        84
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/22"
     },
@@ -201,7 +216,9 @@
       "related_prs": [
         21,
         24,
-        32
+        32,
+        80,
+        86
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/23"
     },
@@ -216,7 +233,8 @@
       "area": "capability",
       "related_prs": [
         23,
-        47
+        47,
+        86
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/24"
     },
@@ -231,7 +249,10 @@
       "area": "capability",
       "related_prs": [
         21,
-        22
+        22,
+        57,
+        69,
+        86
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/25"
     },
@@ -250,7 +271,12 @@
         39,
         40,
         46,
-        48
+        48,
+        58,
+        60,
+        68,
+        83,
+        84
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/26"
     },
@@ -296,7 +322,8 @@
       "head_sha": "94110ff157a03bc52981101c074a5df37656cb4e",
       "area": "capability",
       "related_prs": [
-        54
+        54,
+        83
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/29"
     },
@@ -314,7 +341,8 @@
         34,
         35,
         36,
-        52
+        52,
+        72
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/30"
     },
@@ -346,7 +374,9 @@
         23,
         40,
         46,
-        48
+        48,
+        84,
+        85
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/32"
     },
@@ -362,7 +392,8 @@
       "related_prs": [
         11,
         30,
-        43
+        43,
+        81
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/33"
     },
@@ -393,7 +424,8 @@
       "related_prs": [
         30,
         34,
-        36
+        36,
+        60
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/35"
     },
@@ -454,7 +486,8 @@
       "related_prs": [
         26,
         36,
-        48
+        48,
+        83
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/39"
     },
@@ -484,7 +517,9 @@
       "head_sha": "c0d65affd75579f57ccd9f7e2ba460d01a75b0f7",
       "area": "quality",
       "related_prs": [
-        43
+        43,
+        62,
+        82
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/41"
     },
@@ -515,7 +550,10 @@
       "related_prs": [
         33,
         41,
-        42
+        42,
+        61,
+        81,
+        82
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/43"
     },
@@ -560,7 +598,8 @@
       "related_prs": [
         26,
         32,
-        48
+        48,
+        84
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/46"
     },
@@ -607,7 +646,10 @@
       "area": "quality",
       "related_prs": [
         20,
-        50
+        50,
+        61,
+        62,
+        78
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/49"
     },
@@ -622,7 +664,8 @@
       "area": "quality",
       "related_prs": [
         40,
-        49
+        49,
+        79
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/50"
     },
@@ -637,7 +680,10 @@
       "area": "operations",
       "related_prs": [
         28,
-        52
+        52,
+        72,
+        73,
+        80
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/51"
     },
@@ -728,7 +774,14 @@
       "head": "research/47-followback-lifecycle-parity",
       "head_sha": "46751b28a58b7ce8d60ef4b3b429798f7621aef5",
       "area": "relationship",
-      "related_prs": [],
+      "related_prs": [
+        25,
+        58,
+        59,
+        60,
+        65,
+        84
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/57"
     },
     {
@@ -740,7 +793,13 @@
       "head": "research/48-daily-unfollow-reconciliation",
       "head_sha": "1b91d49e9a0bddac7642db67577495dc8c8fd0a6",
       "area": "relationship",
-      "related_prs": [],
+      "related_prs": [
+        26,
+        57,
+        59,
+        60,
+        84
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/58"
     },
     {
@@ -752,7 +811,14 @@
       "head": "research/49-repeated-nonreciprocity-memory",
       "head_sha": "0f738cefd81b0ae183699a409dac152e1942c65f",
       "area": "relationship",
-      "related_prs": [],
+      "related_prs": [
+        57,
+        58,
+        60,
+        65,
+        71,
+        85
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/59"
     },
     {
@@ -764,7 +830,17 @@
       "head": "research/50-relationship-state-machine",
       "head_sha": "1a5fb48fd12671fcdbab3fde5366c06239fac45b",
       "area": "relationship",
-      "related_prs": [],
+      "related_prs": [
+        26,
+        35,
+        57,
+        58,
+        59,
+        68,
+        83,
+        84,
+        85
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/60"
     },
     {
@@ -776,7 +852,11 @@
       "head": "research/51-recent-post-age-parity",
       "head_sha": "d1e8ae8a2070e31f2c090d285948559577f3178d",
       "area": "relationship",
-      "related_prs": [],
+      "related_prs": [
+        43,
+        49,
+        62
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/61"
     },
     {
@@ -788,7 +868,11 @@
       "head": "research/52-post-timestamp-source-truth",
       "head_sha": "22291b00ad3091e8f8131d9e3ebeb1a94b21902c",
       "area": "discovery",
-      "related_prs": [],
+      "related_prs": [
+        41,
+        49,
+        61
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/62"
     },
     {
@@ -800,7 +884,11 @@
       "head": "research/53-hashtag-source-expansion",
       "head_sha": "1f56b5066772b50c6bb958f4dccbe5742cb332da",
       "area": "discovery",
-      "related_prs": [],
+      "related_prs": [
+        21,
+        64,
+        66
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/63"
     },
     {
@@ -812,7 +900,12 @@
       "head": "research/54-groups-communities-niches-discovery",
       "head_sha": "ac9b4680d33c8ddacc4a5407b7ddc0a49c1190db",
       "area": "discovery",
-      "related_prs": [],
+      "related_prs": [
+        21,
+        63,
+        65,
+        70
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/64"
     },
     {
@@ -824,7 +917,13 @@
       "head": "research/55-reciprocity-signal-discovery",
       "head_sha": "d46039582beedf3c97bd270ac8cee60680023a6e",
       "area": "discovery",
-      "related_prs": [],
+      "related_prs": [
+        21,
+        57,
+        59,
+        64,
+        66
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/65"
     },
     {
@@ -836,7 +935,13 @@
       "head": "research/56-target-quality-ranking",
       "head_sha": "c8ea09f6cb4583fd0a44aaf02a38ee2a17b13a5a",
       "area": "discovery",
-      "related_prs": [],
+      "related_prs": [
+        21,
+        63,
+        65,
+        70,
+        71
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/66"
     },
     {
@@ -848,7 +953,11 @@
       "head": "research/57-repost-notification-persistence",
       "head_sha": "64ddac016d5f74ff8138c738e9d7f7259477d699",
       "area": "engagement",
-      "related_prs": [],
+      "related_prs": [
+        22,
+        68,
+        84
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/67"
     },
     {
@@ -860,7 +969,12 @@
       "head": "research/58-reversible-interaction-lifecycle",
       "head_sha": "d6bfd80481d22b5f60a1beaa75862014e911b3be",
       "area": "engagement",
-      "related_prs": [],
+      "related_prs": [
+        26,
+        60,
+        67,
+        84
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/68"
     },
     {
@@ -872,7 +986,13 @@
       "head": "research/59-inbound-engagement-loyalty",
       "head_sha": "2c8e67aaa26f610bf38f92d60416b548c3c75054",
       "area": "community",
-      "related_prs": [],
+      "related_prs": [
+        25,
+        70,
+        71,
+        77,
+        86
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/69"
     },
     {
@@ -884,7 +1004,12 @@
       "head": "research/60-likers-commenters-audience-discovery",
       "head_sha": "88f9d6cc0c8ff242dd888ab6c1c18a39e9c2f6f8",
       "area": "community",
-      "related_prs": [],
+      "related_prs": [
+        21,
+        64,
+        66,
+        69
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/70"
     },
     {
@@ -896,7 +1021,12 @@
       "head": "research/61-relationship-priority-scoring",
       "head_sha": "ea2e1f7f3d1784fe75b1ab6a43591f07dcba195e",
       "area": "community",
-      "related_prs": [],
+      "related_prs": [
+        21,
+        59,
+        66,
+        69
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/71"
     },
     {
@@ -908,7 +1038,18 @@
       "head": "research/62-comment-generation-cross-network-benchmark",
       "head_sha": "fc13af58ed2f9082ddc3e5c637e4d5187bc508a6",
       "area": "content",
-      "related_prs": [],
+      "related_prs": [
+        30,
+        51,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/72"
     },
     {
@@ -920,7 +1061,14 @@
       "head": "research/63-human-writing-corpus-style",
       "head_sha": "902ad41e23750285da92d279929ef90d557cc3ac",
       "area": "content",
-      "related_prs": [],
+      "related_prs": [
+        22,
+        51,
+        72,
+        74,
+        75,
+        79
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/73"
     },
     {
@@ -932,7 +1080,14 @@
       "head": "research/64-context-grounded-commenting",
       "head_sha": "3b7b60d83cbedf974d605eeca4522dba32d12232",
       "area": "content",
-      "related_prs": [],
+      "related_prs": [
+        22,
+        72,
+        73,
+        75,
+        76,
+        77
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/74"
     },
     {
@@ -944,7 +1099,13 @@
       "head": "research/65-boilerplate-repetition-detection",
       "head_sha": "a160d3fb409e90b5c9b3fe90ab71b47160c2d234",
       "area": "content",
-      "related_prs": [],
+      "related_prs": [
+        22,
+        72,
+        73,
+        74,
+        79
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/75"
     },
     {
@@ -956,7 +1117,12 @@
       "head": "research/66-network-native-language-adaptation",
       "head_sha": "7d2065ba6078059a79e33fc8515a21c54b36321e",
       "area": "content",
-      "related_prs": [],
+      "related_prs": [
+        22,
+        72,
+        74,
+        79
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/76"
     },
     {
@@ -968,7 +1134,14 @@
       "head": "research/67-conversation-continuation-memory",
       "head_sha": "38f81103a62b0684c55f5d6c321cee0c0ecad338",
       "area": "content",
-      "related_prs": [],
+      "related_prs": [
+        22,
+        69,
+        72,
+        74,
+        78,
+        84
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/77"
     },
     {
@@ -980,7 +1153,12 @@
       "head": "research/68-response-timing-cadence",
       "head_sha": "80db8eb3b1261b1d08121ceffa3184f18c1c7ea1",
       "area": "content",
-      "related_prs": [],
+      "related_prs": [
+        22,
+        49,
+        72,
+        77
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/78"
     },
     {
@@ -992,7 +1170,13 @@
       "head": "research/69-spanish-voice-locale-quality",
       "head_sha": "b52b1d955881cafed980e2b65611c108bc62dc11",
       "area": "content",
-      "related_prs": [],
+      "related_prs": [
+        50,
+        72,
+        73,
+        75,
+        76
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/79"
     },
     {
@@ -1004,7 +1188,12 @@
       "head": "research/70-content-comment-experiment-engine",
       "head_sha": "0a4ebb801989b7234120e795b1cc6f350fc27262",
       "area": "content",
-      "related_prs": [],
+      "related_prs": [
+        23,
+        51,
+        72,
+        86
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/80"
     },
     {
@@ -1016,7 +1205,11 @@
       "head": "research/71-executable-feature-parity-matrix",
       "head_sha": "65b3f9052c8b72cda704aaaef3e83a1a5d519958",
       "area": "architecture",
-      "related_prs": [],
+      "related_prs": [
+        33,
+        43,
+        82
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/81"
     },
     {
@@ -1028,7 +1221,11 @@
       "head": "research/72-capability-config-drift-social",
       "head_sha": "73cb20914c0f35f42ec53b98398872e43e9596e6",
       "area": "architecture",
-      "related_prs": [],
+      "related_prs": [
+        41,
+        43,
+        81
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/82"
     },
     {
@@ -1040,7 +1237,14 @@
       "head": "research/73-daily-growth-round-orchestration",
       "head_sha": "89407c9cf4bab1f5b484c4857343e2e2870380bb",
       "area": "architecture",
-      "related_prs": [],
+      "related_prs": [
+        20,
+        26,
+        29,
+        39,
+        60,
+        84
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/83"
     },
     {
@@ -1052,7 +1256,20 @@
       "head": "research/74-relationship-event-ledger",
       "head_sha": "231beea5c0f1fc04eb7ea6282c644f45882d636d",
       "area": "data",
-      "related_prs": [],
+      "related_prs": [
+        22,
+        26,
+        32,
+        46,
+        57,
+        58,
+        60,
+        67,
+        68,
+        77,
+        83,
+        85
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/84"
     },
     {
@@ -1064,7 +1281,12 @@
       "head": "research/75-cross-network-identity-deduplication",
       "head_sha": "22ca5c64804f0e013fbd2fe88489444bbe163de2",
       "area": "data",
-      "related_prs": [],
+      "related_prs": [
+        32,
+        59,
+        60,
+        84
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/85"
     },
     {
@@ -1076,7 +1298,13 @@
       "head": "research/76-growth-funnel-attribution",
       "head_sha": "31c8a577a2bb5251c27882ff6ec9864c7c3cf51c",
       "area": "analytics",
-      "related_prs": [],
+      "related_prs": [
+        23,
+        24,
+        25,
+        69,
+        80
+      ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/86"
     }
   ]
