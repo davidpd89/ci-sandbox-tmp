@@ -105,6 +105,49 @@ class FileHygieneTests(unittest.TestCase):
         ]
         self.assertEqual(rh.violations_for_paths(paths), paths)
 
+    def test_sensitive_file_names_cannot_hide_as_parent_directories(self):
+        paths = [
+            ".env.local/config.py",
+            ".env/variables.py",
+            ".env.example/real_values.py",
+            "secrets.json/backup.py",
+            "credentials.json/sessions.py",
+            "SISTEMA_DIARIO_X/metricas.csv/report.py",
+            "foo/registro_interacciones.csv/items.py",
+            "foo/id_ed25519/part.py",
+            "foo/token_store.json/data.py",
+            "foo/credentials.json /account.py",
+        ]
+        self.assertEqual(rh.violations_for_paths(paths), paths)
+
+    def test_examples_remain_allowed_only_as_standalone_files(self):
+        safe = [
+            ".env.example",
+            "tools/.env.sample",
+            "tests/fixtures/anonymous_state.json",
+            "docs/example.json/guidelines.md",
+            "tools/token_resolver.py",
+        ]
+        self.assertEqual(rh.violations_for_paths(safe), [])
+
+    def test_pr_merge_detects_sensitive_parent_with_real_git_diff(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = pathlib.Path(tmp)
+            _synthetic_pr_merge(repo, ".env.local/settings.py")
+            paths = rh.changed_paths("HEAD^1", root=repo)
+            self.assertEqual(paths, [".env.local/settings.py"])
+            self.assertEqual(rh.violations_for_paths(paths), paths)
+
+    def test_git_path_decoding_rejects_invalid_utf8_instead_of_replacement(self):
+        result = subprocess.CompletedProcess(
+            args=["git"], returncode=0,
+            stdout=b"tools/safe.py\0credentials.json\xff\0",
+            stderr=b"",
+        )
+        with patch.object(rh.subprocess, "run", return_value=result):
+            with self.assertRaisesRegex(RuntimeError, "UTF-8"):
+                rh.changed_paths("HEAD^1")
+
     def test_pr_merge_diff_ignores_forbidden_file_already_in_base(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = pathlib.Path(tmp)
