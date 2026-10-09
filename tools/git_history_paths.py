@@ -69,25 +69,21 @@ def commits_in_range(root: Path, before: str | None, after: str, *, limit: int =
 
 
 def touched_paths(root: Path, commit: str, parents: list[str]) -> set[str]:
-    """A/M/T paths; merges include only changes against *all* parents.
+    """A/M/T paths; merges are compared to their first parent.
 
-    The intersection excludes unchanged paths inherited from a merge parent,
-    while commits newly reachable via that parent are checked individually.
+    This detects reintroduction of old, already-reachable side-branch paths;
+    other newly reachable parent commits are also visited by rev-list.
     """
     options = ["-r", "--no-commit-id", "--no-renames", "--no-ext-diff",
                "--no-textconv", "--name-only", "-z", "--diff-filter=AMT"]
     if not parents:
         data = git(root, "diff-tree", "--root", *options, commit)
         return {p.decode("utf-8", "surrogateescape") for p in data.split(b"\0") if p}
-    common = None
-    for parent in parents:
-        data = git(root, "diff-tree", *options, parent, commit)
-        paths = {p.decode("utf-8", "surrogateescape") for p in data.split(b"\0") if p}
-        common = paths if common is None else common & paths
-        if not common:
-            break
-    return common or set()
-
+    # Compare to the first parent: a merge can resurrect a sensitive path
+    # from an already-reachable side branch, then delete it in this push.
+    # Intersection of all parent diffs would silently miss that transient path.
+    data = git(root, "diff-tree", *options, parents[0], commit)
+    return {p.decode("utf-8", "surrogateescape") for p in data.split(b"\0") if p}
 
 def scan_history(root: Path, before: str | None, after: str, forbidden) -> list[tuple[str, int]]:
     findings = []

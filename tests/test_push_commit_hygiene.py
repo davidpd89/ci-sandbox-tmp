@@ -143,6 +143,27 @@ class PushCommitTests(unittest.TestCase):
         self.commit("merge with new path")
         self.assertEqual(self.scan(before), [(self.head(), 1)])
 
+    def test_force_merge_resurrects_already_reachable_sensitive_path(self):
+        # The old side-branch commit is excluded from after ^ before:
+        # only the new merge introduces this transient path to main.
+        self.git("switch", "-qc", "historical-topic")
+        self.write("secrets/returned.json")
+        self.commit("old sensitive branch")
+        self.git("switch", "main")
+        self.git("merge", "--no-ff", "-qm", "old merge", "historical-topic")
+        self.git("rm", "secrets/returned.json")
+        self.commit("old cleanup")
+        before = self.head()
+        self.git("reset", "--hard", self.base)
+        self.write("docs/new-tip.md")
+        self.commit("divergent tip")
+        self.git("merge", "--no-ff", "-qm", "reintroduce old topic", "historical-topic")
+        merge = self.head()
+        self.git("rm", "secrets/returned.json")
+        self.commit("remove transient")
+        self.assertEqual(self.git("diff", "--name-only", before, "HEAD"), "docs/new-tip.md")
+        self.assertEqual(self.scan(before), [(merge, 1)])
+
     def test_force_divergent_before(self):
         self.write("docs/previous.md")
         self.commit("old tip")
