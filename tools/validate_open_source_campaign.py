@@ -102,11 +102,16 @@ def fetch_live(token=None, opener=urlopen):
     headers = {'Accept': 'application/vnd.github+json', 'User-Agent': 'campaign-metadata-validator'}
     if token:
         headers['Authorization'] = 'Bearer ' + token
-    with opener(Request(url, headers=headers), timeout=20) as response:
-        result = json.load(response)
-    if not isinstance(result, list) or len(result) == 100:
-        raise ValueError('PR listing incomplete or pagination required: fail closed')
-    return {item['number']: item for item in result}
+    result = []
+    for page in range(1, 11):
+        with opener(Request(url.replace('page=1', f'page={page}'), headers=headers), timeout=20) as response:
+            batch = json.load(response)
+        if not isinstance(batch, list):
+            raise ValueError('Invalid GitHub PR listing: fail closed')
+        result.extend(batch)
+        if len(batch) < 100:
+            return {item['number']: item for item in result}
+    raise ValueError('PR list exceeded 10 pages: fail closed')
 
 
 def check_live(doc, live):
@@ -128,6 +133,24 @@ def check_live(doc, live):
     return errors, warnings
 
 
+def check_child_deliverables(paths, root=ROOT):
+    """Reject scope briefs presented as finished child implementations."""
+    modified = [str(p).replace('\\', '/') for p in paths]
+    research = [p for p in modified if p.startswith('docs/research/') and p.endswith('.md')]
+    tests = [p for p in modified if p.startswith('tests/') and p.endswith('.py')]
+    if not research or not tests:
+        return ['child PR needs docs/research evidence and offline regression tests']
+    headings = ('## Problema', '## Alternativas', '## Licencias y procedencia',
+                '## Decisión', '## Pruebas', '## Retirada')
+    for p in research:
+        file = root / p
+        if file.is_file():
+            content = file.read_text(encoding='utf-8')
+            if all(h in content for h in headings):
+                return []
+    return ['child research evidence missing required headings']
+
+
 def changed_paths(base):
     cmd = ['git', 'diff', '--name-only', '-z', '--diff-filter=ACMR', base, 'HEAD', '--']
     data = subprocess.check_output(cmd, cwd=ROOT)
@@ -146,7 +169,10 @@ def main(argv=None):
             for p in (ROOT / d).rglob('*') if p.is_file()]
     if args.changed_base:
         try:
-            scan += changed_paths(args.changed_base)
+            changed = changed_paths(args.changed_base)
+            scan += changed
+            if os.environ.get('GITHUB_BASE_REF') == PARENT:
+                errors += check_child_deliverables(changed)
         except (subprocess.CalledProcessError, OSError) as exc:
             errors.append(f'cannot inspect changed paths: {type(exc).__name__}')
     errors += check_privacy(set(map(str, scan)))
