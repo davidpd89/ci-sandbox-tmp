@@ -186,6 +186,42 @@ class CrossNetworkTests(unittest.TestCase):
                     self.assertEqual(len(out["proposals"]), 1)
                     self.assertEqual(out["proposals"][0]["queue"], "API")
 
+    def test_valid_negative_replication_vetoes_cherry_picked_positive(self):
+        winner = positive()
+        replication = positive(
+            treatment={"n": 100, "successes": 16},
+            control={"n": 100, "successes": 23},
+        )
+        self.assertIsNotNone(c._eligible_trial(replication, NOW))
+        self.assertIsNone(c._positive(replication, NOW))
+        proof = c._evidence_digest(winner, "mastodon")
+        for rows in ((winner, replication), (replication, winner)):
+            with self.subTest(order=rows[0] is winner):
+                report = run(*rows, verified={proof})
+                self.assertEqual(report["proposals"], [])
+                self.assertEqual(report["non_positive_trials"], 1)
+                self.assertEqual(report["invalid_or_unproven"], 0)
+                self.assertEqual(report["duplicate_evidence"], 1)
+        # Otra cola sigue siendo independiente: la réplica API no veta WEB.
+        web = positive(targets={"mastodon": {
+            **winner["targets"]["mastodon"], "queue": "WEB"}})
+        report = run(web, replication)
+        self.assertEqual([p["queue"] for p in report["proposals"]], ["WEB"])
+
+    def test_unknown_target_keys_are_not_silently_ignored(self):
+        valid = positive()
+        for target_data in ({"instagram": {}},
+                            {"mastodon": {}, "instagram": {}},
+                            {},
+                            {"bluesky": {}}):
+            bad = positive(targets=target_data)
+            with self.subTest(targets=target_data):
+                report = run(valid, bad)
+                self.assertEqual(report["invalid_or_unproven"], 1)
+                self.assertEqual(report["duplicate_evidence"], 0)
+                self.assertEqual(len(report["proposals"]), 1)
+        self.assertEqual(run(positive(targets={"mastodon": {}}))["invalid_or_unproven"], 0)
+
     def test_unknown_queue_conflict_does_not_approve_specific_queue(self):
         api = positive()
         unknown = positive(targets={"mastodon": {
