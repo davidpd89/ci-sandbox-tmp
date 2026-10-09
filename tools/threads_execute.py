@@ -396,6 +396,12 @@ if __name__ == "__main__":
         print(f"FALLO DE PREFLIGHT: {type(exc).__name__}: {exc}")
         raise SystemExit(2)
 
+    # Keep this decision in the CLI block: offline AST regression harnesses
+    # execute the entrypoint without loading module-level helper functions.
+    browser_needed = any(item.get("kind") != "reply" or not item.get("reply_to_id")
+                         for item in plan)
+    if browser_needed:
+        t.ensure_browser()
     persisted = set()
 
     def _on_result(r):
@@ -420,7 +426,11 @@ if __name__ == "__main__":
         except Exception:
             pass
 
-    results = _run_by_transport(plan, on_result=_on_result)
+    if browser_needed:
+        with t.session():
+            results = run_plan(plan, prevalidated=True, on_result=_on_result)
+    else:
+        results = run_plan(plan, prevalidated=True, on_result=_on_result)
 
     print("\n=== RESUMEN ===")
     for r in results:
@@ -435,7 +445,7 @@ if __name__ == "__main__":
     if any(str(item.get("resultado", "")).startswith("parada:") for item in results):
         print("PARADA TOTAL: resultados guardados; no se abre de nuevo el navegador para métricas.")
         sys.exit(5)
-    metrics = _fetch_metrics() if _plan_needs_browser(plan) else _fetch_metrics_api()
+    metrics = _fetch_metrics() if browser_needed else _fetch_metrics_api()
     _persist_metrics_without_erasing_known_followers(results, metrics)
     print(f"\nregistro_interacciones.csv y metricas.csv actualizados; ESTADO.md solo con recuento verificado.")
     print(f"Metricas finales: seguidores={metrics['followers']}")
