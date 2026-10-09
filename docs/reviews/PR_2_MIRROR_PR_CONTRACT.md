@@ -209,10 +209,18 @@ higiene también pasó en ambos runners:
    es un contrato de **repositorio y CI**, sin excepciones particulares ni
    cambios de comportamiento en redes sociales.
 
+5. El workflow y el comprobador que ejecuta `pull_request` provienen
+   del checkout propuesto. Una PR que modifique su YAML o
+   `repo_hygiene.py` puede modificar la propia validación. Esto requiere
+   un verificador independiente anclado a código de confianza, sin ejecutar
+   código de forks con credenciales privilegiadas. Se abre la PR de
+   implementación [#92](https://github.com/davidpd89/ci-sandbox-tmp/pull/92).
+   Claude deberá confirmar required checks o protecciones administrativas.
+
 ### Recomendación para el integrador
 
 Integrar la #2 solo tras revisar la CI del último HEAD y contrastar la rama
 `ci/test-campaign-parent`. El uso de `HEAD^1` depende de mantener el
 checkout del merge sintético de `pull_request`, no del head de la rama.
 No afirmar garantías absolutas: el pipeline de #2 protege rutas del árbol
-final, mientras #87, #88, #89 y #90 cubren responsabilidades adicionales.
+final, mientras #87, #88, #89, #90 y #92 cubren responsabilidades adicionales.
