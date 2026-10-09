@@ -19,7 +19,9 @@ Caso sintético determinista en `tests/fixtures/mastodon_search_capabilities.jso
 | `indexada.example` (búsqueda full-text disponible) | 40, 40 (una cuenta solapada), 3; offsets 0/40/80 | 40 cuentas; offset [0] | 82 cuentas únicas; offsets [0,40,80] |
 | `sinindice.example` (sin full-text; backend ignora offset) | 40, repetición 40; offsets 0/40 | 40, offset [0] | 40 sin duplicados, parada tras offset [0,40] |
 
-El test `test_before_after_on_identical_indexed_fixture` ejecuta la implementación antigua reproducida con el mismo fixture que el código corregido: **40 → 82 IDs únicos**, **1 → 3 páginas**; esto mide cobertura sintética, no rendimiento temporal.\n\n**Advertencia:** son *perfiles contractuales sintéticos*, no resultados capturados de dos servidores disponibles públicamente. No demuestran comportamiento en vivo ni compatibilidad general con forks ActivityPub.
+El test `test_before_after_on_identical_indexed_fixture` ejecuta la implementación antigua reproducida con el mismo fixture que el código corregido: **40 → 82 IDs únicos**, **1 → 3 páginas**; esto mide cobertura sintética, no rendimiento temporal.
+
+**Advertencia:** son *perfiles contractuales sintéticos*, no resultados capturados de dos servidores disponibles públicamente. No demuestran comportamiento en vivo ni compatibilidad general con forks ActivityPub.
 
 ## Flujo real y quién consume este resultado
 
@@ -86,3 +88,56 @@ Pendiente sin inventar: validación con dos instancias autorizadas y capacidades
 Las cuatro PR del **espejo** estaban abiertas y sus diffs examinados contienen únicamente el fichero de encargo: [#21](https://github.com/davidpd89/ci-sandbox-tmp/pull/21) descubrimiento/ranking (mismo consumo de candidatos), [#26](https://github.com/davidpd89/ci-sandbox-tmp/pull/26) ledger/idempotencia, [#33](https://github.com/davidpd89/ci-sandbox-tmp/pull/33) tests comparativos y [#41](https://github.com/davidpd89/ci-sandbox-tmp/pull/41) drift de contratos externos. No se trasplanta código. Orden propuesto: integrar este contrato de Mastodon en el privado tras refrescar rama, reejecutar pruebas, y después reconciliar los contratos genéricos cuando lleguen #21/#26/#33/#41. Las numeraciones del mirror no identifican las PR del privado.
 
 **Dictamen provisional: LISTA PARA REVISIÓN (no mergeada), supeditado a CI y a portar/validar en el privado.** Si no puede verificarse la compatibilidad con el privado antes de fusionar, elevar a **BLOQUEADA para merge efectivo**.
+
+## Segunda auditoría adversarial — 2026-10-09
+
+La revisión independiente del estado ya implementado en esta PR detectó dos
+defectos adicionales que no estaban cubiertos por la primera validación:
+
+1. **Identidad local malformada, pero truthy.** El validador anterior aceptaba
+   `{"id": ["valor"]}` o `{"id": true}`, que `str(...)` convertía a un ID
+   aparentemente usable. Ahora solo admite identificadores escalares `str` o
+   `int` no vacíos y excluye `bool`; no exige ASCII numérico para no excluir
+   de antemano adaptadores federados que entreguen cadenas de identificación
+   distintas. Los arrays, objetos y blancos provocan error explícito antes de
+   devolver una lista de candidatos. Sin cambio para IDs correctos de Mastodon.
+2. **Contaminación de imports entre suites.** El test original instalaba
+   dobles de `requests` y `x_interact` mediante `sys.modules.setdefault`,
+   pudiendo dejar `http_retry` y pruebas de otras redes vinculados al doble
+   hasta finalizar el proceso. `requests` ahora se importa realmente y solo
+   `x_interact` se sustituye durante la importación de los dos módulos bajo
+   prueba; el contexto se restaura al salir. Cada test instala guardias
+   temporales contra `_get_response`, `_post` y `_delete`: una ruta HTTP
+   inesperada lanza `AssertionError`, incluso sin credenciales.
+
+Las regresiones nuevas verifican rechazo de IDs sintéticos no escalares,
+deduplicación consistente entre `123` y `"123"`, y ausencia de
+`requests` simulado retenido en `mastodon_interact`. La prueba de dos
+instancias continúa siendo totalmente sintética; no se ha realizado ningún
+canario ni tráfico de usuario. No se incorporan dependencias ni código de
+terceros.
+
+**Razonamiento de reutilización:** la versión de `Mastodon.py` citada arriba
+continúa siendo una opción compatible con Python; migrar todo el transporte
+seguiría sin resolver de forma más económica estos contratos de integridad.
+La regla reutilizable en otras redes es el aislamiento de dobles de módulo
+y la validación de identidades antes del ranking, sin generalizar el
+formato de los IDs de una instancia a todo Fediverse. Este patrón no se
+implementa globalmente aquí para no pisar las PR #26/#33/#41 y #85.
+
+**Seguimiento del árbol privado:** se comprobó
+`tools/mastodon_interact.py` en
+`rrss-davidporto-CODE@integracion/crecimiento-2026-10`
+(blob `5aaac853cd4a55ccec76266521cab676e8e3afa6`). Contiene la
+función previa con el desajuste de 80/40; **no se ha escrito** en la rama
+privada. Claude deberá trasplantar exclusivamente esta función y la
+prueba en una PR separada, tras reconciliar la base.
+
+**Validación de los commits nuevos:** la evidencia de CI anterior
+(`223586c4`) no valida estos cambios. Para aprobar el estado final se
+requiere una ejecución verde de ambos sistemas sobre el **HEAD exacto**
+de esta rama y la reparación independiente del gate de campaña del
+padre. Las pruebas de importación y HTTP son offline; no equivalen a
+ensayos con servidores reales. No hay PR de seguimiento nueva porque el
+inventario abierto ya cubre la identidad entre redes (#85), tests (#30,
+#33) y drift de APIs (#41, #82).
