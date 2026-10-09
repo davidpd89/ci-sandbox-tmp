@@ -80,7 +80,7 @@ def followed_before():
     try:
         with open(REGISTRO_CSV, encoding="utf-8", newline="") as stream:
             for row in csv.DictReader(stream):
-                if (row.get("tipo") or "").strip().casefold() == "follow" and (row.get("resultado") or "").strip().casefold() in ("confirmado", "saltado_ya_seguido", "pendiente_verificacion"):
+                if (row.get("tipo") or "").strip().casefold() == "follow" and (row.get("resultado") or "").strip().casefold() in ("confirmado", "saltado_ya_seguido", "pendiente_verificacion", "pendiente_aprobacion"):
                     handle = (row.get("cuenta") or "").strip().lstrip("@").casefold()
                     if handle:
                         done.add(handle)
