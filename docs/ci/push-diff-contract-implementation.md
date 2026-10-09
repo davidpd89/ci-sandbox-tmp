@@ -27,7 +27,7 @@ Fuentes: [webhook push de GitHub](https://docs.github.com/en/webhooks/webhook-ev
 
 ## Validación y segunda revisión adversarial
 
-`python -m unittest discover -s tests -p 'test_push_hygiene.py' -v`: **15 pruebas correctas** en Linux/Python 3.13; 6 subcasos adicionales de entrada inválida. `pytest -q -p no:cacheprovider tests/test_push_hygiene.py`: **15 passed**. Repositorios Git efímeros, datos sintéticos. Cubren multicommits, deuda histórica intacta, SHA cero, fuerza, `before` ausente, `after` y HEAD discordantes, rama ajena, evento borrado, renombrado a ruta prohibida, eliminación, CLI y contrato estático de workflow. `compileall`: correcto.
+`python -m unittest discover -s tests -p 'test_push_hygiene.py' -v`: **16 pruebas correctas** en Linux/Python 3.13; 6 subcasos adicionales de entrada inválida. `pytest -q -p no:cacheprovider tests/test_push_hygiene.py`: **16 passed**. Repositorios Git efímeros, datos sintéticos. Cubren multicommits, deuda histórica intacta, SHA cero, fuerza, `before` ausente, `after` y HEAD discordantes, rama ajena, evento borrado, renombrado a ruta prohibida, cambio de tipo a gitlink, eliminación, CLI y contrato estático de workflow. `compileall`: correcto.
 
 **Revisión adversarial (segunda pasada):**
 
