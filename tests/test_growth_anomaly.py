@@ -271,6 +271,34 @@ class AnomalyTests(unittest.TestCase):
             raise
         self.assertIn("CAIDA_RENDIMIENTO_SOSTENIDA", panel.ALERT_CODES)
 
+    def test_canary_default_uses_madrid_day_not_utc_host_day(self):
+        from unittest import mock
+        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+        try:
+            ZoneInfo("Europe/Madrid")
+        except ZoneInfoNotFoundError:
+            self.skipTest("Sin tzdata no se debe inferir el dia de Madrid")
+        self.baseline()
+        self.day(2, amount=1)
+        self.day(1, amount=1)
+        self.write()
+
+        class UtcHostClock(dt.datetime):
+            @classmethod
+            def now(cls, tz=None):
+                if tz is None:
+                    return cls(2026, 10, 8, 23, 30)
+                return cls(2026, 10, 9, 1, 30, tzinfo=tz)
+
+        with mock.patch.object(canaries.dt, "datetime", UtcHostClock):
+            with mock.patch.object(a, "_today", wraps=a._today) as madrid_day:
+                report = canaries.collect(self.root, pid_alive=lambda pid: False)
+        madrid_day.assert_called_once_with(None)
+        self.assertEqual([item["network"] for item in report["alerts"]
+                          if item["code"] == "CAIDA_RENDIMIENTO_SOSTENIDA"],
+                         ["bluesky"])
+
     def test_canary_integration_same_alert(self):
         self.baseline()
         self.day(2, amount=1)
