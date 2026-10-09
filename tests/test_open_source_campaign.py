@@ -1,0 +1,114 @@
+"""No-network, synthetic tests for the campaign contract."""
+import copy
+import importlib.util
+import json
+from pathlib import Path
+import tempfile
+import unittest
+
+SOURCE = Path(__file__).resolve().parents[1] / 'tools/validate_open_source_campaign.py'
+spec = importlib.util.spec_from_file_location('campaign_validator', SOURCE)
+v = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(v)
+
+
+def fixtures():
+    children = []
+    lines = ['| PR | Encargo |', '| --- | --- |']
+    for n in range(11, 57):
+        title = f'Tarea {n}'
+        lines.append(f'| [#{n}](https://github.com/davidpd89/ci-sandbox-tmp/pull/{n}) | {title} |')
+        children.append({'number': n, 'title': title, 'objective': title, 'state': 'open',
+                         'base': v.PARENT, 'head': f'research/{n-10:02}-task',
+                         'head_sha': 'a' * 40, 'area': 'quality', 'related_prs': [],
+                         'url': f'https://github.com/{v.REPO}/pull/{n}'})
+    doc = {'schema_version': 1, 'repository': v.REPO, 'parent_pr': 10,
+           'parent_head': v.PARENT, 'children': children}
+    return doc, '\n'.join(lines)
+
+
+class CampaignMetadataTests(unittest.TestCase):
+    def setUp(self):
+        self.doc, self.protocol = fixtures()
+
+    def test_valid_snapshot(self):
+        self.assertEqual(v.check_metadata(self.doc, self.protocol), [])
+
+    def test_missing_child(self):
+        self.doc['children'].pop()
+        self.assertTrue(v.check_metadata(self.doc, self.protocol))
+
+    def test_missing_index(self):
+        self.protocol = self.protocol.replace('| [#11]', '| [#99]')
+        self.assertIn('protocol index is incomplete or duplicated', v.check_metadata(self.doc, self.protocol))
+
+    def test_duplicate_child(self):
+        self.doc['children'][1] = copy.deepcopy(self.doc['children'][0])
+        self.assertTrue(v.check_metadata(self.doc, self.protocol))
+
+    def test_wrong_url(self):
+        self.doc['children'][0]['url'] += '-fake'
+        self.assertTrue(any('link' in e for e in v.check_metadata(self.doc, self.protocol)))
+
+    def test_wrong_index_url(self):
+        self.protocol = self.protocol.replace('/pull/11)', '/pull/999)')
+        self.assertTrue(any('link' in e for e in v.check_metadata(self.doc, self.protocol)))
+
+    def test_bad_head_or_base(self):
+        self.doc['children'][0]['base'] = 'main'
+        self.doc['children'][1]['head'] = 'main'
+        self.assertTrue(len(v.check_metadata(self.doc, self.protocol)) >= 2)
+
+    def test_duplicate_objective_and_related(self):
+        self.doc['children'][1]['objective'] = 'Tarea 11'
+        self.doc['children'][1]['related_prs'] = [12]
+        self.assertTrue(len(v.check_metadata(self.doc, self.protocol)) >= 2)
+
+    def test_live_missing_link_and_drift(self):
+        live = {10: {'base': {'ref': 'main'}, 'head': {'ref': v.PARENT}, 'state': 'open'}}
+        errs, _ = v.check_live(self.doc, live)
+        self.assertTrue(any('broken link' in x for x in errs))
+
+    def test_live_sha_drift_warning_not_merge_approval(self):
+        live = {10: {'base': {'ref': 'main'}, 'head': {'ref': v.PARENT}, 'state': 'open'}}
+        for p in self.doc['children']:
+            live[p['number']] = {'html_url': p['url'], 'base': {'ref': p['base']},
+                                 'head': {'ref': p['head'], 'sha': 'b' * 40},
+                                 'state': p['state'], 'title': p['title']}
+        errs, warnings = v.check_live(self.doc, live)
+        self.assertFalse(errs)
+        self.assertEqual(len(warnings), 46)
+
+
+class CampaignPrivacyTests(unittest.TestCase):
+    def test_public_synthetic_fixture(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d, 'docs/open-source-scouting/fixtures/test.json')
+            path.parent.mkdir(parents=True)
+            path.write_text(json.dumps({'actor': 'test@example.com', 'id': 'fake-001'}))
+            self.assertEqual(v.check_privacy(['docs/open-source-scouting/fixtures/test.json'], Path(d)), [])
+
+    def test_secret_synthetic_fixture_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d, 'docs/open-source-scouting/fixtures/test.json')
+            path.parent.mkdir(parents=True)
+            path.write_text('token=secret_value_that_must_not_escape')
+            self.assertTrue(any('secret' in e for e in v.check_privacy(['docs/open-source-scouting/fixtures/test.json'], Path(d))))
+
+    def test_identifying_fixture_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d, 'docs/open-source-scouting/fixtures/test.json')
+            path.parent.mkdir(parents=True)
+            path.write_text('person@real-user.test')
+            self.assertTrue(any('non-synthetic' in e for e in v.check_privacy(['docs/open-source-scouting/fixtures/test.json'], Path(d))))
+
+    def test_sensitive_path_rejected_even_without_file(self):
+        self.assertTrue(any('forbidden' in e for e in v.check_privacy(['profiles/real.sqlite'], Path('/tmp'))))
+
+    def test_deleted_path_does_not_disclose_content(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(v.check_privacy(['docs/research/deleted.md'], Path(d)), [])
+
+
+if __name__ == '__main__':
+    unittest.main()
