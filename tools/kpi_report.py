@@ -58,11 +58,15 @@ def _rows(path):
 
 
 def _mapping(rows, columns):
-    """Cabecera nombrada opcional; sin cabecera el esquema legacy es posicional."""
+    """Devuelve (filas mapeadas, error); nunca trunca columnas en silencio."""
     if rows and rows[0] and rows[0][0].strip().casefold() == "fecha":
         names = [name.strip().casefold() for name in rows[0]]
-        return (dict(zip(names, row)) for row in rows[1:])
-    return (dict(zip(columns, row)) for row in rows)
+        if len(names) != len(set(names)) or not set(columns).issubset(names):
+            return (), "cabecera_invalida"
+        return ((dict(zip(names, row)), len(row) != len(names))
+                for row in rows[1:]), None
+    return ((dict(zip(columns, row)), len(row) != len(columns))
+            for row in rows), None
 
 
 def _source(record):
@@ -92,14 +96,18 @@ def _activity(root, net, day):
     rows, error = _rows(path)
     columns = ("fecha", "cuenta", "url", "tipo", "texto", "resultado", "notas") if net == "reddit" else (
         "fecha", "cuenta", "tipo", "post_resumen", "texto", "resultado", "notas")
+    mapped, schema_error = _mapping(rows, columns)
+    if schema_error:
+        return {}, {}, {}, schema_error, 0, max(len(rows) - 1, 0)
     counts, by_kind, by_source = Counter(), Counter(), Counter()
     duplicates = bad = 0
     seen = set()
-    for entry in _mapping(rows, columns):
-        if len(entry) < len(columns) or _local_day(entry.get("fecha")) is None:
+    for entry, malformed in mapped:
+        local_day = _local_day(entry.get("fecha"))
+        if malformed or local_day is None:
             bad += 1
             continue
-        if _local_day(entry["fecha"]) != day:
+        if local_day != day:
             continue
         # Sin ID de evento: eliminar solo filas *idénticas*; no deduplicar
         # por cuenta, tipo o fecha, pues hay acciones legítimas repetidas.
@@ -147,10 +155,13 @@ def _inbound(root, day):
     rows, error = _rows(root / "00_OPERATIVO" / "inbound_interacciones.csv")
     if error:
         return None, error
+    mapped, schema_error = _mapping(rows, ("fecha", "red", "handle", "tipo"))
+    if schema_error:
+        return None, schema_error
     counts = Counter()
     seen = set()
-    for entry in _mapping(rows, ("fecha", "red", "handle", "tipo")):
-        if _local_day(entry.get("fecha")) != day or entry.get("red") not in NETWORKS:
+    for entry, malformed in mapped:
+        if malformed or _local_day(entry.get("fecha")) != day or entry.get("red") not in NETWORKS:
             continue
         key = (entry.get("fecha"), entry.get("red"), entry.get("handle"), entry.get("tipo"))
         if key in seen:

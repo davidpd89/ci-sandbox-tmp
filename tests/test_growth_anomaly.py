@@ -26,8 +26,12 @@ class AnomalyTests(unittest.TestCase):
 
     def day(self, age, net="bluesky", amount=9, rounds=3, state="ok"):
         date = (NOW.date() - dt.timedelta(days=age)).isoformat()
-        for _ in range(rounds):
-            self.rows.append([date, net, "12:00:00", "12:01:00", 1, state,
+        for index in range(rounds):
+            start_total = index * 2
+            end_total = start_total + 1
+            start = f"{12 + start_total // 60:02d}:{start_total % 60:02d}:00"
+            end = f"{12 + end_total // 60:02d}:{end_total % 60:02d}:00"
+            self.rows.append([date, net, start, end, 1, state,
                               "{'like': %d}" % amount, 0, 0, 0])
 
     def write(self):
@@ -57,6 +61,14 @@ class AnomalyTests(unittest.TestCase):
         self.baseline()
         self.day(2, amount=2)
         self.day(1, amount=9)
+        self.assertEqual(self.alerts(), [])
+
+    def test_identical_round_retries_do_not_fabricate_complete_days(self):
+        self.baseline()
+        self.day(2, amount=1, rounds=1)
+        self.rows.extend([self.rows[-1][:], self.rows[-1][:]])
+        self.day(1, amount=1, rounds=1)
+        self.rows.extend([self.rows[-1][:], self.rows[-1][:]])
         self.assertEqual(self.alerts(), [])
 
     def test_absence_occupied_and_insufficient_sample_are_not_zero(self):

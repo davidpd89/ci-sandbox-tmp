@@ -62,6 +62,7 @@ def collect(root, *, now=None):
             if (not reader.fieldnames or len(reader.fieldnames) != len(set(reader.fieldnames))
                     or not REQUIRED_COLUMNS.issubset(reader.fieldnames)):
                 return []
+            seen_rows = set()
             for row in reader:
                 network = row.get("red")
                 day = row.get("fecha")
@@ -87,6 +88,12 @@ def collect(root, *, now=None):
                     continue
                 if state not in MEASURED_STATES:
                     continue  # no deducir cero por pausa/ausencia/error
+                # Un reintento/replay puede repetir exactamente una fila. No
+                # debe convertir una única ronda observada en tres muestras.
+                fingerprint = tuple(row.get(name) for name in reader.fieldnames)
+                if fingerprint in seen_rows:
+                    continue
+                seen_rows.add(fingerprint)
                 raw = row.get("confirmadas")
                 if not isinstance(raw, str) or not raw.strip():
                     invalid.add(network)

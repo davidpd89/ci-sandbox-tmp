@@ -72,6 +72,28 @@ class KPITests(unittest.TestCase):
         r = k.build_report(self.root, self.day)["networks"]["mastodon"]
         self.assertEqual(r["confirmed_by_source"], {"seed_ñ": 1})
 
+    def test_extra_legacy_columns_are_malformed_not_confirmed(self):
+        self.write("x", "registro_interacciones.csv", [self.sample() + ["unexpected"]])
+        r = k.build_report(self.root, self.day)["networks"]["x"]
+        self.assertEqual(r["confirmed_rows"], 0)
+        self.assertEqual(r["malformed_rows"], 1)
+
+    def test_invalid_named_header_is_unknown_not_zero(self):
+        header = ["fecha", "cuenta", "tipo", "post_resumen", "texto", "notas", "fuente"]
+        self.write("x", "registro_interacciones.csv", [header, self.sample() + ["seed"]])
+        r = k.build_report(self.root, self.day)["networks"]["x"]
+        self.assertIsNone(r["confirmed_rows"])
+        self.assertEqual(r["outbound_coverage"], "cabecera_invalida")
+
+    def test_duplicate_named_header_is_rejected(self):
+        header = ["fecha", "cuenta", "tipo", "post_resumen", "texto",
+                  "resultado", "resultado", "notas"]
+        row = self.sample() + ["extra"]
+        self.write("x", "registro_interacciones.csv", [header, row])
+        r = k.build_report(self.root, self.day)["networks"]["x"]
+        self.assertIsNone(r["confirmed_rows"])
+        self.assertEqual(r["outbound_coverage"], "cabecera_invalida")
+
     def test_lineage_only_explicit_never_guess(self):
         self.write("pinterest", "registro_interacciones.csv", [self.sample(notes="buena fuente:seed-a"), [*self.sample(notes="motivo | fuente=semilla_1")]])
         r = k.build_report(self.root, self.day)["networks"]["pinterest"]
