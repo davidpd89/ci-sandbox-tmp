@@ -2,7 +2,7 @@
 
 **Consulta:** 2026-10-09 (Europa/Madrid). **PR:** https://github.com/davidpd89/ci-sandbox-tmp/pull/17. **Rama:** `research/07-pinterest`; base verificada `research/public-reuse-parent`. No se ha conectado a Pinterest ni se ha publicado.
 
-## Reproducción y flujo real
+## Problema y reproducción del flujo real
 
 En el mirror, `tools/pinterest_publish.py:publish_pin` aceptaba en modo dry-run cualquier fichero existente: un GIF renombrado a PNG, un PNG truncado o una imagen de más de 20 MB obtenían «ensayo». El mismo error se trasladaba a `--apply` después de abrir el navegador. Tampoco validaba allí el enlace ni la presencia real de ALT y descripción. Antes: **0 de 3 entradas deliberadamente inválidas bloqueadas por el control de imagen** (según inspección del predicado `os.path.exists`, no benchmark de una ejecución histórica). Ahora: esos **3 casos fallan antes de Playwright**, probado en el contrato offline; el test de cableado queda sujeto a CI del checkout real.
 
@@ -10,7 +10,7 @@ Ruta operativa del mirror: ficha `publicaciones Pinterest GPT/*/publicacion.md` 
 
 El mirror contiene además `pinterest_growth.py`, `pinterest_boards.py`, `pinterest_profile_audit.py` y `pinterest_api_audit.py`. No son el flujo de subida. En `davidpd89/rrss-davidporto-CODE@main`, los archivos `tools/pinterest_scan.py`, `tools/pinterest_execute.py` y `tools/pinterest_api_audit.py` representan la etapa anterior, manual/nativa, y `SISTEMA_DIARIO_PINTEREST/PROCESO.md` prohíbe publicar automáticamente: **no inferir que main oficial ejecuta la versión del mirror**. `AI_REVIEWER_BRIEF.md` es histórico. Cualquier promoción al repositorio privado necesita revisión de la diferencia de versiones y autorización; no se ha hecho aquí.
 
-## Opciones comparadas
+## Alternativas comparadas
 
 | Baseline | Candidato 1 | Candidato 2 | Elección | Razón y riesgo |
 |---|---|---|---|---|
@@ -20,6 +20,10 @@ El mirror contiene además `pinterest_growth.py`, `pinterest_boards.py`, `pinter
 Fuentes de mantenimiento del SDK oficial: README en el commit citado y [issue #130](https://github.com/pinterest/pinterest-python-sdk/issues/130) (creación de Pin), [issue #172](https://github.com/pinterest/pinterest-python-sdk/issues/172) (urllib3; vulnerabilidad alegada en el issue, no evaluación CVE independiente). No se ha instalado ni copiado código de terceros. Licencia del componente nuevo: código original de esta PR; compatibilidad del repositorio con Pillow ya presente en CI. Verificar licencia global del mirror antes de redistribuirlo fuera de GitHub; no se incorporan activos de otras licencias.
 
 La [guía oficial de pines orgánicos](https://developers.pinterest.com/docs/work-with-organic-content-and-users/create-boards-and-pins/) admite crear pines mediante API con app/token autorizado y scopes `boards:read`, `boards:write`, `pins:read`, `pins:write`. También señala restricciones de acceso a pines y tableros según autorización, en especial apps recientes. La API no elimina por sí sola problemas de aprobación, cuotas o permisos. [Límites oficiales](https://developers.pinterest.com/docs/reference/rate-limits/) dependen de Trial/Standard y categoría. No se han verificado scopes, permisos ni cuotas disponibles en la cuenta real. No programar, comentar, reaccionar ni realizar acciones reales.
+
+## Licencias y procedencia
+
+Se evaluaron las etiquetas Apache-2.0 y MIT consultando los archivos LICENSE de los repositorios público-oficial y alternativo indicados en la tabla. La licencia del cliente generado no quedó constatada y por ello no se incorpora. No se copió código ni se adoptó componente de esos proyectos. `tools/pinterest_media_guard.py` y los tests son código nuevo escrito para este cambio; reutilizan exclusivamente Pillow, previamente declarada por el proyecto en `requirements-ci.txt`. Los identificadores y rutas del repositorio privado se mencionan solo como trazabilidad técnica; no se transfirieron secretos, contenidos de terceros ni archivos privados.
 
 ## Decisión aplicada
 
@@ -57,7 +61,7 @@ La suite global CI ya está definida en ese workflow (con exclusiones específic
 4. **Doble envío o respuesta incierta:** no resolver con la validación de media. Ya se mantiene `pendiente_verificacion` y el dedupe por URL en `pinterest_daily_pins.py`; tests existentes `test_r7_pinterest_post_wait_revalidation.py`. No reutilizar mocks como demostración de un post real.
 5. **Diferencia entre ramas:** código del mirror más nuevo que la publicación manual del oficial; no se ha promovido código a privado, y eso impide certificar producción aunque CI de mirror pase.
 
-## Reversión y costes
+## Retirada, rollback y costes
 
 Retirada reversible: revertir los commits de esta rama que añaden `pinterest_media_guard`, tests y la llamada desde `pinterest_publish`. No hay migraciones, secretos, estado remoto, cambios de CSV ni llamadas de red. Coste de servicios: 0 nuevas llamadas de API, 0 licencias externas de pago; coste local: apertura/validación de cada imagen con Pillow (tiempo no medido, no inventar benchmark). Si un fichero legítimo queda bloqueado por la política web, hay que reproducirlo y revisar la fuente oficial antes de relajar el guard.
 
@@ -77,4 +81,6 @@ Retirada reversible: revertir los commits de esta rama que añaden `pinterest_me
 
 **BLOQUEOS_PARA_CLAUDE**: La rama final y SHAs deberán leerse de GitHub tras el último commit; el análisis partió de #17 `6c0d343d3df1d0923983f41aa39988ca9a05f5b2`, padre `4da0584f270bdbec6cf37286cc86396a08e11bab` y source oficial `main` consultado el 09-10-2026. En esta sesión no se dispone de checkout clonado ni tokens Pinterest; el intento `git ls-remote https://github.com/davidpd89/ci-sandbox-tmp.git HEAD` falló: `Could not resolve host: github.com`. Acceso GitHub mediante conector con escritura en rama hija; acceso API Pinterest no usado. Claude debe: (1) actualizar/refetch la rama, (2) ejecutar comandos CI anteriores y suite global con fixtures offline, (3) inspeccionar logs Ubuntu/Windows y diffs completos, (4) comparar cuidadosamente el estado del repositorio privado con el mirror antes de cualquier port, (5) confirmar revisión humana y cumplimiento del protocolo antes de merge. No forzar pushes ni publicar Pines.
 
-**Veredicto provisional: LISTA PARA REVISIÓN (no mergeada)**, **no autorizada para merge final** hasta checks y revisión de compatibilidad.
+**Estado de CI verificado sobre el commit 8e0b5ec3a02979f921393ca9c2a4031e7624c91d (09-10-2026):** [run 37978617623](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37978617623), jobs Ubuntu y Windows finalizados con `failure`. En ambos `python -m unittest discover -s tests -p test_open_source_campaign.py -v` pasó, pero el paso `python tools/validate_open_source_campaign.py` falló: `campaign: 76 children; 3 errors`, `expected 46 children, got 76`, `missing, extra or duplicate PR numbers`, `protocol index is incomplete or duplicated`. Es drift de la rama padre #10: el índice/manifiesto ahora contienen 76 hijas, pero el script de validación tiene `RANGE = set(range(11, 57))` y comprueba `len(children) == 46`. **No alterar el padre desde la hija #17.** Tras corregir la validación en la PR padre, volver a comprobar el workflow en la rama hija. El éxito de los tests del protocolo no significa ejecución de los tests nuevos de Pinterest.
+
+**Veredicto: BLOQUEADA para merge**, aunque los cambios específicos de Pinterest quedan preparados para revisión: corregir puerta común en #10, ejecutar tests del nuevo guard con checkout real y validar contra repositorio oficial privado.
