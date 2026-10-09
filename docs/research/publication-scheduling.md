@@ -46,7 +46,7 @@ resolved. Vigencia por defecto 14 días, sin cambiar parámetros del ejecutor.
 Resolver hora local usando roundtrip UTC/zoneinfo rechaza los dos casos
 DST problemáticos, en vez de elegir un offset al azar. Los avisos
 possible_duplicate y slot_collision no borran contenidos ni reservan
-posts: son señales para revisión editorial dentro de la misma red.
+posts: son señales para revisión editorial dentro de la misma red. También se incluyen fichas históricas ya publicadas para detectar posibles reposts futuros.
 
 El mapa WEB X/Threads/Pinterest, API Facebook/Instagram/Bluesky/Mastodon/Reddit,
 MOBILE TikTok describe el canal probable de publicación. No equivale
