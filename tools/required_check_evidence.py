@@ -84,7 +84,8 @@ def verify_live(reader, repo, number, head, base, ref, owners=OWNERS):
         if (check.get("status") != "completed" or check.get("conclusion") != "success"
             or check.get("head_sha") != ref
             or not isinstance(check.get("id"), int)
-            or check.get("app", {}).get("slug") != "github-actions"):
+            or not isinstance(check.get("app"), dict)
+            or check["app"].get("slug") != "github-actions"):
             raise AuditError("check not a successful GitHub Actions check")
         m = DETAILS.fullmatch(str(check.get("details_url", "")))
         if not m or m.group(1) != repo:
@@ -100,7 +101,8 @@ def verify_live(reader, repo, number, head, base, ref, owners=OWNERS):
             or run.get("event") != "pull_request_target"
             or run.get("path") != trusted_path
             or run.get("conclusion") != "success"
-            or run.get("check_suite_id") != check.get("check_suite", {}).get("id")
+            or not isinstance(check.get("check_suite"), dict)
+            or run.get("check_suite_id") != check["check_suite"].get("id")
             or str(job.get("check_run_url", "")).rsplit("/", 1)[-1] != str(check["id"])):
             raise AuditError("run/job identity or provenance mismatch")
         # An Actions run must point to the same PR head when GitHub provides
@@ -108,7 +110,8 @@ def verify_live(reader, repo, number, head, base, ref, owners=OWNERS):
         associated = run.get("pull_requests")
         if (not isinstance(associated, list) or not any(
             isinstance(p, dict) and p.get("number") == number
-            and p.get("head", {}).get("sha") == head for p in associated
+            and isinstance(p.get("head"), dict)
+            and p["head"].get("sha") == head for p in associated
         )):
             raise AuditError("workflow run is not linked to current PR head")
         verified.append(check_name)
