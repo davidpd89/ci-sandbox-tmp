@@ -343,6 +343,18 @@ class TikTokSafetyTests(unittest.TestCase):
             self.assertEqual(pending, set())
 
 
+    def test_malformed_legacy_date_fails_closed_instead_of_losing_quota(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = pathlib.Path(folder) / "registro.csv"
+            path.write_text(
+                "fecha,cuenta,tipo,post_resumen,texto_usado,resultado,notas\n"
+                "2026-10-XX,@lectora,follow,,,confirmado,legacy\n",
+                encoding="utf-8",
+            )
+            with self.assertRaises(safety.SafetyStateError):
+                safety.recorded_actions(str(path), today=dt.date(2026, 10, 9))
+            self.assertIn("2026-10-XX", path.read_text(encoding="utf-8"))
+
     def test_pending_approval_is_historical_no_retry_target(self):
         with tempfile.TemporaryDirectory() as folder:
             path = pathlib.Path(folder) / "registro.csv"
