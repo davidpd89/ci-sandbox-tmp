@@ -64,6 +64,10 @@ def _reason(row, min_sample, min_age_days, as_of, max_snapshot_age_days):
         return "immature_or_invalid_date"
     if (as_of - snapshot).days > max_snapshot_age_days:
         return "stale_snapshot"
+    # A source with no observed actors has no evidence to expand through
+    # the exploration reserve; keep it separate from a small real cohort.
+    if n == 0:
+        return "empty_cohort"
     if n < min_sample:
         return "insufficient_sample"
     return None
