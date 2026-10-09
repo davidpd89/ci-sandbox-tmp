@@ -962,7 +962,8 @@ def main(argv=None):
     finally:
         heartbeat_stop.set()
         if heartbeat_started:
-            heartbeat.join(timeout=2)
+            # No liberar candados hasta que el heartbeat haya terminado.
+            heartbeat.join()
         released = {chain: release_chain_lock(chain) for chain in mine}
         if reload_allowed and control_signal() == "recargar" and all(released.values()):
             # No relanzar hasta confirmar que liberamos todos los locks.

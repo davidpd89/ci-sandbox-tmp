@@ -107,8 +107,10 @@ class RoundCsvAtomicity(unittest.TestCase):
             writer = csv.writer(stream)
             writer.writerow(q.ROUND_CSV_LEGACY_COLUMNS)
             writer.writerow(["2026-10-09", "mastodon", "parcial"])
-        self.path.write_bytes(self.path.read_bytes().rstrip(b"\\r\\n"))
+        self.path.write_bytes(self.path.read_bytes().rstrip(b"\r\n"))
+        self.assertFalse(self.path.read_bytes().endswith(b"\n"))
         self.assertEqual(q.done_today(dt.date(2026, 10, 9)), {"mastodon": 1})
+        self.assertTrue(self.path.read_bytes().endswith(b"\n"))
         self.assertEqual(len(self.read_rows()), 2)
 
     def test_corrupt_header_fails_closed_in_both_readers(self):
@@ -270,6 +272,39 @@ class RoundCsvAtomicity(unittest.TestCase):
               mock.patch.object(q, "control_signal", return_value=None)):
             self.assertEqual(q.main(["--only", "web"]), 0)
         self.assertEqual(events, ["lock", "snapshot", "run", "release"])
+
+    def test_main_joins_heartbeat_before_releasing_ownership(self):
+        order = []
+
+        class FakeHeartbeat:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def start(self):
+                order.append("heartbeat-start")
+
+            def join(self, timeout=None):
+                self_assertion = timeout is None
+                if not self_assertion:
+                    raise AssertionError("No liberar el lock con heartbeat aún vivo")
+                order.append("heartbeat-joined")
+
+        def release(chain):
+            order.append("lock-released")
+            return True
+
+        with (mock.patch.object(q.sys, "stdout", mock.Mock()),
+              mock.patch.object(q.threading, "Thread", FakeHeartbeat),
+              mock.patch.object(q, "rounds_target", return_value=1),
+              mock.patch.object(q, "take_chain_lock", return_value=True),
+              mock.patch.object(q, "done_today", return_value={}),
+              mock.patch.object(q, "_run_chains", return_value=0),
+              mock.patch.object(q, "release_chain_lock", side_effect=release),
+              mock.patch.object(q, "control_signal", return_value=None)):
+            self.assertEqual(q.main(["--only", "web"]), 0)
+
+        self.assertEqual(order,
+                         ["heartbeat-start", "heartbeat-joined", "lock-released"])
 
     def test_bad_snapshot_releases_owned_chain_without_relaunch(self):
         fake_output = mock.Mock()
