@@ -224,6 +224,21 @@ class TikTokSafetyTests(unittest.TestCase):
             self.assertEqual(used, {"follow": 1, "like": 1, "comment": 0})
             self.assertIn(("follow", "lectora"), pending)
 
+    def test_pending_approval_is_historical_no_retry_target(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = pathlib.Path(folder) / "registro.csv"
+            intent_id = "d" * 32
+            lines = [
+                "fecha,cuenta,tipo,post_resumen,texto_usado,resultado,notas",
+                f"2026-10-09,@privada,follow,,,pendiente_verificacion,x | intent_id={intent_id}",
+                f"2026-10-09,@privada,follow,,,pendiente_aprobacion,x | intent_id={intent_id}",
+            ]
+            path.write_text("\n".join(lines) + "\n", encoding="utf-8-sig")
+            with mock.patch.object(bulk, "REGISTRO_CSV", str(path)):
+                already, total = bulk.followed_before()
+            self.assertIn("privada", already)
+            self.assertEqual(total, 1)
+
     def test_pending_approval_closes_intent_and_counts_once(self):
         with tempfile.TemporaryDirectory() as folder:
             path = pathlib.Path(folder) / "registro.csv"
