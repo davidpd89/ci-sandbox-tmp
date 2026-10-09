@@ -293,7 +293,7 @@ class ThreadsTransportTests(unittest.TestCase):
                             "text": "¿Alguna recomendación?",
                             "timestamp": "2026-10-08T12:00:00Z"}], stream)
             with open(decisions, "w", encoding="utf-8") as stream:
-                json.dump({"actions": [{"id": "reply1", "text": "La segunda."}]}, stream)
+                json.dump({"actions": [{"id": "reply1", "text": "La segunda.", "authored": "manual"}]}, stream)
             with patch.object(api, "ROOT", temporary), \
                  patch.object(api, "_env", side_effect=AssertionError("build must be offline")), \
                  patch.object(api.sys, "stdout", io.StringIO()):
@@ -303,6 +303,7 @@ class ThreadsTransportTests(unittest.TestCase):
                 plan = json.load(stream)
             self.assertEqual(plan[0]["reply_to_id"], "reply1")
             self.assertEqual(plan[0]["target_created_at"], "2026-10-08T12:00:00Z")
+            self.assertEqual(plan[0]["authored"], "manual")
 
 
     def test_pool_uncertain_result_is_persistently_non_retriable(self):
