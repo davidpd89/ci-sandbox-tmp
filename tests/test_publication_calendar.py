@@ -149,6 +149,18 @@ class CalendarTests(unittest.TestCase):
         finally:
             cal.cq.scan_items = old
 
+    def test_legacy_queue_cli_calendar_routes_only_to_read_only_preview(self):
+        import runpy
+        from unittest import mock
+        script = str(Path(__file__).resolve().parents[1] / "tools" / "run_content_queue.py")
+        with mock.patch.object(sys, "argv",
+                               [script, "--calendar", "--network", "x"]), \
+             mock.patch.object(cal, "main", return_value=0) as preview:
+            with self.assertRaises(SystemExit) as exit_:
+                runpy.run_path(script, run_name="__main__")
+        self.assertEqual(exit_.exception.code, 0)
+        preview.assert_called_once_with(["--network", "x"])
+
     def test_portability_across_roots(self):
         a = item()
         b = item()
