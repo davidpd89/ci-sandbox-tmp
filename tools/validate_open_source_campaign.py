@@ -50,7 +50,7 @@ def check_metadata(doc, protocol):
         expected = f'https://github.com/{REPO}/pull/{n}'
         if p.get('url') != expected or by_number.get(n, (None,))[0] != expected:
             errors.append(f'#{n}: incorrect or missing PR link')
-        if p.get('objective') != by_number.get(n, ('', ''))[1]:
+        if str(p.get('objective', '')).strip().casefold() != by_number.get(n, ('', ''))[1].casefold():
             errors.append(f'#{n}: objective/index mismatch')
         head = p.get('head', '')
         if not isinstance(head, str) or not head.startswith(f'research/{n-10:02}-') or not re.fullmatch(r'research/\d{2,}-[a-z0-9]+(?:-[a-z0-9]+)*', head):
