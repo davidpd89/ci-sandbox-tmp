@@ -116,7 +116,9 @@ BOARD_ALIASES = {"herramientas para escritores": "Recursos para escritores", "re
 
 def resolve_board(name):
     """Nombre canonico del tablero (lista cerrada o alias) o PinterestPublishError."""
-    wanted = (name or "").strip()
+    if not isinstance(name, str):
+        raise PinterestPublishError("tablero: nombre obligatorio")
+    wanted = name.strip()
     for known in KNOWN_BOARDS:
         if wanted.casefold() == known.casefold():
             return known
@@ -177,8 +179,8 @@ def publish_pin(image, title, description, link, alt, board, apply=False, log=pr
     remota; nunca limpiar borradores automáticamente ni suponer que falló.
     """
     board = resolve_board(board)
-    if len(title) > TITLE_MAX or len(description) > DESC_MAX:
-        raise PinterestPublishError(f"titulo/descripcion demasiado largos ({len(title)}/{len(description)})")
+    # El guard maneja tipos inválidos, valores vacíos y longitudes antes de
+    # abrir Playwright; no usar len() sobre metadatos externos sin validar.
     try:
         validate_web_pin_fields(title, description, link, alt)
         image_info = validate_web_pin_image(image)
