@@ -342,6 +342,8 @@ def collect(root: str | pathlib.Path, *, now: dt.datetime | None = None,
     # también el lector de cuarentena ya incorporado por #120.
     from plan_failure_events import collect_alerts
     alerts.extend(collect_alerts(root, now=now))
+    from growth_anomaly import collect as collect_growth
+    alerts.extend(collect_growth(root, now=now))
     return {
         "schema": 1, "generated_at": now.isoformat(timespec="seconds"),
         "window_minutes": LOOKBACK_MINUTES, "by_network": per_network, "alerts": alerts,
