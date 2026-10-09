@@ -1,0 +1,29 @@
+name: Lint GitHub Actions workflows (pinned actionlint)
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Probar instalador sin red y escenarios sinteticos
+        run: python -m unittest discover -s tests -p test_ci_actionlint.py -v
+      - name: Validar todos los workflows con actionlint verificado
+        run: python tools/ci_actionlint.py --selftest
