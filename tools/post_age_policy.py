@@ -162,7 +162,7 @@ def post_datetime(network, item):
     for ref in _target_ref(item, network):
         when = None
         if network == "x":
-            match = re.search(r"/status/(\\d+)", ref) or re.fullmatch(r"(\\d+)", ref)
+            match = re.search(r"/status/(\d+)", ref) or re.fullmatch(r"(\d+)", ref)
             when = _snowflake_x(match.group(1)) if match else None
         elif network == "bluesky":
             when = _tid_bluesky(ref.rstrip("/").rsplit("/", 1)[-1])
