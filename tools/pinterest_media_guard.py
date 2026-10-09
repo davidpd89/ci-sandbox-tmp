@@ -40,12 +40,14 @@ def validate_web_pin_image(path):
                     raise PinPreflightError("imagen: tipo no admitido para Pin web")
                 if pixel_width <= 0 or pixel_height <= 0:
                     raise PinPreflightError("imagen: dimensiones inválidas")
-                orientation = source.getexif().get(274, 1)
                 source.verify()
             # verify() comprueba la estructura, pero un JPEG truncado puede
             # superarla y fallar después al cargar los píxeles. Decodificarlo.
             with Image.open(path) as decoded:
                 decoded.load()
+                # getexif() puede cambiar el estado del decoder PNG;
+                # tras verify() sobre el primer handle, usar el segundo.
+                orientation = decoded.getexif().get(274, 1)
     except (OSError, ValueError, UnidentifiedImageError,
             Image.DecompressionBombWarning, Image.DecompressionBombError) as exc:
         if isinstance(exc, PinPreflightError):
