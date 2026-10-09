@@ -50,7 +50,10 @@ def audit_projection(row, target):
     if not isinstance(targets, dict):
         return None
     entry = targets.get(target)
-    if not isinstance(entry, dict) or entry.get("queue") not in QUEUES:
+    if not isinstance(entry, dict):
+        return None
+    queue = entry.get("queue")
+    if not isinstance(queue, str) or queue not in QUEUES:
         return None
     a, b = row.get("treatment"), row.get("control")
     if not isinstance(a, dict) or not isinstance(b, dict):
