@@ -56,6 +56,9 @@ Archivo `tests/test_bluesky_jetstream_collect.py`, casos añadidos:
 
 CI del mirror usa Python 3.11 en Ubuntu y Windows, instala `requirements-ci.txt`, ejecuta `python -m compileall -q tools tests` y `python -m pytest tests -q -p no:cacheprovider` con exclusiones **ya configuradas** en el workflow `.github/workflows/validate-social-tools.yml`. El guard de red `tests/conftest.py` impide tráfico saliente durante pytest. Evidencia de cada ejecución: [Actions de la PR](https://github.com/davidpd89/ci-sandbox-tmp/actions/workflows/validate-social-tools.yml?query=branch%3Aresearch%2F01-bluesky-atproto). **No equiparar el éxito del subconjunto a una prueba end-to-end con autenticación real.**
 
+Resultados CI confirmados en [run 37978832148](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37978832148), SHA `5a935d59931c6a7664484e95397519bc0871282f`: **Ubuntu 1694 passed, 8 skipped, 8 deselected, 665 subtests passed (22,56 s); Windows 1697 passed, 5 skipped, 8 deselected, 665 subtests passed (39,14 s)**. Dos warnings ajenos de escapes inválidos en `tools/android_shell.py`; no modificados por #11.
+
+
 ## Autorrevisión adversarial
 
 1. **Reenvío de una operación antigua después de delete/update.** Antes la clave primaria deduplicaba filas, pero no versiones. Se evita mutar cuando `seq <= last_seq`; tests create/delete/replay y replay tras reinicio.
@@ -115,7 +118,7 @@ FAIL: missing, extra or duplicate PR numbers
 FAIL: protocol index is incomplete or duplicated
 ```
 
-Este validador heredado pertenece a la **rama padre**, que avanzó a `8d855560e12a6dd5f4ea76280ba2c3ee574f3cdc` mientras se trabajaba en #11. No corregir el protocolo ni el validador aquí: corresponde a PR #10 actualizar el índice/contrato tras el aumento de hijas y repetir el gate. La rama #11 mantiene `base=research/public-reuse-parent` y no se ha mergeado. `mergeable=true` no implica readiness.
+El gate fallido se ejecutó sobre el *merge ref* anterior; la rama padre avanzó posteriormente hasta `8fa01e6456160d1a01db895290fb288e8d475f83`, cuya versión de `tools/validate_open_source_campaign.py` **ya admite como mínimo 46 hijas originales y un índice continuo de más PR**. El re-run (attempt 2) de [37978839286](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37978839286) **volvió a usar el merge ref anterior `c3fcf6f`**, por lo que repitió los tres errores; no sirve como validación de la corrección del padre. Se requiere un **nuevo evento de validación** con una base/merge ref actualizada y revisar su SHA. No corregir el protocolo ni el validador aquí: corresponde a PR #10 actualizar el índice/contrato tras el aumento de hijas y repetir el gate. La rama #11 mantiene `base=research/public-reuse-parent` y no se ha mergeado. `mergeable=true` no implica readiness.
 
 ## Referencias primarias y procedencia
 
