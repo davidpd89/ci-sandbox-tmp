@@ -25,6 +25,17 @@ def ui(username="cuenta_ejemplo", action="Seguir"):
 
 
 class DiagnosticsTests(unittest.TestCase):
+    def test_navigator_exposes_read_only_snapshot(self):
+        import tiktok_mobile_nav as nav
+        navigator = object.__new__(nav.TikTokNavigator)
+        calls = []
+        navigator.tree = lambda **kwargs: calls.append("read") or ui()
+        reference = diag.diagnose(ui())
+        result = navigator.diagnose_current_ui(reference=reference)
+        self.assertEqual(calls, ["read"])
+        self.assertTrue(result["comparison"]["same_fingerprint"])
+        self.assertEqual(result["snapshot"], reference)
+
     def test_private_text_changes_do_not_affect_fingerprint(self):
         original = diag.diagnose(ui("nombre_privado_A"))
         changed = diag.diagnose(ui("otro_nombre_privado_B"))
