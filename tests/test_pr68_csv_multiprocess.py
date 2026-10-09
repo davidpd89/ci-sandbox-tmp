@@ -1,4 +1,4 @@
-"""PR68: CSV compartido por procesos WEB/API/MÓVIL, sin cuentas ni datos reales."""
+"""PR #5: CSV compartido por procesos WEB/API/MÓVIL, sin cuentas ni datos reales."""
 import csv
 import os
 from pathlib import Path
@@ -12,6 +12,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import round_queue as q
+
 
 class RoundCsvAtomicity(unittest.TestCase):
     def setUp(self):
@@ -27,30 +28,79 @@ class RoundCsvAtomicity(unittest.TestCase):
         return ["2026-10-09", network, "14:00:00", "14:00:01", 0.0,
                 "saltada", "{}", 1, 0, 0]
 
+    def read_rows(self):
+        with self.path.open(encoding="utf-8", newline="") as stream:
+            return list(csv.reader(stream))
+
     def test_missing_or_empty_csv_has_one_header(self):
         q._append_round_csv(self.row())
         q._append_round_csv(self.row("api"))
-        with self.path.open(encoding="utf-8", newline="") as f:
-            rows = list(csv.reader(f))
+        rows = self.read_rows()
         self.assertEqual(rows[0], list(q.ROUND_CSV_COLUMNS))
         self.assertEqual(len(rows), 3)
+
         self.path.write_bytes(b"")
         q._append_round_csv(self.row("tiktok"))
-        with self.path.open(encoding="utf-8", newline="") as f:
-            rows = list(csv.reader(f))
+        rows = self.read_rows()
         self.assertEqual(len(rows), 2)
         self.assertTrue(Path(str(self.path) + ".writer.guard").exists())
 
-    def test_denied_interprocess_lock_cannot_write(self):
-        with mock.patch.object(q, "_recovery_guard") as lock:
-            from contextlib import contextmanager
-            @contextmanager
-            def denied(path):
-                yield False
-            lock.side_effect = denied
+    def test_partial_tail_from_crashed_writer_is_removed_before_append(self):
+        q._append_round_csv(self.row("x"))
+        with self.path.open("ab") as stream:
+            stream.write(b"2026-10-09,bluesky,14:00")
+            stream.flush()
+            os.fsync(stream.fileno())
+
+        q._append_round_csv(self.row("tiktok"))
+
+        rows = self.read_rows()
+        self.assertEqual(rows[0], list(q.ROUND_CSV_COLUMNS))
+        self.assertEqual([row[1] for row in rows[1:]], ["x", "tiktok"])
+        self.assertTrue(all(len(row) == len(q.ROUND_CSV_COLUMNS) for row in rows))
+
+    def test_denied_interprocess_lock_preserves_previous_state(self):
+        q._append_round_csv(self.row("x"))
+        before = self.path.read_bytes()
+
+        from contextlib import contextmanager
+
+        @contextmanager
+        def denied(path):
+            yield False
+
+        with (mock.patch.object(q, "_recovery_guard", side_effect=denied),
+              mock.patch.object(q, "ROUND_CSV_LOCK_TIMEOUT_SECONDS", 0.0)):
             with self.assertRaises(OSError):
-                q._append_round_csv(self.row())
-        self.assertFalse(self.path.exists())
+                q._append_round_csv(self.row("bluesky"))
+
+        self.assertEqual(self.path.read_bytes(), before)
+
+    def test_writer_guard_is_released_when_holder_process_is_killed(self):
+        script = (
+            "import sys,time;"
+            "sys.path.insert(0,sys.argv[1]);"
+            "import round_queue as q;"
+            "q.LOG=sys.argv[2];"
+            "ctx=q._recovery_guard(q.LOG+'.writer');"
+            "held=ctx.__enter__();"
+            "print('HELD' if held else 'BLOCKED',flush=True);"
+            "time.sleep(60)"
+        )
+        proc = subprocess.Popen(
+            [sys.executable, "-c", script, str(ROOT / "tools"), str(self.path)],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, encoding="utf-8",
+        )
+        try:
+            self.assertEqual(proc.stdout.readline().strip(), "HELD")
+        finally:
+            proc.kill()
+            proc.communicate(timeout=5)
+
+        q._append_round_csv(self.row("mastodon"))
+        rows = self.read_rows()
+        self.assertEqual([row[1] for row in rows[1:]], ["mastodon"])
 
     def test_skip_does_not_increment_or_reset_failure_count_after_restart(self):
         import datetime as dt
@@ -70,7 +120,6 @@ class RoundCsvAtomicity(unittest.TestCase):
         self.assertGreater(recovered["x"][1], fake_day)
 
     def test_failed_relaunch_releases_log_handle(self):
-        # Cubre la misma reparación de handle de #60 en el árbol de #68.
         operational = Path(self.temp.name) / "00_OPERATIVO"
         operational.mkdir()
         log = operational / "cola_rondas_recarga.log"
@@ -82,40 +131,43 @@ class RoundCsvAtomicity(unittest.TestCase):
         self.assertTrue(log.is_file())
         log.rename(operational / "renamed.log")  # También debe cerrar en Windows.
 
-    def test_many_independent_python_processes_write_only_one_header(self):
-        # Cada hijo importa la implementación REAL en un proceso nuevo; los
-        # temporales se transmiten por argumento y no hay acceso al repo operativo.
+    def test_many_independent_python_processes_write_exactly_once(self):
         script = (
             "import sys,time;"
             "sys.path.insert(0,sys.argv[1]);"
             "import round_queue as q;"
             "q.LOG=sys.argv[2];"
             "time.sleep(max(0,float(sys.argv[3])-time.time()));"
-            "q._append_round_csv(['2026-10-09','web','00:00:00','00:00:00',0,"
+            "q._append_round_csv(['2026-10-09',sys.argv[4],'00:00:00','00:00:00',0,"
             "'saltada','{}',1,0,0])"
         )
         start = time.time() + 2.5
+        networks = ["x", "threads", "bluesky", "mastodon", "tiktok", "pinterest"]
         procs = []
         try:
-            for _ in range(6):
+            for network in networks:
                 procs.append(subprocess.Popen(
-                    [sys.executable, "-c", script, str(ROOT/"tools"),
-                     str(self.path), str(start)],
+                    [sys.executable, "-c", script, str(ROOT / "tools"),
+                     str(self.path), str(start), network],
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                    text=True, encoding="utf-8"))
+                    text=True, encoding="utf-8",
+                ))
             for proc in procs:
                 out, err = proc.communicate(timeout=25)
-                self.assertEqual(proc.returncode, 0, out+err)
+                self.assertEqual(proc.returncode, 0, out + err)
         finally:
             for proc in procs:
                 if proc.poll() is None:
                     proc.kill()
                     proc.communicate(timeout=5)
-        with self.path.open(encoding="utf-8", newline="") as f:
-            rows = list(csv.reader(f))
-        self.assertEqual(rows[0], list(q.ROUND_CSV_COLUMNS))
-        self.assertEqual(len(rows), 7)
-        self.assertEqual(sum(row and row[0]=="fecha" for row in rows), 1)
 
-if __name__=="__main__":
+        rows = self.read_rows()
+        self.assertEqual(rows[0], list(q.ROUND_CSV_COLUMNS))
+        self.assertEqual(len(rows), 1 + len(networks))
+        self.assertEqual(sum(row and row[0] == "fecha" for row in rows), 1)
+        self.assertEqual(sorted(row[1] for row in rows[1:]), sorted(networks))
+        self.assertTrue(all(len(row) == len(q.ROUND_CSV_COLUMNS) for row in rows))
+
+
+if __name__ == "__main__":
     unittest.main()
