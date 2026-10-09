@@ -187,33 +187,46 @@ def _inbound(root, day):
         return None, schema_error
     counts = Counter()
     seen = set()
-    incomplete = False
-    observed_today = False
+    incomplete_networks = set()
+    observed_networks = set()
+    unattributed = False
     for entry, malformed in mapped:
+        network = entry.get("red")
         local_day = _local_day(entry.get("fecha"))
         if malformed or local_day is None:
-            incomplete = True
+            if network in INBOUND_HARVEST_NETWORKS:
+                incomplete_networks.add(network)
+            elif network not in NETWORKS:
+                unattributed = True
             continue
         if local_day != day:
             continue
-        if (entry.get("red") not in NETWORKS or not entry.get("handle")
-                or entry.get("tipo") not in ("comment", "like", "repost", "follow")):
-            incomplete = True
+        if network not in NETWORKS:
+            unattributed = True
             continue
-        observed_today = True
-        key = (entry.get("fecha"), entry.get("red"), entry.get("handle"), entry.get("tipo"))
+        if (not entry.get("handle")
+                or entry.get("tipo") not in ("comment", "like", "repost", "follow")):
+            if network in INBOUND_HARVEST_NETWORKS:
+                incomplete_networks.add(network)
+            continue
+        observed_networks.add(network)
+        key = (entry.get("fecha"), network, entry.get("handle"), entry.get("tipo"))
         if key in seen:
             continue
         seen.add(key)
         if entry.get("tipo") == "comment":
-            counts[entry["red"]] += 1
-    # Una fila indescifrable podría ocultar otro comentario; el cero deja
-    # de ser un valor defendible, incluso si hay otras filas correctas.
-    if incomplete:
-        return None, "registro_inbound_parcial"
-    if not observed_today:
-        return None, "sin_observaciones_del_dia"
-    return counts, "cuentas_tipo_dia_solo_harvest"
+            counts[network] += 1
+    # La incertidumbre afecta a la red identificable; solo un origen sin
+    # atribución puede contaminar el conjunto de redes cosechadas.
+    coverage = {
+        network: ("registro_inbound_parcial"
+                  if unattributed or network in incomplete_networks else
+                  "cuentas_tipo_dia_solo_harvest"
+                  if network in observed_networks else
+                  "sin_observaciones_del_dia")
+        for network in INBOUND_HARVEST_NETWORKS
+    }
+    return counts, coverage
 
 
 def build_report(root, day):
@@ -240,6 +253,16 @@ def build_report(root, day):
             return None if malformed and count == 0 else count
 
         observed = observed_status("confirmadas")
+        net_inbound_coverage = (
+            inbound_coverage.get(net) if isinstance(inbound_coverage, dict)
+            else inbound_coverage
+        )
+        recorded_inbound = (
+            inbound.get(net, 0)
+            if (net in INBOUND_HARVEST_NETWORKS
+                and net_inbound_coverage == "cuentas_tipo_dia_solo_harvest")
+            else None
+        )
         result["networks"][net] = {
             "confirmed_rows": observed,
             "confirmed_by_kind": kinds,
@@ -251,8 +274,8 @@ def build_report(root, day):
             "duplicate_identical_rows": duplicates,
             "malformed_rows": malformed,
             "outbound_coverage": coverage,
-            "incoming_comment_account_days": None if inbound is None or net not in INBOUND_HARVEST_NETWORKS else inbound.get(net, 0),
-            "incoming_coverage": inbound_coverage if net in INBOUND_HARVEST_NETWORKS else "sin_cosecha_instrumentada",
+            "incoming_comment_account_days": recorded_inbound,
+            "incoming_coverage": net_inbound_coverage if net in INBOUND_HARVEST_NETWORKS else "sin_cosecha_instrumentada",
             "followers_net": follower_delta,
             "followers_coverage": follower_coverage,
             "denominators": {key: None for key in (

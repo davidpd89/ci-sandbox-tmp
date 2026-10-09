@@ -288,6 +288,22 @@ class KPITests(unittest.TestCase):
         self.assertIsNone(r["incoming_comment_account_days"])
         self.assertEqual(r["incoming_coverage"], "registro_inbound_parcial")
 
+    def test_malformed_bluesky_does_not_hide_mastodon_evidence(self):
+        p = self.root / "00_OPERATIVO" / "inbound_interacciones.csv"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with p.open("w", encoding="utf-8", newline="") as stream:
+            csv.writer(stream).writerows([
+                ["fecha", "red", "handle", "tipo"],
+                ["2026-10-09", "bluesky", "cuenta"],
+                ["2026-10-09", "mastodon", "otra", "comment"],
+            ])
+        nets = k.build_report(self.root, self.day)["networks"]
+        self.assertIsNone(nets["bluesky"]["incoming_comment_account_days"])
+        self.assertEqual(nets["bluesky"]["incoming_coverage"], "registro_inbound_parcial")
+        self.assertEqual(nets["mastodon"]["incoming_comment_account_days"], 1)
+        self.assertEqual(nets["mastodon"]["incoming_coverage"],
+                         "cuentas_tipo_dia_solo_harvest")
+
     def test_unattributable_inbound_row_is_not_silent(self):
         p = self.root / "00_OPERATIVO" / "inbound_interacciones.csv"
         p.parent.mkdir(parents=True, exist_ok=True)
