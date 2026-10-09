@@ -82,6 +82,8 @@ def check_privacy(paths, root=ROOT):
         if rel.startswith('/') or '..' in Path(rel).parts or BANNED_PATH.search(rel):
             errors.append(f'{rel}: forbidden path'); continue
         path = root / rel
+        if path.is_symlink() or not path.resolve().is_relative_to(root.resolve()):
+            errors.append(f'{rel}: symlink or path escape is forbidden'); continue
         if not path.is_file():
             continue  # deleted paths cannot leak content in the new tree
         if path.stat().st_size > 2_000_000:
@@ -147,9 +149,15 @@ def check_child_deliverables(paths, root=ROOT):
         file = root / p
         if file.is_file():
             content = file.read_text(encoding='utf-8')
-            if all(h in content for h in headings):
+            fields = (
+                r'(?m)^Fuente primaria:\s*https://\S+',
+                r'(?m)^Fecha de consulta:\s*\d{4}-\d{2}-\d{2}',
+                r'(?m)^Licencia SPDX:\s*[A-Za-z0-9.()+\-]+',
+                r'(?m)^Referencia inmutable:\s*(?:https://\S+|N/A \(sin codigo incorporado\))',
+            )
+            if all(h in content for h in headings) and all(re.search(pattern, content) for pattern in fields):
                 return []
-    return ['child research evidence missing required headings']
+    return ['child research evidence missing headings or license/source metadata']
 
 
 def changed_paths(base):
