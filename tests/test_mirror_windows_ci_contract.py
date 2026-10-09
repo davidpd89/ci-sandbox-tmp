@@ -40,6 +40,18 @@ class MirrorWindowsCiContract(unittest.TestCase):
         self.assertIn(install, self.yaml)
         self.assertLess(self.yaml.index(hygiene), self.yaml.index(install))
 
+    def test_hygiene_only_uses_pr_merge_parent_for_pull_requests(self):
+        # HEAD^1 has the PR base as its first parent only for GitHub's PR
+        # synthetic merge. Push and workflow_dispatch must not reuse it.
+        hygiene_step = self.yaml.split(
+            "      - name: No aceptar artefactos operativos", 1
+        )[1].split("      - name: Instalar dependencias", 1)[0]
+        self.assertRegex(
+            hygiene_step,
+            r"(?m)^        if: github\.event_name == 'pull_request'$",
+        )
+        self.assertIn('repo_hygiene.py --base "HEAD^1"', hygiene_step)
+
     def test_offline_regressions_run_without_network_entrypoint(self):
         self.assertIn("python -m compileall -q tools tests", self.yaml)
         self.assertIn("python -m pytest tests -q -p no:cacheprovider", self.yaml)
