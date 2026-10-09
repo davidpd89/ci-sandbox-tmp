@@ -87,7 +87,7 @@ python -m unittest discover -s tests -p test_open_source_campaign.py -v
 python tools/validate_open_source_campaign.py
 python tools/validate_open_source_campaign.py --live
 # Solo cuando el checkout Git tiene la referencia base:
-GITHUB_BASE_REF=research/public-reuse-parent python tools/validate_open_source_campaign.py --changed-base <SHA_BASE>
+GITHUB_BASE_REF=research/public-reuse-parent python tools/validate_open_source_campaign.py --changed-base <SHA_BASE> --child-head <SHA_HEAD_HIJA>
 ```
 
 CI: `.github/workflows/validate-public-reuse.yml`, Python 3.11,
