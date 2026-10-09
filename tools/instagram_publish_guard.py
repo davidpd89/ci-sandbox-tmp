@@ -5,7 +5,7 @@ UNCERTAIN se persiste antes del POST final. La reconciliación es manual.
 import hashlib
 import os
 
-from action_ledger import ActionLedger, FAILED, RESERVED, UNCERTAIN
+from action_ledger import ActionLedger, FAILED, RESERVED, UNCERTAIN, RoundBusy, exclusive
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 GUARD_DB = os.path.join(ROOT, "00_OPERATIVO", "instagram_publish_intents.sqlite3")
@@ -25,8 +25,22 @@ def _key(account_id, item_path):
 
 def publish_guarded(item_path, account_id, submit, *, db_path=None):
     """submit(before_publish) debe llamar al callback justo antes del POST final."""
-    ledger = ActionLedger(db_path or GUARD_DB)
+    path = os.path.abspath(db_path or GUARD_DB)
     target = _key(account_id, item_path)
+    directory = os.path.dirname(path)
+    os.makedirs(directory, exist_ok=True)
+    # ActionLedger activa WAL al abrir cada conexión. Serializar desde ANTES de
+    # su inicialización evita el SQLITE_BUSY al arrancar dos workers juntos.
+    # El candado de fichero también impide dos envíos simultáneos de esta ficha.
+    try:
+        with exclusive("instagram_publish_" + target, directory=directory):
+            return _publish_under_lock(path, target, submit)
+    except RoundBusy as exc:
+        raise InstagramPublicationHeld("Instagram: publicación concurrente en curso") from exc
+
+
+def _publish_under_lock(db_path, target, submit):
+    ledger = ActionLedger(db_path)
     state = ledger.reserve(KIND, target)
     if state != "ok":
         raise InstagramPublicationHeld(
