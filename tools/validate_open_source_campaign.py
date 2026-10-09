@@ -31,20 +31,21 @@ def check_metadata(doc, protocol):
     children = doc.get('children', [])
     if doc.get('repository') != REPO or doc.get('parent_pr') != 10 or doc.get('parent_head') != PARENT:
         errors.append('campaign identity mismatch')
-    if len(children) != 46:
-        errors.append(f'expected 46 children, got {len(children)}')
+    if len(children) < 46:
+        errors.append(f'expected at least 46 original children, got {len(children)}')
     nums = [p.get('number') for p in children]
-    if set(nums) != RANGE or len(set(nums)) != len(nums):
-        errors.append('missing, extra or duplicate PR numbers')
+    numbers = set(nums)
+    if not RANGE.issubset(numbers) or len(numbers) != len(nums) or numbers != set(range(11, max(numbers, default=10) + 1)):
+        errors.append('missing, out-of-sequence or duplicate PR numbers')
     rows = ROW.findall(protocol)
     rownums = [int(n) for n, _, _ in rows]
-    if len(rows) != 46 or set(rownums) != RANGE or len(set(rownums)) != len(rownums):
+    if len(rows) != len(children) or set(rownums) != numbers or len(set(rownums)) != len(rownums):
         errors.append('protocol index is incomplete or duplicated')
     by_number = {int(n): (url, title.strip()) for n, url, title in rows}
     seen_heads, seen_objectives, seen_urls = set(), set(), set()
     for p in children:
         n = p.get('number')
-        if not isinstance(n, int) or n not in RANGE:
+        if not isinstance(n, int) or n not in numbers:
             continue
         expected = f'https://github.com/{REPO}/pull/{n}'
         if p.get('url') != expected or by_number.get(n, (None,))[0] != expected:
@@ -52,11 +53,11 @@ def check_metadata(doc, protocol):
         if p.get('objective') != by_number.get(n, ('', ''))[1]:
             errors.append(f'#{n}: objective/index mismatch')
         head = p.get('head', '')
-        if not isinstance(head, str) or not head.startswith(f'research/{n-10:02}-') or not re.fullmatch(r'research/\d{2}-[a-z0-9]+(?:-[a-z0-9]+)*', head):
+        if not isinstance(head, str) or not head.startswith(f'research/{n-10:02}-') or not re.fullmatch(r'research/\d{2,}-[a-z0-9]+(?:-[a-z0-9]+)*', head):
             errors.append(f'#{n}: branch naming mismatch')
         if p.get('base') != PARENT or p.get('state') not in ('open', 'closed'):
             errors.append(f'#{n}: base or state mismatch')
-        if p.get('area') not in ('platform', 'capability', 'quality', 'operations'):
+        if p.get('area') not in ('platform', 'capability', 'quality', 'operations', 'relationship', 'discovery', 'engagement', 'community', 'content', 'architecture', 'data', 'analytics'):
             errors.append(f'#{n}: unknown domain')
         if not isinstance(p.get('title'), str) or not p['title'].strip():
             errors.append(f'#{n}: empty title')
@@ -69,7 +70,7 @@ def check_metadata(doc, protocol):
         seen_objectives.add(objective)
         seen_urls.add(expected)
         related = p.get('related_prs', [])
-        if not isinstance(related, list) or len(related) != len(set(related)) or n in related or not set(related).issubset(RANGE):
+        if not isinstance(related, list) or len(related) != len(set(related)) or n in related or not set(related).issubset(numbers):
             errors.append(f'#{n}: invalid related PR references')
     return errors
 
