@@ -56,4 +56,12 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: python tools/validate_open_source_campaign.py --live
+          BASE_BRANCH: ${{ github.base_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          if [[ "$BASE_BRANCH" == "research/public-reuse-parent" && -n "$PR_NUMBER" ]]; then
+            python tools/validate_open_source_campaign.py --live --child-number "$PR_NUMBER"
+          else
+            python tools/validate_open_source_campaign.py --live
+          fi
