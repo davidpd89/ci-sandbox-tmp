@@ -78,7 +78,7 @@ por pagina. No se inventa un benchmark de latencia.
   https://www.postman.com/meta/threads/documentation/dht3nzz/threads-api
 - Meta, changelog prioritario si contradice el Postman:
   https://developers.facebook.com/docs/threads/changelog
-- Meta, permisos/token: `threads_basic`, `threads_content_publish`,
+- Meta, scopes requeridos; entre ellos `threads_basic`, `threads_content_publish`,
   `threads_read_replies`, `threads_manage_replies`,
   `threads_manage_insights`; tokens de larga duracion renovables
   **antes de expirar**. No suponer permisos concedidos por documentacion.
