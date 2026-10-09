@@ -111,7 +111,9 @@ def build_plan(items, decisions):
         if "?" in text and not decision.get("allow_question"):
             raise ValueError(f"decision {index}: un seguimiento no termina con pregunta (se alargaria el hilo)")
         plan.append({"handle": item["username"], "kind": "reply", "text": text, "reply_to_id": item["id"],
-                     "post_text": item.get("text", ""), "motivo": "followup API Threads"})
+                     "post_text": item.get("text", ""),
+                     "post_created_at": item.get("timestamp") or "",
+                     "motivo": "followup API Threads"})
     return plan
 
 
