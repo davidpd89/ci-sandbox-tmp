@@ -103,6 +103,17 @@ class KPITests(unittest.TestCase):
         self.assertEqual(r["malformed_rows"], 1)
         self.assertEqual(r["outbound_coverage"], "registro_parcial_filas_invalidas")
 
+    def test_malformed_previous_day_does_not_poison_today(self):
+        old = self.sample()
+        old[0] = "2026-10-08"
+        self.write("x", "registro_interacciones.csv", [
+            old + ["unexpected"], self.sample()
+        ])
+        r = k.build_report(self.root, self.day)["networks"]["x"]
+        self.assertEqual(r["confirmed_rows"], 1)
+        self.assertEqual(r["malformed_rows"], 0)
+        self.assertEqual(r["outbound_coverage"], "registro_legacy_sin_ids")
+
     def test_bad_row_keeps_only_observed_positive_lower_bound(self):
         self.write("x", "registro_interacciones.csv", [
             self.sample(), ["2026-10-09", "cuenta"], self.sample("fallo:timeout", "reply")
@@ -287,6 +298,19 @@ class KPITests(unittest.TestCase):
         r = k.build_report(self.root, self.day)["networks"]["bluesky"]
         self.assertIsNone(r["incoming_comment_account_days"])
         self.assertEqual(r["incoming_coverage"], "registro_inbound_parcial")
+
+    def test_malformed_old_inbound_does_not_poison_today(self):
+        p = self.root / "00_OPERATIVO" / "inbound_interacciones.csv"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with p.open("w", encoding="utf-8", newline="") as stream:
+            csv.writer(stream).writerows([
+                ["fecha", "red", "handle", "tipo"],
+                ["2026-10-08", "bluesky", "vieja"],
+                ["2026-10-09", "bluesky", "nueva", "like"],
+            ])
+        r = k.build_report(self.root, self.day)["networks"]["bluesky"]
+        self.assertEqual(r["incoming_comment_account_days"], 0)
+        self.assertEqual(r["incoming_coverage"], "cuentas_tipo_dia_solo_harvest")
 
     def test_malformed_bluesky_does_not_hide_mastodon_evidence(self):
         p = self.root / "00_OPERATIVO" / "inbound_interacciones.csv"

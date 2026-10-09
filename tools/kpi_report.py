@@ -115,10 +115,10 @@ def _activity(root, net, day):
     seen = set()
     for entry, malformed in mapped:
         local_day = _local_day(entry.get("fecha"))
+        if local_day is not None and local_day != day:
+            continue  # un defecto fechado en otro día no degrada el actual
         if malformed or local_day is None:
             bad += 1
-            continue
-        if local_day != day:
             continue
         # Sin ID de evento: eliminar solo filas *idénticas*; no deduplicar
         # por cuenta, tipo o fecha, pues hay acciones legítimas repetidas.
@@ -193,13 +193,13 @@ def _inbound(root, day):
     for entry, malformed in mapped:
         network = entry.get("red")
         local_day = _local_day(entry.get("fecha"))
+        if local_day is not None and local_day != day:
+            continue
         if malformed or local_day is None:
             if network in INBOUND_HARVEST_NETWORKS:
                 incomplete_networks.add(network)
             elif network not in NETWORKS:
                 unattributed = True
-            continue
-        if local_day != day:
             continue
         if network not in NETWORKS:
             unattributed = True
