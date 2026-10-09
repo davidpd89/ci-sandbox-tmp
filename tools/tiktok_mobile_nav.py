@@ -19,6 +19,7 @@ from typing import Any
 
 import android_shell
 from mobile_client import MobileCliError, element_center, element_texts, walk_ui
+from mobile_ui_diagnostics import compare as compare_ui_diagnostics, diagnose as diagnose_ui_tree
 from tiktok_mobile_interact import (
     ALIASES,
     TikTokMobileAdapter,
@@ -183,6 +184,16 @@ class TikTokNavigator:
     # --- utilidades de pantalla -------------------------------------------------
     def tree(self, *, validate_shape: bool = False) -> Any:
         return self.a._tree(validate_shape=validate_shape)
+
+    def diagnose_current_ui(self, *, reference: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Observe one UI tree without taps, raw text, screenshots or persistence.
+
+        Optional reference is a schema-1 diagnostic, never a raw screenshot.
+        """
+        snapshot = diagnose_ui_tree(self.tree())
+        if reference is None:
+            return snapshot
+        return {"snapshot": snapshot, "comparison": compare_ui_diagnostics(reference, snapshot)}
 
     def _tap_element(self, element: dict[str, Any], wait: float = 1.2) -> None:
         values = _element_values(element)
