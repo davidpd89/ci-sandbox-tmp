@@ -145,6 +145,13 @@ class RoundCsvAtomicity(unittest.TestCase):
             with self.assertRaises(OSError):
                 q.retry_snapshot_today(now=dt.datetime(2026, 10, 9, 14))
 
+    def test_embedded_line_break_does_not_break_recovery_contract(self):
+        invalid = self.row("x")
+        invalid[6] = "{'comment': 'line one\\nline two'}".replace("\\n", "\n")
+        with self.assertRaises(ValueError):
+            q._append_round_csv(invalid)
+        self.assertFalse(self.path.exists())
+
     def test_denied_interprocess_lock_preserves_previous_state(self):
         q._append_round_csv(self.row("x"))
         before = self.path.read_bytes()
