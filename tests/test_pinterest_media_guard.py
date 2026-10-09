@@ -41,6 +41,17 @@ class PinterestImageContractTests(unittest.TestCase):
         with self.assertRaises(guard.PinPreflightError):
             guard.validate_web_pin_image(self.path)
 
+    def test_jpeg_truncation_cannot_pass_structural_verify(self):
+        # Contrato real: Image.verify() deja pasar este JPEG sin marcador
+        # terminal, pero Image.load() lo rechaza.
+        self.image(fmt="JPEG")
+        original = self.path.read_bytes()
+        self.path.write_bytes(original[:-2])
+        with Image.open(self.path) as structure:
+            structure.verify()  # reproducimos el falso positivo anterior
+        with self.assertRaisesRegex(guard.PinPreflightError, "ilegible"):
+            guard.validate_web_pin_image(self.path)
+
     def test_gif_not_in_static_web_contract(self):
         with self.assertRaisesRegex(guard.PinPreflightError, "tipo no admitido"):
             guard.validate_web_pin_image(self.image(fmt="GIF"))
