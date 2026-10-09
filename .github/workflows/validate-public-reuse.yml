@@ -44,7 +44,13 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: python tools/validate_open_source_campaign.py --changed-base "$BASE_SHA"
+          CHILD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [[ "${{ github.base_ref }}" == "research/public-reuse-parent" ]]; then
+            python tools/validate_open_source_campaign.py --changed-base "$BASE_SHA" --child-head "$CHILD_SHA"
+          else
+            python tools/validate_open_source_campaign.py --changed-base "$BASE_SHA"
+          fi
         shell: bash
       - name: Live PR links and branch refs (read-only)
         if: matrix.os == 'ubuntu-latest'
