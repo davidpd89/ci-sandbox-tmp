@@ -115,6 +115,7 @@ class TrustedRegistry:
             raise ValueError("registro de auditoría inválido")
         records = {}
         assignments = {}
+        identities = {}
         for record in reviewed_records:
             if (not isinstance(record, dict) or set(record) != REGISTRY_FIELDS
                     or any(not isinstance(record[k], str)
@@ -130,12 +131,24 @@ class TrustedRegistry:
                    record["target"], record["queue"])
             if key in records:
                 raise ValueError("registro duplicado")
+            # Un identificador opaco corresponde a UN diseño y conjunto de
+            # asignaciones, aunque la revisión abarque más de una cola/red.
+            identity = (record["design_sha256"], record["assignment_sha256"],
+                        record["assignment_count"], record["origin"], record["feature"])
+            prior_identity = identities.get(record["experiment_id"])
+            if prior_identity is not None and prior_identity != identity:
+                raise ValueError("identidad de ensayo inconsistente")
+            identities[record["experiment_id"]] = identity
             manifest = record["assignment_sha256"]
             if manifest in assignments and assignments[manifest] != record["experiment_id"]:
                 raise ValueError("manifest de asignaciones reutilizado entre ensayos")
             assignments[manifest] = record["experiment_id"]
             records[key] = MappingProxyType(dict(record))
-        self._entries = MappingProxyType(records)
+        object.__setattr__(self, "_entries", MappingProxyType(records))
+
+    def __setattr__(self, name, value):
+        # También evita sustituir el mapa completo tras construirlo.
+        raise AttributeError("registro inmutable")
 
     def approves(self, row, target):
         audit = audit_projection(row, target)
