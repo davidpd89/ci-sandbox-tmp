@@ -21,6 +21,7 @@ import random
 import re
 import sys
 import time
+import uuid
 
 import tiktok_safety as safety
 
@@ -33,7 +34,6 @@ SEEDS_PATH = os.path.join(ROOT, "bulk_seeds.json")
 STATE_PATH = os.path.join(ROOT, "..", "tiktok_state.json")
 BUSINESS = re.compile(r"editorial|ediciones|librer|bookstore|biblioteca|publishing|tienda|shop|store|distribu|oficial|official|agencia|news|noticias|ayuntamiento|colegio|escuela|universidad|instituto", re.I)
 DEFAULT_ACCOUNT = re.compile(r"^user\d{7,}$", re.I)
-LIMIT_WARNING = re.compile(r"(demasiado r[aá]pid|too fast|int[eé]ntalo de nuevo m[aá]s tarde|try again later|actividad inusual|unusual activity|has alcanzado el l[ií]mite|reached the limit|temporalmente|temporarily|no puedes seguir|can.t follow)", re.I)
 FOLLOWED = ("following", "friends", "requested")
 DEFAULT_SEEDS = ["damaris_alvz_escritora", "escritordenovela", "bellataylorauthor", "autor.autopublicado", "rafamago1974", "ale.entrepaginas", "valu_reedings", "lauryn.books",
                  "bethlovesbooks64", "mai.libros_", "miriamolmo_autora", "tris_bookstagram", "sharkbooki", "celia_supongo", "lector.compulsivo", "booktokdajhe"]
@@ -60,26 +60,13 @@ class RateLimited(StopSession):
 
 
 def cooldown_left():
-    """Minutos de descanso que quedan tras un aviso de limite (0 si no hay)."""
-    try:
-        until = datetime.datetime.fromisoformat(json.load(open(COOLDOWN_PATH, encoding="utf-8")).get("until", ""))
-    except (OSError, ValueError):
-        return 0
-    return max(0.0, (until - datetime.datetime.now()).total_seconds() / 60)
+    """Compatibilidad: la lectura compartida falla cerrada ante estado ilegible."""
+    return safety.remaining_minutes(COOLDOWN_PATH)
 
 
-def start_cooldown():
-    """Descanso creciente: 60 min la primera vez, el doble si el aviso se repite el mismo dia (max. 4 h)."""
-    try:
-        data = json.load(open(COOLDOWN_PATH, encoding="utf-8"))
-    except (OSError, ValueError):
-        data = {}
-    today = datetime.date.today().isoformat()
-    strikes = int(data.get("strikes", 0)) + 1 if data.get("day") == today else 1
-    minutes = min(240, 60 * 2 ** (strikes - 1))
-    with open(COOLDOWN_PATH, "w", encoding="utf-8") as stream:
-        json.dump({"day": today, "strikes": strikes, "until": (datetime.datetime.now() + datetime.timedelta(minutes=minutes)).isoformat(timespec="seconds")}, stream)
-    return minutes
+def start_cooldown(reason="warning"):
+    """Persiste una restricción mediante el estado atómico compartido."""
+    return safety.restrict(reason, COOLDOWN_PATH)
 
 
 def load_config():
@@ -103,18 +90,33 @@ def followed_before():
     return done, used["follow"]
 
 
-def record_follow(handle, note, result="confirmado"):
+def record_follow(handle, note, result="confirmado", *, intent_id=None):
     if result not in ("confirmado", "pendiente_verificacion"):
-        raise ValueError("resultado invalido")
+        raise ValueError("resultado inválido")
+    if intent_id is not None and not re.fullmatch(r"[a-f0-9]{32}", intent_id):
+        raise ValueError("intent_id inválido")
     new = not os.path.exists(REGISTRO_CSV) or os.path.getsize(REGISTRO_CSV) == 0
+    detail = note
+    if intent_id is not None:
+        detail += f" | intent_id={intent_id}"
     with open(REGISTRO_CSV, "a", newline="", encoding="utf-8") as stream:
         writer = csv.writer(stream)
         if new:
             writer.writerow(["fecha", "cuenta", "tipo", "post_resumen", "texto_usado", "resultado", "notas"])
-        writer.writerow([datetime.date.today().isoformat(), "@" + handle.lstrip("@"), "follow", "", "", result, f"{note} | transporte=android_native"])
+        writer.writerow([datetime.date.today().isoformat(), "@" + handle.lstrip("@"), "follow", "", "", result,
+                         f"{detail} | transporte=android_native"])
         stream.flush()
         os.fsync(stream.fileno())
     print(f"{result:<35} follow   @{handle}", flush=True)
+
+
+def tap_reserved_follow(sess, handle, note, tap):
+    """Write-ahead: registra el intento antes de cualquier tap que pueda producir el follow."""
+    intent_id = uuid.uuid4().hex
+    record_follow(handle, note, "pendiente_verificacion", intent_id=intent_id)
+    sess.done.add(handle.casefold())
+    tap()
+    return intent_id
 
 
 def vet_name(name, handle):
@@ -156,10 +158,13 @@ def parse_follower_rows(tree, handle_x=(222, 240), button_x=(770, 830)):
 
 
 def check_warning(tree):
-    from tiktok_mobile_interact import _visible_text
-    hit = LIMIT_WARNING.search(_visible_text(tree) or "")
-    if hit:
-        raise StopSession(f"aviso de TikTok en pantalla ({hit.group(0)!r}): se para; lo revisa David")
+    safety.require_writable(COOLDOWN_PATH)
+    try:
+        safety.check_screen(tree)
+    except safety.SafetyFollowLimit as exc:
+        raise RateLimited(str(exc)) from exc
+    except safety.SafetyWarning as exc:
+        raise StopSession(str(exc)) from exc
 
 
 class Session:
@@ -189,11 +194,13 @@ class Session:
             print(f"(micro-descanso {pause:.0f}s)", flush=True)
             time.sleep(pause)
 
-    def ok(self, handle, note):
+    def ok(self, handle, note, *, intent_id=None):
+        # Persistir el ACK antes de reflejar éxito en memoria: si falla disco,
+        # el pending anterior sigue bloqueando el reintento tras reinicio.
+        record_follow(handle, note, intent_id=intent_id)
         self.followed += 1
         self.fails = 0
         self.done.add(handle.casefold())
-        record_follow(handle, note)
 
     def fail(self, why):
         self.fails += 1
@@ -241,18 +248,25 @@ def mine_followers(sess, seed, per_seed):
             seen.add(row["handle"].casefold())
             if row["relation"] not in ("not_following", "follows_me") or row["handle"].casefold() in sess.done or not vet_name(row["name"], row["handle"]):
                 continue
-            # la lista sigue deslizandose un instante tras el swipe: se vuelve a leer la fila justo antes de pulsar y se usan las coordenadas FRESCAS (con las del volcado anterior el tap caia en otra fila)
-            current = next((r for r in parse_follower_rows(nav.tree()) if r["handle"].casefold() == row["handle"].casefold()), None)
+            # la lista sigue deslizándose un instante tras el swipe: releer y
+            # validar justo antes del tap; nunca ejecutar sin write-ahead.
+            fresh_tree = nav.tree()
+            check_warning(fresh_tree)
+            current = next((r for r in parse_follower_rows(fresh_tree) if r["handle"].casefold() == row["handle"].casefold()), None)
             if not current or current["relation"] not in ("not_following", "follows_me"):
                 continue
             bx, by = element_center(current["button"])
-            nav.c.tap(bx, by, nav.device.id)
+            note = f"bulk:followers:@{seed}"
+            intent_id = tap_reserved_follow(
+                sess, row["handle"], note,
+                lambda: nav.c.tap(bx, by, nav.device.id),
+            )
             time.sleep(1.1)
             after = nav.tree()
             check_warning(after)
             fresh = next((r for r in parse_follower_rows(after) if r["handle"].casefold() == row["handle"].casefold()), None)
             if fresh and fresh["relation"] in FOLLOWED:
-                sess.ok(row["handle"], f"bulk:followers:@{seed}")
+                sess.ok(row["handle"], note, intent_id=intent_id)
                 mine += 1
             else:
                 try:
@@ -297,13 +311,18 @@ def mine_mutual(sess, query, videos=3, pages=4):
                 if handle and handle.casefold() not in sess.done and vet_name(profile.get("name") or "", handle) \
                         and profile.get("relation") in ("not_following", "follows_me") \
                         and not (profile.get("followers") and profile["followers"] > 150000):
+                    check_warning(nav.tree())
                     bx, by = element_center(profile["relation_element"])
-                    nav.c.tap(bx, by, nav.device.id)
+                    note = f"bulk:mutual:{query}"
+                    intent_id = tap_reserved_follow(
+                        sess, handle, note,
+                        lambda: nav.c.tap(bx, by, nav.device.id),
+                    )
                     time.sleep(1.4)
                     after = nav.read_profile()
                     check_warning(nav.tree())
                     if (after.get("handle") or "").casefold() == handle.casefold() and after.get("relation") in FOLLOWED:
-                        sess.ok(handle, f"bulk:mutual:{query}")
+                        sess.ok(handle, note, intent_id=intent_id)
                         total += 1
                     else:
                         sess.fail(f"@{handle} no quedo en «Siguiendo»")
@@ -349,17 +368,23 @@ def followback_own(sess, max_rows=120):
                 continue
             if rp:
                 rp.log_inbound("tiktok", row["handle"], "follow")
-            current = next((r for r in parse_follower_rows(nav.tree(), button_x=(690, 730)) if r["handle"].casefold() == row["handle"].casefold()), None)
+            fresh_tree = nav.tree()
+            check_warning(fresh_tree)
+            current = next((r for r in parse_follower_rows(fresh_tree, button_x=(690, 730)) if r["handle"].casefold() == row["handle"].casefold()), None)
             if not current or current["relation"] != "follows_me":
                 continue
             bx, by = element_center(current["button"])
-            nav.c.tap(bx, by, nav.device.id)
+            note = "bulk:followback:nuevo_seguidor"
+            intent_id = tap_reserved_follow(
+                sess, row["handle"], note,
+                lambda: nav.c.tap(bx, by, nav.device.id),
+            )
             time.sleep(1.1)
             after = nav.tree()
             check_warning(after)
             fresh = next((r for r in parse_follower_rows(after, button_x=(690, 730)) if r["handle"].casefold() == row["handle"].casefold()), None)
             if fresh and fresh["relation"] in FOLLOWED:
-                sess.ok(row["handle"], "bulk:followback:nuevo_seguidor")
+                sess.ok(row["handle"], note, intent_id=intent_id)
                 mine += 1
             else:
                 sess.fail(f"@{row['handle']} no quedo en «Siguiendo» (follow-back)")
