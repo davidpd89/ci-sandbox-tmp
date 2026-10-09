@@ -91,22 +91,99 @@ class ThreadsPaginationContract(unittest.TestCase):
                 return page([{"id": "post", "text": "Mi novela", "has_replies": True}])
             if path == "me/replies":
                 return page([{"id": "own", "replied_to": {"id": "asked1"}}])
-            if path == "post/replies":
+            if path == "post/conversation":
                 if not params.get("after"):
                     return page([
-                        {"id": "asked1", "username": "ana", "text": "¿Qué libro?", "timestamp": "2026-10-07T10:00:00Z"},
-                        {"id": "noq", "username": "bea", "text": "Gracias.", "timestamp": "2026-10-07T11:00:00Z"},
+                        {"id": "asked1", "username": "ana", "text": "¿Qué libro?", "replied_to": {"id": "post"}, "timestamp": "2026-10-07T10:00:00Z"},
+                        {"id": "noq", "username": "bea", "text": "Gracias.", "replied_to": {"id": "post"}, "timestamp": "2026-10-07T11:00:00Z"},
                     ], "C2")
                 return page([
-                    {"id": "asked2", "username": "cora", "text": "¿Dónde?", "timestamp": "2026-10-08T10:00:00Z"},
-                    {"id": "asked2", "username": "cora", "text": "¿Dónde?", "timestamp": "2026-10-08T10:00:00Z"},
+                    {"id": "asked2", "username": "cora", "text": "¿Dónde?", "replied_to": {"id": "post"}, "timestamp": "2026-10-08T10:00:00Z"},
+                    {"id": "asked2", "username": "cora", "text": "¿Dónde?", "replied_to": {"id": "post"}, "timestamp": "2026-10-08T10:00:00Z"},
                 ])
             raise AssertionError("endpoint inesperado")
         with patch.object(api, "api_get", side_effect=getter):
             pending = api.followups("tok", "autorademodiaz")
         self.assertEqual([r["id"] for r in pending], ["asked2"])
         self.assertEqual(pending[0]["a_nuestro"], "Mi novela")
-        self.assertIn(("post/replies", "C2"), calls)
+        self.assertIn(("post/conversation", "C2"), calls)
+
+    def test_nested_question_to_our_reply_preserves_verified_ancestry(self):
+        calls = []
+        def getter(path, token, **params):
+            calls.append(path)
+            if path == "me/threads":
+                return page([{"id": "root", "text": "Leamos", "has_replies": True}])
+            if path == "me/replies":
+                return page([{"id": "own", "replied_to": {"id": "question"}}])
+            if path == "root/conversation":
+                return page([
+                    {"id": "question", "username": "ana", "text": "¿Qué libro?",
+                     "timestamp": "2026-10-07T08:00:00Z",
+                     "replied_to": {"id": "root"}},
+                    {"id": "own", "username": "autorademodiaz", "text": "El segundo.",
+                     "timestamp": "2026-10-07T09:00:00Z",
+                     "replied_to": {"id": "question"}, "is_reply_owned_by_me": True},
+                    {"id": "nested", "username": "ana", "text": "¿Y la secuela?",
+                     "timestamp": "2026-10-08T10:00:00Z",
+                     "permalink": "https://www.threads.com/@ana/post/fake12345",
+                     "replied_to": {"id": "own"}},
+                    {"id": "third_party", "username": "bea", "text": "¿Y mi libro?",
+                     "timestamp": "2026-10-08T11:00:00Z",
+                     "replied_to": {"id": "question"}},
+                ])
+            raise AssertionError(path)
+        with patch.object(api, "api_get", side_effect=getter):
+            pending = api.followups("tok", "autorademodiaz")
+        self.assertEqual([r["id"] for r in pending], ["nested"])
+        self.assertEqual(pending[0]["a_nuestro"], "El segundo.")
+        self.assertEqual([t["post_id"] for t in pending[0]["thread_turns"]],
+                         ["root", "question", "own", "nested"])
+        self.assertEqual([t["role"] for t in pending[0]["thread_turns"]],
+                         ["ours", "theirs", "ours", "theirs"])
+        plan = api.build_plan(pending, {"actions": [{"id": "nested", "text": "Sí, está publicada."}]})
+        self.assertTrue(plan[0]["reply_to_us"])
+        self.assertEqual(plan[0]["target_created_at"], "2026-10-08T10:00:00Z")
+        self.assertEqual(plan[0]["thread_turns"], pending[0]["thread_turns"])
+        self.assertIn("root/conversation", calls)
+
+    def test_unverifiable_nested_parent_is_not_treated_as_available(self):
+        def getter(path, token, **params):
+            if path == "me/threads":
+                return page([{"id": "root", "text": "Inicio", "has_replies": True}])
+            if path == "me/replies":
+                return page([{"id": "own-missing", "replied_to": {"id": "old-question"}}])
+            if path == "root/conversation":
+                return page([{"id": "nested", "username": "ana", "text": "¿Y ahora?",
+                              "replied_to": {"id": "own-missing"}}])
+            raise AssertionError(path)
+        with patch.object(api, "api_get", side_effect=getter):
+            with self.assertRaisesRegex(RuntimeError, "cadena de respuestas incompleta"):
+                api.followups("tok", "autorademodiaz")
+
+    def test_own_reply_without_parent_does_not_mask_duplicate_risk(self):
+        def getter(path, token, **params):
+            if path == "me/threads":
+                return page([{"id": "root", "text": "Inicio", "has_replies": True}])
+            if path == "me/replies":
+                return page([{"id": "own-no-parent"}])
+            raise AssertionError(path)
+        with patch.object(api, "api_get", side_effect=getter):
+            with self.assertRaisesRegex(RuntimeError, "carece de replied_to"):
+                api.followups("tok", "autorademodiaz")
+
+    def test_missing_parent_on_inbound_question_fails_closed(self):
+        def getter(path, token, **params):
+            if path == "me/threads":
+                return page([{"id": "root", "text": "Inicio", "has_replies": True}])
+            if path == "me/replies":
+                return page([])
+            if path == "root/conversation":
+                return page([{"id": "unbound", "username": "ana", "text": "¿Sigues ahí?"}])
+            raise AssertionError(path)
+        with patch.object(api, "api_get", side_effect=getter):
+            with self.assertRaisesRegex(RuntimeError, "respuesta recibida sin replied_to"):
+                api.followups("tok", "autorademodiaz")
 
     def test_denied_permissions_and_expired_token_never_return_empty_inbox(self):
         for error in ("API 401: expired token", "API 403: missing threads_read_replies"):
