@@ -11,7 +11,7 @@ Referencia inmutable: https://github.com/python-pillow/Pillow/tree/11.3.0
 
 ## Problema y reproducción del flujo real
 
-En el mirror, `tools/pinterest_publish.py:publish_pin` aceptaba en modo dry-run cualquier fichero existente: un GIF renombrado a PNG, un PNG truncado o una imagen de más de 20 MB obtenían «ensayo». El mismo error se trasladaba a `--apply` después de abrir el navegador. Tampoco validaba allí el enlace ni la presencia real de ALT y descripción. Antes: **0 de 3 entradas deliberadamente inválidas bloqueadas por el control de imagen** (según inspección del predicado `os.path.exists`, no benchmark de una ejecución histórica). Ahora: esos **3 casos fallan antes de Playwright**, probado en el contrato offline; el test de cableado queda sujeto a CI del checkout real.
+En el mirror, `tools/pinterest_publish.py:publish_pin` aceptaba en modo dry-run cualquier fichero existente: un GIF renombrado a PNG, un PNG truncado o una imagen de más de 20 MB obtenían «ensayo». El mismo error se trasladaba a `--apply` después de abrir el navegador. Tampoco validaba allí el enlace ni la presencia real de ALT y descripción. Antes: **0 de 3 entradas deliberadamente inválidas bloqueadas por el control de imagen** (según inspección del predicado `os.path.exists`, no benchmark de una ejecución histórica). Ahora: esos **3 casos fallan antes de Playwright**, demostrado con tests offline y validado en CI para el checkout real (run 37989902365).
 
 Ruta operativa del mirror: ficha `publicaciones Pinterest GPT/*/publicacion.md` o páginas del sitio → `tools/content_queue.py` o `tools/pinterest_daily_pins.py` → selección de tablero/copy/asset → `pinterest_publish.publish_pin` → validación nueva → (solo con `--apply` aprobado) Playwright/CDP y verificación de campos → clic → comprobación en tablero/permalink → `pins_auto.csv`/cola y estado `pendiente_verificacion` ante confirmación ambigua. `tools/action_ledger.py` coordina el navegador. El origen y la persistencia de la deduplicación están en `pinterest_daily_pins.used_links`, `today_count` y la prueba `tests/test_r7_pinterest_post_wait_revalidation.py`: no se reintenta ciegamente un clic de resultado incierto.
 
@@ -87,14 +87,14 @@ Retirada reversible: revertir los commits de esta rama que añaden `pinterest_me
 | Confusión métricas vs tráfico verificado | documentación explícita sin falsas conversiones | PASA (documental) |
 | API scopes/acceso real | documentación oficial, sin token | PENDIENTE de credenciales y autorización |
 | No acciones reales | cambios offline, sin `--apply` | PASA en ejecución local |
-| CI de la rama final y Windows/Linux | workflow offline success 37979404865, Ubuntu/Windows; gate de campaña run 37979411549 failure (46/76) | PASA regresiones; FALLA gate padre |
+| CI de la rama final y Windows/Linux | [suite offline 37989902365](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37989902365) y [gate campaña 37989908541](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37989908541), ambos sistemas | PASA en Ubuntu y Windows para SHA 2232a398 |
 | Integración con repositorio oficial privado | versiones divergentes | BLOQUEADA para promoción, no para review del mirror |
 
 **BLOQUEOS_PARA_CLAUDE**: La rama final y SHAs deberán leerse de GitHub tras el último commit; el análisis partió de #17 `6c0d343d3df1d0923983f41aa39988ca9a05f5b2`, padre `4da0584f270bdbec6cf37286cc86396a08e11bab` y source oficial `main` consultado el 09-10-2026. En esta sesión no se dispone de checkout clonado ni tokens Pinterest; el intento `git ls-remote https://github.com/davidpd89/ci-sandbox-tmp.git HEAD` falló: `Could not resolve host: github.com`. Acceso GitHub mediante conector con escritura en rama hija; acceso API Pinterest no usado. Claude debe: (1) actualizar/refetch la rama, (2) ejecutar comandos CI anteriores y suite global con fixtures offline, (3) inspeccionar logs Ubuntu/Windows y diffs completos, (4) comparar cuidadosamente el estado del repositorio privado con el mirror antes de cualquier port, (5) confirmar revisión humana y cumplimiento del protocolo antes de merge. No forzar pushes ni publicar Pines.
 
-**Estado del gate de campaña verificado y persistente a 09-10-2026 (run 37979411549):** [traza de referencia 37978617623](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37978617623), jobs Ubuntu y Windows finalizados con `failure`. En ambos `python -m unittest discover -s tests -p test_open_source_campaign.py -v` pasó, pero el paso `python tools/validate_open_source_campaign.py` falló: `campaign: 76 children; 3 errors`, `expected 46 children, got 76`, `missing, extra or duplicate PR numbers`, `protocol index is incomplete or duplicated`. Es drift de la rama padre #10: el índice/manifiesto ahora contienen 76 hijas, pero el script de validación tiene `RANGE = set(range(11, 57))` y comprueba `len(children) == 46`. **No alterar el padre desde la hija #17.** Tras corregir la validación en la PR padre, volver a comprobar el workflow en la rama hija. El éxito de los tests del protocolo no significa ejecución de los tests nuevos de Pinterest.
+**Incidencia histórica del gate de campaña (run 37979411549, ya resuelta):** [traza de referencia 37978617623](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37978617623), jobs Ubuntu y Windows finalizados con `failure`. En ambos `python -m unittest discover -s tests -p test_open_source_campaign.py -v` pasó, pero el paso `python tools/validate_open_source_campaign.py` falló: `campaign: 76 children; 3 errors`, `expected 46 children, got 76`, `missing, extra or duplicate PR numbers`, `protocol index is incomplete or duplicated`. Es drift de la rama padre #10: el índice/manifiesto ahora contienen 76 hijas, pero el script de validación tiene `RANGE = set(range(11, 57))` y comprueba `len(children) == 46`. **No se alteró el padre desde esta hija.** Posteriormente la rama base incorporó validación de las 76 hijas. El primer reintento falló por metadatos SPDX y encabezados no indexados; el informe se completó y [run 37989908541](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37989908541) terminó en `success` tanto en Windows como en Ubuntu. Los tests nuevos de Pinterest se ejecutan separadamente en la suite offline 37989902365.
 
-**Veredicto: BLOQUEADA para merge**, aunque los cambios específicos de Pinterest quedan preparados para revisión: corregir puerta común en #10, ejecutar tests del nuevo guard con checkout real y validar contra repositorio oficial privado.
+**Veredicto actualizado: PASA CI del mirror y queda para revisión de Claude; NO hacer merge automático.** Faltan revisión humana de la integración privada y, si se decide publicar, canario manual supervisado; no se han utilizado cuentas ni navegadores reales en estas pruebas.
 
 
 ## Ampliación adversarial: orientación EXIF y tipos de ficha (09-10-2026)
@@ -159,9 +159,9 @@ python -m pytest tests/test_pinterest_media_guard.py tests/test_pinterest_exif_p
 
 La suite general se ejecuta con `.github/workflows/validate-social-tools.yml`
 en cada push. Para el **último SHA**, comprobar los jobs Ubuntu y Windows
-antes de considerar la rama revisable. El gate de la campaña (#10; 76
-hijas frente a 46 reconocidas) permanece fuera del alcance de esta
-PR y bloquea su merge aunque las pruebas funcionales resulten verdes.
+antes de considerar la rama revisable. El gate de campaña fue corregido en la base #10, sin tocarse desde
+esta hija, y posteriormente pasó en ambos sistemas en run 37989908541.
+No confundir su aprobación con una publicación Pinterest real.
 
 **Aplicación transversal:** otras redes pueden consumir dimensiones
 visuales EXIF en el inventario de assets (#28), con requisitos propios:
@@ -178,3 +178,37 @@ y simulación y la ventana de modificación del archivo antes de
 `set_input_files`; las pruebas no certifican ni publicación ni tráfico
 reales. No se accedió a cuentas, ni se abrió navegador de producción,
 ni se modificó estado de la red.
+
+
+## Cierre de revisión adversarial y evidencia final de CI (09-10-2026)
+
+**HEAD probado (código y metadatos):** `2232a398830b87d3315695627a9273207140f76b`.
+[Suite offline 37989902365](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37989902365):
+Ubuntu **1702 passed, 8 skipped, 8 deselected, 2 warnings, 692 subtests**;
+Windows **1705 passed, 5 skipped, 8 deselected, 2 warnings, 692 subtests**.
+[Gate de campaña 37989908541](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/37989908541):
+**success Ubuntu + Windows**. Se ejercitaron los tests nuevos de
+orientación EXIF, PNG sin EXIF y ocho entradas de metadatos incorrectos
+sin abrir Playwright. Todas las pruebas siguen siendo simuladas/offline.
+
+**Segunda revisión adversarial externa al código nuevo:**
+la rama oficial privada `integracion/crecimiento-2026-10` contiene
+`tools/pinterest_publish.py` con un chequeo de `circuit_breaker.write_preflight`
+en la CLI del modo `--apply`; el mirror sanitizado no tiene el mismo
+contenido. Antes de promover, Claude debe portar **solo** guard,
+llamadas mínimas y pruebas, preservando ese preflight de la rama
+privada, el aislamiento de colas WEB/API/MOBILE y la lógica existente
+de estado incierto. No copiar el publicador del mirror sobre el
+módulo privado completo. No hubo escrituras en el repositorio oficial.
+
+**Límites finales:** GitHub CI no ejecuta Edge real, Windows con un
+usuario conectado, tokens Pinterest ni una publicación/canario. No
+certifica permisos, alcance real de analytics, tráfico web ni venta
+atribuida. Tampoco garantiza que el DOM de Pinterest permanezca estable.
+Rollback de la mejora EXIF/campos: revertir los commits específicos
+`ff81fb4`, `7ada1bc`, `a9a1620`, `5b1b6ac` y `5bd1061`
+(o su squash), sin migraciones ni escrituras en cuentas.
+
+**PRs adicionales:** ninguna: #20 (cola/publicación), #23
+(atribución), #28 (assets y EXIF compartido) y #41 (deriva API)
+ya cubren los trabajos transversales. Evitar duplicar esos encargos.
