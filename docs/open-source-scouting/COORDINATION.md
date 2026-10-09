@@ -3,6 +3,8 @@
 Actualizado: 2026-10-09. **Mirror público:** `davidpd89/ci-sandbox-tmp`.
 **Original privado:** `davidpd89/rrss-davidporto-CODE`. No son intercambiables.
 Fuente de números, SHA de referencia y relaciones: [children.json](children.json).
+El alcance inicial #11–#56 fue ampliado en vivo el 2026-10-09 con #57–#86;
+se preservan las 46 originales y se exige integridad del nuevo bloque.
 El índice textual de 46 PR está en [PROTOCOL.md](PROTOCOL.md).
 
 ## Ciclo de trabajo y puntos de fallo
@@ -40,13 +42,19 @@ todas las hermanas relacionadas; volver a hacerlo antes de promover.
 | 23, 24, 32, 46, 47, 48 | Métricas, panel, datos, reconciliación, alertas, backup; `tools/*metrics*.py`, CSV/SQLite | Congelar esquema y claves con 32; 46 verifica reconciliación antes de panel/alertas |
 | 27, 38, 42, 43 | Navegador/móvil, fugas, selectores y capacidades; `tools/mobile_runtime.py`, `tools/cdp_health.py` | 27 aporta límites de sesión; 38 maneja cierre; 42 pruebas visuales; 43 declara degradación |
 | 28, 51, 53 | Contenido, evaluación editorial, fixtures; `tools/*content*.py`, render y archivos de test | 53 debe producir datos sintéticos; 51 no debe introducir corpus privado al mirror |
-| 29, 54, 56 | Agentes, costes, documentación; `00_OPERATIVO/02_FLUJOS/`, runbooks | 29 define contratos y límites; 54 mide; 56 actualiza documentación ejecutable |
+| 29, 37, 54, 56 | Agentes, costes, documentación; `00_OPERATIVO/02_FLUJOS/`, runbooks | 29 define contratos y límites; 54 mide; 56 actualiza documentación ejecutable |
 | 30, 33, 34, 35, 36, 52 | Test harness, paridad, mutaciones, modelos, caos, E2E shadow; `tests/`, CI | 30 fija contratos; 33/35/36 añaden controles aislados; 52 valida sin efectuar acciones |
 | 31, 41, 45, 55 | Privacidad, API drift, calidad, dependencias; CI, requisitos, licencias | 31 revisa higiene antes de cualquier porte; 41 vigila contratos; 55 registra versiones |
 | 40, 44, 50 | Migraciones, arquitectura, Unicode; esquema, imports y normalización | 44 fija propiedad por módulo; 40 requiere compatibilidad hacia atrás; 50 prueba datos ES-ES |
 
+| 57–62, 65, 68, 71, 84, 85 | Relaciones/followback/unfollow, antigüedad, identidad, estado, ledger; `tools/growth_common.py`, registros y pruebas de relaciones | Un único estado canónico; #60 y #84 coordinan claves e idempotencia antes de #57/#58/#59 |
+| 63–66, 70 | Descubrimiento de hashtags, comunidades, reciprocidad, ranking, autores de engagement | Coordinar con #21, #25 y filtros compartidos; evitar contar la misma cuenta dos veces |
+| 67, 69, 77, 78 | Persistencia de repost, fidelización, conversación y cadencia | Coordinar con #22/#25/#49 y ledger #84; límites de contexto por usuario |
+| 72–76, 79, 80 | Benchmark, corpus humano, contexto, muletillas, voz local, experimentos | No mover conversaciones ni muestras reales al mirror; fixtures de redacción inventados, #51/#53 |
+| 81–83, 86 | Paridad ejecutable, drift de configuración, rondas y embudo | Coordinar #33/#41/#43, #20/#26 y #23/#24; separar métricas observadas de inferidas |
+
 Las relaciones explícitas por hija constan en `children.json[].related_prs`.
-En el estado inicial (2026-10-09) **las 46 PR solo añaden sus propias fichas
+En el estado inicial (2026-10-09) **las 76 PR solo añaden sus propias fichas
 `docs/open-source-scouting/tasks/*.md`**. Cero colisiones de archivo observadas
 en el diff inicial, NO garantía de ausencia de futuras colisiones semánticas.
 
