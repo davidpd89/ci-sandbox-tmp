@@ -20,7 +20,7 @@ consultas GitHub o pruebas identificables; no se interpreta
 | Procedencia/licencia | `RESEARCH_TEMPLATE.md` y campos exigidos de fuente, SPDX, referencia inmutable y fecha | Pasa formato; licencias reales pendientes por hija |
 | Secretos y fixtures | `check_privacy`, tests de secreto, email, ruta y symlink sintéticos | Pasa sintético; clasificación humana pendiente |
 | CI independiente | `.github/workflows/validate-public-reuse.yml` Ubuntu/Windows con token solo lectura | Implementado; consultar job del último SHA |
-| Pruebas negativas | `tests/test_open_source_campaign.py`: huecos, duplicado, URL, base, leak, symlink, paginación | Pasa local prototipo; suite actual en CI |
+| Pruebas negativas | `tests/test_open_source_campaign.py`: huecos, duplicado, URL, base, leak, symlink, paginación | Pasa local prototipo; suite actual en CI (30 tests sintéticos) |
 | Compatibilidad con original (G2) | `00_OPERATIVO/...` consultado; no se ejecutaron tests privados | Pendiente |
 | Promoción/rollback (G3) | `PROMOTION_TEMPLATE.json` no aprobado, `COORDINATION.md` | Protocolo pasa; autorización pendiente |
 | Reviews, checks, conflictos finales | GitHub PR #10 y checks por SHA, revisión humana | Pendiente |
@@ -77,6 +77,20 @@ La matriz identifica `scan_common`, ledger, scheduler, media,
 configuración, tests y adaptadores como superficies potenciales.
 Antes de merge, volver a leer diffs de las PR hermanas y elegir
 una interfaz ganadora; el padre jamás fusiona hijas automáticamente.
+
+**Objeción 8: un diff sobre el commit sintético de una PR hija
+contiene el informe y los tests del padre.** Esto permitiría acreditar
+una hija que sólo ha escrito una ficha. Corrección: el paso de CI pasa el
+SHA real de la hija y compara `merge-base(base, head_hija)..head_hija`,
+no el merge construido por GitHub. Test con comandos `git` simulados y
+rechazo del entregable vacío. Releer logs de hijas ya abiertas para
+comprobar que no se aprueban falsos positivos.
+
+**Objeción 9: el catálogo completo puede bloquear a todas las hijas
+por cambiar una sola PR ajena.** Corrección: el padre comprueba todo con
+`--live`, cada hija usa `--live --child-number N` y compara sólo
+su registro y el del padre; test con cambio de título de hermana y
+nueva PR no indexada. El padre sigue detectando añadidos omitidos.
 
 ## Limitaciones residuales y cierre
 
