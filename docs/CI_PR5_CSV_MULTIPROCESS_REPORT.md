@@ -112,3 +112,27 @@ Una ejecución posterior detectó un error de sintaxis introducido al refinar la
 Fuentes técnicas contrastadas a fecha 09-10-2026: portalocker 4.4.0 (BSD-3-Clause, https://pypi.org/project/portalocker/); filelock 4.0.12 (MIT, https://pypi.org/project/filelock/); fasteners (Apache-2.0, https://github.com/harlowja/fasteners); SQLite WAL (https://www.sqlite.org/wal.html). La elección de seguir con `_recovery_guard` de la base es deliberada: reutiliza un guard ya probado y evita dependencia ajena; un ledger SQLite transaccional sería otra arquitectura y encaja con el trabajo ya abierto sobre idempotencia de la PR #26.
 
 **Limitación residual concreta:** no se conoce de forma atómica si una acción remota se confirmó justo antes de que fallara la persistencia local. Ni el lock CSV ni `fsync` pueden resolverlo por sí solos. Claude debe conciliar ese contrato con la capa de ledger/acción confirmada del repositorio oficial antes de interpretar una repetición como segura.
+
+
+## Tercera revisión adversarial — 2026-10-10
+
+La comprobación de las rutas de recuperación detectó un caso no cubierto: el
+**primer escritor** podía interrumpirse mientras materializaba la cabecera, antes
+de emitir el primer salto de línea. `_append_round_csv` comprobaba la cabecera
+antes de intentar reparar esa cola; la siguiente ronda fallaba con
+`ValueError`, aunque no existiese ninguna fila confirmada que conservar.
+
+Se corrige dentro del mismo lock interproceso: solo si el primer bloque
+**sin LF** coincide exactamente con un prefijo de la cabecera canónica se ejecuta
+la reparación antes de validar el esquema. Cualquier cabecera ajena o de
+formato legacy sigue rechazándose sin reescribirla. La validación convencional
+se mantiene para toda cabecera con LF.
+
+Regresiones añadidas a `tests/test_pr68_csv_multiprocess.py`:
+- Prefijos del encabezado de 1, 10, penúltimo, último byte y cabecera completa:
+  reconstrucción de una sola cabecera y una sola fila tras append.
+- Cabecera incompleta ajena al contrato: error explícito y bytes previos intactos.
+
+El alcance sigue siendo exclusivamente la integridad del CSV compartido por
+todas las redes; no se incorpora un segundo writer por adaptador ni se modifica
+el repositorio oficial. Para el port, trasladar también estas dos regresiones.
