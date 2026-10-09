@@ -50,9 +50,9 @@ El primer comando tiene el mismo criterio que pytest, pero `python -m pytest tes
 
 ## Coordinación
 
-Las PR mirror [#21](https://github.com/davidpd89/ci-sandbox-tmp/pull/21) (selección), [#22](https://github.com/davidpd89/ci-sandbox-tmp/pull/22) (texto/contexto), [#25](https://github.com/davidpd89/ci-sandbox-tmp/pull/25) (memoria) y [#41](https://github.com/davidpd89/ci-sandbox-tmp/pull/41) (drift API) siguen abiertas y, a la consulta, solo cambian sus encargos. Esta PR no modifica `scan_common`, colas, `ledger`, puntuaciones, writer, historial ni parseadores compartidos. La PR **#44 del repositorio oficial** es otra numeración y añade fidelización Reddit, en `sub/11-loyalty-reddit`, base `integracion/crecimiento-2026-10`, abierta a esta consulta. No copiar ni pisar su política de respuestas.
+Las PR mirror [#21](https://github.com/davidpd89/ci-sandbox-tmp/pull/21) (selección), [#22](https://github.com/davidpd89/ci-sandbox-tmp/pull/22) (texto/contexto), [#25](https://github.com/davidpd89/ci-sandbox-tmp/pull/25) (memoria) y [#41](https://github.com/davidpd89/ci-sandbox-tmp/pull/41) (drift API) siguen abiertas y, a la consulta, solo cambian sus encargos. Esta PR no modifica `scan_common`, colas, `ledger`, puntuaciones, writer, historial ni parseadores compartidos. La PR **#44 del repositorio oficial** (otra numeración) fue **fusionada el 09-10-2026 a las 19:54 UTC** en `integracion/crecimiento-2026-10` (merge `d67643cfde384d635592924adcba819bad643c63`). Releer su política de fidelización ya integrada antes de adaptar la utilidad; nunca sobreescribirla.
 
-Orden recomendado: integrar primero el estado real/continuidad de la rama oficial de fidelización tras revisar sus cambios; adaptar luego el verificador a un transport autorizado/DOM bajo lock; solo después extender evaluación/ranking y drift. Una API compartida de status/snapshot deberá pertenecer a #41, no se crea aquí.
+Orden recomendado: partir de la fidelización ya fusionada en la rama oficial; adaptar luego el verificador a un transport autorizado/DOM bajo lock; solo después extender evaluación/ranking y drift. Una API compartida de status/snapshot deberá pertenecer a #41, no se crea aquí.
 
 ## Autorrevisión adversarial
 
@@ -100,7 +100,7 @@ El baseline oficial **no se ejecutó en este mirror**: faltan sus módulos. Por 
 
 ### BLOQUEOS_PARA_CLAUDE — pasos exactos
 
-1. En la máquina autorizada del repositorio privado, comprobar `git status`, SHA y rama propia. **No** fusionar de oficio este mirror público sobre `main`, ni copiar historiales o sesiones. Revisar primero cambios de PR oficial #44 (`tools/reddit_comments.py`, `tools/reddit_interact.py`) y su aprobación humana.
+1. En la máquina autorizada del repositorio privado, comprobar `git status`, SHA y rama propia. **No** fusionar de oficio este mirror público sobre `main`, ni copiar historiales o sesiones. Revisar primero cambios ya fusionados de PR oficial #44 (`tools/reddit_comments.py`, `tools/reddit_interact.py`) y su aprobación humana.
 2. Inspeccionar con cuidado `tools/reddit_execute.py::_preflight_plan`, `run_plan`, `_append_registro`, `tools/reddit_interact.py::comment`, `_comment_history_state` y tests de regresión Reddit. Adaptar la comprobación antes del envío **dentro del lock de navegador**, sin importar código privado al mirror. En el contrato oficial no se admite reintento tras 429/timeout/confirmación ambigua.
 3. Resolver preservación de intentos ambiguos en ledger antes de habilitar escrituras; cotejar con el cambio de #44. No tratar un fallo como si nada hubiese sucedido.
 4. Solo si existen permisos OAuth reales y revisión de términos, conectar lectura de `/comments/<id>.json`, reglas y estado de usuario; de otro modo utilizar señales DOM comprobables sin ampliar acciones automatizadas. Nunca consumir la fixture como dato real.
@@ -109,3 +109,24 @@ El baseline oficial **no se ejecutó en este mirror**: faltan sus módulos. Por 
 7. Bloqueos técnicos vigentes: faltan credenciales/permisos Reddit para confirmar API real; mirror carece del ejecutor/CDP/ledger de producción; checks de campaña fallidos por índice y branch diverged; revisiones y autorización de merge pendientes. No hubo comando de escritura a Reddit ni prueba real de OAuth.
 
 **Veredicto de integración real: BLOQUEADA.** El verificador independiente y sus regresiones sí están listos para revisión de código, pero no debe describirse como protección ya operativa en la cuenta.
+
+## Revisión adversarial adicional: procedencia del comentario y del consentimiento (09-10-2026)
+
+**Fallo reproducible anterior**: el objeto de revisión exigía `subreddit` y flags humanos, pero no estaba ligado a un **post concreto ni al texto exacto**. Una ficha de revisión válida podía trasladarse a otra conversación dentro de `r/libros` o a un mensaje editado, manteniendo el resultado `allowed=True` si el resto del snapshot coincidía. Además, el recorrido previo aceptaba `t1` de otros hilos al no comprobar `link_id` ni la relación `parent_id` de los nodos anidados. Las citas y comprobaciones de autor podían entonces resolverse sobre objetos ajenos. Son defectos de identidad, no de acceso a la API.
+
+**Corrección aplicada en esta misma PR**:
+
+- El esquema de revisión añade `post_id`, `plan_sha256` (SHA-256 UTF-8 del texto exacto) y `context_checked_at`. El instante de lectura humana debe ser posterior o igual al del snapshot, no futuro y no superar cinco minutos. Cambiar el texto o el hilo obliga a una nueva revisión; el digest **no autentica** a la persona que rellenó el JSON.
+- El recorrido de Listings ahora es iterativo (no recursivo), comprueba por cada `t1` el `id` único, `link_id=t3_<post>`, `parent_id` del contenedor, autor y cuerpo. Rechaza `more`, hijos ausentes, duplicados, profundidad mayor que 64 y más de 10 000 comentarios. Esta cota evita desbordamientos con JSONs sintéticos o dañados y no pretende cubrir todo hilo gigantesco.
+- Las marcas temporales requieren zona horaria explícita y números finitos; se evita interpretar silenciosamente una hora ingenua usando la zona local de Windows/Ubuntu.
+- `tests/test_reddit_snapshot_provenance.py` cubre revisión reutilizada en otro hilo/texto, lecturas caducadas, nodos injertados, duplicados, árbol anidado legítimo, `more`, profundidad adversarial y timestamps anómalos. `tests/test_reddit_snapshot_preflight.py` comprueba cita Markdown incluso con digest de revisión actualizado. La fixture y todos los casos son inventados.
+- Migración: **no hay migración de datos reales**. Los consumidores offline que construyan un `review` deben añadir las tres claves; omitirlas bloquea la decisión de forma explícita. No reutilizar automáticamente fichas anteriores como aprobaciones.
+- Rollback: revertir los commits de módulo/tests/fixture de esta revisión; no existe escritura en bases de datos, usuarios ni navegador.
+
+**Reutilización pública (comparación ampliada):** se contrastó también [RedditWarp, MIT](https://github.com/Pyprohly/redditwarp/blob/c117c4e677a397c3779c1b9d7017926587110fda/LICENSE), commit [`c117c4e` del 01-07-2024](https://github.com/Pyprohly/redditwarp/commit/c117c4e677a397c3779c1b9d7017926587110fda), sin commits posteriores en la rama principal según GitHub al 09-10-2026. Ofrece wrappers tipados Python >=3.8, compatibles de forma declarada con Python 3.11/Windows. Frente a PRAW/Async PRAW, mantenidos con `v8.0.3` de agosto de 2026, no justifica incorporar una tercera capa de autenticación/red a un verificador de snapshots inerte. Se reutilizó el **contrato público** de Listings `t3/t1/more` de la [documentación de Reddit](https://www.reddit.com/dev/api/), no código externo ni una dependencia nueva.
+
+**Aplicación transversal:** conservar el patrón `identidad del objetivo + fingerprint del borrador + evidencia humana posterior al snapshot` como contrato de adaptador para las colas WEB/API/MOBILE cuando se construya una capa común de revisión. No extraerlo aquí a `scan_common` porque las PR [#22](https://github.com/davidpd89/ci-sandbox-tmp/pull/22) (redacción/contexto), [#25](https://github.com/davidpd89/ci-sandbox-tmp/pull/25) (historial) y [#8](https://github.com/davidpd89/ci-sandbox-tmp/pull/8) (antigüedad) ya tienen jurisdicciones relacionadas. No confundir el fingerprint de aprobación con la confirmación idempotente del envío.
+
+**Límite residual y segunda pasada:** JSON de snapshot/revisión no firmado; no se acredita ni la procedencia de la API ni la autenticación del revisor, y existe carrera entre la última lectura y el clic. El ejecutor privado fusionado debe adquirir el snapshot bajo lock y registrar/reconciliar cualquier intento ambiguo. Por ello, `allowed=True` sigue significando exclusivamente *apto para revisión manual*. No publicar, reintentar ni votar automáticamente a partir de esta salida.
+
+La PR del espejo sigue sin ser integración en producción. El gate de campaña de la rama padre puede permanecer rojo por su manifiesto desactualizado; resolver en la [PR #10](https://github.com/davidpd89/ci-sandbox-tmp/pull/10), no en esta rama Reddit. Las comprobaciones de Ubuntu/Windows para el último HEAD deben consultarse en Actions antes de integrar.
