@@ -92,6 +92,7 @@ def build(scan, decisions):
                 "kind": kind,
                 "lane": lane,
                 "url": post["url"],
+                "post_created_at": post.get("created_at") or None,
                 "motivo": (
                     f"growth:{pid}:lane={lane}:"
                     + ",".join(post.get("sources") or [])
