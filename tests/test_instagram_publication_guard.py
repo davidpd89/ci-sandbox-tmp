@@ -89,6 +89,54 @@ class DurableIntentTests(unittest.TestCase):
         self.assertEqual(sorted([out1.strip(), out2.strip()]), ["HELD", "SENT"])
 
 
+    def test_same_fixture_baseline_two_posts_guard_one(self):
+        # Reproduce el protocolo: status FINISHED y timeout DESPUÉS del POST.
+        # Baseline (dos ejecuciones sin journal) = 2 envíos; guard = 1.
+        sent = []
+        def fake_post(base, path, token, **params):
+            if path.endswith("/media_publish"):
+                sent.append(path)
+                raise TimeoutError("Meta procesó el POST pero se perdió la respuesta")
+            return {"id": "CONTAINER-1"}
+        def fake_get(base, path, token, **params):
+            return {"status_code": "FINISHED"}
+        def submit(callback=None):
+            return mp.publish_instagram(
+                "synthetic", "IG-SYNTH", "Texto", ["https://example.invalid/a.jpg"],
+                before_publish=callback,
+            )
+        with patch.object(mp.mc, "graph_post", side_effect=fake_post), \
+             patch.object(mp.mc, "graph_get", side_effect=fake_get):
+            for _ in range(2):
+                with self.assertRaises(TimeoutError):
+                    submit()
+            baseline_count = len(sent)
+            sent.clear()
+            with self.assertRaises(TimeoutError):
+                guard.publish_guarded(
+                    self.item, "IG-SYNTH", submit, db_path=self.db,
+                )
+            with self.assertRaises(guard.InstagramPublicationHeld):
+                guard.publish_guarded(
+                    self.item, "IG-SYNTH", submit, db_path=self.db,
+                )
+            guarded_count = len(sent)
+        self.assertEqual((baseline_count, guarded_count), (2, 1))
+
+    def test_corrupt_journal_fails_closed_without_sending(self):
+        import sqlite3
+        with open(self.db, "wb") as stream:
+            stream.write(b"esto no es SQLite")
+        calls = []
+        with self.assertRaises(sqlite3.DatabaseError):
+            guard.publish_guarded(
+                self.item, "IG-SYNTH",
+                lambda cb: calls.append("POST"),
+                db_path=self.db,
+            )
+        self.assertEqual(calls, [])
+
+
 class MetaContractTests(unittest.TestCase):
     def test_final_post_only_after_finished_and_checkpoint(self):
         calls = []
