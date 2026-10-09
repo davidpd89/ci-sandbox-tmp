@@ -29,6 +29,8 @@ AUDIT_FIELDS = frozenset((
     "origin", "feature", "target", "queue",
 ))
 REGISTRY_FIELDS = AUDIT_FIELDS | {"evidence_sha256"}
+# review() permite 100 observaciones, cada una hasta 8 destinos instrumentados.
+MAX_REGISTRY_RECORDS = 800
 
 
 def _is_hash(value):
@@ -111,7 +113,7 @@ class TrustedRegistry:
     __slots__ = ("_entries",)
 
     def __init__(self, reviewed_records):
-        if not isinstance(reviewed_records, (tuple, list)) or len(reviewed_records) > 200:
+        if not isinstance(reviewed_records, (tuple, list)) or len(reviewed_records) > MAX_REGISTRY_RECORDS:
             raise ValueError("registro de auditoría inválido")
         records = {}
         assignments = {}
