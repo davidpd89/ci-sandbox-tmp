@@ -241,5 +241,25 @@ class ThreadsPublishContract(unittest.TestCase):
         self.assertEqual([r["resultado"] for r in outcomes], ["pendiente_verificacion"])
 
 
+
+class ThreadsTransportTests(unittest.TestCase):
+    def test_api_only_dispatch_uses_existing_executor(self):
+        items = [{"kind": "reply", "reply_to_id": "synthetic-1"}]
+        self.assertFalse(executor._plan_needs_browser(items))
+        self.assertTrue(executor._plan_needs_browser(items + [{"kind": "like"}]))
+        with patch.object(executor, "run_plan", return_value=[{"resultado": "confirmado"}]) as runner:
+            result = executor._run_by_transport(items)
+        self.assertEqual(result[0]["resultado"], "confirmado")
+        runner.assert_called_once()
+
+    def test_offline_metrics_decode(self):
+        with patch.object(api, "_env", return_value={"THREADS_ACCESS_TOKEN": "synthetic"}), \
+             patch.object(api, "api_get", return_value={
+                 "data": [{"name": "followers_count", "total_value": {"value": 17}}]
+             }) as getter:
+            metrics = executor._fetch_metrics_api()
+        self.assertEqual(metrics, {"followers": "17"})
+        self.assertEqual(getter.call_args.args[0], "me/threads_insights")
+
 if __name__ == "__main__":
     unittest.main()
