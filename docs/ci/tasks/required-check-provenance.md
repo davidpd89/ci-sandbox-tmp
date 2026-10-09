@@ -18,3 +18,11 @@ Fuentes:
 - https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target
 
 **Condición de cierre:** ningún check creado desde el head de una PR puede sustituir silenciosamente el required check de confianza. No se aceptan solo pruebas textuales del YAML.
+
+## Implementación y evidencia
+
+La implementación de #96 reside en `tools/required_check_provenance.py` (inspección estática de YAML sobre contenidos de la PR sin ejecutarlos), `tools/required_check_evidence.py` (canario de evidencia **real** del workflow/job/check observado) y sus pruebas `tests/test_required_check*.py`, con workflows separados para gate de default branch y pruebas sintéticas Ubuntu/Windows.
+
+El informe de licencias, comparables, análisis adversarial, limitaciones y runbook de instalación **está en** [docs/ci/reports/required-check-provenance-review.md](../reports/required-check-provenance-review.md).
+
+**Dependencia:** integrar primero #92, cuyo archivo de workflow no existe en esta base; de lo contrario el detector falla cerrado. **Prohibido declarar enforcement activo** por el mero hecho de que pase la CI sintética o se configure un required status check solo por nombre: se necesita la regla externa por identidad, o app distinta con origen esperado, y canario de bloqueo real comprobado por Claude. No se hizo merge.
