@@ -20,7 +20,7 @@ SECRET = re.compile(
     r'(?:gh[pousr]_[A-Za-z0-9]{25,}|github_pat_[A-Za-z0-9_]{25,}|'
     r'AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{28,}|'
     r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|'
-    r'(?i:(?:api[_-]?key|access[_-]?token|client[_-]?secret|password|token))\s*[=:]\s*[^\s#]{8,})'
+    r'(?i:(?:api[_-]?key|access[_-]?token|client[_-]?secret|password|token))[ \t]*[=:][ \t]*[^\s#]{8,})'
 )
 EMAIL = re.compile(r'(?<![\w.+-])[\w.+-]+@([\w.-]+\.[a-zA-Z]{2,})(?![\w.-])')
 BANNED_PATH = re.compile(r'(?i)(?:^|/)(?:\.env(?:\.|$)|\.git/|cache/|profiles?/|screenshots?/|historial(?:es)?/|(?:[^/]+\.(?:sqlite3?|db|pem|p12|key|pyc))$)')
