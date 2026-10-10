@@ -30,6 +30,13 @@ class BenchmarkTests(unittest.TestCase):
         path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
         return path
 
+    def _temp_key(self, key):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        path = Path(directory.name) / "key.csv"
+        b._write_csv(path, key, b.KEY_COLUMNS)
+        return path
+
     def test_nine_networks_four_scenarios_two_strategies(self):
         self.assertEqual(len(self.cases), 36)
         self.assertEqual(len(self.candidates), 72)
@@ -51,11 +58,10 @@ class BenchmarkTests(unittest.TestCase):
         self.assertTrue(all("formats" in r and "details" in r for r in summary))
 
     def test_blind_export_no_strategy_or_id_or_label_leak(self):
-        blind, key = b.prepare_blind(self.cases, self.candidates, "controlled-salt")
+        blind, key = b.prepare_blind(self.cases, self.candidates)
         self.assertEqual(len(blind), 72)
         self.assertEqual(len({r["token"] for r in blind}), 72)
-        self.assertEqual(blind, b.prepare_blind(self.cases, self.candidates, "controlled-salt")[0])
-        self.assertNotEqual(blind[0]["token"], b.prepare_blind(self.cases, self.candidates, "another-salt")[0][0]["token"])
+        self.assertNotEqual(blind, b.prepare_blind(self.cases, self.candidates)[0])
         self.assertTrue(all(not r["judge"] and not r["naturalidad"] for r in blind))
         self.assertTrue(all("strategy" not in r and "case_id" not in r for r in blind))
         self.assertEqual(set(key[0]), set(b.KEY_COLUMNS))
@@ -63,7 +69,7 @@ class BenchmarkTests(unittest.TestCase):
     def test_two_independent_evaluators_enable_paired_results(self):
         invalid = [(x['case_id'], b._valid(x['reply'], next(c['network'] for c in self.cases if c['id'] == x['case_id']))[1]) for x in self.candidates if x['strategy'] == 'contextual' and not b._valid(x['reply'], next(c['network'] for c in self.cases if c['id'] == x['case_id']))[0]]
         self.assertEqual(invalid, [], invalid)
-        blind, key = b.prepare_blind(self.cases, self.candidates, "review")
+        blind, key = b.prepare_blind(self.cases, self.candidates)
         lookup = {r["token"]: r for r in key}
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "ratings.csv"
@@ -74,14 +80,14 @@ class BenchmarkTests(unittest.TestCase):
                     score = 4 if lookup[row["token"]]["strategy"] == "contextual" else 1
                     for judge in ("a", "b"):
                         writer.writerow({**row, "judge": judge, **{axis: score for axis in b.AXES}})
-            result = b.evaluate(self.cases, self.candidates, str(path), salt="review")
+            result = b.evaluate(self.cases, self.candidates, str(path), key_path=self._temp_key(key))
             self.assertEqual(result["human"]["fully_paired_cases"], 36)
             self.assertEqual(len(result["human"]["winners"]), 9)
             self.assertEqual({r["strategy"] for r in result["human"]["winners"]}, {"contextual"})
             self.assertTrue(all(r["reviewers_min"] == 2 for r in result["human"]["winners"]))
 
     def test_partial_one_judge_or_unpaired_cannot_pick_winner(self):
-        blind, key = b.prepare_blind(self.cases, self.candidates, "review")
+        blind, key = b.prepare_blind(self.cases, self.candidates)
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "ratings.csv"
             with path.open("w", encoding="utf-8", newline="") as handle:
@@ -89,11 +95,11 @@ class BenchmarkTests(unittest.TestCase):
                 writer.writeheader()
                 for row in blind:
                     writer.writerow({**row, "judge": "only-one", **{axis: 4 for axis in b.AXES}})
-            result = b.evaluate(self.cases, self.candidates, str(path), salt="review")
+            result = b.evaluate(self.cases, self.candidates, str(path), key_path=self._temp_key(key))
             self.assertEqual(result["human"]["winners"], [])
 
     def test_duplicate_judge_and_out_of_range_are_rejected(self):
-        blind, _ = b.prepare_blind(self.cases, self.candidates, "review")
+        blind, key = b.prepare_blind(self.cases, self.candidates)
         base = {**blind[0], "judge": "a", **{axis: 2 for axis in b.AXES}}
         for rows in ([base, base], [{**base, "aporte": "5"}], [{**base, "aporte": "2.1"}],
                      [{**base, "token": "invalid"}], [{**base, "judge": ""}]):
@@ -105,10 +111,10 @@ class BenchmarkTests(unittest.TestCase):
                         writer.writeheader()
                         writer.writerows(rows)
                     with self.assertRaises(ValueError):
-                        b.evaluate(self.cases, self.candidates, str(path), salt="review")
+                        b.evaluate(self.cases, self.candidates, str(path), key_path=self._temp_key(key))
 
     def test_ratings_reject_altered_text_or_context(self):
-        blind, _ = b.prepare_blind(self.cases, self.candidates, "integrity")
+        blind, _ = b.prepare_blind(self.cases, self.candidates)
         original = {**blind[0], "judge": "reviewer",
                     **{axis: 2 for axis in b.AXES}}
         for field in ("network", "kind", "post", "thread", "reply"):
@@ -121,7 +127,7 @@ class BenchmarkTests(unittest.TestCase):
                         writer.writeheader()
                         writer.writerow(tampered)
                     with self.assertRaisesRegex(ValueError, "difieren"):
-                        b.evaluate(self.cases, self.candidates, str(path), salt="integrity")
+                        b.evaluate(self.cases, self.candidates, str(path), key_path=self._temp_key(key))
 
     def test_adversarial_unbalanced_cohorts_and_invalid_winner_cannot_win(self):
         for condition in ("missing_variant", "invalid_best"):
@@ -134,7 +140,7 @@ class BenchmarkTests(unittest.TestCase):
                     for candidate in candidates:
                         if candidate["case_id"] == "x_conversacion" and candidate["strategy"] == "contextual":
                             candidate["reply"] = "¡Qué gran reflexión!"
-                blind, key = b.prepare_blind(self.cases, candidates, "adversarial")
+                blind, key = b.prepare_blind(self.cases, candidates)
                 lookup = {row["token"]: row["strategy"] for row in key}
                 with tempfile.TemporaryDirectory() as directory:
                     path = Path(directory) / "ratings.csv"
@@ -145,7 +151,7 @@ class BenchmarkTests(unittest.TestCase):
                             score = 4 if lookup[row["token"]] == "contextual" else 1
                             for judge in ("r1", "r2"):
                                 writer.writerow({**row, "judge": judge, **{axis: score for axis in b.AXES}})
-                    winners = b.evaluate(self.cases, candidates, str(path), salt="adversarial")["human"]["winners"]
+                    winners = b.evaluate(self.cases, candidates, str(path), key_path=self._temp_key(key))["human"]["winners"]
                     self.assertNotIn("x", {winner["network"] for winner in winners})
                     self.assertEqual(len(winners), 8)
 
@@ -155,7 +161,7 @@ class BenchmarkTests(unittest.TestCase):
         for case in cases:
             if case["id"] == "x_conversacion":
                 case["kind"] = "literatura"
-        blind, key = b.prepare_blind(cases, self.candidates, "category-coverage")
+        blind, key = b.prepare_blind(cases, self.candidates)
         strategies = {row["token"]: row["strategy"] for row in key}
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "ratings.csv"
@@ -166,7 +172,7 @@ class BenchmarkTests(unittest.TestCase):
                     grade = 4 if strategies[row["token"]] == "contextual" else 1
                     for judge in ("r1", "r2"):
                         writer.writerow({**row, "judge": judge, **{axis: grade for axis in b.AXES}})
-            winners = b.evaluate(cases, self.candidates, str(path), salt="category-coverage")["human"]["winners"]
+            winners = b.evaluate(cases, self.candidates, str(path), key_path=self._temp_key(key))["human"]["winners"]
         self.assertEqual(len(winners), 8)
         self.assertNotIn("x", {row["network"] for row in winners})
 
@@ -204,7 +210,10 @@ class BenchmarkTests(unittest.TestCase):
 
     def test_cli_prepare_evaluate_and_overwrite_guard(self):
         with tempfile.TemporaryDirectory() as directory:
-            blind, key = Path(directory) / "blind.csv", Path(directory) / "key.csv"
+            blind_dir, key_dir = Path(directory) / "review", Path(directory) / "private"
+            blind_dir.mkdir()
+            key_dir.mkdir()
+            blind, key = blind_dir / "blind.csv", key_dir / "key.csv"
             cmd = [sys.executable, str(ROOT / "tools" / "comment_benchmark.py")]
             env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
             base = [*cmd, "prepare", "--input", str(self.fixture), "--blind", str(blind), "--key", str(key)]
@@ -222,6 +231,64 @@ class BenchmarkTests(unittest.TestCase):
             result = b.main(["prepare", "--input", str(self.fixture), "--blind", str(self.fixture), "--key", str(key)])
             self.assertEqual(result, 2)
             self.assertFalse(key.exists())
+
+    def test_blind_key_is_unpredictable_required_and_dataset_bound(self):
+        first, key = b.prepare_blind(self.cases, self.candidates)
+        second, _ = b.prepare_blind(self.cases, self.candidates)
+        self.assertTrue(set(x["token"] for x in first).isdisjoint(
+            x["token"] for x in second))
+        with tempfile.TemporaryDirectory() as directory:
+            ratings = Path(directory) / "ratings.csv"
+            row = {**first[0], "judge": "anotador", **{axis: 2 for axis in b.AXES}}
+            with ratings.open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.DictWriter(handle, fieldnames=b.COLUMNS)
+                writer.writeheader()
+                writer.writerow(row)
+            with self.assertRaisesRegex(ValueError, "clave privada"):
+                b.evaluate(self.cases, self.candidates, str(ratings))
+            with self.assertRaises(ValueError):
+                b.evaluate(self.cases, self.candidates, str(ratings),
+                           key_path=self._temp_key(b.prepare_blind(self.cases, self.candidates)[1]))
+            altered = [dict(x) for x in key]
+            altered[0]["sha256"] = "0" * 64
+            with self.assertRaisesRegex(ValueError, "alterada"):
+                b.evaluate(self.cases, self.candidates, str(ratings),
+                           key_path=self._temp_key(altered))
+            changed_cases = [dict(c) for c in self.cases]
+            changed_cases[0]["post"] += " reescrito"
+            with self.assertRaisesRegex(ValueError, "alterada"):
+                b.evaluate(changed_cases, self.candidates, str(ratings),
+                           key_path=self._temp_key(key))
+            result = b.evaluate(self.cases, self.candidates, str(ratings),
+                                key_path=self._temp_key(key))
+            self.assertEqual(result["human"]["winners"], [])
+
+    def test_global_duplicate_across_networks_even_if_local_unique(self):
+        cases = [dict(c) for c in self.cases]
+        candidates = [dict(c) for c in self.candidates]
+        chosen = ("x_literatura", "threads_literatura", "mastodon_literatura")
+        for c in candidates:
+            if c["case_id"] in chosen and c["strategy"] == "baseline_generic":
+                c["reply"] = "¿Qué te ha parecido ese final?"
+        result = b.automatic(cases, candidates)
+        diversity = result["diversity"]
+        self.assertGreaterEqual(diversity["global_duplicate_texts"], 2)
+        self.assertGreaterEqual(diversity["cross_network_duplicate_texts"], 2)
+        self.assertIn("opening_top_share", diversity["lint_metrics"])
+        for network in ("x", "threads", "mastodon"):
+            row = next(x for x in result["summary"]
+                       if x["network"] == network and x["strategy"] == "baseline_generic")
+            self.assertEqual(row["duplicate_texts"], 0)
+
+    def test_prepare_cli_separates_private_key_from_review(self):
+        with tempfile.TemporaryDirectory() as directory:
+            same_dir = Path(directory) / "same.csv"
+            other = Path(directory) / "key.csv"
+            code = b.main(["prepare", "--input", str(self.fixture),
+                           "--blind", str(same_dir), "--key", str(other)])
+            self.assertEqual(code, 2)
+            self.assertFalse(same_dir.exists())
+            self.assertFalse(other.exists())
 
 
 if __name__ == "__main__":
