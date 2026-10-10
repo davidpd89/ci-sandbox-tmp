@@ -30,6 +30,16 @@ jobs:
       - name: Install maintained YAML parser
         run: |
           python -m pip install --disable-pip-version-check --only-binary=:all: --no-deps PyYAML==6.0.3
+      - name: Emit source-bound PR identity for supervised audit
+        # Source is the trusted pull_request_target event, NOT PR head code.
+        env:
+          AUDIT_PR: ${{ github.event.pull_request.number }}
+          AUDIT_HEAD: ${{ github.event.pull_request.head.sha }}
+          AUDIT_BASE: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          printf 'trusted-event run_id=%s pr=%s head=%s base=%s\\n' \\
+            "$GITHUB_RUN_ID" "$AUDIT_PR" "$AUDIT_HEAD" "$AUDIT_BASE"
       - name: Inspect all proposed workflow job identities via read-only API
         env:
           GITHUB_TOKEN: ${{ github.token }}
