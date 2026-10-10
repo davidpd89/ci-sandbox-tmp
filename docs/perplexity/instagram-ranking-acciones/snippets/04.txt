@@ -1,0 +1,11 @@
+python
+# https://github.com/zafercavdar/fasttext-langdetect — README
+from ftlangdetect import detect
+
+result = detect(text="Bugün hava çok güzel", low_memory=False)
+print(result)
+# {'lang': 'tr', 'score': 1.0}
+
+result = detect(text="Bugün hava çok güzel", low_memory=True)
+print(result)
+# {'lang': 'tr', 'score': 0.9982126951217651}
