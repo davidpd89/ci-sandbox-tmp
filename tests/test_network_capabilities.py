@@ -25,6 +25,16 @@ class CapabilityMatrixTests(unittest.TestCase):
         for net in cap.INVENTORY_NETWORKS:
             self.assertEqual(matrix[net]["pipeline"], net in PIPELINES, net)
 
+    def test_existing_runtime_and_discovery_contracts_are_not_falsely_extended(self):
+        import discovery_graph
+        import network_policy_contracts
+        declared = {r.network for r in network_policy_contracts.TEXT_EXECUTION_ROUTES}
+        self.assertEqual(set(cap.NETWORKS), declared)
+        self.assertEqual(set(cap.NETWORKS), set(discovery_graph.NETWORKS))
+        self.assertIn("instagram", cap.INVENTORY_NETWORKS)
+        self.assertNotIn("instagram", declared)
+        self.assertIn("instagram", cap.build_matrix())
+
     def test_flags_are_explicit_and_not_inferred_from_platform_name(self):
         matrix = cap.build_matrix()
         for net, features in matrix.items():
