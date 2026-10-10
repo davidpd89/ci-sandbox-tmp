@@ -225,21 +225,28 @@ class AudienceStore:
 
     def start_snapshot(self, network: str, surface: str, seed: str,
                        post_key: str, kind: str, now: str,
-                       recover_abandoned: bool = True) -> str:
+                       recover_abandoned: bool = True,
+                       stale_timeout_seconds: float = 3600.0) -> str:
         if network not in LANES or not surface or not seed or not post_key or kind not in KINDS:
             raise ObservationError("parametros_snapshot_invalidos")
         sid = str(uuid.uuid4())
         now_ts = timestamp(now)
+        now_dt = datetime.fromisoformat(now_ts)
+
         with self.db:
             if recover_abandoned:
-                # Recuperación de snapshots abandonados: marcar como 'aborted' y limpiar staging
+                # Recuperación acotada de snapshots abandonados:
+                # Marcar como 'aborted' únicamente aquellos snapshots activos cuya antigüedad supere stale_timeout_seconds.
                 old_active = self.db.execute("""
-                    SELECT snapshot_id FROM audience_snapshots
+                    SELECT snapshot_id, started_at FROM audience_snapshots
                     WHERE network=? AND surface=? AND seed=? AND post_key=? AND kind=? AND status='active'
                 """, (network, surface, seed, post_key, kind)).fetchall()
-                for (old_sid,) in old_active:
-                    self.db.execute("UPDATE audience_snapshots SET status='aborted' WHERE snapshot_id=?", (old_sid,))
-                    self.db.execute("DELETE FROM audience_snapshot_staging WHERE snapshot_id=?", (old_sid,))
+                for old_sid, started_at_str in old_active:
+                    started_dt = datetime.fromisoformat(started_at_str)
+                    age_seconds = (now_dt - started_dt).total_seconds()
+                    if age_seconds >= stale_timeout_seconds:
+                        self.db.execute("UPDATE audience_snapshots SET status='aborted' WHERE snapshot_id=?", (old_sid,))
+                        self.db.execute("DELETE FROM audience_snapshot_staging WHERE snapshot_id=?", (old_sid,))
 
             try:
                 self.db.execute(
@@ -537,7 +544,8 @@ def collect_pages(store: AudienceStore, *, network: str, surface: str, seed: str
                   fetch_page: Callable[[str | None], Mapping],
                   observed_at: str, max_pages: int = 10,
                   max_post_age_hours: float = 168,
-                  use_snapshot_reconciliation: bool = False) -> dict:
+                  use_snapshot_reconciliation: bool = False,
+                  stale_timeout_seconds: float = 3600.0) -> dict:
     """Paginador genérico read-only con soporte opcional de reconciliación por snapshot.
 
     fetch_page -> {items, next_cursor, kind, post_key, ...}.
@@ -588,7 +596,8 @@ def collect_pages(store: AudienceStore, *, network: str, surface: str, seed: str
 
             if use_snapshot_reconciliation:
                 if snapshot_id is None:
-                    snapshot_id = store.start_snapshot(network, surface, seed, post_key, kind, observed_at)
+                    snapshot_id = store.start_snapshot(network, surface, seed, post_key, kind, observed_at,
+                                                        stale_timeout_seconds=stale_timeout_seconds)
                 store.stage_snapshot_observations(snapshot_id, normalized)
             else:
                 stats = store.ingest(normalized, network=network, surface=surface, seed=seed,

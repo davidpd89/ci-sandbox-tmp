@@ -237,16 +237,19 @@ class SnapshotReconciliationTests(unittest.TestCase):
                              fetch_page=fetch_mismatched, observed_at=NOW, use_snapshot_reconciliation=True)
 
     def test_active_snapshot_collision_and_recovery(self):
-        # Iniciar snapshot sin recuperar abandonados para forzar error
-        sid1 = self.store.start_snapshot("bluesky", "liked_by", "s1", "post_1", "like", NOW)
+        # Iniciar snapshot 1
+        sid1 = self.store.start_snapshot("bluesky", "liked_by", "s1", "post_1", "like", "2026-10-10T10:00:00+00:00")
         self.assertTrue(sid1)
 
+        # Proceso 2 reciente (mismo timestamp o < 3600s): rechazar para proteger al proceso 1 en curso
         with self.assertRaisesRegex(ad.ObservationError, "snapshot_activo_existente"):
-            self.store.start_snapshot("bluesky", "liked_by", "s1", "post_1", "like", NOW, recover_abandoned=False)
+            self.store.start_snapshot("bluesky", "liked_by", "s1", "post_1", "like", "2026-10-10T10:15:00+00:00",
+                                     recover_abandoned=True, stale_timeout_seconds=3600)
 
-        # Con recover_abandoned=True (defecto), se aborta automáticamente el anterior y se crea el nuevo
-        sid2 = self.store.start_snapshot("bluesky", "liked_by", "s1", "post_1", "like", NOW, recover_abandoned=True)
-        self.assertTrue(sid2)
+        # Proceso 3 tras expirar el timeout (e.g., 2 horas más tarde): recupera y aborta el snapshot 1 abandonado
+        sid3 = self.store.start_snapshot("bluesky", "liked_by", "s1", "post_1", "like", "2026-10-10T12:05:00+00:00",
+                                         recover_abandoned=True, stale_timeout_seconds=3600)
+        self.assertTrue(sid3)
         status_old = self.store.db.execute("SELECT status FROM audience_snapshots WHERE snapshot_id=?", (sid1,)).fetchone()[0]
         self.assertEqual(status_old, "aborted")
 
