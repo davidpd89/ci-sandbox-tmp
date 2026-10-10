@@ -62,6 +62,40 @@ class TestSpanishVoice(unittest.TestCase):
         text = "~~~text\nChecar?\n~~~\n¡Buen título!"
         self.assertEqual(self.check(text)["findings"], [])
 
+
+    def test_queue_unknown_is_not_mislabelled_web(self):
+        without_source = self.check("¡Bien!", network="mastodon")
+        self.assertIsNone(without_source["queue"])
+        self.assertEqual(self.check("¡Bien!", network="mastodon",
+                                    queue="API")["queue"], "API")
+
+    def test_blind_cli_separates_key_and_preserves_existing_files(self):
+        import subprocess
+        import tempfile
+        root = pathlib.Path(__file__).resolve().parents[1]
+        command = [sys.executable, str(root / "tools" / "spanish_voice_eval.py"),
+                   str(root / "tests" / "fixtures" / "spanish_voice_pairs.json")]
+        with tempfile.TemporaryDirectory() as temp:
+            outside = pathlib.Path(temp)
+            public = outside / "review"
+            secret = outside / "key"
+            public.mkdir()
+            secret.mkdir()
+            prefix = public / "case"
+            run = lambda *args: subprocess.run([*command, *args], text=True,
+                                               capture_output=True, encoding="utf-8")
+            self.assertNotEqual(run("--blind-prefix", str(prefix)).returncode, 0)
+            self.assertNotEqual(run("--blind-prefix", str(prefix),
+                                    "--blind-key-dir", str(public)).returncode, 0)
+            flags = ("--blind-prefix", str(prefix), "--blind-key-dir", str(secret))
+            first = run(*flags)
+            self.assertEqual(first.returncode, 0, first.stderr)
+            self.assertTrue((public / "case.review.json").is_file())
+            self.assertTrue((secret / "case.key.json").is_file())
+            second = run(*flags)
+            self.assertNotEqual(second.returncode, 0)
+            self.assertIn("no sobrescribir", second.stderr)
+
     def test_reuse_existing_accent_checker(self):
         with mock.patch("spanish_voice_quality._accent_checker",
                         return_value=lambda text: [("capitulo", "capítulo")]):
@@ -152,6 +186,29 @@ class TestIntegration(unittest.TestCase):
                 "tiktok", recent=[], consult=fake_answer, log=events.append)
         self.assertEqual(actual, {"synthetic-id": "Voy a checar el carro."})
         self.assertIn("locale_variant", " ".join(events))
+
+
+    def test_reply_writer_propagates_explicit_source_queue(self):
+        import reply_writer as writer
+        import spanish_voice_quality as quality
+        consult = lambda *_: ('[{"id": "synthetic-id", "reply": "Bien encontrado."}]', "offline")
+        with (mock.patch.object(writer, "new_authors_only", side_effect=lambda items, net, log: items),
+              mock.patch.object(writer, "valid_reply", return_value=(True, "")),
+              mock.patch.object(writer, "mark_gpt"),
+              mock.patch.object(quality, "audit", return_value={"findings": []}) as audit_call):
+            writer.write_replies([{"id": "synthetic-id", "author": "lector-ficticio",
+                                  "text": "Texto inventado", "queue": "MOBILE",
+                                  "network": "tiktok"}],
+                                 "tiktok", recent=[], consult=consult, log=lambda *_: None)
+        self.assertEqual(audit_call.call_args.kwargs["queue"], "MOBILE")
+
+    def test_publisher_dispatches_api_queue(self):
+        import content_publisher as publisher
+        import spanish_voice_quality as quality
+        with mock.patch.object(quality, "audit",
+                               return_value={"findings": []}) as audit_call:
+            publisher._voice_diagnostics("facebook", "Una ficción original", lambda *_: None)
+        self.assertEqual(audit_call.call_args.kwargs["queue"], "API")
 
     def test_auditor_failure_does_not_discard_reply(self):
         import reply_writer as writer
