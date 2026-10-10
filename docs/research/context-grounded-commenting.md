@@ -141,3 +141,28 @@ Sirve como candidato para evaluación semántica posterior, sin añadir
 dependencia pesada a una comprobación determinista por cita. Su incorporación,
 licencia y revisión inmutable requerirían contraste específico al aprobar el
 benchmark, no forman parte de esta PR.
+
+## Tercera revisión adversarial — integridad del padre directo y métricas (10/10/2026)
+
+El campo `reply_to_us=True` ya no autoriza responder solo porque exista algún
+antepasado verificado. Se exige `reply_parent_id` no vacío e idéntico al
+`stable_id` del **último padre cronológico**, con `verified is True` y
+texto verificable. Ante ausencia, padre no verificado, error de orden o identidad
+discordante: `conversation_parent_missing` y paquete no elegible. La identidad
+del padre forma parte del `source_digest`, del paquete renderizado y de su
+huella. El adaptador #104 debe recopilar ese ID a partir de la relación remota,
+no deducirlo del texto. `verified` sigue siendo una aseveración del collector;
+la cadena de ancestros completa sigue pendiente de comprobar en #77/#104.
+
+`summarize_outcomes` ahora rechaza `received_reply=False` junto con
+`continuation_turns>0`, pues no es una observación coherente. No convierte
+un `received_reply=None` en falso: el desconocimiento conserva su denominador.
+Se añadieron regresiones sintéticas para padre directo, cambio de identidad
+y continuidad contradictoria. La revisión previa de 42 pruebas corresponde
+al SHA previo, no al HEAD posterior a estos cambios: revalidar workflows
+Ubuntu y Windows antes de merge.
+
+**Contrato:** `reply_to_us` y `reply_parent_id` solo expresan una relación
+de origen editorial, no un permiso de publicación. El `Audit.ok` mecánico
+tampoco habilita el envío; validar semántica, destino, frescura y controles
+de procedencia del repositorio oficial antes de usarlo con datos reales.
