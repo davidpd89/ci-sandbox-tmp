@@ -54,7 +54,13 @@ def _bluesky_thread(payload: Mapping) -> tuple[list[Mapping], int]:
     root = payload.get("thread")
     if not isinstance(root, Mapping):
         raise core.ObservationError("thread_invalido")
-    pending = list(reversed(root.get("replies") or []))
+    if not isinstance(root.get("post"), Mapping):
+        # El post principal no es visible: ninguna inferencia de ausencia.
+        return [], 1
+    first_replies = root.get("replies") or []
+    if not isinstance(first_replies, (list, tuple)):
+        raise core.ObservationError("replies_invalidas")
+    pending = list(reversed(first_replies))
     items = []
     unavailable = 0
     while pending:
