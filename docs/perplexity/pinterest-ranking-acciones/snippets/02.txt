@@ -1,0 +1,21 @@
+python
+# https://thunderbit.com/es/blog/scrape-pinterest-with-python
+async def scrape_profile(username):
+    url = f"https://www.pinterest.com/{username}/"
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page(
+            user_agent=USER_AGENT,
+            viewport={"width": 1920, "height": 1080}
+        )
+        await page.goto(url)
+        await asyncio.sleep(3)
+
+        # Extraer número de seguidores
+        follower_el = await page.query_selector(
+            "div[data-test-id='follower-count']"
+        )
+        followers = await follower_el.inner_text() if follower_el else "N/A"
+
+        return {"username": username, "followers": followers, "boards": boards}
