@@ -1,0 +1,15 @@
+python
+FacebookTarget = {
+  "network": "facebook",
+  "surface": "page" | "group",
+  "external_id": str,          # page_id o group_id
+  "canonical_url": str | None,
+  "display_name": str,
+  "kind": "post" | "comment" | "profile" | "group_post",
+  "parent_external_id": str | None,
+  "author_external_id": str | None,
+  "created_at": datetime,       # UTC, timezone-aware
+  "text": str,
+  "engagement": dict,
+  "raw": dict
+}
