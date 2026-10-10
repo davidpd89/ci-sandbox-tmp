@@ -39,6 +39,19 @@ Se consultaron el árbol de `davidpd89/rrss-davidporto-CODE@integracion/crecimie
 
 No se reescriben ni se cambia el volumen operativo: solapa con **PR #115** (descubrimiento), **#116** (ranking), **#117** (paridad), **#136** (puente Jetstream) del espejo y múltiples PR fusionadas en el repo oficial. El ejemplo de Perplexity sobre "200 posts útiles por día" y porcentajes de conversión no constituye evidencia reproducible. No se usan como umbrales.
 
+
+## Corrección integrada en descubrimiento EXISTENTE
+
+La segunda pasada encontró en `tools/bluesky_growth_scan.py::_search_popular_feeds` un fallo que desperdiciaba lecturas: elegía `feeds[:2]` **antes** de comprobar relevancia y aceptaba feeds irrelevantes si el término de la propia consulta era literario (`_hits(query) > 0`). Ahora:
+
+- filtra por términos en **nombre y descripción del feed** y excluye metadatos políticos;
+- ordena por número de señales de nicho, después popularidad y URI;
+- elimina URIs repetidas antes de consumir las dos lecturas de feeds;
+- tolera `likeCount` no numérico, y desempata por orden de aparición para no comparar diccionarios;
+- mantiene presupuestos, métricas, `Collector.add_post` y resto del contrato de las nueve redes.
+
+Regresión añadida al archivo original `tests/test_bluesky_growth_scan.py`: mezcla de feed ajeno muy popular, feed literario más relevante, duplicados idénticos y contador malformado. **Esta prueba de integración del escáner no pudo ejecutarse localmente**, porque no se materializó el árbol completo del repositorio privado. Claude debe incluirla en la suite del repo oficial. No hay métricas reales de mejora obtenidas aún.
+
 ## Norma global y adaptadores
 
 Regla común para las **nueve redes**: todo candidato proviene de fuente identificable, posee identidad de post/cuenta, fecha verificable, idioma/tema y estado de interacción; las lecturas no autorizan escrituras; cada adaptador traduce señales propias al motor existente de candidatos, dedupe, ranking, QA y resultados confirmados. Nunca trasladar como fórmula global los contadores de likes/replies de Bluesky a Pinterest o Reddit.
