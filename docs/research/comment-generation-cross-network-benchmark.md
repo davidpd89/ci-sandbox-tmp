@@ -86,7 +86,7 @@ Se añade `tools/comment_benchmark.py` y
 5. `evaluate --ratings` exige **dos evaluadores distintos por texto**.
    Solo compara estrategias puntuadas sobre los mismos casos. Para sugerir
    preferencia por red exige las cuatro categorías pareadas, dos evaluadores,
-   al menos dos estrategias y diferencia de nota media >=0,05. Una
+   al menos dos estrategias **idénticas en los cuatro casos**, textos válidos de la estrategia ganadora y diferencia de nota media >=0,05. Una
    preferencia así **no altera el generador real**: antes es precisa una
    validación supervisada, con muestras reales autorizadas.
 6. `prompt --case` permite inspeccionar el suplemento editorial ajustado
@@ -113,7 +113,7 @@ salida explícitos. Los tests usan directorios temporales.
 
 **Antes (HEAD original):** 0 pares comparables con anotación ciega en
 las nueve redes. **Después (fixtures):** 36 pares, 72 ejemplos;
-11 pruebas unitarias específicas; las pruebas de revisión ficticia
+12 pruebas unitarias específicas; las pruebas de revisión ficticia
 demuestran el funcionamiento del cálculo, **no una preferencia real**.
 Pendiente actualizar el informe con resultado de Actions del HEAD final.
 
@@ -130,6 +130,7 @@ Pendiente actualizar el informe con resultado de Actions del HEAD final.
   de `judge` no prueban independencia humana; no hay verificación de identidad.
 - **Cambio de fecha / DST:** se comparan instantes con zona explícita en UTC;
   se descartan fechas ingenuas, negativas y >72 h.
+- **Pareado adversarial:** una versión inicial permitía comparar una estrategia evaluada en cuatro posts con otra evaluada solo en uno. Ahora exige el mismo conjunto de estrategias y la misma cobertura en todos los casos, y excluye ganadores con respuestas inválidas; hay una regresión sintética específica.
 - **Repetición:** informe por red de duplicados exactos, no detector
   semántico de paráfrasis; el corpus puede mejorar con revisión humana.
 - **Desbordamiento:** límites editoriales comunes, incluido Instagram,
