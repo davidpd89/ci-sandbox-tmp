@@ -36,6 +36,7 @@ import glob
 import os
 import re
 from zoneinfo import ZoneInfo
+from time_utils import classify_local_datetime, resolve_dst_datetime, to_utc_instant
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 
@@ -58,86 +59,6 @@ RED_FOLDERS = {
 }
 
 
-def classify_local_datetime(dt_naive, tz_name="Europe/Madrid"):
-    """Clasifica una fecha/hora local naive en su zona horaria:
-    - 'unambiguous': hora normal sin salto ni solapamiento.
-    - 'non_existent': salto de primavera (spring-forward gap), hora imposible.
-    - 'ambiguous': solapamiento de otoño (fall-back overlap), dos instantes UTC.
-    """
-    if dt_naive is None:
-        return "missing"
-    tz = ZoneInfo(tz_name)
-    dt0 = dt_naive.replace(tzinfo=tz, fold=0)
-    dt1 = dt_naive.replace(tzinfo=tz, fold=1)
-
-    utc0 = dt0.astimezone(datetime.timezone.utc)
-    back0 = utc0.astimezone(tz)
-    if (back0.hour, back0.minute) != (dt_naive.hour, dt_naive.minute):
-        return "non_existent"
-
-    if dt0.utcoffset() != dt1.utcoffset():
-        return "ambiguous"
-
-    return "unambiguous"
-
-
-def resolve_dst_datetime(dt_naive, meta=None, tz_name="Europe/Madrid"):
-    """Resuelve el instante UTC exacto para una fecha/hora local, aplicando
-    desambiguación explícita (fold, offset o instante UTC) si la hora es ambigua.
-    Devuelve (classification, dt_utc, error_msg).
-    """
-    if dt_naive is None:
-        return ("missing", None, None)
-
-    status = classify_local_datetime(dt_naive, tz_name=tz_name)
-    if status == "non_existent":
-        return ("non_existent", None, "fecha/hora imposible (salto DST / spring-forward gap)")
-
-    tz = ZoneInfo(tz_name)
-    if status == "unambiguous":
-        dt_tz = dt_naive.replace(tzinfo=tz)
-        return ("unambiguous", dt_tz.astimezone(datetime.timezone.utc), None)
-
-    meta = meta or {}
-    # Buscar claves de desambiguación explícita
-    fold_str = meta.get("fold")
-    offset_str = meta.get("offset") or meta.get("offset utc") or meta.get("utc offset")
-    utc_str = meta.get("utc") or meta.get("instante utc") or meta.get("utc instant")
-
-    if utc_str:
-        try:
-            iso_str = utc_str.rstrip("Z").rstrip(".")
-            if "T" not in iso_str and " " in iso_str:
-                iso_str = iso_str.replace(" ", "T")
-            dt_utc = datetime.datetime.fromisoformat(iso_str)
-            if dt_utc.tzinfo is None:
-                dt_utc = dt_utc.replace(tzinfo=datetime.timezone.utc)
-            else:
-                dt_utc = dt_utc.astimezone(datetime.timezone.utc)
-            return ("ambiguous", dt_utc, None)
-        except (ValueError, TypeError):
-            pass
-
-    if fold_str in ("0", "1"):
-        fold_val = int(fold_str)
-        dt_tz = dt_naive.replace(tzinfo=tz, fold=fold_val)
-        return ("ambiguous", dt_tz.astimezone(datetime.timezone.utc), None)
-
-    if offset_str:
-        m = re.search(r"([+-])?0?(\d{1,2}):?(\d{2})?", str(offset_str))
-        if m:
-            sign = -1 if m.group(1) == "-" else 1
-            hrs = int(m.group(2))
-            mins = int(m.group(3) or 0)
-            target_seconds = sign * (hrs * 3600 + mins * 60)
-            dt0 = dt_naive.replace(tzinfo=tz, fold=0)
-            dt1 = dt_naive.replace(tzinfo=tz, fold=1)
-            if int(dt0.utcoffset().total_seconds()) == target_seconds:
-                return ("ambiguous", dt0.astimezone(datetime.timezone.utc), None)
-            if int(dt1.utcoffset().total_seconds()) == target_seconds:
-                return ("ambiguous", dt1.astimezone(datetime.timezone.utc), None)
-
-    return ("ambiguous", None, "fecha/hora ambigua en cambio de hora (fall-back overlap); se requiere offset o fold explícito")
 
 
 def _parse_fecha_hora(content):
@@ -431,21 +352,14 @@ def _ya_resuelto(estado):
 
 
 def _to_utc_instant(dt_or_now, tz_name="Europe/Madrid"):
-    if dt_or_now is None:
-        return None
-    if isinstance(dt_or_now, datetime.datetime):
-        if dt_or_now.tzinfo is None:
-            tz = ZoneInfo(tz_name)
-            return dt_or_now.replace(tzinfo=tz).astimezone(datetime.timezone.utc)
-        return dt_or_now.astimezone(datetime.timezone.utc)
-    return None
+    return to_utc_instant(dt_or_now, tz_name=tz_name)
 
 
 def due_items(red, now=None):
     """Fichas con fecha/hora ya vencida (<= ahora) y todavia no marcadas
     como publicadas/programadas - las "debidas" que David pidio poder
     recuperar aunque se ejecute tarde (ayer, hoy, la semana pasada)."""
-    now_utc = _to_utc_instant(now if now is not None else datetime.datetime.now(ZoneInfo("Europe/Madrid")))
+    now_utc = to_utc_instant(now if now is not None else datetime.datetime.now(ZoneInfo("Europe/Madrid")))
     out = []
     for item in scan_items(red):
         if not item["fecha_hora"] or not item.get("fecha_hora_utc") or not item["texto"] or not item["estado"]:
@@ -462,7 +376,7 @@ def due_items(red, now=None):
 def future_items(red, now=None):
     """Fichas con fecha/hora futura y sin resolver - para X/Mastodon, que SI
     programan de verdad, no hace falta esperar a que esten "debidas"."""
-    now_utc = _to_utc_instant(now if now is not None else datetime.datetime.now(ZoneInfo("Europe/Madrid")))
+    now_utc = to_utc_instant(now if now is not None else datetime.datetime.now(ZoneInfo("Europe/Madrid")))
     out = []
     for item in scan_items(red):
         if not item["fecha_hora"] or not item.get("fecha_hora_utc") or not item["texto"] or not item["estado"]:

@@ -25,6 +25,7 @@ from zoneinfo import ZoneInfo
 sys.path.insert(0, os.path.dirname(__file__))
 import content_queue as cq
 import content_queue_alert as cqa
+from time_utils import to_utc_instant
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 CONFIG = os.path.join(ROOT, "00_OPERATIVO", "auto_publicacion.json")
@@ -61,14 +62,7 @@ DATE_BOUND = re.compile(r"\b(hoy|mañana|esta noche|esta tarde|esta mañana|este
 
 
 def _to_utc_instant(dt_or_now, tz_name="Europe/Madrid"):
-    if dt_or_now is None:
-        return None
-    if isinstance(dt_or_now, datetime.datetime):
-        if dt_or_now.tzinfo is None:
-            tz = ZoneInfo(tz_name)
-            return dt_or_now.replace(tzinfo=tz).astimezone(datetime.timezone.utc)
-        return dt_or_now.astimezone(datetime.timezone.utc)
-    return None
+    return to_utc_instant(dt_or_now, tz_name=tz_name)
 
 
 def blockers_of(item, issues_by_path, now=None):
