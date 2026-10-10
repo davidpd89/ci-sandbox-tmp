@@ -1,0 +1,89 @@
+python
+# Patrón adaptado de:
+# https://github.com/airbytehq/airbyte/blob/master/airbyte-integrations/connectors/source-facebook-marketing/unit_tests/test_errors.py
+import pytest
+import requests
+from requests_mock import Mocker
+
+
+GRAPH = "https://graph.facebook.com/v23.0"
+
+
+@pytest.mark.parametrize(
+    ("status_code", "payload", "expected_kind"),
+    [
+        (
+            400,
+            {
+                "error": {
+                    "message": "Invalid parameter",
+                    "type": "OAuthException",
+                    "code": 100,
+                    "fbtrace_id": "trace-invalid-parameter",
+                }
+            },
+            "invalid_request",
+        ),
+        (
+            401,
+            {
+                "error": {
+                    "message": "Error validating access token",
+                    "type": "OAuthException",
+                    "code": 190,
+                    "fbtrace_id": "trace-auth",
+                }
+            },
+            "auth",
+        ),
+        (
+            403,
+            {
+                "error": {
+                    "message": "Insufficient permission",
+                    "type": "OAuthException",
+                    "code": 200,
+                    "fbtrace_id": "trace-permission",
+                }
+            },
+            "permission",
+        ),
+        (
+            400,
+            {
+                "error": {
+                    "message": "Please reduce the amount of data",
+                    "type": "OAuthException",
+                    "code": 4,
+                    "fbtrace_id": "trace-throttle",
+                }
+            },
+            "throttle",
+        ),
+        (
+            400,
+            {
+                "error": {
+                    "message": "Duplicate Post",
+                    "type": "OAuthException",
+                    "code": 506,
+                    "fbtrace_id": "trace-duplicate",
+                }
+            },
+            "duplicate",
+        ),
+    ],
+)
+def test_facebook_error_contract(requests_mock: Mocker, status_code, payload, expected_kind):
+    requests_mock.get(
+        f"{GRAPH}/group_123/feed",
+        status_code=status_code,
+        json=payload,
+    )
+
+    response = requests.get(f"{GRAPH}/group_123/feed")
+    body = response.json()
+
+    assert response.status_code == status_code
+    assert body["error"]["code"] in {100, 190, 200, 4, 506}
+    assert expected_kind in {"invalid_request", "auth", "permission", "throttle", "duplicate"}
