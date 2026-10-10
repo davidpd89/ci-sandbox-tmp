@@ -14,7 +14,7 @@ v = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(v)
 
 
-def fixtures(last=56):
+def fixtures(last=86):
     children = []
     lines = ['| PR | Encargo |', '| --- | --- |']
     for n in range(11, last + 1):
@@ -36,17 +36,34 @@ class CampaignMetadataTests(unittest.TestCase):
     def test_valid_snapshot(self):
         self.assertEqual(v.check_metadata(self.doc, self.protocol), [])
 
-    def test_contiguous_extension_preserves_initial_wave(self):
-        doc, protocol = fixtures(last=86)
+    def test_original_wave_is_valid(self):
+        doc, protocol = fixtures()
+        self.assertEqual(v.check_metadata(doc, protocol), [])
+
+    def test_sparse_later_child_is_registered_explicitly(self):
+        doc, protocol = fixtures()
+        doc['children'].append({
+            'number': 204,
+            'title': 'Mapa de relaciones',
+            'objective': 'Mapa de relaciones',
+            'state': 'open',
+            'base': v.PARENT,
+            'head': 'audit/pr-relationships-2026-10-10',
+            'head_sha': 'b' * 40,
+            'area': 'operations',
+            'related_prs': [],
+            'url': f'https://github.com/{v.REPO}/pull/204',
+        })
+        protocol += '\n| [#204](https://github.com/davidpd89/ci-sandbox-tmp/pull/204) | Mapa de relaciones |'
         self.assertEqual(v.check_metadata(doc, protocol), [])
 
     def test_extension_gap_fails(self):
-        doc, protocol = fixtures(last=86)
+        doc, protocol = fixtures()
         doc['children'] = [p for p in doc['children'] if p['number'] != 57]
         self.assertTrue(v.check_metadata(doc, protocol))
 
     def test_extension_duplicate_fails(self):
-        doc, protocol = fixtures(last=86)
+        doc, protocol = fixtures()
         doc['children'][-1]['number'] = 85
         self.assertTrue(v.check_metadata(doc, protocol))
 
@@ -149,7 +166,7 @@ class CampaignMetadataTests(unittest.TestCase):
                                  'state': p['state'], 'title': p['title']}
         errs, warnings = v.check_live(self.doc, live)
         self.assertFalse(errs)
-        self.assertEqual(len(warnings), 46)
+        self.assertEqual(len(warnings), len(self.doc['children']))
 
 
 class CampaignPrivacyTests(unittest.TestCase):
