@@ -105,13 +105,15 @@ def _permalink(network, value):
             return None
         path = p.path
         if network == "facebook":
-            if re.fullmatch(r"/(?:[^/]+/posts/[0-9]+|groups/[0-9]+/(?:posts|permalink)/[0-9]+)/?", path):
+            # Real Facebook hashtag readers also expose /videos/ and
+            # /posts/ URLs; groups may use textual slugs, not just IDs.
+            if re.fullmatch(r"/(?:[A-Za-z0-9_.-]+/(?:posts|videos)/(?:[0-9]+|pfbid[A-Za-z0-9]+)|groups/[A-Za-z0-9_.-]+/(?:posts|permalink)/[0-9]+)/?", path):
                 return "https://www.facebook.com" + path.rstrip("/")
-            if path == "/story.php":
+            if path in ("/story.php", "/permalink.php"):
                 qs = parse_qs(p.query, strict_parsing=False)
                 if (len(qs.get("story_fbid", [])) == 1 and len(qs.get("id", [])) == 1
                     and all(_DIGITS.fullmatch(qs[k][0]) for k in ("story_fbid", "id"))):
-                    return ("https://www.facebook.com/story.php?story_fbid="
+                    return ("https://www.facebook.com" + path + "?story_fbid="
                             + qs["story_fbid"][0] + "&id=" + qs["id"][0])
             return None
         match = _POST_PATTERN[network].fullmatch(path)
