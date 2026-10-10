@@ -1,0 +1,15 @@
+text
+#Romantasy lang:es
+#RomanceFantasy lang:es
+#FantasíaÉpica lang:es
+#AltaFantasía lang:es
+#DarkRomance lang:es
+#RomanceOscuro lang:es
+#FaeRomance lang:es
+#EnemiesToLovers lang:es
+#AcademiaDeMagia lang:es
+#FantasíaOscura lang:es
+#FantasíaRomántica lang:es
+#Dragones lang:es
+#Hadas lang:es
+#Vampiros lang:es
