@@ -65,11 +65,13 @@ def _id(value):
 def _when(value, *, epoch=False):
     if isinstance(value, bool):
         return None
-    if epoch and isinstance(value, (int, float)) and math.isfinite(value) and 0 <= value <= 253402300799:
+    if epoch and isinstance(value, (int, float)):
         try:
-            return dt.datetime.fromtimestamp(value, tz=dt.timezone.utc)
+            if math.isfinite(value) and 0 <= value <= 253402300799:
+                return dt.datetime.fromtimestamp(value, tz=dt.timezone.utc)
         except (ValueError, OverflowError, OSError):
-            return None
+            pass
+        return None
     if isinstance(value, dt.datetime):
         parsed = value
     elif isinstance(value, str):
@@ -229,6 +231,7 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
         account = grouped.setdefault(key, {
             "account_id": stable, "handle": handle, "bio": None,
             "followers": None, "sources": set(), "posts": {},
+            "conflicting_posts": set(),
             "language": None, "following": None, "followed_by": None,
             "actions": set(), "lane": lane,
         })
@@ -241,7 +244,10 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
             account["bio"] = bio[:2000]
         followers = row.get("followers")
         if type(followers) is int and 0 <= followers <= 1_000_000_000:
-            account["followers"] = followers
+            if account["followers"] is None:
+                account["followers"] = followers
+            elif account["followers"] != followers:
+                diagnostics.append({"index": i, "reason": "conflicting_follower_snapshots"})
         for field in ("source", "tag"):
             src = row.get(field)
             if isinstance(src, str) and 0 < len(src.strip()) <= 200:
@@ -250,9 +256,12 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
         if isinstance(sources, (list, tuple)):
             account["sources"].update(s.strip() for s in sources
                                        if isinstance(s, str) and 0 < len(s.strip()) <= 200)
-        lang = _language(row)
-        if lang is not None and account["language"] is None:
-            account["language"] = lang
+        # A post language does not prove the account/profile language.
+        profile = row.get("profile") if isinstance(row.get("profile"), Mapping) else {}
+        profile_lang = _language({"language": row.get("profile_language") or
+                                             profile.get("language")})
+        if profile_lang is not None and account["language"] is None:
+            account["language"] = profile_lang
         for rel in ("following", "followed_by"):
             if type(row.get(rel)) is bool:
                 account[rel] = row[rel]
@@ -276,10 +285,19 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
             # author handle (URL is author evidence; not display text).
             if network in ("x", "threads") and handle:
                 url_handle = url.split("/")[3].lstrip("@").casefold()
-                if handle != url_handle:
+                claimed_post_handle = _valid_handle(post.get("handle"))
+                # Historical links can show the old handle only when a
+                # trusted immutable author id links them to this account.
+                post_author_id = _id(post.get("author_id"))
+                id_matches = bool(stable and post_author_id == stable)
+                if ((handle != url_handle or
+                     (claimed_post_handle and claimed_post_handle != handle))
+                    and not id_matches):
                     diagnostics.append({"index": i, "reason": "post_author_mismatch"})
                     continue
-            raw_date = post.get("created_at", post.get("timestamp"))
+            raw_date = post.get("created_at")
+            if raw_date is None:
+                raw_date = post.get("timestamp")
             if network == "reddit" and raw_date is None:
                 raw_date = post.get("created_utc")
             timestamp = _when(raw_date, epoch=(network == "reddit"))
@@ -308,9 +326,20 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
                         post_lang is not None and post_lang.startswith("es") else []}
             # No fake reply counts or engagement stats.
             replies = post.get("replies")
+            if replies is None and network == "reddit":
+                replies = post.get("comment_count")
             if type(replies) is int and 0 <= replies <= 1_000_000:
                 known["stats"] = {"replies": replies}
-            account["posts"].setdefault(url, known)
+            existing = account["posts"].get(url)
+            if url in account["conflicting_posts"]:
+                continue
+            if existing and existing["created_at"] != known["created_at"]:
+                account["posts"].pop(url, None)
+                account["conflicting_posts"].add(url)
+                diagnostics.append({"index": i, "reason": "conflicting_post_timestamps"})
+                continue
+            if existing is None or (existing["language"] is None and known["language"] is not None):
+                account["posts"][url] = known
     shortlist = []
     for key, account in sorted(grouped.items()):
         # If stable id exists, avoid the ranker's handle-first fallback.
