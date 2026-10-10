@@ -228,20 +228,15 @@ def _verify(red, now):
 
 
 def _voice_diagnostics(red, text, out):
-    """QA editorial común para fichas: informa, nunca reescribe ni frena."""
+    """Adaptador mínimo: sirve tanto en vista previa como antes de publicar."""
     try:
-        import spanish_voice_quality as voice_qa
-        if red not in voice_qa.NETWORKS:
-            return []
-        issues = voice_qa.audit(text, network=red,
-                                queue="WEB" if red in BROWSER else "API")["findings"]
-        if issues:
-            out(f"[{red}] revision_es: " + ",".join(sorted({issue["code"] for issue in issues})))
-        return issues
+        from spanish_voice_quality import advisory
+        return advisory(text, network=red,
+                        queue="WEB" if red in BROWSER else "API",
+                        log=out, label=f"[{red}] revision_es")
     except Exception as exc:
-        out(f"[{red}] auditor_es_no_disponible: " + type(exc).__name__)
+        out(f"[{red}] auditor_es_no_disponible: {type(exc).__name__}")
         return []
-
 
 def run(red, *, apply=False, now=None, out=print, publishers=None, verify=_verify, log_path=None):
     """Publica como mucho una ficha de `red`. Devuelve la URL o None."""
