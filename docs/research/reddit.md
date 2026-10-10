@@ -68,7 +68,9 @@ python tools/reddit_snapshot_preflight.py --plan plan.json --snapshot reddit_lis
 ```
 El primer comando tiene el mismo criterio que pytest, pero `python -m pytest tests/test_reddit_snapshot_preflight.py -q` es el comando de CI. CLI devuelve 0 para *apto para revisión*, 2 si bloquea. **Nunca autoriza por sí sola publicar**; el snapshot debe adquirirse de modo autorizado y revalidarse bajo el candado de escritura.
 
-**Paridad de antigüedad (REV 18, 10-10-2026):** el preflight original aceptaba 7 días para un comentario raíz, mientras el contrato común del oficial (`tools/post_age_policy.py`) establece 3 días para `comment` y 7 solo para `follow-up`. Se acota ahora a 3 días con prueba de 4 días bloqueado y 3 días permitido. Al integrar en el privado, **importar** la política compartida y no mantener dos fuentes de verdad. Este módulo sigue siendo offline y no autoriza publicación.\n\n## Riesgos, alcance y retirada
+**Paridad de antigüedad (REV 18, 10-10-2026):** el preflight original aceptaba 7 días para un comentario raíz, mientras el contrato común del oficial (`tools/post_age_policy.py`) establece 3 días para `comment` y 7 solo para `follow-up`. Se acota ahora a 3 días con prueba de 4 días bloqueado y 3 días permitido. Al integrar en el privado, **importar** la política compartida y no mantener dos fuentes de verdad. Este módulo sigue siendo offline y no autoriza publicación.
+
+## Riesgos, alcance y retirada
 
 - TOS: cualquier API requiere OAuth autorizado, agente de usuario honesto, consentimiento/aprobación que corresponda y respeto a cuotas; el wrapper no elude estas obligaciones. Devvit puede exigir revisión. Sin acuerdo/permisos confirmados, no consultar la API desde esta PR.
 - Privacidad: no guardar cuerpos de mensajes de usuarios, enlaces a perfiles, tokens, correos, cookies ni cookies CDP en este mirror. El snapshot de prueba es **inventado**. El repositorio privado contiene identificadores en el código antiguo; NO se portan.
