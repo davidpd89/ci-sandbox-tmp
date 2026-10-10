@@ -91,14 +91,14 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(self.calc("pinterest", rows)["state"], "manual_unknown_age")
 
     def test_network_rows_are_isolated_and_mastodon_server_is_preserved(self):
-        out = lc.replay([row("@Ana@uno.example", "2026-09-01", network="mastodon"),
-                         row("@Ana@dos.example", "2026-10-08", network="mastodon"),
-                         row("@Ana@uno.example", "2026-10-07", network="x")],
+        out = lc.replay([row("@Ana@example.com", "2026-09-01", network="mastodon"),
+                         row("@Ana@example.org", "2026-10-08", network="mastodon"),
+                         row("@Ana@example.com", "2026-10-07", network="x")],
                         network="mastodon", today=TODAY,
-                        following=("ana@uno.example", "ana@dos.example"),
-                        followers=("ana@dos.example",), followers_complete=True)
-        self.assertEqual(out["ana@uno.example"]["state"], "eligible")
-        self.assertEqual(out["ana@dos.example"]["state"], "reciprocal")
+                        following=("ana@example.com", "ana@example.org"),
+                        followers=("ana@example.org",), followers_complete=True)
+        self.assertEqual(out["ana@example.com"]["state"], "eligible")
+        self.assertEqual(out["ana@example.org"]["state"], "reciprocal")
         self.assertNotIn("ana", out)
 
     def test_ambiguous_current_following_cannot_be_eligible(self):
