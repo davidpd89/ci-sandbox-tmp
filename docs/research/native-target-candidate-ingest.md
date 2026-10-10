@@ -197,3 +197,22 @@ Todos los tests funcionales usan datos artificiales y lector inyectado;
 aún falta merge-preview real de #66 y ensayos supervisados de
 WEB/API/MOBILE, Edge/Windows y dispositivo móvil. No declarar aptitud
 de merge mientras el gate online y estas dependencias sigan abiertos.
+
+
+### Tercera comprobación: enlaces de Facebook
+
+El lector oficial de hashtags selecciona enlaces con /posts/, /videos/
+y parámetros fbid. Se amplió la validación acotada en el commit 66e4cc9:
+posts (ID numérico o pfbid), vídeos, publicaciones/permalinks de grupos
+con slug y story.php/permalink.php con IDs numéricos. No se admiten páginas
+de perfil ni hosts ajenos, ni se usa el nombre visible para atribuir autoría.
+Prueba de regresión: test_facebook_posts_groups_videos_and_story_urls.
+
+[CI de HEAD funcional 05eea3e](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38022433415):
+**39/39 Ubuntu + 39/39 Windows** Python 3.11, suites completas y
+compilación exitosas. El gate de campaña
+[38022433501](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38022433501)
+sigue con fallo online Ubuntu por no figurar #100 en el manifiesto del
+padre; la validación offline es correcta. Es bloqueo de coordinación,
+no un fallo de tests funcionales de los adaptadores. No se alteró
+research/public-reuse-parent ni se hizo merge.
