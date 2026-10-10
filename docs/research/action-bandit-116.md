@@ -1,3 +1,28 @@
+Fuente primaria: https://github.com/fidelity/mabwiser
+Fecha de consulta: 2026-10-10
+Licencia SPDX: Apache-2.0
+Referencia inmutable: https://github.com/fidelity/mabwiser/commit/b104071351d532aae977955d19b83872a9c1b1e3
+
+## Problema
+Falta un ranking experimental de acciones que consuma únicamente resultados D+7 confirmados, sin duplicar ranking de fuentes, cohortes ni ejecutores.
+
+## Alternativas
+MABWiser opcional para LinUCB; Vowpal Wabbit exige mayor complejidad operativa; contextualbandits y pybandits añaden una segunda dependencia; banditml no se reutiliza por GPL y falta de mantenimiento.
+
+## Licencias y procedencia
+Reutilizado por dependencia externa MABWiser 2.7.4 (Apache-2.0), commit inmutable arriba. Sin copia de código ajeno; enlaces/versiones del resto en la tabla de contraste.
+
+## Decisión
+Núcleo de solo lectura, nueve adaptadores, cold-start por reglas y entrenamiento LinUCB solo con cohortes completas D+7, 300 casos por red y 30 por acción. Sin conectar ejecutores.
+
+## Pruebas
+27 pruebas unitarias offline locales; integración MABWiser mediante CI Ubuntu/Windows Python 3.11. Comprobar siempre el HEAD exacto y la suite del oficial antes de integrar.
+
+## Retirada
+Eliminar núcleo, adaptadores, tres tests y workflow. Sin migraciones de estado persistido ni acciones ejecutadas.
+
+---
+
 # PR #116 — investigación aplicada y ranking experimental (10/10/2026)
 
 ## Decisión e integración
