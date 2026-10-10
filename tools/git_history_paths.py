@@ -68,22 +68,35 @@ def commits_in_range(root: Path, before: str | None, after: str, *, limit: int =
     return rows
 
 
-def touched_paths(root: Path, commit: str, parents: list[str]) -> set[str]:
-    """A/M/T paths; merges are compared to their first parent.
+def touched_paths(root: Path, commit: str, parents: list[str], *,
+                  merge_policy: str = "first_parent") -> set[str]:
+    """A/M/T paths in a commit, with explicit merge attribution.
 
-    This detects reintroduction of old, already-reachable side-branch paths;
-    other newly reachable parent commits are also visited by rev-list.
+    first_parent (push): catch a previously reachable side-parent path
+    reintroduced temporarily by a force-push merge.
+    all_parents (PR helper): exclude unchanged paths merely inherited from
+    the current base; a PR adapter must also apply its base-aware checks.
     """
+    if merge_policy not in {"first_parent", "all_parents"}:
+        raise HistoryError("Unknown merge attribution policy")
     options = ["-r", "--no-commit-id", "--no-renames", "--no-ext-diff",
                "--no-textconv", "--name-only", "-z", "--diff-filter=AMT"]
+
+    def diff(parent: str | None) -> set[str]:
+        args = (["diff-tree", "--root", *options, commit] if parent is None else
+                ["diff-tree", *options, parent, commit])
+        data = git(root, *args)
+        # Match strict UTF-8 handling in the final-tree/PR scanners.
+        return {p.decode("utf-8") for p in data.split(b"\\0") if p}
+
     if not parents:
-        data = git(root, "diff-tree", "--root", *options, commit)
-        return {p.decode("utf-8") for p in data.split(b"\0") if p}
-    # Compare to the first parent: a merge can resurrect a sensitive path
-    # from an already-reachable side branch, then delete it in this push.
-    # Intersection of all parent diffs would silently miss that transient path.
-    data = git(root, "diff-tree", *options, parents[0], commit)
-    return {p.decode("utf-8") for p in data.split(b"\0") if p}
+        return diff(None)
+    paths = diff(parents[0])
+    if merge_policy == "all_parents":
+        for parent in parents[1:]:
+            paths.intersection_update(diff(parent))
+    return paths
+
 
 def scan_history(root: Path, before: str | None, after: str, forbidden) -> list[tuple[str, int]]:
     findings = []
