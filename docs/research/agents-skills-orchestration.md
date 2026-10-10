@@ -1,12 +1,21 @@
 # CI #29 — Contrato de skills, checkpoints y aprobación, 10-10-2026
 
-## Hueco comprobado
+## Problema
 
 En `davidpd89/ci-sandbox-tmp` (HEAD inicial `94110ff157a03bc52981101c074a5df37656cb4e`), `tools/mechanical_round.py` contiene `PIPELINES` por red y ejecuta `pre/build/execute/post`; `round_queue.py` ya serializa recursos WEB/API/MOBILE; `content_publisher.py` valida fichas y hace publicaciones por adaptador. No procede sustituirlos por un motor de agentes. En el **privado**, rama `integracion/crecimiento-2026-10`, HEAD consultado `5449513d9b545d0a6a72abf066ab6a779bfdad71`, los prompts `00_OPERATIVO/PROMPTS_GPT_RONDA_2026-10-09.md` separan GPT escritor, Claude revisor y Windows canario; `00_OPERATIVO/RUNBOOK_OPERACION_VERIFICADA.md` aclara el fallback móvil de Instagram y la necesidad de respetar ACK incierto. Este detalle privado se consultó **solo en lectura** y no se copiaron estados, cuentas ni secretos. El espejo puede mostrar una ruta histórica para Instagram: el inspector de pipeline es orientativo, no prevalece sobre el scheduler desplegado.
 
 Falta un **contrato neutral y comprobable** entre investigar, planificar, escribir, validar, aprobar y pasar una intención al ejecutor, con huellas de skills, datos mínimos para replay y distinción estricta de confirmación frente a incertidumbre. Sin él es fácil confundir un prompt, un plan, una aprobación y un ACK en scripts diferentes. Un agente autónomo de publicación añadido aquí duplicaría la cola y el publicador actuales.
 
-## Comparativa OSS pública, verificada el 10-10-2026
+## Alternativas
+
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/pytransitions/transitions/tree/bd42b38f3627e6bca7274fb4d9af2e105f75da7c
+Fecha de consulta: 2026-10-10
+Licencia SPDX: MIT
+Referencia inmutable: https://github.com/pytransitions/transitions/commit/bd42b38f3627e6bca7274fb4d9af2e105f75da7c
+
+Alternativas adicionales, licencias y revisión de mantenimiento verificadas el 10-10-2026. La licencia anterior corresponde a la fuente primaria de la comparación, **no** a código externo copiado (no hay código externo incorporado).
 
 | Proyecto, referencia inmutable | Licencia | Actividad comprobada | Python 3.11/Windows | Decisión |
 | --- | --- | --- | --- | --- |
@@ -17,7 +26,7 @@ Falta un **contrato neutral y comprobable** entre investigar, planificar, escrib
 
 **Elección:** seguir con la arquitectura actual y reutilizar el **patrón** de FSM/checkpoint; no copiar código de terceros ni añadir dependencias. Coste adicional de instalación: **0** paquetes; no se deben reproducir avisos/locks/estado que ya tiene el sistema. Código local propio, sin archivos externos incorporados y sin obligación de atribución por copia. Para una futura orquestación con tool-calling realmente autónomo, reevaluar LangGraph/Pydantic AI con una prueba contra el sistema existente (no instalar sin esa evaluación).
 
-## Implementación en esta PR
+## Decisión e implementación en esta PR
 
 `tools/agent_workflow.py`: flujo puro de siete etapas `research → plan → write → validate → approval → dispatch → verify`. Cada transición registra `event_id` único, `tool_id` opaco, SHA-256 de evidencia, revisión y, cuando procede, atestación humana o resultado de ejecución. La revisión escrita tiene un fingerprint estable; QA y aprobación deben referirse a **esa misma revisión**. `handoff()` produce **datos**, nunca invoca redes ni ejecutores. `intent_key()` fija una clave de idempotencia por ejecución/red/cola/revisión. La etapa `verify` acaba en **complete**, **failed** o **uncertain** según ACK explícito, sin reintentos automáticos de resultado incierto.
 
@@ -47,7 +56,7 @@ El adaptador consumidor deberá mantener por su cuenta la identidad real del apr
 
 - Antes: 0 módulo de contrato transversal de etapas/checkpoints en el espejo; existen ejecutores y colas, que se conservan.
 - Después: 9 redes × 3 canales = 27 combinaciones de esquema, validación de revisión obsoleta, replay idéntico vs conflicto, digest/ID malformados, checkpoint alterado, JSON con claves repetidas, ACK `confirmed/failed/unknown`, ausencia de texto/argumentos privados e inventario de scripts sintéticos.
-- Comando local Linux Python 3.11: `python -m unittest discover -s tests -p test_agent_workflow.py -v`. Resultado al preparar la PR: 14 pruebas (`OK`). El resto de la suite no está disponible en el checkout parcial local; verificar Actions sobre el HEAD real.
+- Comando local en contenedor Python 3.13.5: `python -m unittest discover -s tests -p test_agent_workflow.py -v`. Resultado al preparar la PR: 14 pruebas (`OK`). El resto de la suite no está disponible en el checkout parcial local; verificar Actions sobre el HEAD real.
 - Pendiente Claude: suite completa en Windows 3.11 y Ubuntu, importación real de `mechanical_round.PIPELINES`, rutas y bloqueos de los tres canales, revisión de que el contrato no se considera un permiso de publicar; prueba canario supervisado **solo tras** integración futura y aprobación.
 
 ## Segunda revisión adversarial y límites
@@ -58,6 +67,6 @@ El adaptador consumidor deberá mantener por su cuenta la identidad real del apr
 4. No hay persistencia durable proporcionada aquí, compare-and-swap ni token de aprobación verificable. Son responsabilidades del adaptador/almacén y no se presentan como implementadas.
 5. No hay integración con publisher/LLM/Edge/Android, ni medición real de tokens ahorrados; el contrato evita repetir evidencias completas en checkpoints pero el ahorro en producción **no está cuantificado**.
 
-## Activación y retirada
+## Retirada y activación
 
 Por defecto es **inerte**. No se importa en la ruta de ejecución del scheduler, ni modifica el estado de redes. La CLI solo lee configuración estática. Para un experimento futuro, inyectar el contrato *antes* de un paso humano y guardar checkpoints en almacén provisional segregado, sin habilitar `dispatch` en vivo. Retirada: dejar de importar el módulo y descartar únicamente snapshots sintéticos creados por el experimento; **nunca** resetear locks, ACK inciertos, sesiones, historiales o breakers. No hay migración sobre datos reales.
