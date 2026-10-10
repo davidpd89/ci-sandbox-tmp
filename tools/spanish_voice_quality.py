@@ -63,13 +63,13 @@ def _accent_checker():
     return check_missing_accents
 
 
-def audit(text: str, *, network: str, locale: str = "es-ES", queue: str = "WEB",
+def audit(text: str, *, network: str, locale: str = "es-ES", queue: str | None = None,
           check_accents: bool = True) -> dict:
     if not isinstance(text, str):
         raise TypeError("text debe ser str")
     if network not in NETWORKS:
         raise ValueError("red desconocida")
-    if queue not in QUEUES:
+    if queue is not None and queue not in QUEUES:
         raise ValueError("cola desconocida")
     if locale not in ("es-ES", "es"):
         raise ValueError("locale desconocido")
@@ -133,7 +133,8 @@ def audit(text: str, *, network: str, locale: str = "es-ES", queue: str = "WEB",
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Auditoría offline no destructiva")
     parser.add_argument("--network", required=True, choices=sorted(NETWORKS))
-    parser.add_argument("--queue", choices=sorted(QUEUES), default="WEB")
+    parser.add_argument("--queue", choices=sorted(QUEUES), default=None,
+                        help="cola real; omitir si no se conoce")
     parser.add_argument("--locale", choices=["es-ES", "es"], default="es-ES")
     parser.add_argument("--text", help="Texto propio; si se omite, stdin")
     args = parser.parse_args(argv)
