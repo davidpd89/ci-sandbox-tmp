@@ -1,0 +1,21 @@
+text
+tests/
+  contracts/
+    test_social_adapter_contract.py
+  fixtures/
+    bluesky/
+      profile.ok.json
+      profile.not_found.json
+      post.ok.json
+      post.deleted.json
+      thread.ok.json
+      thread.deleted_parent.json
+      search.page1.json
+      search.page2.json
+      search.invalid_cursor.json
+      jetstream.post.created.json
+      jetstream.post.duplicate.json
+      jetstream.reconnect.json
+      error.rate_limited.json
+      error.invalid_at_uri.json
+      error.forbidden.json
