@@ -188,6 +188,16 @@ class TestBlind(unittest.TestCase):
                          {"before": 2, "after": 0, "cases": 2})
 
 
+
+    def test_unpredictable_seed_default_and_reproducible_test_override(self):
+        with mock.patch("spanish_voice_blind.secrets.token_hex",
+                        return_value="synthetic-private-entropy") as entropy:
+            actual = pack(self.pairs)
+        entropy.assert_called_once_with(32)
+        explicit = pack(self.pairs, seed="synthetic-private-entropy")
+        self.assertEqual(actual, explicit)
+        self.assertNotIn("seed", actual[1])
+
     def test_invalid_choice_type_is_rejected(self):
         doc, key = pack(self.pairs, seed="review")
         doc["items"][0]["preference"] = ["left"]
