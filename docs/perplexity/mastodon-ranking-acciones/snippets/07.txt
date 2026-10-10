@@ -1,0 +1,2 @@
+text
+discovery -> normalize -> profile_score -> post_score -> action_queue -> outcome_tracker
