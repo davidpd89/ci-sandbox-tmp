@@ -1,0 +1,30 @@
+python
+# Adaptación propia para davidpd89/ci-sandbox-tmp.
+# SDK oficial: https://github.com/tiktok/tiktok-business-api-sdk
+import os
+from tiktokapify import ApiClient  # Sustituir por el cliente exacto del SDK instalado
+
+from tools.action_ledger import record_action
+
+
+def fetch_campaign_report(advertiser_id: str, report_range: str) -> dict:
+    client = ApiClient()
+    client.configuration.access_token = os.environ["TIKTOK_ACCESS_TOKEN"]
+    response = client.reporting_api.report(
+        advertiser_id=advertiser_id,
+        report_type="BASIC",
+        data_level="AUCTION_CAMPAIGN",
+        dimensions=["campaign_id"],
+        metrics=["impressions", "clicks", "spend", "conversion"],
+        start_date=report_range[0],
+        end_date=report_range[1],
+    )
+    payload = response.to_dict()
+    record_action(
+        platform="tiktok",
+        action="ads_report_fetch",
+        target_id=advertiser_id,
+        result="ok",
+        metadata={"rows": len(payload.get("data", {}).get("list", []))},
+    )
+    return payload
