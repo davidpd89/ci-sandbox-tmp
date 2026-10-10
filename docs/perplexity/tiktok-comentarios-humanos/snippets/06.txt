@@ -1,0 +1,61 @@
+python
+# Nuevo archivo: tools/tiktok_comment_intents.py
+from dataclasses import dataclass
+import random
+
+@dataclass(frozen=True)
+class CommentIntent:
+    name: str
+    openers: tuple[str, ...]
+    emoji_policy: tuple[int, int]
+    max_words: int
+
+INTENTS = {
+    "reaction": CommentIntent(
+        name="reaction",
+        openers=("Vale,", "No puedo con", "Esto me ha", "Ok, necesito"),
+        emoji_policy=(0, 1),
+        max_words=12,
+    ),
+    "empathy": CommentIntent(
+        name="empathy",
+        openers=("Totalmente,", "Me pasa exactamente", "Joder, esto", "No sé cómo"),
+        emoji_policy=(0, 1),
+        max_words=18,
+    ),
+    "question": CommentIntent(
+        name="question",
+        openers=("¿Team", "¿Cuál fue", "¿Lo habríais", "¿Alguien más"),
+        emoji_policy=(0, 1),
+        max_words=14,
+    ),
+    "reply": CommentIntent(
+        name="reply",
+        openers=("Totalmente,", "Exacto,", "Yo también", "Justo eso"),
+        emoji_policy=(0, 1),
+        max_words=15,
+    ),
+}
+
+def pick_intent(context: dict) -> str:
+    if context.get("parent_comment"):
+        return "reply"
+    if context.get("question_opportunity"):
+        return "question"
+    return random.choice(("reaction", "empathy", "question"))
+
+def build_prompt(context: dict, intent: str) -> str:
+    item = INTENTS[intent]
+    opener = random.choice(item.openers)
+    return (
+        f"Escribe un comentario de TikTok en español para una cuenta de autora de fantasía juvenil/romantasy.\n"
+        f"Intención: {intent}.\n"
+        f"Comienza con una variante natural de: {opener}\n"
+        f"Contexto del vídeo: {context.get('caption', '')}\n"
+        f"Tema detectado: {context.get('topic', '')}\n"
+        f"Detalle obligatorio: menciona una escena, personaje, tropo, frase o emoción concreta.\n"
+        f"Máximo {item.max_words} palabras.\n"
+        f"Usa entre {item.emoji_policy[0]} y {item.emoji_policy[1]} emoji.\n"
+        "No uses frases genéricas como 'qué buen vídeo', 'me encanta tu contenido' o 'sigue así'.\n"
+        "Devuelve solo el comentario."
+    )
