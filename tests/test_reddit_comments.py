@@ -44,7 +44,11 @@ class PlanTest(unittest.TestCase):
             r._check_micro_comment(p["text"])
 
     def test_skips_own_threads_and_done(self):
+<<<<<<< HEAD
         mine = thread("Mi estantería", author="AutoraDemoEscritor")
+=======
+        mine = thread("Mi estantería", author="DavidPortoEscritor")
+>>>>>>> origin/research/public-reuse-parent
         done = thread("Mi biblioteca en casa")
         plan = rc.build_plan([mine, done], max_comments=2, done_keys={done["url"]})
         self.assertEqual(plan, [])
@@ -67,7 +71,11 @@ class ReplyTests(unittest.TestCase):
         comments = [
             {"id": "t1_a", "author": "ana", "depth": 0, "text": "Ensayo sobre la ceguera."},
             {"id": "t1_b", "author": "luis", "depth": 0, "text": "De ratones y hombres"},
+<<<<<<< HEAD
             {"id": "t1_c", "author": "AutoraDemoEscritor", "depth": 1, "text": "Gran elección."},     # ya respondido a luis
+=======
+            {"id": "t1_c", "author": "DavidPortoEscritor", "depth": 1, "text": "Gran elección."},     # ya respondido a luis
+>>>>>>> origin/research/public-reuse-parent
             {"id": "t1_d", "author": "pepe", "depth": 1, "text": "Venía a decir esto"},                # hijo de otro: no
             {"id": "t1_e", "author": "mar", "depth": 0, "text": "Soy leyenda"},
             {"id": "t1_f", "author": "AutoModerator", "depth": 0, "text": "Recordad las normas del subreddit"},
@@ -86,6 +94,7 @@ class ReplyTests(unittest.TestCase):
 class NoBankTests(unittest.TestCase):
     def test_micro_comments_need_chatgpt_text_and_a_concrete_title(self):
         import reply_queue
+<<<<<<< HEAD
         threads = [{"url": "u1", "title": "Audiolibros", "author": "a"}, {"url": "u2", "title": "Terminé mi primera novela de fantasía", "author": "b"}]
         plan = [{"kind": "comment", "subreddit": "libros", "url": "u1", "text": "¿Lo recomendarías sin spoilers?"}, {"kind": "comment", "subreddit": "libros", "url": "u2", "text": "banco"}]
         original = reply_queue.get_or_enqueue
@@ -98,6 +107,50 @@ class NoBankTests(unittest.TestCase):
             self.assertEqual(rc.write_comment_texts(plan, threads, log=lambda *_: None), [])   # sin respuesta de ChatGPT no se comenta
         finally:
             reply_queue.get_or_enqueue = original
+=======
+        import reply_provenance as proof
+        import tempfile
+        from unittest import mock
+        bad = "https://www.reddit.com/r/libros/comments/abcd01/audiolibros/"
+        good = "https://www.reddit.com/r/libros/comments/abcd02/primera_novela/"
+        threads = [{"url": bad, "title": "Audiolibros", "author": "a"},
+                   {"url": good, "title": "Terminé mi primera novela de fantasía", "author": "b"}]
+        plan = [{"kind": "comment", "subreddit": "libros", "url": bad, "text": "¿Lo recomendarías sin spoilers?"},
+                {"kind": "comment", "subreddit": "libros", "url": good, "text": "banco"}]
+        original = reply_queue.get_or_enqueue
+        response = "Enhorabuena, qué paso más grande"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.dict(os.environ, {"RRSS_GPT_PROVENANCE_PATH": os.path.join(tmp, "proof.json")}):
+                def generated(items, network, log=print):
+                    for item in items:
+                        self.assertTrue(proof.record(network, item, response))
+                    return {i["id"]: response for i in items}
+                try:
+                    reply_queue.get_or_enqueue = generated
+                    out = rc.write_comment_texts(plan, threads, log=lambda *_: None)
+                    self.assertEqual([a["url"] for a in out], [good])
+                    self.assertEqual(out[0]["text"], response)
+                    self.assertTrue(proof.verify(out[0], "reddit"))
+                    self.assertEqual(rc.write_comment_texts(plan, threads, log=lambda *_: None)[0]["url"], good)
+                    reply_queue.get_or_enqueue = lambda items, network, log=print: {}
+                    self.assertEqual(rc.write_comment_texts(plan, threads, log=lambda *_: None), [])
+                finally:
+                    reply_queue.get_or_enqueue = original
+
+    def test_reddit_micro_without_issued_proof_fails_closed(self):
+        import reply_queue
+        from unittest import mock
+        import tempfile
+        good = "https://www.reddit.com/r/libros/comments/abcd02/primera_novela/"
+        plan = [{"kind": "comment", "subreddit": "libros", "url": good, "text": "banco"}]
+        threads = [{"url": good, "title": "Terminé mi primera novela de fantasía", "author": "b"}]
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.dict(os.environ, {"RRSS_GPT_PROVENANCE_PATH": os.path.join(tmp, "proof.json")}):
+                with mock.patch.object(reply_queue, "get_or_enqueue",
+                                       return_value={good: "Frase de otro post"}):
+                    self.assertEqual(rc.write_comment_texts(plan, threads, log=lambda *_: None), [])
+>>>>>>> origin/research/public-reuse-parent
 
 
 class RedditContextTests(unittest.TestCase):

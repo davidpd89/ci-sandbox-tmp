@@ -56,7 +56,11 @@ class MastodonScanTests(unittest.TestCase):
             "account": {"acct": "lector"},
         }
         def search(query, kind=None, limit=20, **kwargs):
+<<<<<<< HEAD
             if query == "autorademodiaz.com":
+=======
+            if query == "davidportodiaz.com":
+>>>>>>> origin/research/public-reuse-parent
                 return {"statuses": []}
             raise RuntimeError("indice no disponible")
         with patch.object(scan.m, "health"), \

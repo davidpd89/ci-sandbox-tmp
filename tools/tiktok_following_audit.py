@@ -8,7 +8,12 @@ navegador, sin captcha), con pausa entre peticiones y cache reanudable.
     python tools/tiktok_following_audit.py collect            # (navegador, lectura) lista de seguidos -> cache/following.json
     python tools/tiktok_following_audit.py enrich [--max N]   # (HTTP) idioma/bio/cifras de cada uno -> cache/profiles.json
     python tools/tiktok_following_audit.py classify           # -> audit.json + resumen: keep / unfollow con motivo
+<<<<<<< HEAD
     python tools/tiktok_following_audit.py unfollow --max 30  # (navegador; tope 30/dia desde el captcha del 04/10) deja de seguir a los marcados; para ante cualquier aviso
+=======
+    python tools/tiktok_following_audit.py relations --following ... --registro ... --inbound ... --observed-on YYYY-MM-DD
+    # PR39: el comando 'unfollow' queda bloqueado mientras no exista aprobación y verificación humana.
+>>>>>>> origin/research/public-reuse-parent
 
 Conserva: cuentas en espanol (idioma `es`, o biografia claramente en espanol) con aspecto de persona real, las que ya tienen
 interaccion nuestra en el registro, y las de `KEEP_HANDLES`. Quita: otro idioma, bots (sin videos y con muchisimo seguidos,
@@ -258,6 +263,12 @@ def unfollow(max_n=30):
     """TikTok solo deja leer ~30 seguidos por apertura de la lista (la paginacion web no carga mas), asi que se
     trabaja por pasadas: se leen las 30 filas, se clasifican (HTTP) y se quitan las marcadas; al reabrir aparecen las
     siguientes. Para al llegar a `max_n`, sin marcadas en pantalla, o ante cualquier aviso/captcha."""
+<<<<<<< HEAD
+=======
+    # PR39: no hay autorización de unfollow. Este script permanece legible
+    # para auditoría histórica pero NO puede hacer escrituras remotas.
+    raise PermissionError("PR39: unfollow bloqueado; solo informe hasta aprobación humana explícita")
+>>>>>>> origin/research/public-reuse-parent
     import action_ledger as al
     import circuit_breaker as cb
     import tiktok_interact as tt
@@ -337,8 +348,17 @@ def main(argv=None):
         enrich(max_n)
     elif command == "classify":
         run_classify()
+<<<<<<< HEAD
     elif command == "unfollow":
         unfollow(max_n or 30)
+=======
+    elif command == "relations":
+        from tiktok_relation_report import main as relation_main
+        return relation_main(argv[1:])
+    elif command == "unfollow":
+        print("PR39: unfollow BLOQUEADO. Utiliza el informe offline 'relations'; no hay aprobación de escritura.")
+        return 3
+>>>>>>> origin/research/public-reuse-parent
     else:
         print(__doc__)
         return 2

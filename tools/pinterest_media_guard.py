@@ -1,0 +1,84 @@
+"""Preflight local del publicador web de Pinterest; ninguna operación remota.
+
+Solo comprueba imagen estática (pin normal), no anuncios, vídeo o cargas móviles.
+"""
+from __future__ import annotations
+
+import os
+import warnings
+from urllib.parse import urlsplit
+
+from PIL import Image, UnidentifiedImageError
+
+MAX_WEB_IMAGE_BYTES = 20_000_000  # límite web conservador: 20 MB decimales
+WEB_FORMATS = frozenset({"BMP", "JPEG", "PNG", "TIFF", "WEBP"})
+# EXIF Orientation 5-8 intercambia ejes al mostrarse; la foto no se modifica.
+EXIF_SWAPPED_AXES = frozenset({5, 6, 7, 8})
+
+
+class PinPreflightError(ValueError):
+    """Entrada local inválida: todavía no se ha abierto el navegador."""
+
+
+def validate_web_pin_image(path):
+    """Lee cabecera y decodificación; devuelve dimensiones visuales con EXIF."""
+    if not isinstance(path, (str, os.PathLike)) or not os.fspath(path):
+        raise PinPreflightError("imagen: ruta local vacía o inválida")
+    try:
+        size = os.stat(path).st_size
+    except (OSError, ValueError) as exc:
+        raise PinPreflightError("imagen: archivo inaccesible") from exc
+    if not 0 < size <= MAX_WEB_IMAGE_BYTES:
+        raise PinPreflightError("imagen: archivo vacío o superior a 20 MB web")
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            with Image.open(path) as source:
+                fmt = source.format
+                pixel_width, pixel_height = source.size
+                if fmt not in WEB_FORMATS:
+                    raise PinPreflightError("imagen: tipo no admitido para Pin web")
+                if pixel_width <= 0 or pixel_height <= 0:
+                    raise PinPreflightError("imagen: dimensiones inválidas")
+                source.verify()
+            # verify() comprueba la estructura, pero un JPEG truncado puede
+            # superarla y fallar después al cargar los píxeles. Decodificarlo.
+            with Image.open(path) as decoded:
+                decoded.load()
+                # getexif() puede cambiar el estado del decoder PNG;
+                # tras verify() sobre el primer handle, usar el segundo.
+                orientation = decoded.getexif().get(274, 1)
+    except (OSError, ValueError, UnidentifiedImageError,
+            Image.DecompressionBombWarning, Image.DecompressionBombError) as exc:
+        if isinstance(exc, PinPreflightError):
+            raise
+        raise PinPreflightError("imagen: formato ilegible, truncado o sospechoso") from exc
+    width, height = ((pixel_height, pixel_width)
+                     if isinstance(orientation, int) and orientation in EXIF_SWAPPED_AXES
+                     else (pixel_width, pixel_height))
+    return {"format": fmt, "bytes": size, "width": width,
+            "height": height, "aspect_2_3": width * 3 == height * 2,
+            "pixel_width": pixel_width, "pixel_height": pixel_height,
+            "exif_orientation": orientation}
+
+
+def validate_web_pin_fields(title, description, link, alt):
+    """Valida metadatos entregados al compositor web, sin suponer publicación."""
+    fields = (("título", title, 100), ("descripción", description, 800),
+              ("texto alternativo", alt, 500))
+    for label, value, maximum in fields:
+        if not isinstance(value, str) or not value.strip():
+            raise PinPreflightError(f"{label}: obligatorio")
+        if maximum is not None and len(value) > maximum:
+            raise PinPreflightError(f"{label}: supera {maximum} caracteres")
+    if not isinstance(link, str) or not link or any(ord(c) < 33 for c in link):
+        raise PinPreflightError("enlace: debe ser URL HTTPS sin espacios ni controles")
+    try:
+        parsed = urlsplit(link)
+        port = parsed.port
+    except (ValueError, TypeError) as exc:
+        raise PinPreflightError("enlace: URL malformada") from exc
+    if (parsed.scheme != "https" or not parsed.hostname or
+            parsed.username is not None or parsed.password is not None or
+            port is not None):
+        raise PinPreflightError("enlace: solo HTTPS con host, sin credenciales ni puerto")

@@ -45,6 +45,12 @@ def run(red):
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD
+=======
+    if "--calendar" in sys.argv[1:]:
+        import publication_calendar
+        raise SystemExit(publication_calendar.main([a for a in sys.argv[1:] if a != "--calendar"]))
+>>>>>>> origin/research/public-reuse-parent
     redes = [sys.argv[1]] if len(sys.argv) > 1 else list(cq.RED_FOLDERS.keys())
     for red in redes:
         run(red)

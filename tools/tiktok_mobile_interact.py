@@ -29,7 +29,11 @@ from mobile_client import (  # noqa: E402
 )
 
 
+<<<<<<< HEAD
 MY_HANDLE = "autorademoescritor"
+=======
+MY_HANDLE = "davidportoescritor"
+>>>>>>> origin/research/public-reuse-parent
 TIKTOK_PACKAGE_CANDIDATES = (
     "com.zhiliaoapp.musically",
     "com.ss.android.ugc.trill",
@@ -142,6 +146,37 @@ def _visible_text(tree: Any) -> str:
     return "\n".join(values)
 
 
+<<<<<<< HEAD
+=======
+
+def _comment_visible_as_content(tree: Any, text: str) -> bool:
+    """Evidencia conservadora de contenido no editable, no de autoría remota.
+
+    Un EditText que aún contiene el texto indica borrador/no confirmación,
+    aunque el contenedor también replique el texto en un TextView. No leer
+    labels/identifiers como sustitutos del contenido publicado.
+    """
+    wanted = _norm(" ".join(str(text or "").split()))
+    if not wanted:
+        return False
+    elements = [el for el in walk_ui(tree) if not _foreign_package(el)]
+    for element in elements:
+        if "edittext" not in _norm(element.get("type")):
+            continue
+        if any(_norm(" ".join(str(v).split())) == wanted
+               for v in element_texts(element)):
+            return False
+    for element in elements:
+        node_type = _norm(element.get("type"))
+        if not any(tag in node_type for tag in ("textview", "statictext")):
+            continue
+        if any(_norm(" ".join(str(v).split())) == wanted
+               for v in element_texts(element)):
+            return True
+    return False
+
+
+>>>>>>> origin/research/public-reuse-parent
 def _check_challenge(tree: Any) -> None:
     text = _norm(_visible_text(tree))
     for signal in BOT_WARNING_SIGNALS:
@@ -747,7 +782,13 @@ class TikTokMobileAdapter:
                 f"el perfil abierto es @{profile.get('handle')} y no @{wanted}"
             )
         relation = profile.get("relation")
+<<<<<<< HEAD
         if relation in ("following", "friends", "requested"):
+=======
+        if relation == "requested":
+            return "requested"  # solicitud pendiente, NO follow confirmado
+        if relation in ("following", "friends"):
+>>>>>>> origin/research/public-reuse-parent
             return "already"
         if relation not in ("not_following", "follows_me"):
             raise TikTokTargetNotFound(f"estado del control follow desconocido: {relation!r}")
@@ -765,7 +806,13 @@ class TikTokMobileAdapter:
                 time.sleep(1.8)
         if (profile.get("handle") or "").casefold() != wanted:
             raise TikTokTargetNotFound(f"el perfil cambió tras hojearlo: @{profile.get('handle')}")
+<<<<<<< HEAD
         if profile.get("relation") in ("following", "friends", "requested"):
+=======
+        if profile.get("relation") == "requested":
+            return "requested"
+        if profile.get("relation") in ("following", "friends"):
+>>>>>>> origin/research/public-reuse-parent
             return "already"
         if profile.get("relation") not in ("not_following", "follows_me"):
             raise TikTokTargetNotFound(f"estado del control follow desconocido: {profile.get('relation')!r}")
@@ -777,10 +824,18 @@ class TikTokMobileAdapter:
         # Tras el tap el perfil puede tardar en repintarse (o salir un aviso): se vuelve a
         # LEER (nunca a pulsar) hasta 3 veces y, si no, se reabre el perfil limpio.
         for attempt in range(4):
+<<<<<<< HEAD
             if (after.get("handle") or "").casefold() == wanted and after.get("relation") in (
                 "following", "friends", "requested",
             ):
                 return "followed"
+=======
+            if (after.get("handle") or "").casefold() == wanted:
+                if after.get("relation") == "requested":
+                    return "requested"  # aun no aceptado: no falsear confirmacion
+                if after.get("relation") in ("following", "friends"):
+                    return "followed"
+>>>>>>> origin/research/public-reuse-parent
             time.sleep(2.0)
             if attempt == 2:
                 self.open_profile(handle)
@@ -842,11 +897,17 @@ class TikTokMobileAdapter:
         if not isinstance(text, str) or not text.strip():
             raise ValueError("comentario vacío")
         text = text.strip()
+<<<<<<< HEAD
         import voice_output_finalization as voice
         voice.inspect(text, network="tiktok", queue="MOBILE")
         self._open_target(url)
         tree = self._tree()
         if _norm(text) in _norm(_visible_text(tree)):
+=======
+        self._open_target(url)
+        tree = self._tree()
+        if _comment_visible_as_content(tree, text):
+>>>>>>> origin/research/public-reuse-parent
             return "already"
         self._hook("before_comment")
         info = self.client.device_info(self.device.id)
@@ -859,7 +920,11 @@ class TikTokMobileAdapter:
         self.client.tap(x, y, self.device.id)
         time.sleep(0.6)
         tree = self._tree(validate_shape=False)
+<<<<<<< HEAD
         if _norm(text) in _norm(_visible_text(tree)):
+=======
+        if _comment_visible_as_content(tree, text):
+>>>>>>> origin/research/public-reuse-parent
             return "already"
         self._hook("comments_opened")
         tree = self._tree(validate_shape=False)
@@ -885,7 +950,11 @@ class TikTokMobileAdapter:
         self._hook("after_send")
         tree = self._tree(validate_shape=False)
         _check_challenge(tree)
+<<<<<<< HEAD
         if _norm(text) in _norm(_visible_text(tree)):
+=======
+        if _comment_visible_as_content(tree, text):
+>>>>>>> origin/research/public-reuse-parent
             return "created"
         raise TikTokWriteUnverified(
             "comentario enviado pero no confirmado en pantalla; parar y revisar, no reintentar"

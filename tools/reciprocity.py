@@ -1,6 +1,10 @@
 """Cuentas RECIPROCAS («hubs de follow-back») para todas las redes (07/10/2026).
 
+<<<<<<< HEAD
 Descubrimiento (David, 07/10): @rober@masto.es (admin de masto.es) tiene 33.750 seguidores y sigue a 37.400: crece SIGUIENDO a mucha gente que le sigue de vuelta. Quien tiene
+=======
+Descubrimiento (David, 07/10): un hub ilustrativo (datos orientativos) tiene 33.750 seguidores y sigue a 37.400: crece SIGUIENDO a mucha gente que le sigue de vuelta. Quien tiene
+>>>>>>> origin/research/public-reuse-parent
 esa conducta (sigue casi tantas cuentas como le siguen) devuelve el follow; y sus listas de seguidores y de seguidos son un caladero de cuentas con la misma cultura de follow-back.
 No es una anecdota de Mastodon: el patron vale en Bluesky, X, Threads, Instagram, TikTok y Pinterest.
 
@@ -45,7 +49,18 @@ def _fold(text):
 
 
 def declares_followback(bio):
+<<<<<<< HEAD
     return bool(FOLLOWBACK_BIO.search(_fold(bio)))
+=======
+    # Compartido por todos los adaptadores que ya llaman declared_bonus.
+    # Una mención explicativa o negativa NO es intención explícita.
+    try:
+        from reciprocity_signals import classify_text
+    except ImportError:
+        from tools.reciprocity_signals import classify_text
+    return any(s["kind"] == "follow_exchange" and s["intent"] == "explicit"
+               for s in classify_text(bio))
+>>>>>>> origin/research/public-reuse-parent
 
 
 def declared_bonus(bio):

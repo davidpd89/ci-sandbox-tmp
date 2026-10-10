@@ -1,5 +1,9 @@
 """
+<<<<<<< HEAD
 Herramienta unica para el dia a dia de Instagram (@autorademodiaz) - mismo
+=======
+Herramienta unica para el dia a dia de Instagram (@davidportodiaz) - mismo
+>>>>>>> origin/research/public-reuse-parent
 patron que x_interact.py/threads_interact.py/reddit_interact.py (Edge real
 via CDP puerto 9223, ya logueado - David dejo la sesion lista el
 21/09/2026). Instagram es, de las cinco redes de este proyecto, la mas
@@ -33,7 +37,11 @@ dia), 3 intentos seguidos de actuar sobre un indice fallaron los 3 porque
 el post ya no estaba ahi en la siguiente carga.
 
 CONFIRMADO EN VIVO el 21/09 (primera sesion real, con acciones reales):
+<<<<<<< HEAD
 - Cuenta activa confirmada por el enlace `a[href='/autorademodiaz/']`
+=======
+- Cuenta activa confirmada por el enlace `a[href='/davidportodiaz/']`
+>>>>>>> origin/research/public-reuse-parent
   (con o sin texto visible segun la pagina - ver `_active_handle`).
 - `edit_bio()`: funciona, bio corregida y verificada en el perfil real.
 - `follow()`: funciona, verificado por incremento real del contador de
@@ -80,12 +88,21 @@ from playwright.sync_api import sync_playwright
 CDP_URL = "http://127.0.0.1:9223"
 EDGE_EXE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 # Mismo perfil dedicado que las otras tres herramientas - David logueo
+<<<<<<< HEAD
 # @autorademodiaz en Instagram ahi el 21/09/2026. Ver PENDIENTES.md sobre
 # la posibilidad de migrar a un perfil de Edge aislado solo para esta red
 # si en algun momento se ve necesario (los intentos archivados en
 # C:\GIT\Instagram preferian perfiles aislados).
 EDGE_USER_DATA = r"C:\Temp\rrss-autorademo-edge"
 MY_HANDLE = "autorademodiaz"
+=======
+# @davidportodiaz en Instagram ahi el 21/09/2026. Ver PENDIENTES.md sobre
+# la posibilidad de migrar a un perfil de Edge aislado solo para esta red
+# si en algun momento se ve necesario (los intentos archivados en
+# C:\GIT\Instagram preferian perfiles aislados).
+EDGE_USER_DATA = r"C:\Temp\rrss-davidporto-edge"
+MY_HANDLE = "davidportodiaz"
+>>>>>>> origin/research/public-reuse-parent
 
 # Seguro anti-bot ampliado (21/09) con las senales que los intentos
 # reales de C:\GIT\Instagram encontraron en vivo entre mayo y septiembre
@@ -302,11 +319,22 @@ def ensure_browser():
 def _connect():
     _refuse_if_paused()
     p = sync_playwright().start()
+<<<<<<< HEAD
     browser = p.chromium.connect_over_cdp(CDP_URL)
     ctx = browser.contexts[0]
     pages = [pg for pg in ctx.pages if urllib.parse.urlsplit(pg.url).hostname in {"instagram.com", "www.instagram.com"}]
     pg = pages[-1] if pages else ctx.new_page()
     return p, pg
+=======
+    try:
+        import browser_common as bc
+        browser = bc.connect_cdp(p.chromium, CDP_URL)
+        pg = bc.new_owned_page(browser, lean=False)
+        return bc.OwnedPlaywright(p, pg), pg
+    except Exception:
+        p.stop()
+        raise
+>>>>>>> origin/research/public-reuse-parent
 
 
 def _active_handle(pg):

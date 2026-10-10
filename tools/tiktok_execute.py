@@ -123,9 +123,30 @@ def _apply_warmup_gate(plan, dias_activo):
 
 
 def run_plan(plan):
+<<<<<<< HEAD
     results = []
     for i, item in enumerate(plan):
         kind = item["kind"]
+=======
+    import reply_writer as _rw
+    plan = _rw.require_gpt(plan, "tiktok")
+    results = []
+    for i, item in enumerate(plan):
+        # Una ronda puede durar horas: revalidar la cuarentena antes de CADA
+        # acción, incluso si el lanzador aprobó el lote al comienzo.
+        import circuit_breaker as _cb
+        _write_ok, _hold_reason = _cb.write_preflight("tiktok")
+        if not _write_ok:
+            print(f"[tiktok] cortacircuitos ABIERTO: {_hold_reason}; detener el lote")
+            break
+        kind = item["kind"]
+        # El ejecutor WEB heredado elige el vídeo por fragmento visible, no por
+        # permalink estable. No se autoriza comentario GPT en un vídeo incierto;
+        # la vía Android sí ejecuta la URL concreta del certificado.
+        if kind == "comment" and item.get("gpt_proof"):
+            results.append({**item, "resultado": "saltado_destino_web_no_verificable"})
+            continue
+>>>>>>> origin/research/public-reuse-parent
         handle = item["handle"].lstrip("@")
         print(f"=== {i+1}/{len(plan)}: {kind} -> @{handle} ===")
 
@@ -276,8 +297,11 @@ if __name__ == "__main__":
         sys.exit(4)
 
     plan = _drop_stacked_actions(plan)
+<<<<<<< HEAD
     import reply_writer as _rw
     plan = _rw.require_gpt(plan, "tiktok")      # 08/10: nunca se publica texto que no venga de ChatGPT
+=======
+>>>>>>> origin/research/public-reuse-parent
     kept, skipped, techo = _apply_warmup_gate(plan, dias_activo)
     resumen_calentamiento = (
         f"Fase de calentamiento: dias_activo={dias_activo}, techo hoy "

@@ -20,6 +20,32 @@ HISTORY = os.path.join(ROOT, "00_OPERATIVO", "historial_huecos.csv")
 NETWORKS = ["bluesky", "mastodon", "threads"]
 
 
+<<<<<<< HEAD
+=======
+def external_complaints_summary(root=None):
+    """Solo lee cuarentenas ya persistidas; NO inspecciona inbox ni DMs."""
+    import circuit_breaker as cb
+    root = ROOT if root is None else root
+    nets = ("bluesky", "mastodon", "x", "threads", "facebook", "pinterest",
+            "reddit", "tiktok", "instagram")
+    out = ["## Quejas externas y revisión manual (estado local)", ""]
+    held = 0
+    for network in nets:
+        directory = os.path.join(root, f"SISTEMA_DIARIO_{network.upper()}")
+        state = cb.load(directory)
+        if state.get("invalid"):
+            out.append(f"- {network}: BREAKER_INVALIDO; revisar manualmente")
+        elif state.get("manual_hold_reason") == "external_complaint" and state.get("manual_hold"):
+            held += 1
+            out.append(f"- {network}: QUEJA_EXTERNA_REVISAR; sin reanudación automática")
+    if not held:
+        out.append("- No hay cuarentenas external_complaint conocidas; NO equivale a bandejas comprobadas")
+    out.append("")
+    return out
+
+
+
+>>>>>>> origin/research/public-reuse-parent
 def _csv(path):
     try:
         with open(path, encoding="utf-8", newline="") as stream:
@@ -120,9 +146,42 @@ def main(argv=None):
     return 0
 
 
+<<<<<<< HEAD
 def extra_sections(today):
     """07/10: rondas del dia por estado, fidelizacion por red, follow-back de TikTok por fuente y cola de respuestas (para vigilar que TODAS las redes avanzan igual)."""
     out = []
+=======
+def experiment_notice():
+    """Aviso estable, sin leer cuentas ni insinuar uplift causal en el informe nocturno."""
+    return ["## Experimentos y atribución", "",
+            "- Las tasas históricas de follow-back son asociaciones, no efecto causal.",
+            "- El análisis de controles solo es offline y explícito: "
+            "`python tools/growth_attribution.py --experiment-report <json>`.",
+            "- Nunca usar un intervalo o un CSV de holdout para activar acciones "
+            "sin auditoría del diseño y revisión humana.", ""]
+
+
+def plan_age_summary(root=None, *, now=None):
+    """Muestra planes recientes, no eventos ejecutados ni destinos privados."""
+    import post_age_policy
+    statuses = post_age_policy.audit_recent_plans(ROOT if root is None else root, now=now)
+    lines = ["## Antigüedad del destino (planes recientes, NO acciones)", ""]
+    for network, info in sorted(statuses.items()):
+        if info["estado"] != "ok":
+            lines.append(f"- {network}: {info['estado']} (no significa cero edades desconocidas)")
+            continue
+        lines.append(f"- {network}: {info['desconocidas_respuesta']} respuestas sin fecha / "
+                     f"{info['edad_desconocida']} acciones sin fecha / {info['total']} propuestas; "
+                     f"{info['antiguas']} antiguas detectadas; "
+                     f"{info['fechas_inverosimiles']} fechas futuras inverosímiles")
+    lines.append("")
+    return lines
+
+
+def extra_sections(today):
+    """07/10: rondas del dia por estado, fidelizacion por red, follow-back de TikTok por fuente y cola de respuestas (para vigilar que TODAS las redes avanzan igual)."""
+    out = plan_age_summary()
+>>>>>>> origin/research/public-reuse-parent
     # VER_ESTADO_RONDAS.bat llama a este informe; sin depender del futuro HTML.
     try:
         from plan_failure_events import collect_alerts
@@ -136,6 +195,51 @@ def extra_sections(today):
                        f"log {alert['last_log_name']}")
     except OSError:
         out.append("- Alertas de plan: lectura no disponible")
+<<<<<<< HEAD
+=======
+    # El informe por red distingue ausencia de datos de cero errores.
+    from plan_failure_events import NETWORKS as ALL_NETWORKS, RETENTION_DAYS, last_failures
+    last = last_failures(ROOT)
+    out += [f"## Último fallo local de plan por red (ventana {RETENTION_DAYS} días)", ""]
+    for net in ALL_NETWORKS:
+        item = last.get(net)
+        if item:
+            out.append(f"- {net}: {item['at']} | {item['stage']} | {item['cause']}")
+        else:
+            out.append(f"- {net}: sin evento disponible (no equivale a éxito)")
+    out.append("")
+    # Únicamente códigos controlados; jamás reproducir posts ni errores crudos.
+    import glob
+    import re
+    reasons = frozenset(("texto_publicado", "texto_repetido_lote",
+        "objetivo_repetido_lote", "relacion_repetida_lote", "microtexto_publicado", "post_antiguo"))
+    out += ["## Elementos omitidos por motivo en preflight (rondas mecánicas)", ""]
+    for net in ALL_NETWORKS:
+        paths = glob.glob(os.path.join(ROOT, f"SISTEMA_DIARIO_{net.upper()}",
+                                       "cache", f"mech_{today}_*.log"))
+        if not paths:
+            out.append(f"- {net}: sin log mecánico disponible (no es cero)")
+            continue
+        counts = Counter()
+        readable = 0
+        for path in paths:
+            try:
+                with open(path, encoding="utf-8") as stream:
+                    for line in stream:
+                        if "OMITIDO_PREFLIGHT_DUPLICADO elemento=" not in line:
+                            continue
+                        match = re.search(r"motivo=([a-z_]+)", line)
+                        reason = match.group(1) if match and match.group(1) in reasons else "duplicado_legacy"
+                        counts[reason] += 1
+                readable += 1
+            except (OSError, UnicodeError):
+                continue
+        if not readable:
+            out.append(f"- {net}: logs ilegibles; omisiones no verificables")
+        else:
+            out.append(f"- {net}: {dict(sorted(counts.items()))} (logs {readable})")
+    out.append("")
+>>>>>>> origin/research/public-reuse-parent
     try:
         with open(os.path.join(ROOT, "00_OPERATIVO", "tiempos_rondas.csv"), encoding="utf-8", newline="") as stream:
             rows = [r for r in csv.DictReader(stream) if r.get("fecha") == today]
@@ -164,6 +268,28 @@ def extra_sections(today):
         out += ["## Cola de respuestas de ChatGPT", "", f"- pendientes {len(reply_queue._load(reply_queue.PENDING))}, respuestas utiles {sum(1 for v in answers.values() if v.get('reply'))}, descartadas {sum(1 for v in answers.values() if not v.get('reply'))}", ""]
     except Exception:
         pass
+<<<<<<< HEAD
+=======
+    from growth_anomaly import collect as collect_growth
+    declines = collect_growth(ROOT, now=datetime.date.fromisoformat(today))
+    out += ["## Caídas sostenidas de rendimiento por ronda", ""]
+    if not declines:
+        out.append("- Ninguna caída demostrada (la muestra podría ser insuficiente).")
+    for item in declines:
+        out.append(f"- {item['network']}: {item['code']}; referencia "
+                   f"{item['baseline_actions_per_round']}/ronda, "
+                   f"últimos dos días {item['recent_actions_per_round']}/ronda "
+                   f"({item['baseline_days']} días válidos de referencia).")
+    out.append("")
+    out += external_complaints_summary()
+    out += experiment_notice()
+    # Telemetria transversal y solo lectura: edad del POST DESTINO, no la fecha de encolado.
+    try:
+        import post_age_distribution
+        out += post_age_distribution.daily_lines(ROOT)
+    except (OSError, ValueError, TypeError) as exc:
+        out += [f"## Antiguedad de posts: no disponible ({type(exc).__name__})", ""]
+>>>>>>> origin/research/public-reuse-parent
     return out
 
 

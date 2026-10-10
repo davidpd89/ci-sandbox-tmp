@@ -23,10 +23,17 @@ import urllib.request
 API_ORIGIN = "https://api.pinterest.com"
 PINS_URL = API_ORIGIN + "/v5/pins"
 USER_ACCOUNT_URL = API_ORIGIN + "/v5/user_account"
+<<<<<<< HEAD
 EXPECTED_USERNAME = "autorademodiaz"
 
 INTERNAL_ID = re.compile(r"\b(?:IG|TT|FB|DP)-[A-Z0-9-]+\b", re.I)
 HOME_HOSTS = {"autorademodiaz.com", "www.autorademodiaz.com"}
+=======
+EXPECTED_USERNAME = "davidportodiaz"
+
+INTERNAL_ID = re.compile(r"\b(?:IG|TT|FB|DP)-[A-Z0-9-]+\b", re.I)
+HOME_HOSTS = {"davidportodiaz.com", "www.davidportodiaz.com"}
+>>>>>>> origin/research/public-reuse-parent
 
 
 class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -264,14 +271,22 @@ def main():
             {
                 "id": "123",
                 "title": "IG-02-08 — Un libro",
+<<<<<<< HEAD
                 "link": "https://autorademodiaz.com/",
+=======
+                "link": "https://davidportodiaz.com/",
+>>>>>>> origin/research/public-reuse-parent
                 "board_id": "9",
                 "alt_text": "Portada y lectura del libro.",
             },
             {
                 "id": "456",
                 "title": "Una escena de lectura",
+<<<<<<< HEAD
                 "link": "https://autorademodiaz.com/cuaderno/",
+=======
+                "link": "https://davidportodiaz.com/cuaderno/",
+>>>>>>> origin/research/public-reuse-parent
                 "board_id": "9",
                 "alt_text": "Escena de lectura vinculada al cuaderno.",
             },

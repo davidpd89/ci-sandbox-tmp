@@ -11,7 +11,11 @@ Formato:
     "media_alt_text": ["descripción accesible"],
     "board_name": "Nombre visible del tablero",
     "pin_title": "Título editorial",
+<<<<<<< HEAD
     "pin_link": "https://autorademodiaz.com/ruta-especifica/",
+=======
+    "pin_link": "https://davidportodiaz.com/ruta-especifica/",
+>>>>>>> origin/research/public-reuse-parent
     "motivo": "opcional"
   }
 ]
@@ -121,7 +125,11 @@ def _validate(item):
         parsed = urlsplit(link)
         if (
             parsed.hostname.casefold()
+<<<<<<< HEAD
             in {"autorademodiaz.com", "www.autorademodiaz.com"}
+=======
+            in {"davidportodiaz.com", "www.davidportodiaz.com"}
+>>>>>>> origin/research/public-reuse-parent
             and parsed.path in ("", "/")
         ):
             errors.append(

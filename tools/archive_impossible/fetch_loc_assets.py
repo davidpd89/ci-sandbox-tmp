@@ -19,7 +19,11 @@ from urllib.parse import urlsplit, urlunsplit
 
 import requests
 
+<<<<<<< HEAD
 UA = "David-Porto-RRSS-Archive-Puzzle/1.0 (+https://autorademodiaz.com/)"
+=======
+UA = "David-Porto-RRSS-Archive-Puzzle/1.0 (+https://davidportodiaz.com/)"
+>>>>>>> origin/research/public-reuse-parent
 
 
 def normalize_url(url: str) -> str:

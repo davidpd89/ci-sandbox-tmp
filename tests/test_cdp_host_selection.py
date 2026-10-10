@@ -24,7 +24,11 @@ def _x_connect(urls):
     import x_interact
     pages = [types.SimpleNamespace(url=u) for u in urls]
     ctx = types.SimpleNamespace(pages=pages, new_page=lambda: types.SimpleNamespace(url="about:blank"))
+<<<<<<< HEAD
     driver = types.SimpleNamespace(chromium=types.SimpleNamespace(connect_over_cdp=lambda *args: types.SimpleNamespace(contexts=[ctx])))
+=======
+    driver = types.SimpleNamespace(chromium=types.SimpleNamespace(connect_over_cdp=lambda *args, **kw: types.SimpleNamespace(contexts=[ctx])), stop=lambda: None)
+>>>>>>> origin/research/public-reuse-parent
     original = bc.sync_playwright
     bc.sync_playwright = lambda: types.SimpleNamespace(start=lambda: driver)
     try:
@@ -36,6 +40,11 @@ def _x_connect(urls):
 def isolated_connect(filename, urls):
     if filename == "x_interact.py":
         return _x_connect(urls)
+<<<<<<< HEAD
+=======
+    import sys
+    sys.path.insert(0, str(TOOLS))
+>>>>>>> origin/research/public-reuse-parent
     code = (TOOLS / filename).read_text(encoding="utf-8")
     fn = next(node for node in ast.parse(code).body
               if isinstance(node, ast.FunctionDef) and node.name == "_connect")
@@ -44,7 +53,12 @@ def isolated_connect(filename, urls):
     ctx.new_page = lambda: types.SimpleNamespace(url="about:blank")
     browser = types.SimpleNamespace(contexts=[ctx])
     driver = types.SimpleNamespace(
+<<<<<<< HEAD
         chromium=types.SimpleNamespace(connect_over_cdp=lambda *args: browser)
+=======
+        chromium=types.SimpleNamespace(connect_over_cdp=lambda *args, **kw: browser),
+        stop=lambda: None,
+>>>>>>> origin/research/public-reuse-parent
     )
     env = {
         "sync_playwright": lambda: types.SimpleNamespace(start=lambda: driver),
@@ -67,7 +81,12 @@ class ExactCDPHostTests(unittest.TestCase):
     def test_ignores_domain_containing_social_name(self):
         for filename, fake, real in CASES:
             with self.subTest(module=filename):
+<<<<<<< HEAD
                 self.assertEqual(isolated_connect(filename, [real, fake]).url, real)
+=======
+                # Ningún hostname demuestra ownership, incluso cuando coincide.
+                self.assertEqual(isolated_connect(filename, [real, fake]).url, "about:blank")
+>>>>>>> origin/research/public-reuse-parent
 
     def test_never_reuses_only_fake_social_tab(self):
         for filename, fake, _ in CASES:

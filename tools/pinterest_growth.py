@@ -1,7 +1,11 @@
 """Pinterest: interaccion humana y gradual por navegador (04/10/2026, David: "Pinterest podemos interactuar, montalo").
 
 El 03/10 se dejo Pinterest sin interaccion por una conclusion mia (la API v5 no tiene comentarios), no por decision de David.
+<<<<<<< HEAD
 La API no hace falta: se opera como una persona en el Edge del 9223 (cuenta autorademodiaz, sesion abierta).
+=======
+La API no hace falta: se opera como una persona en el Edge del 9223 (cuenta davidportodiaz, sesion abierta).
+>>>>>>> origin/research/public-reuse-parent
 
 Acciones (de menos a mas riesgo; por ahora sin comentarios):
   - react   : "Reaccionar" (corazon) a pines en espanol del nicho.
@@ -35,7 +39,11 @@ METRICAS_CSV = os.path.join(ROOT, "metricas.csv")
 ESTADO_MD = os.path.join(ROOT, "ESTADO.md")
 
 CDP_URL = "http://127.0.0.1:9223"
+<<<<<<< HEAD
 MY_HANDLE = "autorademodiaz"
+=======
+MY_HANDLE = "davidportodiaz"
+>>>>>>> origin/research/public-reuse-parent
 BASE = "https://es.pinterest.com"
 
 FANTASY = "Fantasía juvenil española"
@@ -197,17 +205,35 @@ def write_comments(plan, candidates=None, log=print):
             if len(re.findall(r"\w+", text)) < 4:
                 continue                      # pin sin texto concreto al que responder
             items.append({"id": action["url"], "network": "pinterest", "author": action.get("author") or "", "text": text[:600],
+<<<<<<< HEAD
+=======
+                          "url": action.get("url"),
+>>>>>>> origin/research/public-reuse-parent
                           "context": "pin de Pinterest: comentario muy breve sobre lo que dicen el titulo y la descripcion, sin suponer nada de la imagen"})
         got = reply_queue.get_or_enqueue(items, "pinterest", log) if items else {}
     except Exception as exc:
         log(f"[pinterest] comentarios sin escribir ({type(exc).__name__}: {str(exc)[:80]}): no se comenta esta ronda")
+<<<<<<< HEAD
+=======
+    import reply_provenance as proof
+    sources = {item["id"]: item for item in items} if "items" in locals() else {}
+>>>>>>> origin/research/public-reuse-parent
     out = []
     for action in plan:
         if action.get("kind") == "comment":
             written = got.get(action["url"])
+<<<<<<< HEAD
             if not written:
                 continue
             action = {**action, "text": written}
+=======
+            source = sources.get(action["url"])
+            if not written or not source:
+                continue
+            action = proof.attach({**action, "text": written}, source, "pinterest")
+            if action is None:
+                continue
+>>>>>>> origin/research/public-reuse-parent
         out.append(action)
     return out
 
@@ -245,10 +271,21 @@ def done_sets(registro_csv=REGISTRO_CSV):
 def _connect():
     from playwright.sync_api import sync_playwright
     p = sync_playwright().start()
+<<<<<<< HEAD
     browser = p.chromium.connect_over_cdp(CDP_URL)
     ctx = browser.contexts[0]
     pg = ctx.new_page()   # pagina propia: no se toca ninguna pestana de otra red
     return p, pg
+=======
+    try:
+        import browser_common as bc
+        browser = bc.connect_cdp(p.chromium, CDP_URL)
+        pg = bc.new_owned_page(browser, lean=False)
+        return bc.OwnedPlaywright(p, pg), pg
+    except Exception:
+        p.stop()
+        raise
+>>>>>>> origin/research/public-reuse-parent
 
 
 def _captcha_visible(pg):
@@ -278,9 +315,15 @@ def _check_bot_warning(pg):
 
 
 def _assert_account(pg):
+<<<<<<< HEAD
     link = pg.locator('[data-test-id="header-profile"] a[href*="/autorademodiaz"], a[href="/autorademodiaz/"]')
     if link.count() == 0:
         raise BotWarningDetected("no se confirma la sesion de @autorademodiaz; parar")
+=======
+    link = pg.locator('[data-test-id="header-profile"] a[href*="/davidportodiaz"], a[href="/davidportodiaz/"]')
+    if link.count() == 0:
+        raise BotWarningDetected("no se confirma la sesion de @davidportodiaz; parar")
+>>>>>>> origin/research/public-reuse-parent
 
 
 def search_pins(pg, query, limit=PINS_PER_QUERY * 2):
@@ -527,10 +570,24 @@ def cmd_run():
     import reply_writer as _rw
     plan = _rw.require_gpt(plan, "pinterest")      # 08/10: nunca se publica texto que no venga de ChatGPT
     today, rows, results, stopped = datetime.date.today().isoformat(), [], {}, False
+<<<<<<< HEAD
+=======
+    held = False
+>>>>>>> origin/research/public-reuse-parent
     with al.browser_session():
         p, pg = _connect()
         try:
             for index, item in enumerate(plan, 1):
+<<<<<<< HEAD
+=======
+                # El lock Edge puede durar y la cuarentena cambiar en mitad
+                # de los likes/follows; evitar seguir escribiendo.
+                allowed, reason = cb.write_preflight("pinterest")
+                if not allowed:
+                    print(f"[pinterest] cortacircuitos ABIERTO: {reason}; parar ronda")
+                    held = True
+                    break
+>>>>>>> origin/research/public-reuse-parent
                 kind = item["kind"]
                 import conversation_turn_policy as ctp
                 permitted, reason = ctp.check_execution("pinterest", item)
@@ -590,8 +647,14 @@ def cmd_run():
             print(f"confirmado {row[2]} {row[1] if row[2] == 'follow' else row[3]}")
         else:
             print(f"saltado_ya_hecho {row[2]}")
+<<<<<<< HEAD
     print(f"RESUMEN: {results}" + (" (PARADA)" if stopped else ""))
     return 5 if stopped else 0
+=======
+    print(f"RESUMEN: {results}" + (" (PARADA PLATAFORMA)" if stopped else
+                                 " (CUARENTENA EXTERNA)" if held else ""))
+    return 5 if stopped else 0  # external hold is an intentional skip, not a platform error
+>>>>>>> origin/research/public-reuse-parent
 
 
 def main(argv=None):

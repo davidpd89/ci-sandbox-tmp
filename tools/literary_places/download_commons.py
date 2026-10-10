@@ -25,7 +25,11 @@ def query_file(title: str) -> dict:
         "iiprop":"url|extmetadata","titles":title
     }
     url = API + "?" + urllib.parse.urlencode(params)
+<<<<<<< HEAD
     req = urllib.request.Request(url, headers={"User-Agent":"AutoraDemo-RRSS/IG13"})
+=======
+    req = urllib.request.Request(url, headers={"User-Agent":"DavidPorto-RRSS/IG13"})
+>>>>>>> origin/research/public-reuse-parent
     with urllib.request.urlopen(req, timeout=30) as response:
         data = json.load(response)
     page = next(iter(data["query"]["pages"].values()))
@@ -34,7 +38,11 @@ def query_file(title: str) -> dict:
     return page["imageinfo"][0]
 
 def download(url: str, dest: pathlib.Path):
+<<<<<<< HEAD
     req = urllib.request.Request(url, headers={"User-Agent":"AutoraDemo-RRSS/IG13"})
+=======
+    req = urllib.request.Request(url, headers={"User-Agent":"DavidPorto-RRSS/IG13"})
+>>>>>>> origin/research/public-reuse-parent
     with urllib.request.urlopen(req, timeout=60) as response, dest.open("wb") as fh:
         fh.write(response.read())
 

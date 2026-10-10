@@ -15,13 +15,22 @@ import tiktok_mobile_execute as ex
 CONFIG = {"scoring": {"auto_follow_score_min": 8, "auto_like_score_min": 3}}
 
 
+<<<<<<< HEAD
 def candidate(cid, handle, score, *, follow=True, url=None):
+=======
+def candidate(cid, handle, score, *, follow=True, url=None, quality="eligible"):
+>>>>>>> origin/research/public-reuse-parent
     posts = []
     if url:
         posts.append({"id": f"{cid}-P1", "url": url, "caption": "cap", "source": "seed:post",
                       "actions": ["like", "comment"]})
     return {"id": cid, "handle": handle, "score": score, "lane": "acquisition",
+<<<<<<< HEAD
             "actions": ["follow"] if follow else [], "sources": ["user_search"], "posts": posts}
+=======
+            "actions": ["follow"] if follow else [], "sources": ["user_search"], "posts": posts,
+            "quality": quality}
+>>>>>>> origin/research/public-reuse-parent
 
 
 class AutoPlanTests(unittest.TestCase):
@@ -35,6 +44,13 @@ class AutoPlanTests(unittest.TestCase):
         kinds = {(r["kind"], r["handle"]) for r in plan}
         self.assertEqual(kinds, {("follow", "alta"), ("like", "alta")})
 
+<<<<<<< HEAD
+=======
+    def test_candidate_in_review_is_never_auto_followed(self):
+        plan = ts.build_auto_plan([candidate("T001", "dudosa", 20, quality="review")], CONFIG)
+        self.assertNotIn(("follow", "dudosa"), {(r["kind"], r["handle"]) for r in plan})
+
+>>>>>>> origin/research/public-reuse-parent
     def test_comments_are_never_automatic(self):
         plan = ts.build_auto_plan([candidate("T001", "x", 20, url="https://vm.tiktok.com/a/")], CONFIG)
         self.assertNotIn("comment", {r["kind"] for r in plan})
@@ -92,7 +108,12 @@ class ExecutorOrderTests(unittest.TestCase):
                 {"kind": "follow", "handle": "c"}]
         res = ex.run_plan(plan, A(), pause=False, on_result=saved.append)
         self.assertEqual([r["resultado"].split(":")[0] for r in res], ["confirmado", "parada", "no_intentado"])
+<<<<<<< HEAD
         self.assertEqual(len(saved), 3)
+=======
+        self.assertEqual([row['resultado'].split(':')[0] for row in saved],
+                         ['pendiente_verificacion', 'confirmado', 'pendiente_verificacion', 'parada', 'no_intentado'])
+>>>>>>> origin/research/public-reuse-parent
 
     def test_session_time_limit_skips_remaining(self):
         class A:

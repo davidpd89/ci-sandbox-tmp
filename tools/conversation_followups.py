@@ -100,6 +100,10 @@ def make_items(rows, today=None, replies_sent=None, *, network=None, verify_thre
         items.append({"id": f"F{len(items) + 1:02d}", "handle": row["handle"],
                       "text": " ".join(URL_OR_TAG.sub(" ", row["text"]).split()),
                       "url": row["url"], "mine": row.get("mine", ""),
+<<<<<<< HEAD
+=======
+                      "post_created_at": row.get("created") or "",
+>>>>>>> origin/research/public-reuse-parent
                       **({"context": context, "thread_turns": turns, "context_quality": "complete" if turns else "partial", "reply_to_us": True} if context else {})})
     return items
 
@@ -119,6 +123,10 @@ def build_plan(items, decisions, kind="reply"):
                              "contesta lo que preguntan sin devolver otra, o pon allow_question")
         plan.append({"handle": item["handle"], "kind": kind, "lane": "community",
                      "url": item["url"], "text": text, "post_text": item["text"],
+<<<<<<< HEAD
+=======
+                     "post_created_at": item.get("post_created_at") or "",
+>>>>>>> origin/research/public-reuse-parent
                      "motivo": f"followup:{item['id']}:respuesta a nuestra reply",
                      "thread_turns": item.get("thread_turns", []), "context_quality": item.get("context_quality", "partial"), "reply_to_us": True})
     return plan
@@ -174,7 +182,11 @@ def bluesky_all_notifications(b, did, today=None, max_age_days=MAX_AGE_DAYS * 2,
             "handle": handle, "text": record.get("text", ""),
             "url": f"https://bsky.app/profile/{handle}/post/{n['uri'].rsplit('/', 1)[-1]}",
             "mine": mine.get(n.get("reasonSubject"), ""), "ref": n["uri"],
+<<<<<<< HEAD
             "created": record.get("createdAt") or n.get("indexedAt") or "",
+=======
+            "created": record.get("createdAt") or "",
+>>>>>>> origin/research/public-reuse-parent
             "answered": n["uri"] in answered_parents, "liked": liked.get(n["uri"], False),
             "media_present": media,
             "sensitive": lcp.bluesky_sensitive(n) or lcp.bluesky_sensitive(target),
@@ -273,7 +285,11 @@ def likeable_text(text):
     return lcp.can_like(text, media_present=False)[0]
 
 
+<<<<<<< HEAD
 def like_all(rows, liker, out=print, pause=None):
+=======
+def like_all(rows, liker, out=print, pause=None, *, network=None):
+>>>>>>> origin/research/public-reuse-parent
     """Da like/favourite a toda respuesta de otra persona que aun no lo tenga
     (gesto barato y muy valorado: la persona ve que alguien leyo su respuesta).
     Devuelve (hechos, fallos). Un fallo no detiene el resto salvo 429."""
@@ -290,6 +306,15 @@ def like_all(rows, liker, out=print, pause=None):
             out(f"OMITIDO like {row['handle']}: {reason}")
             continue
         seen.add(row["ref"])
+<<<<<<< HEAD
+=======
+        if network is not None:
+            import circuit_breaker as cb
+            allowed, reason = cb.write_preflight(network)
+            if not allowed:
+                out(f"[{network}] cortacircuitos ABIERTO: {reason}; dejar likes restantes")
+                break
+>>>>>>> origin/research/public-reuse-parent
         try:
             liker(row)
             done += 1
@@ -338,7 +363,11 @@ def main(argv=None):
     cache = os.path.join(ROOT, f"{net}_followups.json")
     if "--like" in argv:
         rows = ALL_SOURCES[net][0]()
+<<<<<<< HEAD
         done, failed = like_all(rows, ALL_SOURCES[net][1], pause=lambda: sc.pause(1, 3))
+=======
+        done, failed = like_all(rows, ALL_SOURCES[net][1], pause=lambda: sc.pause(1, 3), network=net)
+>>>>>>> origin/research/public-reuse-parent
         print(f"[{net}] {done} likes a respuestas recibidas ({failed} fallos); "
               f"{sum(1 for r in rows if not r['answered'])} sin contestar")
         return 0

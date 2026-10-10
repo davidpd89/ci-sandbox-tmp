@@ -96,7 +96,11 @@ class XDiscoveryTests(unittest.TestCase):
             )
             self.assertFalse(
                 scanner._eligible_discovery(
+<<<<<<< HEAD
                     "https://x.com/AUTORADEMODIAZ/status/123",
+=======
+                    "https://x.com/DAVIDPORTODIAZ/status/123",
+>>>>>>> origin/research/public-reuse-parent
                     "Mi post",
                     set(),
                 )
@@ -141,7 +145,11 @@ class XDiscoveryTests(unittest.TestCase):
         result = scanner._process_discovery_rows(
             [
                 ("https://x.com/Lectora/status/1", "Busco fantasía"),
+<<<<<<< HEAD
                 ("https://x.com/AutoraDemoDiaz/status/2", "Mi post"),
+=======
+                ("https://x.com/DavidPortoDiaz/status/2", "Mi post"),
+>>>>>>> origin/research/public-reuse-parent
             ],
             excluded=set(),
             operational=False,
@@ -331,8 +339,13 @@ class XDiscoveryTests(unittest.TestCase):
         self._configure_scan_stubs(
             notifications=[
                 {
+<<<<<<< HEAD
                     "url": "https://x.com/AUTORADEMODIAZ/status/123",
                     "handles": ["AUTORADEMODIAZ"],
+=======
+                    "url": "https://x.com/DAVIDPORTODIAZ/status/123",
+                    "handles": ["DAVIDPORTODIAZ"],
+>>>>>>> origin/research/public-reuse-parent
                     "kind_hint": "reply_recibido",
                     "text": "Respuesta propia",
                 },
@@ -355,7 +368,11 @@ class XDiscoveryTests(unittest.TestCase):
             scanner.scan()
         lines = output.getvalue()
         self.assertIn("sugerido=reply | @lectora", lines)
+<<<<<<< HEAD
         self.assertNotIn("sugerido=reply | @autorademodiaz", lines)
+=======
+        self.assertNotIn("sugerido=reply | @davidportodiaz", lines)
+>>>>>>> origin/research/public-reuse-parent
 
     def test_failed_seed_thread_does_not_consume_cooldown(self):
         self._configure_scan_stubs(article_rows=[])

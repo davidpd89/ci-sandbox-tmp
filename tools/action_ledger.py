@@ -52,10 +52,31 @@ OUTCOME_CLASS = {
     "saltado_ya_reply": (CONFIRMED, None),
     "saltado_perfil": (SKIPPED_POLICY, 7 * 86400),
     "saltado_cierre_conversacion": (SKIPPED_POLICY, 86400),
+<<<<<<< HEAD
     "saltado_like_contexto": (SKIPPED_POLICY, 86400),
     "saltado_fase_calentamiento": (SKIPPED_POLICY, 6 * 3600),
     "saltado_techo_sesion": (SKIPPED_POLICY, 6 * 3600),
     "saltado_duplicado": (SKIPPED_POLICY, 6 * 3600),
+=======
+    "saltado_contexto_api_no_verificado": (SKIPPED_POLICY, 6 * 3600),
+    "saltado_like_contexto": (SKIPPED_POLICY, 86400),
+    "saltado_politica_auto_like": (SKIPPED_POLICY, 86400),
+    "saltado_fase_calentamiento": (SKIPPED_POLICY, 6 * 3600),
+    "saltado_techo_sesion": (SKIPPED_POLICY, 6 * 3600),
+    "saltado_techo_diario": (SKIPPED_POLICY, 6 * 3600),
+    "saltado_limite_follow": (SKIPPED_POLICY, 4 * 3600),     # limite de seguir de TikTok: se reintenta tras el descanso
+    # El ejecutor web de TikTok solo localiza vídeos por fragmento visual:
+    # no reintentar comentarios sin un destino remoto comprobable.
+    "saltado_destino_web_no_verificable": (SKIPPED_POLICY, 7 * 86400),
+    "saltado_duplicado": (SKIPPED_POLICY, 6 * 3600),
+    # Omisión confirmada solo dentro de preflight: nunca una acción remota.
+    "saltado_preflight_texto_publicado": (SKIPPED_POLICY, 6 * 3600),
+    "saltado_preflight_texto_repetido_lote": (SKIPPED_POLICY, 6 * 3600),
+    "saltado_preflight_objetivo_repetido_lote": (SKIPPED_POLICY, 6 * 3600),
+    "saltado_preflight_relacion_repetida_lote": (SKIPPED_POLICY, 6 * 3600),
+    "saltado_preflight_microtexto_publicado": (SKIPPED_POLICY, 6 * 3600),
+    "saltado_preflight_post_antiguo": (SKIPPED_POLICY, 7 * 86400),
+>>>>>>> origin/research/public-reuse-parent
     "saltado_en_ledger": (FAILED, None),
     "saltado_api_*": (FAILED, None),
     "saltado_sin_contexto": (FAILED, None),
@@ -331,12 +352,26 @@ def _os_guard_for_exclusive(path, name):
 
 
 @contextlib.contextmanager
+<<<<<<< HEAD
 def exclusive(name, stale_after=7200, directory=None):
     """Bloqueo por fichero entre procesos. Lanza RoundBusy si otro proceso lo tiene
     (y no esta caducado)."""
     # RRSS_LOCK_DIR permite aislar los tests de una ronda real en curso (comparten la carpeta temporal).
     directory = directory or os.environ.get("RRSS_LOCK_DIR") or tempfile.gettempdir()
     path = os.path.join(directory, f"rrss_lock_{name}.lock")
+=======
+def exclusive(name, stale_after=7200, directory=None, *, lock_path=None):
+    """Turno exclusivo entre procesos, también para una ruta móvil heredada.
+
+    ``lock_path`` es optativo: sin él se conserva exactamente la ruta Edge.
+    No se roba un turno vivo por edad; un guard OS serializa reclamadores.
+    """
+    # RRSS_LOCK_DIR permite aislar los tests de una ronda real en curso (comparten la carpeta temporal).
+    directory = directory or os.environ.get("RRSS_LOCK_DIR") or tempfile.gettempdir()
+    path = os.path.abspath(os.fspath(lock_path)) if lock_path is not None else os.path.join(directory, f"rrss_lock_{name}.lock")
+    if lock_path is not None:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+>>>>>>> origin/research/public-reuse-parent
     with _os_guard_for_exclusive(path, name):
         for _ in range(2):
             try:
@@ -378,7 +413,11 @@ def exclusive(name, stale_after=7200, directory=None):
                 # muerto. Un proceso Edge legítimo puede durar > stale_after
                 # (suspensión del equipo, espera de red): nunca robarle el lock.
                 try:
+<<<<<<< HEAD
                     old_pid = int(owner.split()[0])
+=======
+                    old_pid = int(owner.split()[0].split(":", 1)[0])  # admite tokens móviles anteriores PID:timestamp
+>>>>>>> origin/research/public-reuse-parent
                 except (IndexError, TypeError, ValueError):
                     old_pid = 0
                 if old_pid > _MAX_PID:

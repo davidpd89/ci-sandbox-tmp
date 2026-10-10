@@ -21,6 +21,11 @@ import sys
 import stat
 import threading
 
+<<<<<<< HEAD
+=======
+from alert_codes import PROVIDER_ALERT_CODES
+
+>>>>>>> origin/research/public-reuse-parent
 NETWORKS = ("bluesky", "mastodon", "threads", "x", "facebook",
             "pinterest", "reddit", "tiktok")
 COLUMNS = {"fecha", "red", "fin", "estado", "confirmadas", "fallos", "codigo"}
@@ -30,6 +35,11 @@ WORKER_HOURS = range(8, 23)
 
 
 def _alert(code: str, severity: str, network: str | None = None, **details) -> dict:
+<<<<<<< HEAD
+=======
+    if code not in PROVIDER_ALERT_CODES:
+        raise ValueError("codigo de alerta no registrado")
+>>>>>>> origin/research/public-reuse-parent
     return {"code": code, "severity": severity, "network": network, **details}
 
 
@@ -93,16 +103,42 @@ def _read_recent(path: pathlib.Path, now: dt.datetime) -> list[dict]:
 
 def _breaker_alerts(root: pathlib.Path, now: dt.datetime) -> list[dict]:
     alerts = []
+<<<<<<< HEAD
     for network in NETWORKS:
+=======
+    # Instagram móvil comparte cortacircuitos por directorio, aunque aún no se
+    # incluye en el conjunto histórico de ocho métricas de rondas.
+    for network in (*NETWORKS, "instagram"):
+>>>>>>> origin/research/public-reuse-parent
         path = root / f"SISTEMA_DIARIO_{network.upper()}" / "cache" / "breaker.json"
         if not path.exists():
             continue
         try:
             obj = json.loads(path.read_text(encoding="utf-8"))
+<<<<<<< HEAD
             until = obj.get("open_until") if isinstance(obj, dict) else None
             if until:
                 end = dt.datetime.fromisoformat(until)
                 if now < end:
+=======
+            import circuit_breaker as cb
+            state = cb.load(str(path.parent.parent))
+            if state.get("invalid"):
+                alerts.append(_alert("BREAKER_INVALIDO", "alta", network))
+                continue
+            if state.get("manual_hold"):
+                code = ("QUEJA_EXTERNA_REVISAR"
+                        if state.get("manual_hold_reason") == "external_complaint"
+                        else "BREAKER_REVISION_MANUAL")
+                alerts.append(_alert(code, "alta", network,
+                                     reason=state["manual_hold_reason"]))
+            until = obj.get("open_until") if isinstance(obj, dict) else None
+            if until:
+                end = dt.datetime.fromisoformat(until)
+                # Desde #59 open_until incluye offset Madrid. Comparar
+                # instantes UTC, no datetimes naive/aware ni horas de pared.
+                if cb._instant(now) < cb._instant(end):
+>>>>>>> origin/research/public-reuse-parent
                     alerts.append(_alert("CORTACIRCUITOS_ABIERTO", "alta", network,
                                          until=end.isoformat(timespec="minutes")))
         except (OSError, ValueError, TypeError) :
@@ -291,6 +327,12 @@ def collect(root: str | pathlib.Path, *, now: dt.datetime | None = None,
             pid_alive=None) -> dict:
     """Informe agregado, sin copiar mensajes privados ni handles."""
     root = pathlib.Path(root)
+<<<<<<< HEAD
+=======
+    # El canario conserva su reloj local para ventanas de horas/minutos; el
+    # detector diario debe resolver Madrid cuando no se inyectó un instante.
+    injected_now = now
+>>>>>>> origin/research/public-reuse-parent
     now = now or dt.datetime.now()
     if pid_alive is None:
         from mobile_runtime import _pid_alive
@@ -342,6 +384,11 @@ def collect(root: str | pathlib.Path, *, now: dt.datetime | None = None,
     # también el lector de cuarentena ya incorporado por #120.
     from plan_failure_events import collect_alerts
     alerts.extend(collect_alerts(root, now=now))
+<<<<<<< HEAD
+=======
+    from growth_anomaly import collect as collect_growth
+    alerts.extend(collect_growth(root, now=now))
+>>>>>>> origin/research/public-reuse-parent
     return {
         "schema": 1, "generated_at": now.isoformat(timespec="seconds"),
         "window_minutes": LOOKBACK_MINUTES, "by_network": per_network, "alerts": alerts,

@@ -14,6 +14,11 @@ import urllib.parse
 
 sys.path.insert(0, os.path.dirname(__file__))
 from playwright.sync_api import sync_playwright
+<<<<<<< HEAD
+=======
+from pinterest_media_guard import (PinPreflightError, validate_web_pin_fields,
+                                  validate_web_pin_image)
+>>>>>>> origin/research/public-reuse-parent
 
 CDP_URL = "http://127.0.0.1:9223"
 CREATE_URL = "https://es.pinterest.com/pin-creation-tool/"
@@ -38,8 +43,13 @@ def _check(pg):
 
 
 def _assert_account(pg):
+<<<<<<< HEAD
     if pg.locator("text=Autora Demo Díaz | Escritor").count() == 0:
         raise PinterestPublishError("no se confirma la cuenta Autora Demo Díaz | Escritor; parar")
+=======
+    if pg.locator("text=David Porto Díaz | Escritor").count() == 0:
+        raise PinterestPublishError("no se confirma la cuenta David Porto Díaz | Escritor; parar")
+>>>>>>> origin/research/public-reuse-parent
 
 
 def board_slug(name):
@@ -50,7 +60,11 @@ def board_slug(name):
 
 def board_pins(pg, board, limit=12):
     """[(url, etiqueta)] de los primeros Pines del tablero (los mas recientes primero)."""
+<<<<<<< HEAD
     pg.goto(f"https://es.pinterest.com/autorademodiaz/{board_slug(board)}/", wait_until="domcontentloaded", timeout=45000)
+=======
+    pg.goto(f"https://es.pinterest.com/davidportodiaz/{board_slug(board)}/", wait_until="domcontentloaded", timeout=45000)
+>>>>>>> origin/research/public-reuse-parent
     pg.wait_for_timeout(4500)
     _check(pg)
     rows = pg.evaluate("""() => Array.from(document.querySelectorAll('a[href*="/pin/"]')).map(a => [a.getAttribute('href'), a.getAttribute('aria-label') || ''])""")
@@ -114,7 +128,13 @@ BOARD_ALIASES = {"herramientas para escritores": "Recursos para escritores", "re
 
 def resolve_board(name):
     """Nombre canonico del tablero (lista cerrada o alias) o PinterestPublishError."""
+<<<<<<< HEAD
     wanted = (name or "").strip()
+=======
+    if not isinstance(name, str):
+        raise PinterestPublishError("tablero: nombre obligatorio")
+    wanted = name.strip()
+>>>>>>> origin/research/public-reuse-parent
     for known in KNOWN_BOARDS:
         if wanted.casefold() == known.casefold():
             return known
@@ -175,6 +195,7 @@ def publish_pin(image, title, description, link, alt, board, apply=False, log=pr
     remota; nunca limpiar borradores automáticamente ni suponer que falló.
     """
     board = resolve_board(board)
+<<<<<<< HEAD
     if len(title) > TITLE_MAX or len(description) > DESC_MAX:
         raise PinterestPublishError(f"titulo/descripcion demasiado largos ({len(title)}/{len(description)})")
     if not os.path.exists(image):
@@ -186,6 +207,23 @@ def publish_pin(image, title, description, link, alt, board, apply=False, log=pr
     # Un aviso editorial previo no acredita que el auditor haya terminado correctamente.
     fields = {"titulo": title, "descripcion": description, "alt": alt}
     voice.inspect_fields(fields, network="pinterest", queue="WEB", log=log)
+=======
+    # El guard maneja tipos inválidos, valores vacíos y longitudes antes de
+    # abrir Playwright; no usar len() sobre metadatos externos sin validar.
+    try:
+        validate_web_pin_fields(title, description, link, alt)
+        image_info = validate_web_pin_image(image)
+    except PinPreflightError as exc:
+        raise PinterestPublishError(str(exc)) from exc
+    if not apply:
+        log(f"  ensayo offline: imagen {image_info['format']} "
+            f"{image_info['width']}x{image_info['height']} "
+            f"({image_info['bytes']} bytes), metadatos válidos; "
+            "no se crea borrador ni se confirma enlace remoto")
+        if not image_info["aspect_2_3"]:
+            log("  aviso: imagen no tiene proporción recomendada 2:3")
+        return "ensayo"
+>>>>>>> origin/research/public-reuse-parent
     p = sync_playwright().start()
     try:
         browser = p.chromium.connect_over_cdp(CDP_URL)
@@ -197,6 +235,15 @@ def publish_pin(image, title, description, link, alt, board, apply=False, log=pr
             _check(pg)
             _assert_account(pg)
             # No eliminar borradores preexistentes: pueden ser trabajo humano.
+<<<<<<< HEAD
+=======
+            # Revalidar justo antes de cargar: el archivo pudo cambiar mientras
+            # se obtenía el turno exclusivo del navegador.
+            try:
+                validate_web_pin_image(image)
+            except PinPreflightError as exc:
+                raise PinterestPublishError(str(exc)) from exc
+>>>>>>> origin/research/public-reuse-parent
             pg.set_input_files("#storyboard-upload-input", image)
             pg.wait_for_selector('text="¡Cambios guardados!"', timeout=30000)
             _fill(pg, title, description, link, alt, board, log)
@@ -255,10 +302,17 @@ def own_recent_texts(boards=None):
         pg.set_default_timeout(15000)
         try:
             if not boards:
+<<<<<<< HEAD
                 pg.goto("https://es.pinterest.com/autorademodiaz/_saved/", wait_until="domcontentloaded", timeout=45000)
                 pg.wait_for_timeout(4500)
                 _check(pg)
                 names = pg.evaluate("""() => Array.from(document.querySelectorAll('a[href^="/autorademodiaz/"]')).map(a => a.getAttribute('href').split('/')[2]).filter(s => s && !s.startsWith('_'))""")
+=======
+                pg.goto("https://es.pinterest.com/davidportodiaz/_saved/", wait_until="domcontentloaded", timeout=45000)
+                pg.wait_for_timeout(4500)
+                _check(pg)
+                names = pg.evaluate("""() => Array.from(document.querySelectorAll('a[href^="/davidportodiaz/"]')).map(a => a.getAttribute('href').split('/')[2]).filter(s => s && !s.startsWith('_'))""")
+>>>>>>> origin/research/public-reuse-parent
                 slugs = list(dict.fromkeys(names))[:8]
             else:
                 slugs = [board_slug(b) for b in boards]
@@ -291,6 +345,14 @@ def main(argv=None):
         url = publish_pin(item["imagen"], item["titulo"], item["texto"], meta["enlace"], item["alt"] or meta.get("alt", ""), meta["tablero"], apply=False)
     else:
         with guard:
+<<<<<<< HEAD
+=======
+            import circuit_breaker as cb
+            allowed, reason = cb.write_preflight("pinterest")
+            if not allowed:
+                print(f"[pinterest] NO se publica: cortacircuitos ABIERTO ({reason})")
+                return 0
+>>>>>>> origin/research/public-reuse-parent
             url = publish_pin(item["imagen"], item["titulo"], item["texto"], meta["enlace"], item["alt"] or meta.get("alt", ""), meta["tablero"], apply=True)
     print(url)
     return 0

@@ -14,8 +14,14 @@ relevantes, no la API. Este modulo decide cuanto hacer en cada ronda:
   elite (lo mejor, siempre), muestra ponderada por posicion y exploracion uniforme del
   resto (datos contrafactuales para saber si el scoring funciona). Los follows tienen un
   tope duro de proporcion. Devuelve tambien los candidatos NO elegidos.
+<<<<<<< HEAD
 * `split_holdout`: aparta una pequena fraccion de follows no elite para NO tocarlos y
   medir cuantos nos siguen igualmente (seguidores incrementales reales).
+=======
+* `split_holdout`: aparta una fraccion de follows NO elite para observar
+  seguimientos sin contacto. Es un indicador descriptivo: compararlo con TODOS
+  los seguidos, que incluyen elite, introduce sesgo de seleccion.
+>>>>>>> origin/research/public-reuse-parent
 * `run_seed`: semilla reproducible de cada ronda (fecha, red, franja) para poder explicar
   por que una accion entro o quedo fuera.
 * `human_gap`: pausa entre acciones con rafagas, dudas y algun paron largo.
@@ -143,8 +149,17 @@ def shape_plan(plan, cap, rng=None, follow_share=FOLLOW_SHARE, hard_follow_max=H
 
 
 def split_holdout(plan, rng=None, share=HOLDOUT_SHARE, elite_share=ELITE_SHARE):
+<<<<<<< HEAD
     """(plan_sin_holdout, holdout): aparta `share` de los follows NO elite para medir el
     seguimiento organico (cuantos nos habrian seguido igualmente). Solo follows."""
+=======
+    """(plan_sin_holdout, holdout): separa una muestra de follows NO elite.
+
+    El grupo apartado solo es comparable, en principio, con los NO elite elegibles;
+    NO debe contrastarse con el total tratado para afirmar incrementalidad.
+    La asignacion se explica en #70; este algoritmo no se altera. Solo follows.
+    """
+>>>>>>> origin/research/public-reuse-parent
     rng = rng or random.Random()
     follow_idx = [i for i, a in enumerate(plan) if a.get("kind") == "follow"]
     eligible = follow_idx[int(len(follow_idx) * elite_share):]

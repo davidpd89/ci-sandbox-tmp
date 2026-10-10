@@ -254,7 +254,11 @@ class TikTokMobileTests(unittest.TestCase):
     def test_verify_active_account_uses_profile_and_exact_handle(self):
         client = FakeClient([
             tree(el("Perfil", y=170)),
+<<<<<<< HEAD
             tree(el("@autorademoescritor")),
+=======
+            tree(el("@davidportoescritor")),
+>>>>>>> origin/research/public-reuse-parent
         ])
         adapter = tm.TikTokMobileAdapter(client)
         self.assertTrue(adapter.verify_active_account())

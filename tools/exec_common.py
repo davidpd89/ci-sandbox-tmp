@@ -17,6 +17,38 @@ import text_common as tc
 
 
 
+<<<<<<< HEAD
+=======
+class WriteOutcomeUnknown(RuntimeError):
+    """El intento de escritura alcanzó la frontera POST sin ACK fiable.
+
+    status_code solo se conoce si el servidor devolvió una respuesta HTTP;
+    errores de red sin respuesta conservan status_code=None.
+    """
+
+    def __init__(self, message, *, status_code=None):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+def uncertain_transport_error(exc):
+    """Posible POST enviado sin ACK; SOLO usar desde la frontera de escritura.
+
+    Requests documenta ConnectTimeout como seguro para reintentar: no es un
+    ReadTimeout. Para el resto, una llamada sin respuesta puede haber escrito.
+    """
+    import requests
+    if isinstance(exc, requests.exceptions.ConnectTimeout):
+        return False
+    return isinstance(exc, (
+        TimeoutError, ConnectionError,
+        requests.exceptions.Timeout, requests.exceptions.ConnectionError,
+        requests.exceptions.ChunkedEncodingError,
+        requests.exceptions.ContentDecodingError,
+    ))
+
+
+>>>>>>> origin/research/public-reuse-parent
 def omit_previously_published_reply(text, check, *, network, index, log=print):
     """Política común: una reply ya publicada se omite, NO invalida el lote.
 
@@ -30,6 +62,79 @@ def omit_previously_published_reply(text, check, *, network, index, log=print):
         return True
     return False
 
+<<<<<<< HEAD
+=======
+# Motivos cerrados, sin autores, textos, URLs ni identificadores de cuentas.
+SAFE_PREFLIGHT_SKIP_REASONS = frozenset({
+    "texto_publicado", "texto_repetido_lote", "objetivo_repetido_lote",
+    "relacion_repetida_lote", "microtexto_publicado", "post_antiguo",
+})
+SAFE_PREFLIGHT_SKIP_OUTCOMES = {
+    "texto_publicado": "saltado_preflight_texto_publicado",
+    "texto_repetido_lote": "saltado_preflight_texto_repetido_lote",
+    "objetivo_repetido_lote": "saltado_preflight_objetivo_repetido_lote",
+    "relacion_repetida_lote": "saltado_preflight_relacion_repetida_lote",
+    "microtexto_publicado": "saltado_preflight_microtexto_publicado",
+    "post_antiguo": "saltado_preflight_post_antiguo",
+}
+
+
+# 09/10/2026: el tope de antigüedad vive en `post_age_policy` (comun a todas las redes); estos envoltorios sirven al preflight de Mastodon.
+def post_too_old(kind, status_id, created_at=None, *, now=None):
+    import post_age_policy
+    allowed, _ = post_age_policy.check("mastodon", {"kind": kind, "status_id": status_id, "post_created_at": created_at}, now=now)
+    return not allowed
+
+
+def mastodon_post_age_days(status_id, created_at=None, *, now=None):
+    import post_age_policy
+    return post_age_policy.age_days("mastodon", {"status_id": status_id, "post_created_at": created_at}, now=now)
+
+
+def is_safe_preflight_omit(result):
+    """La lista cerrada evita aceptar otro resultado bajo un prefijo genérico."""
+    return result in SAFE_PREFLIGHT_SKIP_OUTCOMES.values()
+
+
+def record_preflight_skip(skipped, *, network, index, kind, reason, log=print):
+    """Registra una omisión segura sin exponer contenido y sin confirmar acciones.
+
+    `skipped` es opcional para preservar llamadas que solo quieren la lista
+    de acciones válidas. Nunca omitir identidad o política.
+    """
+    if reason not in SAFE_PREFLIGHT_SKIP_REASONS:
+        raise ValueError("motivo de omision preflight no permitido")
+    if skipped is not None:
+        skipped.append({"kind": kind, "resultado": SAFE_PREFLIGHT_SKIP_OUTCOMES[reason]})
+    log(f"[{network}] OMITIDO_PREFLIGHT_DUPLICADO elemento={index} motivo={reason}")
+
+
+
+class PreflightSkipBuffer:
+    """Acumula omisiones sin emitir eventos antes de validar el lote entero.
+
+    Si otra acción falla la validación, el buffer se descarta sin modificar
+    `skipped` ni contaminar el informe de omisiones efectivas.
+    """
+    def __init__(self, network, skipped=None, log=print):
+        self.network = network
+        self.skipped = skipped
+        self.log = log
+        self.pending = []
+
+    def add(self, index, kind, reason):
+        if reason not in SAFE_PREFLIGHT_SKIP_REASONS:
+            raise ValueError("motivo de omision preflight no permitido")
+        self.pending.append((index, kind, reason))
+
+    def commit(self):
+        for index, kind, reason in self.pending:
+            record_preflight_skip(self.skipped, network=self.network, index=index,
+                                  kind=kind, reason=reason, log=self.log)
+        self.pending.clear()
+
+
+>>>>>>> origin/research/public-reuse-parent
 TRANSIENT_HTTP = frozenset({500, 502, 503, 504})
 DEFAULT_BACKOFF = (6, 20)
 

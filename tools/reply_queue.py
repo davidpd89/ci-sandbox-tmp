@@ -9,7 +9,12 @@ espera por paso, y las rondas por API tardaban mas de una hora. Ahora esas ronda
     python tools/reply_queue.py stats
 
 Ficheros en 00_OPERATIVO/_cola_respuestas/: pending.json (clave -> post pendiente) y answers.json (clave -> respuesta o null, caduca a las 36 h).
+<<<<<<< HEAD
 La clave es red + autor + inicio del texto: el mismo post siempre cae en la misma respuesta aunque cambie de ronda.
+=======
+La clave v3 incluye red, autor, texto completo y destino estable cuando existe.
+La procedencia y el estado de la respuesta se revalidan antes de usarla.
+>>>>>>> origin/research/public-reuse-parent
 """
 from __future__ import annotations
 
@@ -30,6 +35,13 @@ ANSWERS = os.path.join(DIR, "answers.json")
 LOCK = os.path.join(DIR, "worker.lock")
 TTL_HOURS = 36
 MAX_PENDING = 400
+<<<<<<< HEAD
+=======
+# Evitar bucles de gasto ante respuestas incompletas. Un cambio real de
+# contexto reactiva la petición; un null explícito no consume reintentos.
+INCOMPLETE_RETRY_MINUTES = (5, 15, 30)
+MAX_INCOMPLETE_ATTEMPTS = 4
+>>>>>>> origin/research/public-reuse-parent
 
 
 # Política R8 limitada a pending.json y answers.json. No es una base de
@@ -122,6 +134,7 @@ def _valid_entry(path, entry):
     if not isinstance(stamp, str):
         return False
     try:
+<<<<<<< HEAD
         datetime.datetime.fromisoformat(stamp)
     except ValueError:
         return False
@@ -129,6 +142,47 @@ def _valid_entry(path, entry):
         return isinstance(entry.get("network"), str) and bool(entry["network"]) and isinstance(entry.get("text"), str) and bool(entry["text"])
     if os.fspath(path) == os.fspath(ANSWERS):
         return "reply" in entry and (entry["reply"] is None or isinstance(entry["reply"], str))
+=======
+        parsed = datetime.datetime.fromisoformat(stamp)
+    except (ValueError, OverflowError):
+        return False
+    if parsed.tzinfo is not None:
+        return False  # formato previo: hora local sin offset
+    if os.fspath(path) == os.fspath(PENDING):
+        if not (isinstance(entry.get("network"), str)
+                and entry["network"].strip().casefold() in rw.MAX_CHARS
+                and isinstance(entry.get("text"), str) and entry["text"].strip()):
+            return False
+        if "incomplete_attempts" in entry:
+            attempts = entry["incomplete_attempts"]
+            if type(attempts) is not int or not 0 <= attempts <= MAX_INCOMPLETE_ATTEMPTS:
+                return False
+        if "retry_after" in entry:
+            try:
+                due = datetime.datetime.fromisoformat(entry["retry_after"])
+            except (ValueError, TypeError, OverflowError):
+                return False
+            if due.tzinfo is not None:
+                return False
+        return True
+    if os.fspath(path) == os.fspath(ANSWERS):
+        if ("reply" not in entry
+                or not (entry["reply"] is None or isinstance(entry["reply"], str))):
+            return False
+        if "state" in entry:
+            state = entry["state"]
+            if state not in ("written", "null", "rejected"):
+                return False
+            if state == "written" and not (isinstance(entry["reply"], str) and entry["reply"].strip()):
+                return False
+            if state != "written" and entry["reply"] is not None:
+                return False
+        if "source_hash" in entry:
+            h = entry["source_hash"]
+            if not isinstance(h, str) or len(h) != 64 or any(c not in "0123456789abcdef" for c in h):
+                return False
+        return True
+>>>>>>> origin/research/public-reuse-parent
     return True
 
 
@@ -330,6 +384,7 @@ def _rekey_pending(pending):
         new_key = key_for(entry["network"], entry)
         if new_key in result and isinstance(result[new_key], dict):
             old = result[new_key]
+<<<<<<< HEAD
             # Debe conservarse la edad del pendiente MÁS RECIENTE, no la
             # del que casualmente tenga la bio más larga; en caso contrario
             # la poda TTL perdería trabajo aún vigente.
@@ -342,6 +397,15 @@ def _rekey_pending(pending):
                     merged[field] = entry[field]
             merged["reply_to_us"] = bool(old.get("reply_to_us") or entry.get("reply_to_us"))
             result[new_key] = merged
+=======
+            # Dos snapshots con la misma clave pueden tener hilos distintos.
+            # No componer bio vieja con conversación nueva por elegir el texto
+            # MÁS LARGO de cada campo: GPT inventaría una fuente que no existe.
+            # Conservar íntegra la observación más reciente (ambos ts validados).
+            newest = (entry if datetime.datetime.fromisoformat(entry["ts"]) >=
+                      datetime.datetime.fromisoformat(old["ts"]) else old)
+            result[new_key] = dict(newest)
+>>>>>>> origin/research/public-reuse-parent
         else:
             result[new_key] = dict(entry)
     return result
@@ -383,12 +447,86 @@ def _fresh(entry, now=None):
     if not isinstance(entry, dict):
         return False
     try:
+<<<<<<< HEAD
         age = (now - datetime.datetime.fromisoformat(entry.get("ts", ""))).total_seconds()
+=======
+        stamp = datetime.datetime.fromisoformat(entry.get("ts", ""))
+        if stamp.tzinfo is not None or now.tzinfo is not None:
+            return False
+        age = (now - stamp).total_seconds()
+>>>>>>> origin/research/public-reuse-parent
         return -300 <= age < TTL_HOURS * 3600
     except (ValueError, TypeError, OverflowError):
         return False
 
 
+<<<<<<< HEAD
+=======
+def _source_hash(source):
+    """Misma huella contextual que #79; evita otra caché o clave paralela."""
+    import reply_provenance as proof
+    return proof.source_hash(source)
+
+
+def _answer_matches(entry, source, network=None):
+    """Un cambio de hilo/contexto no autoriza a reutilizar una respuesta.
+
+    Las answers anteriores a #62 no llevan source_hash: su gate sigue siendo
+    la prueba de procedencia de #79, nunca una huella reconstruida a ciegas.
+    """
+    if not isinstance(entry, dict):
+        return False
+    if network and entry.get("network"):
+        import reply_provenance as proof
+        if proof.norm_net(network) != proof.norm_net(entry["network"]):
+            return False
+    stamped = entry.get("source_hash")
+    if stamped is None:
+        return True  # legacy: requiere igualmente _proof_ready al emitir texto.
+    return bool(stamped) and stamped == _source_hash(source)
+
+
+def _retry_due(entry, now):
+    """Nunca reconsultar inmediatamente un ID omitido por el modelo."""
+    stamp = entry.get("retry_after") if isinstance(entry, dict) else None
+    if not stamp:
+        return True
+    try:
+        due = datetime.datetime.fromisoformat(stamp)
+        if due.tzinfo is not None or now.tzinfo is not None:
+            return False
+        return due <= now
+    except (TypeError, ValueError, OverflowError):
+        return False
+
+
+def _defer_incomplete(entry, now):
+    attempts = entry.get("incomplete_attempts", 0)
+    attempts = attempts if type(attempts) is int and 0 <= attempts <= MAX_INCOMPLETE_ATTEMPTS else 0
+    attempts = min(attempts + 1, MAX_INCOMPLETE_ATTEMPTS)
+    entry["incomplete_attempts"] = attempts
+    if attempts >= MAX_INCOMPLETE_ATTEMPTS:
+        # Se conserva hasta TTL para diagnóstico, pero no se generan
+        # consultas indefinidas; solo contexto enriquecido reabre la petición.
+        minutes = TTL_HOURS * 60
+    else:
+        minutes = INCOMPLETE_RETRY_MINUTES[attempts - 1]
+    entry["retry_after"] = (now + datetime.timedelta(minutes=minutes)).isoformat(timespec="seconds")
+
+
+def _proof_ready(network, source, reply):
+    """Cache answers legacy sin prueba no puede convertirse en plan remoto."""
+    if (os.environ.get("RRSS_ALLOW_UNMARKED_TEXT") == "1"
+            and os.environ.get("PYTEST_CURRENT_TEST")):
+        return True  # Fixtures de las suites previas a #79; nunca una ronda real.
+    import reply_provenance as proof
+    if not proof.canonical(network, source):
+        return False
+    action = {**source, "text": reply}
+    return proof.attach(action, source, network) is not None
+
+
+>>>>>>> origin/research/public-reuse-parent
 class DuplicateHistoryUnavailable(RuntimeError):
     """No se puede acreditar que el texto no fue publicado."""
 
@@ -417,11 +555,31 @@ def _get_or_enqueue_unchecked(items, network, log=print, wait_min=0):
 
     La espera a ChatGPT (#119) sucede SIEMPRE fuera de la sección crítica.
     """
+<<<<<<< HEAD
     items = rw.new_authors_only(list(items), network, log)
+=======
+    # El productor puede recibir una fuente vacía o mal tipada. No encolar
+    # entradas que luego darían source_hash vacío ni contaminar el JSON.
+    candidates = [
+        {**item, "network": (item.get("network") or network).strip().casefold()}
+        for item in (items or [])
+        if isinstance(item, dict)
+        and isinstance(item.get("text"), str) and item["text"].strip()
+        and isinstance(item.get("id"), (str, int)) and not isinstance(item["id"], bool)
+        and str(item["id"]).strip()
+        and isinstance(item.get("network") or network, str)
+        and (item.get("network") or network).strip().casefold() in rw.MAX_CHARS
+    ]
+    items = rw.new_authors_only(candidates, network, log)
+>>>>>>> origin/research/public-reuse-parent
     if not items:
         return {}
     out, wanted = {}, set()
     hits = misses = negative = queued = duplicate = full = 0
+<<<<<<< HEAD
+=======
+    obsolete_proofs = missing_targets = 0
+>>>>>>> origin/research/public-reuse-parent
     with _storage_lock():
         answers = _load(ANSWERS)
         original = _load(PENDING)
@@ -432,6 +590,24 @@ def _get_or_enqueue_unchecked(items, network, log=print, wait_min=0):
             net = item.get("network") or network
             key = key_for(net, item)
             entry = answers.get(key)
+<<<<<<< HEAD
+=======
+            if entry and _fresh(entry) and not _answer_matches(entry, item, net):
+                # Mismo destino y texto, pero contexto nuevo: hay que volver
+                # a generar; conservar el pending y no publicar texto antiguo.
+                answers.pop(key, None)
+                dirty_answers = True
+                entry = None
+            if entry and _fresh(entry) and entry.get("reply") and not _proof_ready(net, item, entry["reply"]):
+                import reply_provenance as proof
+                if not proof.canonical(net, item):
+                    missing_targets += 1
+                    continue  # No reconsultar GPT sin referencia verificable.
+                answers.pop(key, None)
+                dirty_answers = True
+                obsolete_proofs += 1
+                entry = None  # Recompone una vez; no asigna destino al legacy.
+>>>>>>> origin/research/public-reuse-parent
             if entry and _fresh(entry) and entry.get("reply"):
                 try:
                     published = already_used(entry["reply"])
@@ -456,9 +632,24 @@ def _get_or_enqueue_unchecked(items, network, log=print, wait_min=0):
             if key in pending:
                 duplicate += 1
                 for field in ("context", "conversation_context"):
+<<<<<<< HEAD
                     fresh_value = str(item.get(field) or "")
                     if len(fresh_value) > len(str(pending[key].get(field) or "")):
                         pending[key][field] = fresh_value
+=======
+                    incoming = item.get(field)
+                    if not isinstance(incoming, str) or not incoming.strip():
+                        continue  # falta de dato no borra el hilo documentado
+                    known = str(pending[key].get(field) or "")
+                    # Si es truncamiento literal, conservar el más completo.
+                    # Si las versiones difieren semánticamente, gana la lectura
+                    # nueva (aunque sea más corta); nunca fusionar dos hilos.
+                    selected = known if incoming in known else incoming
+                    if selected != known:
+                        pending[key][field] = selected
+                        pending[key].pop("retry_after", None)
+                        pending[key].pop("incomplete_attempts", None)
+>>>>>>> origin/research/public-reuse-parent
                         dirty_pending = True
                 wanted.add(key)
             elif len(pending) < MAX_PENDING:
@@ -467,6 +658,10 @@ def _get_or_enqueue_unchecked(items, network, log=print, wait_min=0):
                     "text": item.get("text"), "context": item.get("context", ""),
                     "conversation_context": item.get("conversation_context", ""),
                     "post_uri": _remote_target(item, net),
+<<<<<<< HEAD
+=======
+                    "url": item.get("permalink") or item.get("url"),
+>>>>>>> origin/research/public-reuse-parent
                     "reply_to_us": bool(item.get("reply_to_us")),
                     "ts": datetime.datetime.now().isoformat(timespec="seconds"),
                 }
@@ -485,7 +680,12 @@ def _get_or_enqueue_unchecked(items, network, log=print, wait_min=0):
     # Métricas agregadas para integrar en el embudo C1 de #117, sin textos ni IDs.
     log(f"[reply_queue] {network}: cache_hits={hits} cache_null={negative} "
         f"cache_misses={misses} ya_pendientes={duplicate} encoladas={queued} "
+<<<<<<< HEAD
         f"cola_llena={full} pendientes={pending_count}")
+=======
+        f"cola_llena={full} pendientes={pending_count} "
+        f"pruebas_legacy_recompuestas={obsolete_proofs} objetivos_no_verificados={missing_targets}")
+>>>>>>> origin/research/public-reuse-parent
     if wait_min and wanted and worker_running():
         # wait_min viene de #119 y también cubre pendientes ya existentes.
         out.update(_wait_for_batch(items, network, {k: True for k in wanted}, wait_min, log))
@@ -517,7 +717,13 @@ def _wait_for_batch(items, network, pending, wait_min, log):
         entry = answers.get(key)
         if entry and _fresh(entry) and entry.get("reply"):
             try:
+<<<<<<< HEAD
                 if not already_used(entry["reply"]):
+=======
+                if (_answer_matches(entry, item, item.get("network") or network)
+                        and not already_used(entry["reply"])
+                        and _proof_ready(item.get("network") or network, item, entry["reply"])):
+>>>>>>> origin/research/public-reuse-parent
                     got[item["id"]] = entry["reply"]
             except DuplicateHistoryUnavailable:
                 log("[reply_queue] historial no verificable: respuesta en espera retenida")
@@ -537,21 +743,40 @@ def work_once(max_items=40, wait_min=15, consult=None, log=print):
         # se consulta GPT otra vez aunque answers["k"] siga vigente.
         outstanding = {
             k: v for k, v in original.items()
+<<<<<<< HEAD
             if not (k in answers_before and _fresh(answers_before[k], now))
+=======
+            if not (k in answers_before and _fresh(answers_before[k], now)
+                    and _answer_matches(answers_before[k], v, v.get("network")))
+>>>>>>> origin/research/public-reuse-parent
         }
         pending = _active_pending(outstanding, now)
         # Cubrir también la recuperación posterior con clave v3.
         pending = {
             k: v for k, v in pending.items()
+<<<<<<< HEAD
             if not (k in answers_before and _fresh(answers_before[k], now))
+=======
+            if not (k in answers_before and _fresh(answers_before[k], now)
+                    and _answer_matches(answers_before[k], v, v.get("network")))
+>>>>>>> origin/research/public-reuse-parent
         }
         if pending != original:
             _save(PENDING, pending)
         if not pending:
             return 0
+<<<<<<< HEAD
         keys = sorted(pending, key=lambda k: (
             not pending[k].get("reply_to_us"), pending[k].get("ts", "")
         ))[:max_items]
+=======
+        keys = sorted((k for k in pending if _retry_due(pending[k], now)),
+                      key=lambda k: (
+                          not pending[k].get("reply_to_us"), pending[k].get("ts", "")
+                      ))[:max_items]
+        if not keys:
+            return 0
+>>>>>>> origin/research/public-reuse-parent
         snapshot = {k: dict(pending[k]) for k in keys}
 
     items = [
@@ -559,7 +784,13 @@ def work_once(max_items=40, wait_min=15, consult=None, log=print):
          "author": snapshot[k].get("author"), "text": snapshot[k]["text"],
          "context": snapshot[k].get("context", ""),
          "conversation_context": snapshot[k].get("conversation_context", ""),
+<<<<<<< HEAD
          "reply_to_us": snapshot[k].get("reply_to_us")}
+=======
+         "reply_to_us": snapshot[k].get("reply_to_us"),
+         "post_uri": snapshot[k].get("post_uri"),
+         "url": snapshot[k].get("url") or snapshot[k].get("post_uri")}
+>>>>>>> origin/research/public-reuse-parent
         for n, k in enumerate(keys)
     ]
     status = {}
@@ -568,7 +799,12 @@ def work_once(max_items=40, wait_min=15, consult=None, log=print):
         log("[reply_queue] ChatGPT no respondio: los pendientes se conservan")
         return 0
 
+<<<<<<< HEAD
     useful = committed = changed = 0
+=======
+    useful = committed = changed = incomplete = 0
+    outcomes = status.get("outcomes") or {}
+>>>>>>> origin/research/public-reuse-parent
     with _storage_lock():
         original = _load(PENDING)
         pending = _active_pending(original)
@@ -580,17 +816,47 @@ def work_once(max_items=40, wait_min=15, consult=None, log=print):
             if pending.get(key) != snapshot[key]:
                 changed += 1
                 continue
+<<<<<<< HEAD
             if key in answers and _fresh(answers[key]):
                 pending.pop(key)
                 continue
             reply = written.get(f"q{n + 1}")
             answers[key] = {
                 "reply": reply or None, "network": snapshot[key]["network"],
+=======
+            if (key in answers and _fresh(answers[key])
+                    and _answer_matches(answers[key], snapshot[key],
+                                        snapshot[key].get("network"))):
+                pending.pop(key)
+                continue
+            item_id = f"q{n + 1}"
+            reply = written.get(item_id)
+            outcome = outcomes.get(item_id)
+            # Compatibilidad con escritores de prueba que devuelven texto sin
+            # registrar outcomes; nunca asumir null por un ID ausente.
+            if outcome is None and isinstance(reply, str) and reply.strip():
+                outcome = "written"
+            if (outcome not in ("written", "null", "rejected")
+                    or (outcome == "written"
+                        and not (isinstance(reply, str) and reply.strip()))):
+                incomplete += 1
+                _defer_incomplete(pending[key], datetime.datetime.now())
+                continue
+            answers[key] = {
+                "reply": reply if outcome == "written" else None,
+                "state": outcome,
+                "source_hash": _source_hash(snapshot[key]),
+                "network": snapshot[key]["network"],
+>>>>>>> origin/research/public-reuse-parent
                 "ts": datetime.datetime.now().isoformat(timespec="seconds"),
             }
             pending.pop(key)
             committed += 1
+<<<<<<< HEAD
             if reply:
+=======
+            if outcome == "written":
+>>>>>>> origin/research/public-reuse-parent
                 useful += 1
         if committed or answers != original_answers:
             # Orden de crash recuperable: answers primero, pending después.
@@ -598,7 +864,12 @@ def work_once(max_items=40, wait_min=15, consult=None, log=print):
         if pending != original:
             _save(PENDING, pending)
     log(f"[reply_queue] tanda: {len(keys)} consultados, {committed} guardados, "
+<<<<<<< HEAD
         f"{useful} utiles, {changed} pendientes con contexto nuevo")
+=======
+        f"{useful} utiles, {incomplete} pendientes sin decision, "
+        f"{changed} pendientes con contexto nuevo")
+>>>>>>> origin/research/public-reuse-parent
     return useful
 
 def _alive(pid):
@@ -654,6 +925,20 @@ def stats_snapshot():
         "pendientes": len(pending),
         "respuestas": sum(bool(v["reply"]) for v in answers.values()),
         "descartadas": sum(not bool(v["reply"]) for v in answers.values()),
+<<<<<<< HEAD
+=======
+        "rechazadas": sum(v.get("state") == "rejected" for v in answers.values()),
+        "pendientes_caducados": sum(not _fresh(v) for v in pending.values()),
+        "pendientes_en_pausa": sum(_fresh(v) and not _retry_due(v, datetime.datetime.now())
+                                   for v in pending.values()),
+        "pendientes_reintentos_agotados": sum(
+            v.get("incomplete_attempts") == MAX_INCOMPLETE_ATTEMPTS
+            for v in pending.values()),
+        "respuestas_caducadas": sum(not _fresh(v) for v in answers.values()),
+        "respuestas_sin_huella_contextual": sum(
+            bool(v["reply"]) and not v.get("source_hash") for v in answers.values()
+        ),
+>>>>>>> origin/research/public-reuse-parent
         "trabajador": worker_running(),
         "ficheros_ausentes": [
             name for name, missing in (("pending.json", pending_missing),

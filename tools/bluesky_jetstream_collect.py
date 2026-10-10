@@ -23,12 +23,26 @@ import sqlite3
 import sys
 import time
 import unicodedata
+<<<<<<< HEAD
 from urllib.parse import urlencode
+=======
+from urllib.parse import urlencode, urlsplit
+>>>>>>> origin/research/public-reuse-parent
 
 sys.path.insert(0, os.path.dirname(__file__))
 import scan_common as sc
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
+<<<<<<< HEAD
+=======
+IDLE_CHECKPOINT_SECONDS = 5.0
+
+
+class StreamProtocolError(ValueError):
+    """Error estructural: reconectar al mismo origen no lo subsana."""
+
+
+>>>>>>> origin/research/public-reuse-parent
 DEFAULT_CONFIG = os.path.join(ROOT, "SISTEMA_DIARIO_BLUESKY", "growth_config.json")
 DEFAULT_ENDPOINT = (
     "wss://jetstream.us-east.bsky.network/"
@@ -165,6 +179,24 @@ def get_state(db, key):
     return row[0] if row else None
 
 
+<<<<<<< HEAD
+=======
+def _saved_positive_int(db, key):
+    """Valida checkpoints persistidos antes de mutar la base."""
+    value = get_state(db, key)
+    if value is None:
+        return None
+    if not value.isascii() or not value.isdecimal():
+        raise ValueError(f"Checkpoint Jetstream inválido: {key}")
+    try:
+        if int(value) <= 0:
+            raise ValueError(f"Checkpoint Jetstream inválido: {key}")
+    except ValueError:
+        raise ValueError(f"Checkpoint Jetstream inválido: {key}") from None
+    return value
+
+
+>>>>>>> origin/research/public-reuse-parent
 def set_state(db, key, value):
     db.execute(
         """
@@ -175,6 +207,20 @@ def set_state(db, key, value):
     )
 
 
+<<<<<<< HEAD
+=======
+def _checkpoint(db, *, last_seq, last_time_us, stream_identity=None):
+    """Guarda posts y high-water juntos en una transacción SQLite."""
+    if last_time_us:
+        set_state(db, "last_time_us", last_time_us)
+    if last_seq:
+        set_state(db, "last_seq", last_seq)
+        if stream_identity:
+            set_state(db, "last_seq_stream", stream_identity)
+    db.commit()
+
+
+>>>>>>> origin/research/public-reuse-parent
 def _post_uri(did, rkey):
     return f"at://{did}/app.bsky.feed.post/{rkey}"
 
@@ -307,6 +353,19 @@ def _is_v2_endpoint(endpoint):
     )
 
 
+<<<<<<< HEAD
+=======
+def _stream_identity(endpoint):
+    """Origen v2 sin query ni credenciales: los seq son locales a la instancia."""
+    parsed = urlsplit(str(endpoint))
+    if parsed.scheme.lower() not in {"ws", "wss"} or not parsed.hostname:
+        raise ValueError("Endpoint Jetstream no es una URL WebSocket válida")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("Endpoint Jetstream no admite credenciales en URL")
+    return f"{parsed.scheme.lower()}://{parsed.netloc.lower()}{parsed.path.rstrip('/')}"
+
+
+>>>>>>> origin/research/public-reuse-parent
 def read_active_authors(path, *, limit=25, min_posts=2, max_age_hours=72):
     """DIDs que reaparecen en el nicho durante la ventana reciente."""
     if not os.path.exists(path):
@@ -369,6 +428,54 @@ def _iso_to_time_us(value):
     return int(parsed.timestamp() * 1_000_000)
 
 
+<<<<<<< HEAD
+=======
+def _validate_v2_frame_shape(message):
+    """No ocultar avisos de pérdida ni errores terminales del stream v2.
+
+    El contrato xrpc.v1.json usa una envoltura `message/payload` y puede
+    enviar `#info` sin seq. Un cursor timestamp obsoleto se recorta con
+    OutdatedCursor; ignorarlo presentaría una ingesta parcial como completa.
+    """
+    if not isinstance(message, dict):
+        raise StreamProtocolError("Jetstream v2: envoltura no válida")
+    if message.get("$type") == "error":
+        # No volcar el mensaje remoto: podría incluir detalles del servidor.
+        raise StreamProtocolError("Jetstream v2: error terminal del servidor")
+    if message.get("$type") != "message":
+        raise StreamProtocolError("Jetstream v2: envoltura inesperada")
+    payload = message.get("payload")
+    if not isinstance(payload, dict):
+        raise StreamProtocolError("Jetstream v2: payload no válido")
+    kind = payload.get("$type")
+    prefix = "network.bsky.jetstream.subscribeEvents#"
+    if kind == prefix + "info":
+        notice = payload.get("name")
+        if notice in {"OutdatedCursor", "FutureCursor"}:
+            raise StreamProtocolError(
+                f"Jetstream v2: {notice}; replay incompleto, cursor conservado"
+            )
+        raise StreamProtocolError("Jetstream v2: aviso de cursor desconocido")
+    if kind != prefix + "commit":
+        raise StreamProtocolError("Jetstream v2: tipo de mensaje inesperado")
+    # No avanzar un cursor con una mutación parcial o malformada: el
+    # contrato v2 requiere estos campos aun cuando el post no coincida.
+    seq = payload.get("seq")
+    if type(seq) is not int or seq <= 0:
+        raise StreamProtocolError("Jetstream v2: commit sin seq válido")
+    for field in ("did", "time", "collection", "rkey"):
+        if not isinstance(payload.get(field), str) or not payload[field]:
+            raise StreamProtocolError(f"Jetstream v2: commit sin {field} válido")
+    if _iso_to_time_us(payload["time"]) <= 0:
+        raise StreamProtocolError("Jetstream v2: commit con time inválido")
+    operation = payload.get("operation")
+    if operation not in ("create", "update", "delete"):
+        raise StreamProtocolError("Jetstream v2: operación inválida")
+    if operation in ("create", "update") and not isinstance(payload.get("record"), dict):
+        raise StreamProtocolError("Jetstream v2: record no válido")
+
+
+>>>>>>> origin/research/public-reuse-parent
 def _normalize_frame(message):
     """Convierte Jetstream v2 y legacy al mismo evento interno.
 
@@ -432,6 +539,39 @@ def _resume_cursor(
     return max(0, int(now_us - lookback * 60.0 * 1_000_000))
 
 
+<<<<<<< HEAD
+=======
+def _apply_frame(db, event, event_cursor, mode, terms, last_seq):
+    """Aplica un commit v2 una sola vez y solo avanza tras tratarlo.
+
+    El cursor v2 es inclusivo al reconectar. No permitir que un replay antiguo
+    resucite un post borrado ni revierta una actualización más reciente.
+    El caller confirma estado+posts en una misma transacción SQLite.
+    """
+    if mode == "v2":
+        if not isinstance(event_cursor, int) or event_cursor <= 0:
+            raise ValueError("Jetstream v2: commit sin secuencia positiva")
+        if last_seq is not None and event_cursor <= int(last_seq):
+            return False, last_seq, True
+    stored = store_event(db, event, terms)
+    if mode == "v2":
+        last_seq = event_cursor
+    return stored, last_seq, False
+
+
+def _fatal_stream_status(exc):
+    """HTTP no recuperable en handshake: retry idéntico crea un bucle inútil.
+
+    En Jetstream v2 HTTP 400 puede significar CursorTooOld; no reiniciar
+    silenciosamente el cursor porque ocultaría una brecha en la ingesta.
+    HTTP 429 y 5xx mantienen el backoff de reconexión.
+    """
+    response = getattr(exc, "response", None)
+    status = getattr(response, "status_code", None)
+    return status if status in (400, 401, 403, 404, 410) else None
+
+
+>>>>>>> origin/research/public-reuse-parent
 def _next_retry_delay(delay):
     """Backoff exponencial acotado para reconexiones de una escucha larga."""
     return min(60.0, max(1.0, float(delay) * 2.0))
@@ -456,7 +596,26 @@ async def collect(
 
     config = load_config(config_path)
     terms = load_terms(config)
+<<<<<<< HEAD
     db = init_db(db_path)
+=======
+    is_v2 = _is_v2_endpoint(endpoint)
+    stream_identity = _stream_identity(endpoint) if is_v2 else None
+    db = init_db(db_path)
+    try:
+        saved_seq = _saved_positive_int(db, "last_seq") if is_v2 else None
+        saved_time = _saved_positive_int(db, "last_time_us")
+        saved_stream = get_state(db, "last_seq_stream") if is_v2 else None
+    except ValueError:
+        db.close()
+        raise RuntimeError("Jetstream: checkpoint persistido inválido; caché intacta") from None
+    if saved_seq and saved_stream and saved_stream != stream_identity:
+        db.close()
+        raise RuntimeError(
+            "Jetstream v2: seq persistido pertenece a otro endpoint; "
+            "usar caché separada o migración supervisada"
+        )
+>>>>>>> origin/research/public-reuse-parent
     retention_hours = int(
         (config.get("jetstream") or {}).get("retention_hours", 72)
     )
@@ -474,10 +633,17 @@ async def collect(
     connection_errors = 0
     last_error = None
     retry_delay = 1.0
+<<<<<<< HEAD
 
     is_v2 = _is_v2_endpoint(endpoint)
     saved_seq = get_state(db, "last_seq") if is_v2 else None
     saved_time = get_state(db, "last_time_us")
+=======
+    unrecovered_stream_error = False
+    failed_database = False
+
+    stream_confirmed = bool(saved_stream)
+>>>>>>> origin/research/public-reuse-parent
     cursor = _resume_cursor(
         is_v2=is_v2,
         saved_seq=saved_seq,
@@ -485,7 +651,13 @@ async def collect(
         overlap_seconds=resume_overlap_seconds,
         initial_lookback_minutes=initial_lookback_minutes,
     )
+<<<<<<< HEAD
     last_seq = None
+=======
+    # El high-water se recupera ANTES del primer frame: el servidor puede
+    # reentregar el último cursor inclusive después de un reinicio.
+    last_seq = int(saved_seq) if saved_seq else None
+>>>>>>> origin/research/public-reuse-parent
 
     try:
         while time.monotonic() < deadline:
@@ -503,6 +675,7 @@ async def collect(
                 async with websockets.connect(url, **connect_kwargs) as ws:
                     connected_at = time.monotonic()
                     while time.monotonic() < deadline:
+<<<<<<< HEAD
                         timeout = min(30.0, max(0.1, deadline - time.monotonic()))
                         try:
                             raw = await asyncio.wait_for(ws.recv(), timeout=timeout)
@@ -533,6 +706,77 @@ async def collect(
                             if last_seq:
                                 set_state(db, "last_seq", last_seq)
                             db.commit()
+=======
+                        timeout = min(IDLE_CHECKPOINT_SECONDS, max(0.1, deadline - time.monotonic()))
+                        try:
+                            raw = await asyncio.wait_for(ws.recv(), timeout=timeout)
+                        except asyncio.TimeoutError:
+                            # El timeout mantiene el socket, pero no confirma
+                            # recuperación tras una caída previa sin nuevos frames.
+                            # Streams silenciosos no deben retener locks SQLite.
+                            if db.in_transaction:
+                                _checkpoint(
+                                    db, last_seq=last_seq, last_time_us=last_time_us,
+                                    stream_identity=stream_identity if stream_confirmed else None,
+                                )
+                                last_commit = time.monotonic()
+                            continue
+                        try:
+                            decoded = json.loads(raw)
+                            if is_v2:
+                                _validate_v2_frame_shape(decoded)
+                            event, event_cursor, mode = _normalize_frame(decoded)
+                            if not event:
+                                # Un mensaje estructural no procesable no es progreso.
+                                if isinstance(decoded, dict):
+                                    unrecovered_stream_error = False
+                                continue
+                            matched, last_seq, replayed = _apply_frame(
+                                db, event, event_cursor, mode, terms, last_seq
+                            )
+                        except StreamProtocolError:
+                            raise
+                        except (ValueError, TypeError, KeyError, AttributeError):
+                            raise StreamProtocolError(
+                                "Frame Jetstream malformado; cursor conservado"
+                            ) from None
+                        unrecovered_stream_error = False
+                        if replayed:
+                            continue
+                        if mode == "v2":
+                            stream_confirmed = True
+                        processed += 1
+                        event_time = int(event.get("time_us") or 0)
+                        if event_time:
+                            last_time_us = max(last_time_us or 0, event_time)
+                        if event_cursor:
+                            if mode == "v2":
+                                # Una primera conexión v2 puede arrancar con
+                                # cursor v1 (microsegundos); tras el primer
+                                # frame ya guardamos exclusivamente su seq.
+                                cursor = last_seq
+                            else:
+                                cursor = max(cursor or 0, event_cursor)
+                        if matched:
+                            stored += 1
+                        # Post, borrado y high-water son atómicos. Incluso si
+                        # no hay coincidencias, el cursor debe sobrevivir
+                        # a una desconexión o caída del proceso.
+                        now = time.monotonic()
+                        if processed % 250 == 0 or now - last_commit > 5.0:
+                            _checkpoint(
+                                db, last_seq=last_seq, last_time_us=last_time_us,
+                                stream_identity=stream_identity if stream_confirmed else None,
+                            )
+                            last_commit = now
+                # Confirmar el lote antes del backoff tras cierre limpio.
+                if db.in_transaction:
+                    _checkpoint(
+                        db, last_seq=last_seq, last_time_us=last_time_us,
+                        stream_identity=stream_identity if stream_confirmed else None,
+                    )
+                    last_commit = time.monotonic()
+>>>>>>> origin/research/public-reuse-parent
                 if time.monotonic() < deadline:
                     reconnects += 1
                     if connected_at is not None and time.monotonic() - connected_at >= 60:
@@ -540,8 +784,36 @@ async def collect(
                     await asyncio.sleep(retry_delay)
                     retry_delay = _next_retry_delay(retry_delay)
             except Exception as exc:
+<<<<<<< HEAD
                 connection_errors += 1
                 last_error = f"{type(exc).__name__}: {str(exc)[:200]}"
+=======
+                if isinstance(exc, sqlite3.Error):
+                    # Una inserción puede haber fallado después de adelantar
+                    # last_seq en memoria; NUNCA confirmar ese cursor.
+                    failed_database = True
+                    db.rollback()
+                    raise
+                # Liberar escrituras pendientes antes de reintentar el socket.
+                if db.in_transaction:
+                    _checkpoint(
+                        db, last_seq=last_seq, last_time_us=last_time_us,
+                        stream_identity=stream_identity if stream_confirmed else None,
+                    )
+                    last_commit = time.monotonic()
+                if isinstance(exc, StreamProtocolError):
+                    raise
+                connection_errors += 1
+                # Evitar incluir URLs, cabeceras o contenido recibido en logs.
+                last_error = type(exc).__name__
+                unrecovered_stream_error = True
+                fatal_status = _fatal_stream_status(exc) if is_v2 else None
+                if fatal_status:
+                    raise RuntimeError(
+                        f"Jetstream v2 rechazó conexión HTTP {fatal_status}; "
+                        "revisar endpoint y cursor persistido antes de reanudar"
+                    ) from None
+>>>>>>> origin/research/public-reuse-parent
                 if time.monotonic() < deadline:
                     reconnects += 1
                     if connected_at is not None and time.monotonic() - connected_at >= 60:
@@ -549,12 +821,31 @@ async def collect(
                     await asyncio.sleep(retry_delay)
                     retry_delay = _next_retry_delay(retry_delay)
     finally:
+<<<<<<< HEAD
         if last_time_us:
             set_state(db, "last_time_us", last_time_us)
         if last_seq:
             set_state(db, "last_seq", last_seq)
         db.commit()
         db.close()
+=======
+        try:
+            if failed_database:
+                db.rollback()
+            else:
+                _checkpoint(
+                    db, last_seq=last_seq, last_time_us=last_time_us,
+                    stream_identity=stream_identity if stream_confirmed else None,
+                )
+        finally:
+            db.close()
+
+    if unrecovered_stream_error:
+        raise RuntimeError(
+            "Jetstream: ventana terminada con error de conexión sin recuperar; "
+            "checkpoint conservado, ingesta incompleta"
+        )
+>>>>>>> origin/research/public-reuse-parent
 
     return {
         "processed": processed,

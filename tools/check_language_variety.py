@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 """Preflight anti-repetición estructural para respuestas/comentarios de Autora Demo.
+=======
+"""Preflight anti-repetición estructural para respuestas/comentarios de David Porto.
+>>>>>>> origin/research/public-reuse-parent
 
 No reescribe ni "humaniza" texto con sinónimos. Detecta si un candidato cae
 otra vez en las mismas estructuras recientes: apertura repetida, modo

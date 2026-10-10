@@ -67,7 +67,11 @@ class InstagramTokenTests(unittest.TestCase):
         calls = {"media": {"data": [{"id": "m1", "caption": "Mi post"}]},
                  "comments": {"data": [
                      {"id": "c1", "text": "¿Dónde?", "username": "ana", "timestamp": "2026-10-02",
+<<<<<<< HEAD
                       "replies": {"data": [{"username": "autorademodiaz"}]}},
+=======
+                      "replies": {"data": [{"username": "davidportodiaz"}]}},
+>>>>>>> origin/research/public-reuse-parent
                      {"id": "c2", "text": "¿Cuándo?", "username": "eva", "timestamp": "2026-10-03"}]}}
 
         def fake_get(base, path, token, **params):
@@ -75,7 +79,11 @@ class InstagramTokenTests(unittest.TestCase):
         old = mc.graph_get
         mc.graph_get = fake_get
         try:
+<<<<<<< HEAD
             pending = ig.comments_pending("t", "1", "autorademodiaz")
+=======
+            pending = ig.comments_pending("t", "1", "davidportodiaz")
+>>>>>>> origin/research/public-reuse-parent
         finally:
             mc.graph_get = old
         self.assertEqual([c["id"] for c in pending], ["c2"])

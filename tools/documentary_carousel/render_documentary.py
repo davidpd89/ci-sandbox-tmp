@@ -86,7 +86,11 @@ def cue_html(cue: str | None) -> str:
 
 def header(counter: str, light: bool = False) -> str:
     cls = "header light" if light else "header"
+<<<<<<< HEAD
     return f'<div class="{cls}"><div>AUTORA DEMO DÍAZ</div><div class="counter">{esc(counter)}</div></div>'
+=======
+    return f'<div class="{cls}"><div>DAVID PORTO DÍAZ</div><div class="counter">{esc(counter)}</div></div>'
+>>>>>>> origin/research/public-reuse-parent
 
 
 def image_classes(slide: dict[str, Any], fit: str, *, full: bool) -> str:

@@ -50,9 +50,15 @@ class ActiveAccountHandleTests(unittest.TestCase):
 
     def test_reads_handle_from_expanded_sidebar_text(self):
         pg = FakeLocatorPage(FakeLocator(
+<<<<<<< HEAD
             count=1, text="Autora Demo Díaz\n@autorademodiaz",
         ))
         self.assertEqual(self.fn(pg), "autorademodiaz")
+=======
+            count=1, text="David Porto Díaz\n@davidportodiaz",
+        ))
+        self.assertEqual(self.fn(pg), "davidportodiaz")
+>>>>>>> origin/research/public-reuse-parent
 
     def test_falls_back_to_avatar_testid_when_sidebar_collapsed(self):
         # Bug real visto en vivo el 02/10: con el sidebar colapsado a solo
@@ -63,12 +69,20 @@ class ActiveAccountHandleTests(unittest.TestCase):
             count=1, text="",
             children={
                 '[data-testid^="UserAvatar-Container-"]': FakeLocator(
+<<<<<<< HEAD
                     count=1, attr="UserAvatar-Container-autorademodiaz",
+=======
+                    count=1, attr="UserAvatar-Container-davidportodiaz",
+>>>>>>> origin/research/public-reuse-parent
                 ),
             },
         )
         pg = FakeLocatorPage(btn)
+<<<<<<< HEAD
         self.assertEqual(self.fn(pg), "autorademodiaz")
+=======
+        self.assertEqual(self.fn(pg), "davidportodiaz")
+>>>>>>> origin/research/public-reuse-parent
 
     def test_returns_none_when_button_missing(self):
         pg = FakeLocatorPage(FakeLocator(count=0))
@@ -83,12 +97,20 @@ class ActiveAccountHandleTests(unittest.TestCase):
             count=1, text="", raise_on_text=True,
             children={
                 '[data-testid^="UserAvatar-Container-"]': FakeLocator(
+<<<<<<< HEAD
                     count=1, attr="UserAvatar-Container-autorademodiaz",
+=======
+                    count=1, attr="UserAvatar-Container-davidportodiaz",
+>>>>>>> origin/research/public-reuse-parent
                 ),
             },
         )
         pg = FakeLocatorPage(btn)
+<<<<<<< HEAD
         self.assertEqual(self.fn(pg), "autorademodiaz")
+=======
+        self.assertEqual(self.fn(pg), "davidportodiaz")
+>>>>>>> origin/research/public-reuse-parent
 
 
 class FakeLocatorPage:

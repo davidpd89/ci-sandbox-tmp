@@ -10,7 +10,11 @@ import uuid
 
 NETWORKS = ("bluesky", "mastodon", "threads", "x", "facebook", "pinterest", "reddit", "tiktok")
 STAGES = frozenset(("scan", "decide", "write", "plan", "build", "preflight"))
+<<<<<<< HEAD
 RETENTION_DAYS = 7
+=======
+RETENTION_DAYS = 8  # cobertura >7 días; eventos operativos, nunca contenido social
+>>>>>>> origin/research/public-reuse-parent
 ALERT_WINDOW_MINUTES = 120
 ALERT_THRESHOLD = 3
 MAX_EVENT_BYTES = 2048
@@ -103,3 +107,44 @@ def collect_alerts(root, *, now=None):
                        "last_cause": _safe_token(last.get("cause")),
                        "last_log_name": _safe_token(last.get("log_name"))})
     return alerts
+<<<<<<< HEAD
+=======
+
+
+def last_failures(root, *, now=None):
+    """Último fallo local verificable por red dentro de la retención.
+
+    Solo lecturas; no repite logs, causas arbitrarias ni datos de terceros.
+    Una ausencia de evento NO demuestra que la red haya funcionado.
+    """
+    now = now or dt.datetime.now()
+    latest = {}
+    try:
+        paths = _folder(root).glob("*.json")
+        for path in paths:
+            try:
+                if path.stat().st_size > MAX_EVENT_BYTES:
+                    continue
+                event = json.loads(path.read_text(encoding="utf-8"))
+                if not isinstance(event, dict) or event.get("schema") != 1:
+                    continue
+                net, stage = event.get("red"), event.get("stage")
+                if net not in NETWORKS or stage not in STAGES:
+                    continue
+                when = dt.datetime.fromisoformat(event["at"])
+                seconds = (now - when).total_seconds()
+                if not 0 <= seconds <= RETENTION_DAYS * 86400:
+                    continue
+                if net not in latest or when > latest[net]["_when"]:
+                    latest[net] = {"_when": when,
+                                   "at": when.isoformat(timespec="seconds"),
+                                   "stage": stage,
+                                   "cause": _safe_token(event.get("cause"))}
+            except (OSError, ValueError, TypeError, KeyError, OverflowError):
+                continue
+    except OSError:
+        return {}
+    for item in latest.values():
+        del item["_when"]
+    return latest
+>>>>>>> origin/research/public-reuse-parent

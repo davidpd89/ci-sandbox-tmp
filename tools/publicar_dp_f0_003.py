@@ -15,7 +15,11 @@ import urllib.request
 BRAND_ID = "6435452"
 MCP = "https://ai.metricool.com/mcp"
 
+<<<<<<< HEAD
 IMAGE_URL = "https://autorademodiaz.com/assets/david-porto-medallon.webp"
+=======
+IMAGE_URL = "https://davidportodiaz.com/assets/david-porto-medallon.webp"
+>>>>>>> origin/research/public-reuse-parent
 
 CAPTION_IG = """Un objeto mágico no es poderoso por brillar.
 
@@ -35,7 +39,11 @@ Es que, cuando aparecen, ya nada pueda seguir exactamente igual.
 
 ¿Qué objeto mágico recuerdas mejor de una novela?
 
+<<<<<<< HEAD
 Más fantasía con coste y objetos con memoria en autorademodiaz.com.
+=======
+Más fantasía con coste y objetos con memoria en davidportodiaz.com.
+>>>>>>> origin/research/public-reuse-parent
 
 #FantasiaEspanola #PortalFantasy #ObjetosMagicos #SamuelEntreMundos #Noveris"""
 
@@ -47,7 +55,11 @@ En Samuel entre mundos, los objetos con memoria y los canalizadores forman parte
 
 ¿Qué objeto mágico recuerdas mejor de una novela?
 
+<<<<<<< HEAD
 https://autorademodiaz.com
+=======
+https://davidportodiaz.com
+>>>>>>> origin/research/public-reuse-parent
 
 #FantasiaEspanola #SamuelEntreMundos"""
 
