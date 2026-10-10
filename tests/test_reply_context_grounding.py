@@ -213,6 +213,43 @@ class GroundedDraftTests(unittest.TestCase):
         self.assertEqual(audit_draft(changed, self.draft()).issues, ("context_changed",))
         self.assertNotEqual(packet_fingerprint(self.packet), packet_fingerprint(changed))
 
+    def test_untruncated_source_changes_invalidate_snapshot(self):
+        # The visible snippet is identical, but the unseen source tail differs.
+        pairs = (
+            ({"text": "a" * 1200 + " primer final"},
+             {"text": "a" * 1200 + " segundo final"}),
+            ({"post_body": "b" * 800 + " una frase"},
+             {"post_body": "b" * 800 + " otra frase"}),
+            ({"parents": [{"stable_id": "p", "verified": True,
+                           "text": "p" * 350 + " primero"}]},
+             {"parents": [{"stable_id": "p", "verified": True,
+                           "text": "p" * 350 + " segundo"}]}),
+            ({"visual": [{"asset_id": "v", "verified": True,
+                          "provenance": "human_verified",
+                          "description": "v" * 300 + " primero"}]},
+             {"visual": [{"asset_id": "v", "verified": True,
+                          "provenance": "human_verified",
+                          "description": "v" * 300 + " segundo"}]}),
+            ({"target_id": "t" * 240 + "A"},
+             {"target_id": "t" * 240 + "B"}),
+        )
+        for left, right in pairs:
+            with self.subTest(fields=list(left)):
+                original = build_packet(sample(**left), now=NOW)
+                changed = build_packet(sample(**right), now=NOW)
+                self.assertEqual(original.evidence, changed.evidence)
+                self.assertNotEqual(packet_fingerprint(original),
+                                    packet_fingerprint(changed))
+                draft = {
+                    "network": original.network,
+                    "target_id": original.target_id,
+                    "context_fingerprint": packet_fingerprint(original),
+                    "reply": "Tres libros en un mes",
+                    "claims": [self.claim("Tres libros en un mes", "tres libros")],
+                }
+                self.assertEqual(audit_draft(changed, draft).issues,
+                                 ("context_changed",))
+
     def test_draft_fingerprint_includes_queue_timestamp_and_author(self):
         for kw in ({"queue": "WEB"}, {"author": "Otro autor"},
                    {"published_at": "2026-10-09T13:00:00Z"}):
