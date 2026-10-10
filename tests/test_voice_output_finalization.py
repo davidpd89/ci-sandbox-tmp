@@ -103,7 +103,9 @@ class VoiceContractTests(unittest.TestCase):
     def test_malformed_contract_is_not_treated_as_success(self):
         module = types.ModuleType("spanish_voice_quality")
         for output in ({}, {"changed": True, "findings": []},
-                       {"changed": False, "findings": ["text"]}):
+                       {"changed": False, "findings": ["text"]},
+                       {"schema_version": 2, "network": "x", "queue": "WEB", "changed": False, "findings": []},
+                       {"schema_version": 1, "network": "instagram", "queue": "WEB", "changed": False, "findings": []}):
             module.audit = lambda *args, **kwargs: output
             with mock.patch.dict(sys.modules, {"spanish_voice_quality": module}):
                 with self.assertRaises(voice.VoicePreflightUnavailable):
@@ -136,6 +138,7 @@ class XBankBoundaryTests(unittest.TestCase):
              mock.patch.object(xb, "load_bank", return_value=[item]), \
              mock.patch.object(xb, "choose", return_value=(item, "ok")), \
              mock.patch.object(xb, "record") as record, \
+             mock.patch("circuit_breaker.write_preflight", return_value=(True, "ok")), \
              mock.patch.object(voice_output_finalization, "inspect",
                                side_effect=audit_side_effect) as audit:
             if audit_side_effect is not None:
@@ -225,12 +228,27 @@ class IsolatedActionBoundaryTests(unittest.TestCase):
     def test_reddit_embedded_reply_failure_cannot_click(self):
         clicked = []
         fake_reddit = types.ModuleType("reddit_interact")
+        fake_reddit._assert_thread_destination = lambda *_: None
+        fake_reddit._thread_post_id = lambda *_: "123"
+        fake_reddit.MY_USERNAME = "author"
         fake_reddit._check_spanish_orthography = lambda _: None
-        pg = types.SimpleNamespace(locator=lambda *_: clicked.append("locator"))
+        fake_rw = types.ModuleType("reply_writer")
+        fake_rw.require_gpt = lambda *_, **__: True
+        fake_policy = types.ModuleType("conversation_turn_policy")
+        fake_policy.check_execution = lambda *_, **__: (True, "ok")
+        pg = types.SimpleNamespace(
+            locator=lambda *_: clicked.append("locator"),
+            evaluate=lambda expression: ([{"id": "synthetic", "depth": 0,
+                                          "parent": "t3_123"}]
+                                         if expression == "synthetic" else "author"))
         fn = self.extract("reddit_comments.py", "reply_in_thread", {
             "check_reply": lambda _: None,
+            "_JS_COMMENTS": "synthetic",
+            "_certified_dom_target": lambda *args: True,
         })
-        with mock.patch.dict(sys.modules, {"reddit_interact": fake_reddit}), \
+        with mock.patch.dict(sys.modules, {"reddit_interact": fake_reddit,
+                                            "reply_writer": fake_rw,
+                                            "conversation_turn_policy": fake_policy}), \
              mock.patch.object(voice, "inspect",
                                side_effect=voice.VoicePreflightUnavailable("fake")):
             with self.assertRaises(voice.VoicePreflightUnavailable):
@@ -260,6 +278,11 @@ class IsolatedActionBoundaryTests(unittest.TestCase):
             "os": types.SimpleNamespace(path=types.SimpleNamespace(
                 exists=lambda _: True)),
             "sync_playwright": lambda: opened.append("open_browser"),
+            "validate_web_pin_fields": lambda *a: None,
+            "validate_web_pin_image": lambda *a: {"format": "PNG", "width": 1000,
+                "height": 1500, "bytes": 100, "aspect_2_3": True},
+            "PinPreflightError": ValueError,
+            "PinterestPublishError": RuntimeError,
         })
         with mock.patch.object(voice, "inspect_fields",
                                side_effect=voice.VoicePreflightUnavailable("fake")) as audit:
@@ -377,6 +400,87 @@ class StaticLastBoundaryTests(unittest.TestCase):
                      "pinterest_publish.py", "content_queue_alert.py"):
             self.assertIn("import voice_output_finalization as voice", self.source(path))
 
+
+
+class RealAuditorAndPublisherTests(unittest.TestCase):
+    def test_real_base_auditor_contract_and_nonmutation(self):
+        import spanish_voice_quality
+        actual = spanish_voice_quality.audit(SAMPLE, network="bluesky", queue="API")
+        self.assertEqual(actual["schema_version"], 1)
+        self.assertEqual(actual["network"], "bluesky")
+        self.assertEqual(actual["queue"], "API")
+        self.assertIs(actual["changed"], False)
+        self.assertIsInstance(actual["findings"], list)
+        self.assertEqual(voice.inspect(SAMPLE, network="bluesky", queue="API", log=lambda _: None),
+                         actual["findings"])
+
+    def test_six_auto_publishers_fail_closed_and_preserve_exact_fields(self):
+        import datetime
+        import content_publisher as cp
+        import x_bank_publish as xb
+        now = datetime.datetime(2026, 10, 10, 13, 0)
+        for red in ("bluesky", "mastodon", "threads", "x", "facebook", "instagram"):
+            with self.subTest(red=red):
+                item = {"texto": SAMPLE, "red": red, "fecha_hora": now,
+                        "carpeta": "synthetic", "md_path": "synthetic.md",
+                        "media": [{"exists": True, "alt": "Portada de Samuel, ñandú"}]
+                                 if red in ("facebook", "instagram") else []}
+                if red in ("bluesky", "mastodon"):
+                    item.update(imagen="synthetic.png", alt="Portada de Samuel")
+                hits, audits, verifies, logs = [], [], [], []
+                def publish(source):
+                    hits.append(source["texto"])
+                    return "https://example.org/post"
+                def verify(*args):
+                    verifies.append(args)
+                    return {"unverifiable": False}
+                def inspect_fields(fields, *, network, queue, log):
+                    audits.append((dict(fields), network, queue))
+                    return {}
+                with mock.patch.object(cp, "load_config", return_value={"enabled": {red: True}}), \
+                     mock.patch.object(cp.cq, "pending_parse_issues", return_value=[]), \
+                     mock.patch.object(cp, "eligible", return_value=([item], [])), \
+                     mock.patch.object(cp, "last_auto_publication", return_value=None), \
+                     mock.patch.object(cp, "blockers_of", return_value=[]), \
+                     mock.patch.object(cp, "_voice_diagnostics", return_value=[]), \
+                     mock.patch.object(cp.cq, "mark_done") as done, \
+                     mock.patch.object(cp, "_log"), \
+                     mock.patch.object(xb, "read_log", return_value=[]), \
+                     mock.patch("circuit_breaker.write_preflight", return_value=(True, "ok")), \
+                     mock.patch.object(voice, "inspect_fields",
+                                       side_effect=voice.VoicePreflightUnavailable("fake")):
+                    with self.assertRaises(voice.VoicePreflightUnavailable):
+                        cp.run(red, apply=True, now=now, publishers={red: publish},
+                               verify=verify, out=logs.append)
+                    self.assertFalse(hits, red)
+                    done.assert_not_called()
+                    self.assertEqual(len(verifies), 1, red)
+                verifies.clear()
+                with mock.patch.object(cp, "load_config", return_value={"enabled": {red: True}}), \
+                     mock.patch.object(cp.cq, "pending_parse_issues", return_value=[]), \
+                     mock.patch.object(cp, "eligible", return_value=([item], [])), \
+                     mock.patch.object(cp, "last_auto_publication", return_value=None), \
+                     mock.patch.object(cp, "blockers_of", return_value=[]), \
+                     mock.patch.object(cp, "_voice_diagnostics", return_value=[]), \
+                     mock.patch.object(cp.cq, "mark_done") as done, \
+                     mock.patch.object(cp, "_log"), \
+                     mock.patch.object(xb, "read_log", return_value=[]), \
+                     mock.patch("circuit_breaker.write_preflight", return_value=(True, "ok")), \
+                     mock.patch.object(voice, "inspect_fields", side_effect=inspect_fields):
+                    self.assertEqual(cp.run(red, apply=True, now=now,
+                                            publishers={red: publish}, verify=verify,
+                                            out=logs.append), "https://example.org/post")
+                    done.assert_called_once()
+                self.assertEqual(hits, [SAMPLE])
+                self.assertEqual(len(audits), 1)
+                fields, network, queue = audits[0]
+                self.assertEqual(fields["texto"], SAMPLE)
+                self.assertEqual(network, red)
+                self.assertEqual(queue, "WEB" if red in cp.BROWSER else "API")
+                if red in ("facebook", "instagram"):
+                    self.assertEqual(fields["alt_0"], "Portada de Samuel, ñandú")
+                if red in ("bluesky", "mastodon"):
+                    self.assertEqual(fields["alt"], "Portada de Samuel")
 
 if __name__ == "__main__":
     unittest.main()
