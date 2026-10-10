@@ -167,7 +167,10 @@ def advisory(text, *, network, queue=None, log=print, label="[voz] revision_es")
             pass
 
     try:
-        findings = audit(text, network=network, queue=queue)["findings"]
+        # Metadatos de origen desconocidos nunca deben desactivar el QA:
+        # no atribuir WEB/API/MOBILE cuando el valor recibido es inválido.
+        safe_queue = queue if isinstance(queue, str) and queue in QUEUES else None
+        findings = audit(text, network=network, queue=safe_queue)["findings"]
     except Exception as exc:
         safe_log(label + " auditor_es_no_disponible: " + type(exc).__name__)
         return []
