@@ -1,0 +1,25 @@
+json
+{
+  "hashtags_core": [
+    "libros",
+    "lectura",
+    "leo",
+    "bookstodon",
+    "bookstagram",
+    "amoleer",
+    "recomendacionlibros",
+    "fantasia",
+    "fantasía",
+    "fantasiaepica",
+    "fantasíaépica",
+    "novelafantastica",
+    "novelafantástica",
+    "romantasy",
+    "romance",
+    "juvenil",
+    "librosjuveniles",
+    "autores",
+    "escritores",
+    "reseñasdelibros"
+  ]
+}
