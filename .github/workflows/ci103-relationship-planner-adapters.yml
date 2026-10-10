@@ -1,0 +1,40 @@
+name: CI103 relationship planner adapters (offline)
+on:
+  push:
+    branches: [research/daily-priority-planner-adapters]
+    paths:
+      - tools/relationship_planner_adapters.py
+      - tests/test_relationship_planner_adapters.py
+      - docs/research/daily-priority-planner-adapters.md
+      - .github/workflows/ci103-relationship-planner-adapters.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  relationship-planner:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+      - name: Checkout pinned #71 score contract (read-only)
+        uses: actions/checkout@v4
+        with:
+          ref: a8b3330b444090a871bbf7b53d26585525ad2450
+          path: priority-contract
+          sparse-checkout: |
+            tools/relationship_priority.py
+          sparse-checkout-cone-mode: false
+      - name: Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Offline unit and integration tests
+        run: python -m unittest discover -s tests -p test_relationship_planner_adapters.py -v
+      - name: Compilation guard
+        run: python -m py_compile tools/relationship_planner_adapters.py tests/test_relationship_planner_adapters.py
