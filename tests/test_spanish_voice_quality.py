@@ -159,6 +159,20 @@ class TestSpanishVoice(unittest.TestCase):
         exploding = lambda *_: (_ for _ in ()).throw(OSError("logger ficticio"))
         self.assertTrue(advisory(content, network="tiktok", log=exploding))
 
+    def test_advisory_unknown_queue_still_audits(self):
+        from spanish_voice_quality import advisory
+        import spanish_voice_quality as quality
+        events = []
+        with mock.patch.object(quality, "audit", wraps=quality.audit) as invoked:
+            findings = advisory("¿De verdad...?", network="threads",
+                                queue="browser", log=events.append)
+        self.assertEqual(findings, [])
+        self.assertIsNone(invoked.call_args.kwargs["queue"])
+        flagged = advisory("En serio?", network="threads", queue={"bad": "value"},
+                           log=events.append)
+        self.assertEqual([item["code"] for item in flagged], ["question_opening"])
+        self.assertNotIn("auditor_es_no_disponible", " ".join(events))
+
     def test_invalid_network_and_queue_types(self):
         for invalid in ([], {}, 2):
             with self.assertRaises(ValueError):
