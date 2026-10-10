@@ -545,6 +545,8 @@ def reply_in_thread(pg, thread_url, item, log=print):
         log("[reddit] PROCEDENCIA_COMENTARIO_DISTINTO; no se pulsa Enviar")
         return False
     check_reply(item["text"])
+    import voice_output_finalization as voice
+    voice.inspect(item["text"], network="reddit", queue="WEB", log=log)
     r._check_spanish_orthography(item["text"].replace("¿", "").replace("?", ""))
     node = pg.locator(f'shreddit-comment[thingid="{item["id"]}"]').first
     if not node.count():
