@@ -1,0 +1,17 @@
+python
+# Propuesta: tools/growth_contracts.py
+from datetime import datetime, timezone
+
+def parse_reddit_timestamp(value: float | int | str | None) -> datetime | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        if not value.strip().replace(".", "", 1).isdigit():
+            return None
+        value = float(value)
+    if isinstance(value, float) and not value.is_integer():
+        return None
+    ts = int(value)
+    if ts < 0:
+        return None
+    return datetime.fromtimestamp(ts, tz=timezone.utc)
