@@ -123,7 +123,8 @@ class IdentityGraphBase:
 
     def to_document(self) -> dict:
         return {"schema_version": 1,
-                "profiles": [asdict(self.profiles[k]) for k in sorted(self.profiles)],
+                "profiles": [dict(asdict(self.profiles[k]), declared_links=list(self.profiles[k].declared_links))
+                             for k in sorted(self.profiles)],
                 "decisions": [{"left": a, "right": b, "status": status, "reason": reason}
                               for (a, b), (status, reason) in sorted(self.decisions.items())]}
 
