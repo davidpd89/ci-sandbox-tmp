@@ -243,6 +243,55 @@ class IsolatedActionBoundaryTests(unittest.TestCase):
         self.assertEqual(opened, [])
 
 
+
+class NativeDispatchBoundaryTests(unittest.TestCase):
+    def test_nine_network_output_dispatches_have_preflight(self):
+        scenarios = [
+            ("x_execute.py", "run_plan", 'voice.inspect(item["text"], network="x", queue="WEB")', 'outcome = x.reply_to('),
+            ("bluesky_execute.py", "run_plan", 'voice.inspect(item["text"], network="bluesky", queue="API")', 'b.reply_to('),
+            ("mastodon_execute.py", "_do", 'voice.inspect(item["text"], network="mastodon", queue="API")', 'created = m.reply_to('),
+            ("threads_execute.py", "run_plan", 'voice.inspect(item["text"], network="threads", queue="API")', 'api.publish_reply('),
+            ("facebook_execute.py", "run_plan", 'voice.inspect(item["text"], network="facebook", queue="WEB")', 'outcome = fb.comment('),
+            ("instagram_execute.py", "run_plan", 'voice.inspect(item["text"], network="instagram", queue="WEB")', 'outcome = ig.comment('),
+        ]
+        for path, scope, audit, action in scenarios:
+            with self.subTest(path=path):
+                StaticLastBoundaryTests().assert_before(path, audit, action, scope)
+
+    def test_secondary_native_dispatch_branches_audited(self):
+        cases = [
+            ("x_execute.py", 'elif kind == "quote":', 'voice.inspect(item["text"], network="x", queue="WEB")', 'x.repost('),
+            ("threads_execute.py", 'elif kind == "reply":', 'voice.inspect(item["text"], network="threads", queue="WEB")', 't.reply_to('),
+            ("facebook_execute.py", 'elif kind == "comment_external":', 'voice.inspect(item["text"], network="facebook", queue="WEB")', 'fb.comment_external('),
+        ]
+        for file, branch, audit, action in cases:
+            s = (ROOT / "tools" / file).read_text(encoding="utf-8")
+            part = s[s.index(branch):]
+            self.assertLess(part.index(audit), part.index(action), file)
+        s = (ROOT / "tools" / "bluesky_execute.py").read_text(encoding="utf-8")
+        self.assertIn("else _voice_quote(", s)
+
+    def test_mastodon_reply_failure_cannot_send(self):
+        sent = []
+        fn = IsolatedActionBoundaryTests.extract("mastodon_execute.py", "_do", {
+            "m": types.SimpleNamespace(reply_to=lambda *_: sent.append(True)),
+        })
+        with mock.patch.object(voice, "inspect",
+                               side_effect=voice.VoicePreflightUnavailable("fake")):
+            with self.assertRaises(voice.VoicePreflightUnavailable):
+                fn("reply", {"status_id": "123", "text": SAMPLE})
+        self.assertEqual(sent, [])
+
+    def test_bluesky_quote_failure_cannot_send(self):
+        sent = []
+        fn = IsolatedActionBoundaryTests.extract("bluesky_execute.py", "_voice_quote", {})
+        bridge = types.SimpleNamespace(quote=lambda *_: sent.append(True))
+        with mock.patch.object(voice, "inspect",
+                               side_effect=voice.VoicePreflightUnavailable("fake")):
+            with self.assertRaises(voice.VoicePreflightUnavailable):
+                fn({"url": "https://bsky.app/profile/demo/post/id", "text": SAMPLE}, bridge)
+        self.assertEqual(sent, [])
+
 class StaticLastBoundaryTests(unittest.TestCase):
     """Comprobación AST de orden/cola por ruta; no sustituye un canario real."""
 

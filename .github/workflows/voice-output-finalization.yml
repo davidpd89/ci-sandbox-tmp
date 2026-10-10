@@ -5,6 +5,12 @@ on:
     paths:
       - 'tools/voice_output_finalization.py'
       - 'tools/x_bank_publish.py'
+      - 'tools/bluesky_execute.py'
+      - 'tools/mastodon_execute.py'
+      - 'tools/threads_execute.py'
+      - 'tools/facebook_execute.py'
+      - 'tools/instagram_execute.py'
+      - 'tools/x_execute.py'
       - 'tools/reddit_publish.py'
       - 'tools/reddit_interact.py'
       - 'tools/reddit_comments.py'
@@ -38,6 +44,6 @@ jobs:
       - name: Install timezone data used by existing X publisher (Windows)
         run: python -m pip install --disable-pip-version-check "tzdata>=2026.1,<2027"
       - name: Compile affected modules
-        run: python -m compileall -q tools/voice_output_finalization.py tools/x_bank_publish.py tools/reddit_publish.py tools/reddit_comments.py tools/reddit_interact.py tools/tiktok_mobile_interact.py tools/pinterest_publish.py tools/content_publisher.py tools/content_queue_alert.py
+        run: python -m compileall -q tools/voice_output_finalization.py tools/x_bank_publish.py tools/reddit_publish.py tools/reddit_comments.py tools/reddit_interact.py tools/tiktok_mobile_interact.py tools/pinterest_publish.py tools/content_publisher.py tools/content_queue_alert.py tools/bluesky_execute.py tools/mastodon_execute.py tools/threads_execute.py tools/facebook_execute.py tools/instagram_execute.py tools/x_execute.py
       - name: Unit tests (synthetic, no social network)
         run: python -m unittest discover -s tests -p test_voice_output_finalization.py -v
