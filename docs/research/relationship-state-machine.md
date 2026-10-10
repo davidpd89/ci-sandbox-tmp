@@ -187,3 +187,5 @@ como pruebas realizadas.
 ## Comprobación adicional adversarial (10/10/2026)
 
 La apertura de una base SQLite preexistente valida el esquema antes de escribir: nombres y orden de columnas, tipos, nulabilidad y claves primarias de ambas tablas. No realiza migraciones implícitas. Una base ajena/incompatible se rechaza con `ValueError`, en lugar de permitir una PK de idempotencia equivocada o fallar a mitad de una transacción. Incluye dos casos de regresión sintéticos para tabla de estado truncada y PK de eventos alterada. Sigue pendiente coordinar la autoridad del ledger de #84; este cambio **no** resuelve los bloqueos de procedencia, exclusión permanente ni seguidor entrante de la revisión previa.
+
+La misma comprobación impide abrir en la proyección un fichero SQLite que contenga la tabla operativa `actions` o la tabla append-only `relationship_events` de #84. Es una barrera contra el uso accidental de dos almacenes independientes en la misma base, no una integración entre ambos.
