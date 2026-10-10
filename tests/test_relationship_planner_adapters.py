@@ -318,6 +318,22 @@ class PlannerBridge(unittest.TestCase):
         self.assertEqual(len(ranked["queues"]["API"]), 1)
         self.assertEqual(ranked["queues"]["WEB"], [])
 
+    def test_missing_inbound_sqlite_does_not_abort_valid_sources(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "x.json").write_text(json.dumps(source("x")["data"]),
+                                         encoding="utf-8")
+            config = {"sources": [{"network": "x", "lane": "WEB",
+                                   "path": str(root / "x.json")}],
+                      "verified_inbound_sqlite": str(root / "absent.sqlite")}
+            (root / "manifest.json").write_text(json.dumps(config), encoding="utf-8")
+            sources, outbound, incoming = bridge.read_manifest(root / "manifest.json")
+            self.assertEqual(incoming, [])
+            snapshot, diag = bridge.build_snapshot(sources, outbound, incoming, today=TODAY)
+            self.assertEqual(len(snapshot["candidates"]), 1)
+            self.assertEqual(diag["inbound_source"], "unavailable")
+            self.assertNotIn("inbound", snapshot["candidates"][0])
+
     def test_cost_read_microbenchmark_synthetic(self):
         samples = [source(net, lane, handle=f"reader_{net}_{lane}_{i}")
                    for i in range(50) for net in bridge.NETWORKS for lane in bridge.LANES]
