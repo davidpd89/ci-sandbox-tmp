@@ -153,40 +153,61 @@ class RelationshipLedger:
         return _borrow(self._memory_conn) if self._memory_conn is not None else closing(self._connect())
 
     def append(self, data: dict) -> bool:
-        """True if inserted; False on byte-equivalent replay; conflict on divergent replay."""
-        item = _event(data)
-        stable = json.dumps(item, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-        digest = hashlib.sha256(stable.encode("utf-8")).hexdigest()
-        identity = json.dumps([item["network"], item["source"], item["source_id"]],
-                              ensure_ascii=False, separators=(",", ":"))
-        event_id = hashlib.sha256(identity.encode("utf-8")).hexdigest()
-        now = datetime.now(timezone.utc).isoformat(timespec="microseconds")
+        """True on insert, False on an identical replay."""
+        return self.append_many([data])["inserted"] == 1
+
+    def append_many(self, events: Iterable[dict]) -> dict:
+        """Validate first, commit the entire batch or none of it, idempotently.
+
+        One SQLite connection and writer lock per export, not per row. The
+        reservation ledger remains untouched.
+        """
+        prepared = []
+        for raw in events:
+            item = _event(raw)
+            stable = json.dumps(item, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+            digest = hashlib.sha256(stable.encode("utf-8")).hexdigest()
+            identity = json.dumps(
+                [item["network"], item["source"], item["source_id"]],
+                ensure_ascii=False, separators=(",", ":"),
+            )
+            event_id = hashlib.sha256(identity.encode("utf-8")).hexdigest()
+            prepared.append((item, digest, event_id))
+        stats = {"inserted": 0, "replayed": 0}
+        if not prepared:
+            return stats
         with self._connection() as conn:
             conn.execute("BEGIN IMMEDIATE")
             try:
-                old = conn.execute(
-                    "SELECT digest FROM relationship_events WHERE event_id=?", (event_id,)
-                ).fetchone()
-                if old is not None:
-                    if old["digest"] != digest:
-                        raise ValueError("source event changed after ingestion; new source_id required")
-                    conn.execute("COMMIT")
-                    return False
-                conn.execute(
-                    "INSERT INTO relationship_events("
-                    "event_id,network,queue,subject,kind,outcome,occurred_at,precision,"
-                    "source,source_id,correlation_id,target_id,digest,ingested_at)"
-                    " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                    (event_id, *(item[key] for key in (
-                        "network", "queue", "subject", "kind", "outcome", "occurred_at",
-                        "precision", "source", "source_id", "correlation_id", "target_id")),
-                     digest, now),
-                )
+                now = datetime.now(timezone.utc).isoformat(timespec="microseconds")
+                for item, digest, event_id in prepared:
+                    old = conn.execute(
+                        "SELECT digest FROM relationship_events WHERE event_id=?",
+                        (event_id,),
+                    ).fetchone()
+                    if old is not None:
+                        if old["digest"] != digest:
+                            raise ValueError(
+                                "source event changed after ingestion; new source_id required"
+                            )
+                        stats["replayed"] += 1
+                        continue
+                    conn.execute(
+                        "INSERT INTO relationship_events("
+                        "event_id,network,queue,subject,kind,outcome,occurred_at,precision,"
+                        "source,source_id,correlation_id,target_id,digest,ingested_at)"
+                        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                        (event_id, *(item[key] for key in (
+                            "network", "queue", "subject", "kind", "outcome", "occurred_at",
+                            "precision", "source", "source_id", "correlation_id", "target_id")),
+                         digest, now),
+                    )
+                    stats["inserted"] += 1
                 conn.execute("COMMIT")
-                return True
             except Exception:
                 conn.execute("ROLLBACK")
                 raise
+        return stats
 
     def history(self, network: str, subject: str) -> list[dict]:
         network = _clean(network, "network").lower()
@@ -260,20 +281,22 @@ class RelationshipLedger:
             raise ValueError("complete must be bool")
         seen = {_subject(s) for s in followers}
         tracked_ids = {_subject(s) for s in tracked}
-        result = {"inserted": 0, "replayed": 0, "unknown": 0}
+        events = []
+        unknown = 0
         for subject in sorted(tracked_ids):
             if subject not in seen and not complete:
-                result["unknown"] += 1
+                unknown += 1
                 continue
             status = "present" if subject in seen else "absent"
             key = hashlib.sha256(subject.encode("utf-8")).hexdigest()
-            inserted = self.append({
+            events.append({
                 "network": network, "queue": queue, "subject": subject,
                 "kind": "followback", "outcome": status, "occurred_at": observed_at,
                 "source": source, "source_id": f"{snapshot_id}:{key}",
                 "correlation_id": snapshot_id,
             })
-            result["inserted" if inserted else "replayed"] += 1
+        result = self.append_many(events)
+        result["unknown"] = unknown
         return result
 
 
@@ -322,21 +345,22 @@ def import_legacy_csv(ledger: RelationshipLedger, csv_path: str | Path, *,
     No free-form text (including texto_usado) is persisted.
     """
     source_id = _clean(source_id, "source_id")
-    stats = {"inserted": 0, "replayed": 0, "ignored": 0}
+    events = []
+    ignored = 0
     with open(csv_path, encoding="utf-8-sig", newline="") as handle:
         for line_no, row in enumerate(csv.DictReader(handle), start=2):
             kind_str = str(row.get("tipo") or "").strip().lower()
             pieces = kind_str.split("+")
             if not pieces or any(p not in ACTION_ALIASES for p in pieces):
-                stats["ignored"] += 1
+                ignored += 1
                 continue
             subject = row.get("cuenta") or row.get("handle")
             if not subject:
-                stats["ignored"] += 1
+                ignored += 1
                 continue
             occurred_at, precision = legacy_time(row.get("fecha"))
             for idx, part in enumerate(pieces):
-                new = ledger.append({
+                events.append({
                     "network": network, "queue": queue, "subject": subject,
                     "kind": ACTION_ALIASES[part],
                     "outcome": legacy_outcome(row.get("resultado")),
@@ -346,7 +370,8 @@ def import_legacy_csv(ledger: RelationshipLedger, csv_path: str | Path, *,
                     "correlation_id": f"{source_id}:row{line_no}",
                     "target_id": (row.get("url") or "").strip() or None,
                 })
-                stats["inserted" if new else "replayed"] += 1
+    stats = ledger.append_many(events)
+    stats["ignored"] = ignored
     return stats
 
 
