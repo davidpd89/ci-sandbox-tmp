@@ -135,7 +135,7 @@ def run_checks() -> list[Check]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="RRSS Autora Demo flow healthcheck")
+    parser = argparse.ArgumentParser(description="RRSS David Porto flow healthcheck")
     parser.add_argument("--json", action="store_true", help="print JSON output")
     args = parser.parse_args()
 

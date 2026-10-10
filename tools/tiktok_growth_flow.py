@@ -33,6 +33,8 @@ def report(state):
     shortlist = state["shortlist"]
     return {
         "fetched_posts": state["fetched_posts"],
+        "discovery_attribution": __import__("discovery_attribution").safe_state_summary(
+            "tiktok", state, hmac_key=os.environ.get("RRSS_DISCOVERY_HMAC_KEY", "").encode("utf-8")),
         "discovery": state.get("discovery"),
         "shortlist": len(shortlist),
         "acquisition": sum(1 for c in shortlist if c.get("lane") == "acquisition"),
@@ -61,6 +63,7 @@ def prepare(args):
     if reusable(args.state, getattr(args, "reuse_hours", 0)):
         print(f"[tiktok] estado de hace menos de {args.reuse_hours} h con plan de sobra: se reutiliza (sin scan)")
         return 0
+    print("[tiktok] origen_estado=scan_live; reutilizacion_no_aplicada")
     rc = scan.main(["--live-read", "--out", args.state])
     if rc != 0:
         return rc
@@ -73,26 +76,52 @@ def prepare(args):
     return 0
 
 
-def drop_already_done(plan):
-    """Quita lo ya confirmado en el registro (follows, URLs de like/comentario y textos usados):
-    relanzar un plan tras un corte nunca repite ni choca con el dedupe del preflight."""
+def drop_already_done(plan, *, today=None):
+    """Quita acciones hechas, inciertas y descartes de contexto del día actual.
+
+    El CSV legacy registra fecha sin hora: el descarte de contexto dura
+    el día natural, NO 24 h exactas. No implica tap ni gasto de cuota.
+    Los observados 'ya_*' son destinos realmente atendidos.
+    """
     import csv
+    import datetime as dt
+    import tiktok_safety as safety
+    today = today or dt.date.today()
     path = scan.REGISTRO_CSV
+    _, unresolved = safety.recorded_actions(path)
     done_follow, done_url, done_text = set(), set(), set()
     if os.path.exists(path):
         with open(path, encoding="utf-8", newline="") as stream:
             for row in csv.DictReader(stream):
-                if (row.get("resultado") or "").strip().casefold() != "confirmado":
-                    continue
                 kind = (row.get("tipo") or "").strip().casefold()
+                result = (row.get("resultado") or "").strip().casefold()
+                if (kind == "like" and result.startswith("saltado_like_contexto:")
+                        and (row.get("fecha") or "").strip() == today.isoformat()):
+                    done_url.add(("like", (row.get("post_resumen") or "").strip()))
+                    continue
+                confirmed = result in ("confirmado", "publicado")
+                # Ya interactuado en la UI no es una escritura NUEVA ni gasta
+                # cupo, pero sí demuestra que este destino no debe proponerse.
+                already_done = result == {
+                    "follow": "saltado_ya_seguido",
+                    "like": "saltado_ya_like",
+                    "comment": "saltado_ya_comentado",
+                }.get(kind)
+                if not (confirmed or already_done):
+                    continue
                 if kind == "follow":
                     done_follow.add((row.get("cuenta") or "").strip().lstrip("@").casefold())
                 else:
                     done_url.add((kind, (row.get("post_resumen") or "").strip()))
-                    if kind == "comment":
+                    if kind == "comment" and confirmed:
+                        # Si ya había comentario, no afirmar que el texto
+                        # propuesto ahora se publicó (solo el URL está resuelto).
                         done_text.add(" ".join((row.get("texto_usado") or "").split()).casefold())
     kept = []
     for item in plan:
+        key = (item["kind"], item["handle"].lstrip("@").casefold() if item["kind"] == "follow" else item.get("url", ""))
+        if key in unresolved:
+            continue
         if item["kind"] == "follow" and item["handle"].casefold() in done_follow:
             continue
         if item["kind"] != "follow" and (item["kind"], item.get("url", "")) in done_url:
@@ -110,11 +139,23 @@ def build(args):
     if args.decisions:
         with open(args.decisions, encoding="utf-8") as stream:
             decisions = json.load(stream)
-    plan = drop_already_done(builder.build(state, decisions))
+    raw_plan = builder.build(state, decisions)
+    eligible_plan = drop_already_done(raw_plan)
+    plan = eligible_plan
     if getattr(args, "no_follows", False):       # 07/10: TikTok limita los follows (~100-150 al dia en esta cuenta); el cupo se reserva para el seguimiento masivo (follow-back 25 % frente al 10 % del plan automatico)
         plan = [item for item in plan if item.get("kind") != "follow"]
     _write(args.plan, plan)
-    print(json.dumps({"plan": args.plan, "actions": len(plan)}, ensure_ascii=False, indent=2))
+    # Diagnóstico puramente agregado: el plan corto puede proceder de falta
+    # de oferta o de deduplicación, no equivale a fallo del escáner.
+    removed = len(raw_plan) - len(eligible_plan)
+    stats = {"plan": args.plan, "actions": len(plan),
+             "propuestas_iniciales": len(raw_plan),
+             "descartadas_por_registro": removed,
+             "descartadas_follows": len(eligible_plan) - len(plan),
+             "acciones_por_tipo": {k: sum(it["kind"] == k for it in plan)
+                                  for k in ("follow", "like", "comment")},
+             "plan_pobre": len(plan) < 20}
+    print(json.dumps(stats, ensure_ascii=False, indent=2))
     return 0
 
 

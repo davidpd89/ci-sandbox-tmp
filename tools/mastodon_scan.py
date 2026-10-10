@@ -155,9 +155,9 @@ def scan():
     # Señal de máxima afinidad después de notificaciones: alguien que ya
     # enlaza contenido del autor, aunque no haya mencionado la cuenta.
     try:
-        data = m.search("autorademodiaz.com", "statuses", limit=20)
+        data = m.search("davidportodiaz.com", "statuses", limit=20)
         for status in data.get("statuses", []):
-            emit_status("search:autorademodiaz.com", status)
+            emit_status("search:davidportodiaz.com", status)
     except Exception as exc:
         print(f"AVISO search dominio propio: {exc}")
 
