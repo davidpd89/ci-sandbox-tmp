@@ -1,7 +1,7 @@
 """Contratos offline con estructura de respuesta documentada en Postman oficial de Meta.
 
 Sin navegador, credenciales ni llamadas HTTP reales. Ejecucion:
-python -m pytest tests/test_threads_api_contract_2026.py -q
+python -m pytest tests/test_threads_conversation_read_port_2026.py -q
 """
 import datetime
 import os
@@ -221,11 +221,14 @@ class ThreadsPaginationContract(unittest.TestCase):
             write.assert_not_called()
 
 
-    def test_uncertified_text_does_not_create_action(self):
+    def test_uncertified_text_never_becomes_signed(self):
+        import reply_provenance as proof
         items = [{"id": "target", "username": "ana", "text": "¿Cuál?", "timestamp": "2026-10-10T09:00:00Z",
                   "thread_turns": [{"role": "theirs", "text": "¿Cuál?", "post_id": "target"}]}]
-        with patch("reply_provenance.carry_decision_proof", return_value=None):
-            self.assertEqual(api.build_plan(items, {"actions": [{"id": "target", "text": "El segundo."}]}), [])
+        plan = api.build_plan(items, {"actions": [{"id": "target", "text": "El segundo."}]})
+        self.assertEqual(len(plan), 1)
+        self.assertNotIn("gpt_proof", plan[0])
+        self.assertFalse(proof.verify(plan[0], "threads"))
 
     def test_legacy_verified_publication_contract_is_preserved(self):
         import inspect
