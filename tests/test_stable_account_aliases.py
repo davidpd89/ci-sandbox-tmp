@@ -6,6 +6,7 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools"))
 from stable_account_aliases import AliasTimeline, AliasError, NETWORKS, account_key
+from identity_profiles import account_key as canonical_account_key
 
 T1, T2, T3 = ("2026-10-01T09:00:00Z", "2026-10-02T09:00:00Z", "2026-10-03T09:00:00Z")
 D1, D2 = ("did:plc:abcdefghijklmnopqrstuvwx", "did:plc:bcdefghijklmnopqrstuvwxy")
@@ -348,6 +349,15 @@ class StableAliasTests(unittest.TestCase):
         self.assertEqual(self.g.resolve("bluesky", "first.bsky.social", T3)["status"],
                          "inferred_interval")
         self.assertGreater(self.g._indexed_epoch, cached_revision)
+
+    def test_canonical_key_builder_parity_across_all_networks(self):
+        for net in NETWORKS:
+            handle = "Reader@Example.org" if net == "mastodon" else "@Writer"
+            with self.subTest(network=net):
+                self.assertEqual(account_key(net, handle), canonical_account_key(net, handle))
+                self.assertEqual(AliasTimeline().resolve(net, handle, T1),
+                                 AliasTimeline(key_builder=canonical_account_key).resolve(
+                                     net, handle, T1))
 
     def test_compatible_future_85_key_builder(self):
         g = AliasTimeline(key_builder=account_key)

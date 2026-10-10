@@ -7,6 +7,7 @@ from bisect import bisect_left, bisect_right
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import Mapping
+from identity_profiles import IdentityError, account_key as _canonical_account_key
 from urllib.parse import urlsplit
 import re
 
@@ -38,20 +39,15 @@ def _stamp(dt: datetime) -> str:
 
 
 def account_key(network: str, handle: str) -> str:
-    """Local-key adapter for #85; prefer its account_key via key_builder after merge."""
-    if not isinstance(network, str) or network not in NETWORKS or not isinstance(handle, str):
-        raise AliasError("account_invalid")
-    h = handle.strip().lstrip("@").casefold()
-    if not h or len(h) > 256 or any(c.isspace() or c in "|/:?#\\" for c in h):
-        raise AliasError("handle_invalid")
-    if network == "mastodon":
-        parts = h.split("@")
-        if (len(parts) != 2 or not re.fullmatch(r"[a-z0-9_][a-z0-9_.-]*", parts[0])
-                or not re.fullmatch(r"[a-z0-9.-]+", parts[1]) or "." not in parts[1]):
-            raise AliasError("mastodon_fully_qualified_acct_required")
-    elif "@" in h or not re.fullmatch(r"[\w.-]+", h, re.UNICODE):
-        raise AliasError("handle_invalid")
-    return network + "|" + h
+    """Use the canonical nine-network key policy in identity_profiles (#85).
+
+    Preserve AliasError at this boundary rather than drifting to a second
+    per-network normalization implementation.
+    """
+    try:
+        return _canonical_account_key(network, handle)
+    except (IdentityError, TypeError) as exc:
+        raise AliasError("account_invalid") from exc
 
 
 def stable_key(network: str, value: str, verification: str) -> str:

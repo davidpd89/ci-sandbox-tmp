@@ -122,3 +122,10 @@ nativos operativos.
 `action` JSON de tipo lista/diccionario ya no pueden provocar `TypeError`
 por búsquedas de pertenencia en `set`/`dict` con claves no hashables.
 Se rechazan mediante `AliasError`, con regresiones de replay y eventos.
+
+**Paridad con el código vigente:** la normalización `account_key` de
+`stable_account_aliases` delega ahora en
+`identity_profiles.account_key`, disponible en la base sincronizada y en
+el repositorio oficial. Se elimina la segunda implementación de las reglas
+de handle para las nueve redes; las llamadas existentes siguen recibiendo
+`AliasError`. Se prueba el adaptador canónico con las nueve redes.
