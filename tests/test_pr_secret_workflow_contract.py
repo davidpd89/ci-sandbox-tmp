@@ -20,7 +20,8 @@ class PrSecretWorkflowContract(unittest.TestCase):
         self.assertIn("windows-latest", y)
         self.assertIn("fromJSON(", y)
         self.assertIn("branches: [main]", y)
-        self.assertIn("paths:", y)
+        # Sin filtro de paths: un push que solo añade métricas también debe activar CI.
+        self.assertNotIn("    paths:", y)
         self.assertNotIn("secrets.", y)
         actions = re.findall(r"(?m)^\s*- uses: ([^\s#]+)", y)
         self.assertTrue(actions)

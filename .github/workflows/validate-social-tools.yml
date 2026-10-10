@@ -4,12 +4,9 @@ on:
   # Valida toda PR del mirror, incluso si solo cambia configuración.
   pull_request:
   push:
+    # Detectar cualquier ruta operativa aunque no cambien tools/tests.
     branches: [main]
-    paths:
-      - 'tools/**'
-      - 'tests/**'
-      - '.github/workflows/validate-social-tools.yml'
-      - 'requirements-ci.txt'
+  # Dispatch valida únicamente la suite offline; no inventa rangos Git.
   workflow_dispatch:
 
 permissions:
@@ -35,10 +32,18 @@ jobs:
     env:
       CI: 'true'
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Checkout PR o manual (merge sintético si es PR)
+        if: github.event_name != 'push'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 2  # PR: merge commit + primer padre (base), suficiente para HEAD^1
+          fetch-depth: 2
+      - name: Checkout push (before puede abarcar múltiples commits)
+        if: github.event_name == 'push'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.11'
@@ -47,6 +52,9 @@ jobs:
         # En push/dispatch HEAD^1 sería el commit previo, no la base de una PR.
         if: github.event_name == 'pull_request'
         run: python tools/repo_hygiene.py --base "HEAD^1"
+      - name: No aceptar artefactos operativos ni rutas sensibles en push completo
+        if: github.event_name == 'push'
+        run: python tools/push_hygiene.py
       - name: Instalar Gitleaks CLI desde release fijada y verificada
         if: github.event_name == 'pull_request'
         run: python tools/install_gitleaks_ci.py
