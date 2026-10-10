@@ -1,0 +1,31 @@
+python
+# Propuesta: tools/reddit_scan.py
+def candidate_from_reddit_thing(thing: dict) -> GrowthCandidate | None:
+    data = thing.get("data") or {}
+    kind = thing.get("kind")
+    short_id = data.get("id")
+    created_utc = data.get("created_utc")
+    if kind not in {"t1", "t3"} or not short_id:
+        return None
+    parsed = parse_reddit_timestamp(created_utc)
+    if parsed is None:
+        return None
+    fullname = f"{kind}_{short_id}"
+    parent = data.get("parent_id")
+    return GrowthCandidate(
+        network="reddit",
+        kind=kind,
+        short_id=short_id,
+        fullname=fullname,
+        created_utc=float(created_utc),
+        permalink=data.get("permalink", ""),
+        action="comment",
+        target_fullname=data.get("link_id") if kind == "t1" else fullname,
+        parent_fullname=parent if kind == "t1" else None,
+        subreddit=data.get("subreddit"),
+        author=data.get("author"),
+        title=data.get("title"),
+        body_or_selftext=data.get("body") or data.get("selftext"),
+        score=data.get("score"),
+        num_comments=data.get("num_comments"),
+    )
