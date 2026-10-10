@@ -1,0 +1,61 @@
+json
+{
+  "groups": [
+    {
+      "slug": "circulo-lectores-fantasia-ciencia-ficcion",
+      "url": "https://www.facebook.com/groups/207124236162026/",
+      "tema": "fantasia_ciencia_ficcion",
+      "prioridad": 1,
+      "max_posts": 10,
+      "min_comments": 0
+    },
+    {
+      "slug": "lecturas-fantasticas-juvenil",
+      "url": "https://www.facebook.com/groups/lecturasfantasticas/",
+      "tema": "fantasia_juvenil",
+      "prioridad": 1,
+      "max_posts": 10,
+      "min_comments": 0
+    },
+    {
+      "slug": "fantasia-epica-y-algo-mas",
+      "url": "https://www.facebook.com/groups/215627118464853/",
+      "tema": "fantasia_epica",
+      "prioridad": 1,
+      "max_posts": 10,
+      "min_comments": 0
+    },
+    {
+      "slug": "romantasy-bookclub",
+      "url": "https://www.facebook.com/groups/599577785909907/",
+      "tema": "romantasy",
+      "prioridad": 1,
+      "max_posts": 10,
+      "min_comments": 0
+    },
+    {
+      "slug": "recomienda-libros",
+      "url": "https://www.facebook.com/groups/RecomiendaLibros/",
+      "tema": "lectura_general",
+      "prioridad": 2,
+      "max_posts": 8,
+      "min_comments": 0
+    },
+    {
+      "slug": "adictos-a-la-lectura",
+      "url": "https://www.facebook.com/groups/403666423153977/",
+      "tema": "lectura_general",
+      "prioridad": 2,
+      "max_posts": 8,
+      "min_comments": 0
+    },
+    {
+      "slug": "amigos-de-la-lectura",
+      "url": "https://www.facebook.com/groups/247845471929442/",
+      "tema": "lectura_general",
+      "prioridad": 3,
+      "max_posts": 8,
+      "min_comments": 0
+    }
+  ]
+}
