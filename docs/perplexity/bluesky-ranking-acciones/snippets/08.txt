@@ -1,0 +1,20 @@
+python
+# Fuente: https://davidgasquez.com/exploring-atproto-python
+from tqdm import tqdm
+
+with open("databs.csv", "w") as f:
+    f.write(
+        "source,target,source_avatar_url,source_posts_count,"
+        "source_followers_count,source_follows_count\n"
+    )
+
+    for source in tqdm(unique_authors):
+        author_follows = get_all_follows(source)
+        source_actor = client.app.bsky.actor.get_profile(params={"actor": source})
+
+        for follow in author_follows:
+            f.write(
+                f"{source},{follow.handle},{source_actor.avatar},"
+                f"{source_actor.posts_count},{source_actor.followers_count},"
+                f"{source_actor.follows_count}\n"
+            )
