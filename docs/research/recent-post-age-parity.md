@@ -82,18 +82,24 @@ código privado; no se introduce una dependencia nueva ni un nuevo gate.
   **Excluye acciones sobre perfiles** (`follow`, `follow_external`, `followback`,
   `unfollow`) del denominador de posts y las cuenta aparte. Esto evita que un
   plan Instagram compuesto solo por follows genere falsos «posts sin fecha».
-- Procedencia explícita: target_created_at/post_created_at; fechas en post,
-  record, status o media; Reddit created_utc; TikTok create_time. Created_at en
-  raíz solo con source_kind=post. El campo created_at de una ACCIÓN,
+- Procedencia conservadora revisada: en **acciones de planes** solo se aceptan
+  target_created_at/post_created_at; los campos genéricos de post/record/status/media
+  (también Reddit created_utc y TikTok create_time) se leen **solo en payloads
+  sin acción** declarados source_kind=post. La marca source_kind por sí sola NO
+  acredita el objetivo si hay kind de acción. El campo created_at de una ACCIÓN,
   indexedAt, observed_at, queued_at y first_seen_at no autorizan antigüedad.
-  Conflictos mayores de un segundo no seleccionan la fecha más reciente.
+  Conflictos mayores de un segundo entre fechas declaradas del mismo post
+  se apartan; no se elige silenciosamente la más reciente.
 - Relojes: datetimes con UTC offset, epoch seconds/milliseconds inequívocos,
   comparación en UTC, 5 min de tolerancia a deriva; futuros lejanos y fechas
   locales sin huso se apartan explícitamente.
 - audit_recent_plans: snapshots de las ocho rutas registradas en el código
-  privado; Reddit figura como sin_ruta_verificada, no cero. Archivos ausentes,
-  antiguos, corruptos o mayores de 4 MB son estados separados. Sin accesos
-  de red, credenciales o modificación de colas.
+  privado; Reddit figura como sin_ruta_verificada, no cero. Si está disponible
+  post_age_policy.PLAN_SNAPSHOTS del gate de #8/privado, se utiliza directamente
+  en vez de repetir las rutas; el fallback local sirve solo para el espejo
+  independiente. Contratos con redes incompletas provocan error visible.
+  Archivos ausentes, antiguos, corruptos o mayores de 4 MB se diferencian
+  de planes válidos. Sin accesos de red, credenciales o modificación de colas.
 - tools/daily_review.py: la sección nueva imprime solo contadores para nueve
   redes. No imprime URLs, textos, handles ni ID. Para reproducir:
   python tools/post_age_distribution.py --root .
@@ -132,13 +138,21 @@ Se ha buscado deliberadamente: un created_at de cola interpretado como post;
 indexedAt confundido con createdAt; DST / fecha sin offset; falso cero cuando
 falta plan; contradicciones entre metadatos; ID federado Mastodon / TID de
 Bluesky como supuesto reloj certificado; futuro inverosímil; ficheros
-corruptos y fugas en salida. El módulo no infiere nada a partir de IDs:
+corruptos y fugas en salida. Un caso nuevo mostró que post/record/status/media
+de una **acción** podían ser wrappers recientes no pertenecientes al post
+destino: ahora esos campos solo se aceptan en payloads sin acción identificados
+source_kind=post. En las acciones sin fecha acreditada se informa unknown; se
+añadió regresión por nueve redes y test de preferencia por el contrato
+PLAN_SNAPSHOTS del gate oficial. El módulo no infiere nada a partir de IDs:
 el gate de #8 es más específico. La telemetría **no autoriza publicaciones**.
 
 ## Pendiente de integración y reversibilidad
 
-Claude debe validar que los escáneres nutren fechas originales en cada
-snapshot, ejecutar Windows/Edge/Android real y cualquier canario supervisado;
+Claude debe validar que los escáneres propagan target_created_at/post_created_at
+certificados hasta los planes, especialmente si antes se usaban campos genéricos:
+esta mitigación prioriza unknown frente a falsos posts recientes. Validar
+source_kind=post solo para documentos auténticos de post, no envoltorios.
+Ejecutar Windows/Edge/Android real y cualquier canario supervisado;
 no se afirma que las pruebas offline cubran esos entornos. La ruta de planes
 Reddit requiere verificación antes de declararla cubierta. Para retirar la
 integración, eliminar el hook en daily_review.extra_sections, el módulo y sus
