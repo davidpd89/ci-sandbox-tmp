@@ -253,10 +253,14 @@ class ExperimentStore:
                 posteriors[arm], simulations[arm] = _posterior(
                     stats["successes"], stats["mature"], rng, draws)
             a, b = variants
-            # Comparación MC: emparejar muestras de las dos marginales, sin
-            # elegir variantes ni modificar asignaciones basándose en ella.
+            # Comparación MC: permutar las muestras marginales para evitar
+            # emparejar cuantiles ordenados; NUNCA decide automáticamente.
+            permuted_b = simulations[b][:]
+            random.Random(int(hashlib.sha256(
+                f"{name}|{network}|pairing-v1".encode()).hexdigest(), 16)
+            ).shuffle(permuted_b)
             probability = round(sum(x < y for x, y in
-                                    zip(simulations[a], simulations[b])) / draws, 4)
+                                    zip(simulations[a], permuted_b)) / draws, 4)
             total_assigned = sum(x["assigned"] for x in arms.values())
             total_exposed = sum(x["exposed"] for x in arms.values())
             total_mature = sum(x["mature"] for x in arms.values())
