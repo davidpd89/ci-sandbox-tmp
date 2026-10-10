@@ -1,0 +1,62 @@
+python
+# https://github.com/python-jsonschema/jsonschema#jsonschema
+from jsonschema import validate
+
+IG_CANDIDATE_SCHEMA = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [
+        "network",
+        "candidate_type",
+        "external_id",
+        "canonical_key",
+        "author",
+        "captured_at",
+    ],
+    "properties": {
+        "network": {"const": "instagram"},
+        "candidate_type": {"enum": ["post", "comment", "profile"]},
+        "external_id": {"type": "string", "minLength": 1},
+        "canonical_key": {
+            "type": "string",
+            "pattern": r"^instagram:(media|comment|profile):[A-Za-z0-9_:-]+$",
+        },
+        "author": {
+            "type": "object",
+            "required": ["user_id"],
+            "properties": {
+                "user_id": {"type": "string", "minLength": 1},
+                "username": {"type": ["string", "null"]},
+                "permalink": {"type": ["string", "null"]},
+            },
+        },
+        "media": {
+            "type": ["object", "null"],
+            "properties": {
+                "media_id": {"type": "string"},
+                "media_type": {
+                    "enum": ["IMAGE", "VIDEO", "CAROUSEL_ALBUM"]
+                },
+                "permalink": {"type": ["string", "null"]},
+                "timestamp": {"type": ["string", "null"]},
+            },
+        },
+        "parent_comment_id": {"type": ["string", "null"]},
+        "text": {"type": ["string", "null"]},
+        "captured_at": {"type": "string"},
+        "signals": {"type": "object"},
+        "action": {
+            "type": "object",
+            "required": ["kind", "eligible"],
+            "properties": {
+                "kind": {"enum": ["like", "comment", "follow"]},
+                "eligible": {"type": "boolean"},
+                "reason": {"type": "string"},
+            },
+        },
+    },
+}
+
+
+def validate_instagram_candidate(candidate: dict) -> None:
+    validate(instance=candidate, schema=IG_CANDIDATE_SCHEMA)
