@@ -1,0 +1,44 @@
+python
+# tools/facebook/niche_discovery.py
+# Descubrimiento de Pages candidatas para el nicho de fantasía/romantasy en español.
+
+from dataclasses import dataclass
+
+@dataclass
+class PageCandidate:
+    page_id: str
+    name: str
+    url: str
+    category: str | None
+    followers: int | None
+    relevance: float
+
+KEYWORDS = [
+    "fantasía juvenil",
+    "romantasy",
+    "novela fantástica",
+    "autores independientes",
+    "lectura fantástica",
+    "booktok español",
+]
+
+def score_page(page: dict) -> float:
+    score = 0.0
+    text = " ".join(
+        str(page.get(field, "")).lower()
+        for field in ("name", "category", "about", "description")
+    )
+    score += sum(2.0 for keyword in KEYWORDS if keyword in text)
+    followers = page.get("followers_count") or 0
+    score += min(followers / 10000, 5.0)
+    return round(score, 3)
+
+def to_candidate(page: dict) -> PageCandidate:
+    return PageCandidate(
+        page_id=page["id"],
+        name=page.get("name", ""),
+        url=page.get("link", ""),
+        category=page.get("category"),
+        followers=page.get("followers_count"),
+        relevance=score_page(page),
+    )
