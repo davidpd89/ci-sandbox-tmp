@@ -282,6 +282,8 @@ class RankingTests(unittest.TestCase):
                      {"as_of": dt.datetime(2026, 10, 9)},
                      {"exploration_fraction": False},
                      {"exploration_fraction": True},
+                     {"exploration_fraction": 10 ** 400},
+                     {"exploration_fraction": -(10 ** 400)},
                      {"max_snapshot_age_days": True}):
             with self.subTest(opts=opts), self.assertRaises(ValueError):
                 ranking([], **opts)
