@@ -88,6 +88,11 @@ def _id(value):
 
 
 def _time(value, *, epoch=False):
+    # Native payloads sometimes encode Unix seconds as decimal strings.
+    # Accept only an unambiguous ten-digit epoch on epoch-based networks;
+    # never interpret a search timestamp, short date or millisecond count.
+    if epoch and isinstance(value, str) and re.fullmatch(r"[0-9]{10}", value):
+        value = int(value)
     if epoch and isinstance(value, (int, float)) and not isinstance(value, bool):
         try:
             result = datetime.fromtimestamp(value, tz=timezone.utc)
