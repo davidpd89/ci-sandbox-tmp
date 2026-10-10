@@ -27,7 +27,7 @@ sin enviar. El código original de esta rama puede ejecutarse sin él mientras n
 | X | **conectado** banco, replies/citas y fichas #79 | pendiente (API sin ruta acreditada) | no aplicable verificado | `x_bank_publish.main`, `x_execute.run_plan`, `content_publisher.run` |
 | Threads | **conectado** replies web y fichas #79 | **conectado** replies API | no aplicable verificado | `threads_execute.run_plan` + `content_publisher.run` |
 | Facebook | **conectado** comentarios propios/externos y fichas #79 | pendiente (otras salidas API directas) | no aplicable verificado | `facebook_execute.run_plan` + `content_publisher.run` |
-| Pinterest | **conectado** directo, pin diario, fichas #79 | pendiente (lectores API, sin publicación auditada) | no aplicable verificado | `pinterest_publish.publish_pin` antes de CDP; `voice_checked=True` evita repetir descripción ya revisada |
+| Pinterest | **conectado** directo, pin diario, fichas #79 | pendiente (lectores API, sin publicación auditada) | no aplicable verificado | `pinterest_publish.publish_pin` antes de CDP; el preflight final revisa título, descripción y ALT aunque exista aviso previo |
 | Reddit | **conectado** banco/post/comentario/reply | pendiente (sin ruta API acreditada) | no aplicable verificado | `reddit_publish.publish_post` antes de intención/clic, `reddit_interact.comment`, `reddit_comments.reply_in_thread` |
 | Bluesky | no aplicable verificado a publicaciones | **conectado** replies/citas y fichas #79 | no aplicable verificado | `bluesky_execute.run_plan` + `content_publisher.run` |
 | Mastodon | no aplicable verificado a publicaciones | **conectado** replies y fichas #79 | no aplicable verificado | `mastodon_execute._do` + `content_publisher.run` |
@@ -45,8 +45,9 @@ Se integraron seis despachadores adicionales (`x_execute`, `bluesky_execute`,
 sin modificar los clientes de bajo nivel ni las plantillas de vídeo. Los comentarios que nacen en
 `reply_writer` pueden recibir una revisión en generación y otra **final en ejecución**
 si atraviesan las rutas directas instrumentadas: son fases distintas, no dos llamadas durante
-una misma construcción. La excepción de Pinterest `voice_checked=True` impide una
-segunda revisión de la misma descripción en la cadena de fichas #79.
+una misma construcción. En Pinterest hay dos fases diferentes: el aviso editorial de #79 y el preflight
+final que audita título, descripción y ALT. Es deliberado porque el adaptador
+`advisory()` de #79 devuelve `[]` ante fallos técnicos; no acredita validación efectiva.
 
 ## Decisión y contrato técnico
 
@@ -120,9 +121,9 @@ Métrica de cobertura documentada antes/después:
 
 1. **Crítico — ausencia de #79:** rama #106 aislada no puede ejercer el motor real.
    Resuelto como dependencia explícita y preflight de fallo controlado; orden de merge obligatorio.
-2. **Alto — doble QA de la descripción Pinterest:** se añadió `voice_checked=True` desde
-   `content_publisher` para que el publicador directo revise solo título y ALT;
-   pin diario directo revisa los tres campos.
+2. **Alto — Pinterest puede omitir QA final de la descripción:** corregido eliminando
+   `voice_checked=True`. El aviso previo de #79 es informativo y no garantiza éxito;
+   ahora todas las vías auditadas revisan los tres campos antes de abrir CDP.
 3. **Alto — inferencia incorrecta de WEB en salidas manuales:** corregido a `queue=None`.
    El informe manual no demuestra publicación ni cola.
 4. **Medio — auditor editorial lento/no disponible:** fallo técnico controlado corta
@@ -134,7 +135,10 @@ Métrica de cobertura documentada antes/después:
 6. **Corregido en la segunda pasada:** los despachadores de reply/cita de
    Threads API, Bluesky API, Mastodon API y comentarios WEB de X/Facebook/Instagram
    no pasaban por la revisión final; ahora llaman al mismo puente antes del transporte.
-7. **Pendiente:** rutas SDK fuera de los despachadores inventariados y publicación
+7. **Corregido — alerta manual frágil:** fallo técnico del auditor impedía escribir
+   `PENDIENTES_PUBLICACION.md`. Ahora la alerta registra el fallo sin suprimir el informe;
+   este flujo nunca ejecuta una acción social.
+8. **Pendiente:** rutas SDK fuera de los despachadores inventariados y publicación
    manual móvil/WEB no observada. Solo canarios supervisados pueden acreditar esos caminos.
 
 **Rollback:** revertir los commits de #106; no hay cambios de esquema,
