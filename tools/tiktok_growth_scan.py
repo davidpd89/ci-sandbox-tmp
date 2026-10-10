@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import datetime
 import json
 import os
 import re
@@ -394,9 +395,19 @@ def _run_discovery(adapter, config, known, followed, discarded, rows, issues, *,
         wanted = []  # las superficies principales ya están en el checkpoint
     for surface in wanted:
         queries, budget_key = pools[surface]
-        chosen = disc.pick_queries(
-            queries, surface, ctx["stats"], int(config["budgets"].get(budget_key, 2))
-        )
+        query_limit = int(config["budgets"].get(budget_key, 2))
+        chosen = disc.pick_queries(queries, surface, ctx["stats"], query_limit)
+        # Una reserva dentro de la cuota, antes de run_surface; no basta
+        # con añadir al final de los 86/144 términos preexistentes.
+        if surface in ("user_search", "video_search"):
+            import hashtag_query_consumers as hqc
+            field = ("lexical_actor_queries" if surface == "user_search"
+                     else "lexical_video_queries")
+            now = datetime.datetime.now()
+            chosen = hqc.reserve_fresh(
+                chosen, config.get(field) or [], budget=query_limit,
+                tick=now.toordinal() * 4 + now.hour // 6,
+            )
         total = {"queries": chosen, "rows": 0, "valid": 0, "new": 0}
         for query in chosen:
             valid, st = disc.run_surface(nav, surface, query, config, ctx)
