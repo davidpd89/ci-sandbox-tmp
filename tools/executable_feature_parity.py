@@ -92,11 +92,12 @@ def _script_steps(spec):
                 yield section, tuple(str(v).replace("\\", "/") for v in argv)
 
 
-def _wiring(spec, module, network=None):
+def _wiring(spec, module, network=None, *, required_args=()):
+    """Comprueba un paso invocado con los argumentos operativos exigidos."""
     needle = f"tools/{module}.py"
     for section, argv in _script_steps(spec):
         if any(part == needle or part.endswith("/" + needle) for part in argv):
-            if network is None or network in argv:
+            if (network is None or network in argv) and all(arg in argv for arg in required_args):
                 return section
     return None
 
@@ -141,7 +142,7 @@ def build_matrix(*, root=ROOT, pipelines=None):
             elif feature == "unfollow":
                 module, symbol = "unfollow_cleanup", "ADAPTERS"
                 verified = network in cleanup
-                stage = _wiring(spec, module, network)
+                stage = _wiring(spec, module, network, required_args=("--apply",))
             elif feature == "loyalty":
                 module, symbol = "loyalty", "HARVEST"
                 verified = network in harvest
