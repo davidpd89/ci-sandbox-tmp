@@ -96,7 +96,16 @@ def _rotate_queries(n=2):
     n = max(0, min(int(n), len(QUERY_POOL)))
     day = datetime.date.today().timetuple().tm_yday
     verified = [QUERY_POOL[(day + i) % len(QUERY_POOL)] for i in range(n)]
-    trial = TRIAL_QUERY_POOL[day % len(TRIAL_QUERY_POOL)]
+    import hashtag_query_consumers as hqc
+    # Las etiquetas son consultas de prueba de cuentas, no tags verificados.
+    def vocabulary(network, kind):
+        from discovery_terms import terms
+        values = terms(network, kind)
+        if kind == "busquedas":
+            values += terms(network, "hashtags")
+        return values
+    trial = hqc.select("instagram", "busquedas", TRIAL_QUERY_POOL,
+                       budget=1, tick=day, reader=vocabulary)[0]
     return [(q, "validada") for q in verified] + [(trial, "prueba_no_validada")]
 
 
