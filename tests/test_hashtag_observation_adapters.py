@@ -310,6 +310,50 @@ class ObservationTests(unittest.TestCase):
         self.assertEqual(bridge.to_engine_rows()[0]["tags"], original)
 
 
+
+    def test_full_network_queue_parity_with_real_engine(self):
+        from hashtag_expansion import build_snapshot
+
+        # Two distinct authors per platform, all three read-only queues.
+        # This validates downstream shape, not availability of live producers.
+        text_paths = {
+            "x": ("full_text",), "threads": ("text",),
+            "facebook": ("message",), "pinterest": ("description",),
+            "reddit": ("title",), "bluesky": ("record", "text"),
+            "mastodon": ("content",), "tiktok": ("desc",),
+            "instagram": ("caption", "text"),
+        }
+        collector = ObservationCollector(now=NOW)
+        for network in sorted(NETWORKS):
+            batch = []
+            for n in (1, 2):
+                row = sample(network, post=f"post-{n}", author=f"author-{n}")
+                container = row
+                for key in text_paths[network][:-1]:
+                    container = container[key]
+                last = text_paths[network][-1]
+                container[last] += " romantasy #Juvenil"
+                batch.append(row)
+            for queue in sorted(QUEUES):
+                collector.add_posts(network, queue, "reader", batch)
+        self.assertEqual(collector.aggregate_report()["unique_posts"], 18)
+        snapshot = build_snapshot(collector.to_engine_rows(),
+                                  now=NOW, seeds={"fantasia": ["romantasy"]})
+        self.assertEqual(snapshot["diagnostics"]["unique"], 18)
+        self.assertEqual(snapshot["diagnostics"]["invalid"], 0)
+        for network in NETWORKS:
+            result = snapshot["networks"][network]
+            self.assertIn("juvenil", result["busquedas"], network)
+            chosen = next(x for x in result["candidates"]
+                          if x["tag"] == "juvenil")
+            self.assertEqual(chosen["authors"], 2, network)
+            self.assertEqual(chosen["sources"],
+                             ["API:reader", "MOBILE:reader", "WEB:reader"], network)
+            if network == "reddit":
+                self.assertEqual(result["hashtags"], [])
+            else:
+                self.assertIn("juvenil", result["hashtags"], network)
+
     def test_end_to_end_with_current_hashtag_expansion_engine(self):
         # Genuine producer -> adapter -> current #63 engine composition,
         # not a mocked engine signature or an assumption about live feeds.
