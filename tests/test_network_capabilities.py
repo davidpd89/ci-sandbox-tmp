@@ -11,11 +11,11 @@ import network_capabilities as cap
 
 
 class CapabilityMatrixTests(unittest.TestCase):
-    def test_coverage_is_exactly_eight_active_networks(self):
+    def test_coverage_is_exactly_nine_networks_including_instagram(self):
         from mechanical_round import PIPELINES
         matrix = cap.build_matrix()
         self.assertEqual(set(matrix), set(cap.NETWORKS))
-        self.assertNotIn("instagram", matrix)
+        self.assertIn("instagram", matrix)
         # Algunas redes (p. ej. Reddit) usan una ruta propia fuera de
         # mechanical_round: inventariar ausencia no es un error del informe.
         for net in cap.NETWORKS:
@@ -95,6 +95,11 @@ class CapabilityMatrixTests(unittest.TestCase):
         self.assertEqual(set(gaps), set(cap.NETWORKS))
         self.assertIn("adaptador de unfollow no implementado", gaps["tiktok"])
         self.assertTrue(all("imposible" not in " ".join(lines) for lines in gaps.values()))
+
+    def test_writer_only_counts_pre_not_post(self):
+        sample = {"instagram": {"post": [["python", "tools/reply_writer.py", "instagram"]]}}
+        matrix = cap.build_matrix(pipelines=sample, cleanup_adapters={}, harvesters={})
+        self.assertFalse(matrix["instagram"]["gpt_writer_scheduled"])
 
     def test_command_parser_supports_windows_separators(self):
         pipe = {"pre": [["python.exe", "tools\\reply_writer.py", "x"]]}
