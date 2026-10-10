@@ -200,6 +200,30 @@ class ObservationTests(unittest.TestCase):
         self.assertEqual(c.to_engine_rows(), [])
         self.assertEqual(c.counts["invalid"], 1)
 
+    def test_mastodon_urls_require_server_and_resource_path(self):
+        # Without both authority and resource path these cannot disambiguate
+        # identities across Mastodon instances, even if prefixed with https.
+        bad_urls = ("https://", "https:///missing-host",
+                    "https://example.social", "https://example.social/",
+                    "ftp://example.social/@user/42",
+                    "https://other@example.social/@user/42",
+                    "https://[bad-ipv6/@user/42")
+        for bad in bad_urls:
+            for field in ("post", "author"):
+                with self.subTest(url=bad, field=field):
+                    row = sample("mastodon")
+                    if field == "post":
+                        row["url"] = bad
+                    else:
+                        row["account"]["url"] = bad
+                    collector = ObservationCollector(now=NOW)
+                    collector.add_posts("mastodon", "API", "identity", [row])
+                    self.assertEqual(collector.to_engine_rows(), [])
+                    self.assertEqual(collector.counts["invalid"], 1)
+        collector = ObservationCollector(now=NOW)
+        collector.add_posts("mastodon", "API", "identity", [sample("mastodon")])
+        self.assertEqual(collector.aggregate_report()["unique_posts"], 1)
+
     def test_feedback_exactly_once_and_aggregate_without_raw_identifiers(self):
         c = ObservationCollector(now=NOW)
         row = {"event_id": "opaque-1", "window": STAMP, "tag": "#Año",
