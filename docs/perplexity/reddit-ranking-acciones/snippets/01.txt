@@ -1,0 +1,5 @@
+python
+# https://github.com/redditraffler/redditraffler/blob/bfae4be3ea4885a3ceefcb2c91d7af8b833b68ee/app/util/raffler.py
+age=Raffler._account_age_days(author.created_utc),
+comment_karma=author.comment_karma,
+link_karma=author.link_karma,
