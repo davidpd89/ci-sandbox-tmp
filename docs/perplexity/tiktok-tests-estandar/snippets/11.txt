@@ -1,0 +1,31 @@
+json
+// tests/fixtures/tiktok/post_full.json
+{
+  "network": "tiktok",
+  "kind": "post",
+  "external_id": "7412345678901234567",
+  "author_handle": "autorfantasia",
+  "author_id": "7001234567890123456",
+  "sec_uid": "MS4wLjABAAAA_example",
+  "canonical_url": "https://www.tiktok.com/@autorfantasia/video/7412345678901234567",
+  "created_at": "2026-10-10T13:16:00+00:00",
+  "text": "Primer capítulo disponible: una ciudad suspendida sobre las nubes.",
+  "metrics": {
+    "views": 12500,
+    "likes": 842,
+    "comments": 63,
+    "shares": 121,
+    "saves": 210
+  },
+  "raw": {
+    "id": "7412345678901234567",
+    "createTime": 1760104560,
+    "statsV2": {
+      "playCount": "12500",
+      "diggCount": "842",
+      "commentCount": "63",
+      "shareCount": "121",
+      "collectCount": "210"
+    }
+  }
+}
