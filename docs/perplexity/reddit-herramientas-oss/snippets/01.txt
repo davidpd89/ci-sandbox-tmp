@@ -1,0 +1,126 @@
+python
+# Inspirado en: https://github.com/ChocoData-com/reddit-scraper/blob/main/reddit_scraper_api_codes/mention_monitor.py
+# Nuevo adaptador para davidpd89/ci-sandbox-tmp; usa PRAW y SQLite local.
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import sqlite3
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+
+import praw
+
+
+DB_PATH = Path("00_OPERATIVO/reddit/mention_monitor.sqlite3")
+
+
+@dataclass(frozen=True)
+class Mention:
+    mention_id: str
+    term: str
+    subreddit: str
+    post_id: str
+    post_title: str
+    post_url: str
+    author: str
+    created_utc: int
+    score: int | None
+    num_comments: int | None
+    selftext_excerpt: str
+    discovered_at: str
+
+
+def _connect() -> sqlite3.Connection:
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS seen_mentions (
+            mention_id TEXT PRIMARY KEY,
+            payload TEXT NOT NULL,
+            discovered_at TEXT NOT NULL
+        )
+        """
+    )
+    return conn
+
+
+def _mention_id(term: str, post_id: str) -> str:
+    raw = f"{term.lower()}:{post_id}".encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _excerpt(text: str, limit: int = 320) -> str:
+    text = " ".join((text or "").split())
+    return text[:limit]
+
+
+def search_mentions(reddit: praw.Reddit, terms: list[str], limit_per_term: int = 50) -> list[Mention]:
+    now = datetime.now(timezone.utc).isoformat()
+    mentions: list[Mention] = []
+
+    for term in terms:
+        for post in reddit.subreddit("all").search(term, sort="new", time_filter="week", limit=limit_per_term):
+            mentions.append(
+                Mention(
+                    mention_id=_mention_id(term, post.id),
+                    term=term,
+                    subreddit=str(post.subreddit),
+                    post_id=post.id,
+                    post_title=post.title,
+                    post_url=f"https://www.reddit.com{post.permalink}",
+                    author=str(post.author) if post.author else "[deleted]",
+                    created_utc=int(post.created_utc),
+                    score=getattr(post, "score", None),
+                    num_comments=getattr(post, "num_comments", None),
+                    selftext_excerpt=_excerpt(post.selftext),
+                    discovered_at=now,
+                )
+            )
+
+    return mentions
+
+
+def persist_new_mentions(mentions: list[Mention]) -> list[Mention]:
+    new_items: list[Mention] = []
+
+    with _connect() as conn:
+        for item in mentions:
+            cursor = conn.execute(
+                "INSERT OR IGNORE INTO seen_mentions (mention_id, payload, discovered_at) VALUES (?, ?, ?)",
+                (item.mention_id, json.dumps(asdict(item), ensure_ascii=False), item.discovered_at),
+            )
+            if cursor.rowcount:
+                new_items.append(item)
+
+    return new_items
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--terms", nargs="+", required=True)
+    parser.add_argument("--limit", type=int, default=50)
+    args = parser.parse_args()
+
+    reddit = praw.Reddit(
+        client_id=os.environ["REDDIT_CLIENT_ID"],
+        client_secret=os.environ["REDDIT_CLIENT_SECRET"],
+        user_agent=os.environ.get("REDDIT_USER_AGENT", "davidporto-growth-monitor/1.0"),
+        username=os.environ.get("REDDIT_USERNAME"),
+        password=os.environ.get("REDDIT_PASSWORD"),
+    )
+
+    mentions = search_mentions(reddit, args.terms, args.limit)
+    new_mentions = persist_new_mentions(mentions)
+
+    for item in new_mentions:
+        print(json.dumps(asdict(item), ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()
