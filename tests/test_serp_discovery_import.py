@@ -83,7 +83,7 @@ class TestSerpImport(unittest.TestCase):
 
     def test_encoded_host_path_collision_not_accepted(self):
         rows = [self.row("https://facebook.com.evil.example/name/posts/42"),
-                self.row("https://facebook.com@evil.example.com/name/posts/42"),
+                self.row("https://facebook.com@example.com/name/posts/42"),
                 self.row("http://www.facebook.com/name/posts/42"),
                 self.row("https://www.facebook.com:8443/name/posts/42")]
         result = mod.import_results(rows)
