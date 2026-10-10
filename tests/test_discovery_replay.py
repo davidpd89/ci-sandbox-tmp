@@ -101,6 +101,11 @@ class ReplayTests(unittest.TestCase):
         self.assertNotIn("Someone", repr(run(t, h)))
         self.assertNotIn("fantasía", repr(run(t, h)))
 
+    def test_malformed_unscoped_future_fails_instead_of_misreporting(self):
+        with self.assertRaises(ValueError):
+            run([cohort(1, 100, 50)],
+                [cohort(1, 100, 55, future=True), {"source_key": "unscoped"}])
+
     def test_immutable_inputs_and_validation(self):
         t = [cohort(1, 100, 50)]
         h = [cohort(1, 100, 50, future=True)]
