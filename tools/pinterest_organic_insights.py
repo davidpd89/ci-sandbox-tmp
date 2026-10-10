@@ -14,6 +14,8 @@ import json
 import os
 from collections.abc import Mapping
 
+import pinterest_niche
+
 WINDOWS = ("90d", "lifetime_metrics")
 FIELDS = ("impression", "pin_click", "clickthrough", "save")
 MAX_PINS = 10000
@@ -58,7 +60,13 @@ def summarize(pins, *, window="90d", min_impressions=100):
         # El campo clickthrough se conserva como tal; API no certifica venta.
         ratio = ((counts["clickthrough"] / imp) if sufficient and
                  counts["clickthrough"] is not None and imp > 0 else None)
+        # Contraste visual basado solo en metadatos API; no inferir calidad.
+        image = pinterest_niche.largest_image(dict(pin))
+        ratio = (image[1] / image[2]) if image else None
+        vertical_2_3 = (abs(ratio - 2 / 3) <= 0.025) if ratio is not None else None
         rows.append({
+            "image_dimensions": [image[1], image[2]] if image else None,
+            "vertical_2_3": vertical_2_3,
             "network": "pinterest", "source": "api_v5_owned_pin_metrics",
             "pin_id": native_id,
             "title": str(pin.get("title") or "")[:100],
