@@ -130,6 +130,28 @@ class LedgerTest(unittest.TestCase):
         self.assertEqual(winners.count(False), 11)
         self.assertEqual(self.ledger.count(), 1)
 
+    def test_batch_atomic_when_later_event_invalid(self):
+        valid = event(source_id="a")
+        invalid = event(source_id="b", occurred_at="2026-10-01T10:00:00")
+        with self.assertRaises(ValueError):
+            self.ledger.append_many([valid, invalid])
+        self.assertEqual(self.ledger.count(), 0)
+
+    def test_batch_atomic_when_later_event_conflicts(self):
+        self.ledger.append(event(source_id="original"))
+        good = event(source_id="fresh")
+        conflict = event(source_id="original", outcome="failed")
+        with self.assertRaisesRegex(ValueError, "changed"):
+            self.ledger.append_many([good, conflict])
+        self.assertEqual(self.ledger.count(), 1)
+        self.assertEqual(self.ledger.history("bluesky", "ana")[0]["outcome"], "confirmed")
+
+    def test_batch_load_500_records_and_replay(self):
+        records = [event(subject=f"autor-{i}", source_id=f"bulk-{i}") for i in range(500)]
+        self.assertEqual(self.ledger.append_many(records), {"inserted": 500, "replayed": 0})
+        self.assertEqual(self.ledger.append_many(records), {"inserted": 0, "replayed": 500})
+        self.assertEqual(self.ledger.count(), 500)
+
     def test_in_memory_connection(self):
         mem = RelationshipLedger(":memory:")
         self.assertTrue(mem.append(event()))
