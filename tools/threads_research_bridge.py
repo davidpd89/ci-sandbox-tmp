@@ -11,6 +11,7 @@ import argparse
 from collections import Counter
 from datetime import datetime, timezone
 import json
+import math
 from pathlib import Path
 import re
 from urllib.parse import urlsplit
@@ -129,10 +130,17 @@ def ingest_rows(rows, *, db_path):
         raise ValueError("--db obligatorio para importación local")
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import browser_pool
-    db = browser_pool.connect(str(db_path))
+    import threads_pool
+    # Usar el adaptador EXISTENTE de Threads (filtro antispam y campañas
+    # incluida en la rama oficial), no saltarlo escribiendo a browser_pool.
+    # El selector existente solo utiliza posts <=72 h. Redondear hacia
+    # arriba impide que contenido antiguo se considere artificialmente nuevo.
+    fresh = [row for row in rows if row[4] <= 72]
+    converted = [(handle, url, f"{handle} {max(1, math.ceil(age))} h {body}", source)
+                 for handle, url, body, source, age, _lang in fresh]
+    db = threads_pool.connect(str(db_path))
     try:
-        return browser_pool.record_post_rows(db, rows)
+        return threads_pool.record_posts(db, converted)
     finally:
         db.close()
 
