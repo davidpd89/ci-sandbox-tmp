@@ -91,3 +91,13 @@ Nueva comparación al 10/10/2026 sobre `davidpd89/rrss-davidporto-CODE` / `integ
 **Autorrevisión sucesiva:** los defectos anteriores fueron detectados en una segunda revisión, corregidos en la misma rama y regresados en CI. En particular los formularios ciegos no se deben subir al repositorio; revisar y clave deben permanecer fuera de él y bajo distintos directorios. Esta suite no valida contenido real ni interpreta matices de registro de cada red.
 
 **Límites conocidos:** no valida semántica, contexto conversacional, concordancia general, contenido multimedia ni naturalidad; los regex se restringen deliberadamente a señales de alta precisión. El detector de tildes no es infalible. Las pruebas de esta PR son offline y sintéticas.
+
+## Revisión independiente REV 79 — 10/10/2026
+
+Se añadió una pasada adversarial independiente tras `b09e5dc`, sin alterar salidas ni introducir llamadas a redes:
+
+- Las aperturas de interrogación y exclamación ahora se rastrean por separado. Antes `¡¿De verdad?!` y `¿¡En serio!?` generaban falsos positivos por limpiar el estado al primer cierre. La secuencia `¿Algo...?` también perdía la apertura al encontrar el primer punto. Se corrigió con regresiones de combinación, elipsis y preguntas sucesivas sin apertura.
+- El enmascarado de bloques Markdown cercados ahora admite fin de línea CRLF de Windows. La prueba usa caracteres `\\r\\n` reales en tiempo de ejecución, sin modificar la longitud ni los índices.
+- Un `queue` de origen desconocido o mal tipado ya no desactiva el auditor compartido: `advisory` lo clasifica como desconocido (`None`) antes de `audit`, sin atribuir transportes ficticios. La API estricta `audit` sigue rechazando colas inválidas y el escritor/publicador no se alteran.
+
+**Condiciones de integración:** esta PR sigue aportando solo auditoría informativa. La integración del código del espejo no debe sobrescribir `tools/reply_writer.py` ni `tools/content_publisher.py` del repositorio oficial; portar únicamente llamadas al auditor y conservar `mark_gpt`/prueba de autoría, `circuit_breaker.write_preflight`, selección y persistencia actuales. La extensión a otras rutas de salida se mantiene en #106, no se duplica aquí. La evaluación humana ciega y una prueba con Edge/móvil supervisada continúan pendientes. Los estados de CI se deben verificar siempre sobre el último HEAD, no sobre los SHA citados en rondas anteriores.
