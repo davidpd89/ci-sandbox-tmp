@@ -1,0 +1,24 @@
+python
+# Nuevo módulo: tools/mastodon/search_mastodon.py
+import requests
+
+def search_instance(instance: str, query: str, token: str | None = None):
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    response = requests.get(
+        f"{instance}/api/v2/search",
+        params={"q": query, "type": "accounts", "limit": 20},
+        headers=headers,
+        timeout=20,
+    )
+    response.raise_for_status()
+    return response.json().get("accounts", [])
+
+
+QUERIES = [
+    "romantasy",
+    "fantasía épica",
+    "lectura fantasía",
+    "bookstodon español",
+    "autores fantasía",
+    "reseñas de libros",
+]
