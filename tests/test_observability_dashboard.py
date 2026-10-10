@@ -87,6 +87,7 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(report["queues"]["WEB"]["open_breakers"], 1)
         self.assertEqual(report["networks"]["reddit"]["queue"], "WEB")
         self.assertEqual(report["networks"]["tiktok"]["queue"], "MOBILE")
+        self.assertEqual(report["queues"]["WEB"]["networks_with_alerts"], 1)
 
     def test_outcomes_not_conflated_and_no_double_count_from_rounds(self):
         report = dash.collect(self.root, as_of=NOW)
@@ -100,6 +101,7 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(x["rounds"]["states"]["ocupada"], 1)
         self.assertEqual(x["rounds"]["mean_minutes"], 2.5)
         self.assertEqual(x["pending_replies"], 1)
+        self.assertEqual(x["alerts"], ["breaker_abierto", "rondas_parciales", "acciones_sin_verificar"])
         self.assertEqual(report["networks"]["tiktok"]["pending_replies"], 1)
 
     def test_phase_timings_bounded_and_sensitive_log_text_not_exported(self):
@@ -118,6 +120,7 @@ class DashboardTests(unittest.TestCase):
         self.assertIsNone(report["networks"]["instagram"]["actions"])
         self.assertIsNone(report["networks"]["instagram"]["rounds"])
         self.assertEqual(report["networks"]["instagram"]["pending_replies"], 0)
+        self.assertEqual(report["networks"]["instagram"]["alerts"], [])
         csv_file(self.root / "SISTEMA_DIARIO_INSTAGRAM" / "registro_interacciones.csv",
                  ["fecha", "cuenta", "tipo", "resultado"], [])
         report = dash.collect(self.root, as_of=NOW)
