@@ -38,6 +38,8 @@ def source(net, lane="WEB", **changes):
 
 class PlannerBridge(unittest.TestCase):
     def test_9x3_dry_lanes_actor_once(self):
+        if importlib.util.find_spec("relationship_priority") is None:
+            self.skipTest("dependencia #71 ausente en base; CI103 la comprueba fijada por SHA")
         sources = [source(net, lane) for net in bridge.NETWORKS for lane in bridge.LANES]
         snapshot, diag = bridge.build_snapshot(sources, {}, [], today=TODAY)
         self.assertEqual(len(snapshot["candidates"]), 27)
