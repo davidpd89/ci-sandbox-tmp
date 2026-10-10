@@ -27,8 +27,12 @@ VERSION = "relationship-priority/v1"
 def _number(value, field, *, minimum=0.0, maximum=1.0):
     if isinstance(value, bool) or not isinstance(value, (float, int)):
         raise ValueError(f"{field}: numero obligatorio")
+    # Comprobar el rango ANTES de convertir: int de JSON arbitrariamente grande
+    # puede lanzar OverflowError en float(...) y abortar todas las candidaturas.
+    if not minimum <= value <= maximum:
+        raise ValueError(f"{field}: fuera de rango")
     n = float(value)
-    if not math.isfinite(n) or not minimum <= n <= maximum:
+    if not math.isfinite(n):
         raise ValueError(f"{field}: fuera de rango")
     return n
 
@@ -68,7 +72,8 @@ def _normalize(row, today):
     network = row.get("network")
     lane = row.get("lane")
     handle = row.get("handle")
-    if network not in NETWORKS or lane not in LANES:
+    if (not isinstance(network, str) or network not in NETWORKS
+            or not isinstance(lane, str) or lane not in LANES):
         raise ValueError("network o lane no reconocida")
     if not isinstance(handle, str) or not HANDLE_RE.fullmatch(handle):
         raise ValueError("handle invalido")
@@ -172,7 +177,8 @@ def rank_daily(snapshot, *, today, limits=None, max_target_age=7, diversity_weig
         raise ValueError("today debe ser date")
     if not isinstance(snapshot, dict) or not isinstance(snapshot.get("candidates"), list):
         raise ValueError("snapshot.candidates: lista requerida")
-    if not isinstance(max_target_age, int) or not 0 <= max_target_age <= 30:
+    if (isinstance(max_target_age, bool) or not isinstance(max_target_age, int)
+            or not 0 <= max_target_age <= 30):
         raise ValueError("max_target_age fuera de rango")
     diversity_weight = _number(diversity_weight, "diversity_weight", maximum=50)
     if limits is None:
@@ -192,8 +198,12 @@ def rank_daily(snapshot, *, today, limits=None, max_target_age=7, diversity_weig
             continue
         key = candidate["identity"]
         old = winners.get(key)
+        # Desempatar hasta el final para que invertir el orden de entrada no
+        # cambie la representación visible de un mismo actor.
         tie = lambda x: (-x["score"], ACTIONS.index(x["action"]), LANES.index(x["lane"]),
-                         x["handle"].casefold())
+                         x["handle"].casefold(), x["handle"], x["actor_id"] or "",
+                         tuple(x["eligible_actions"]), tuple(x["notes"]),
+                         json.dumps(x["features"], sort_keys=True))
         if old is None or tie(candidate) < tie(old):
             if old is not None:
                 excluded.append(dict(index=index, reason="duplicado reemplazado", network=old["network"],
@@ -249,8 +259,13 @@ def evaluate_synthetic(snapshot, output, *, k=10):
     result = {}
     for lane, items in output["queues"].items():
         first = items[:k]
-        known = [labels[(row["network"], (str(row["actor_id"]).strip().casefold() if row["actor_id"] else str(row["handle"]).lstrip("@").casefold()))]
-                 for row in first if (row["network"], str(row["actor_id"] or row["handle"]).lstrip("@").casefold()) in labels]
+        known = []
+        for row in first:
+            actor_id = row["actor_id"]
+            identifier = actor_id.strip().casefold() if actor_id else row["handle"].lstrip("@").casefold()
+            key = (row["network"], identifier)
+            if key in labels:
+                known.append(labels[key])
         result[lane] = dict(k=min(k, len(first)), observed=len(known),
                             precision=(round(sum(known) / len(known), 3) if known else None))
     return result
