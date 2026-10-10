@@ -143,8 +143,9 @@ def summarize(rows, *, as_of: date):
                 continue  # censura temporal: ventana aun no cerrada
             bucket = cohort[net][str(days)]
             bucket["eligible"] += 1
-            if any(first_follow <= back <= first_follow.replace(
-                    ) + __import__("datetime").timedelta(days=days) for back in backs):
+            if any(first_follow <= back <= first_follow + timedelta(days=days)
+                   and not any(first_follow <= stop <= back for stop in unfollows)
+                   for back in backs):
                 bucket["observed_followback"] += 1
     return {
         "as_of": as_of.isoformat(),
