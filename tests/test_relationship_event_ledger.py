@@ -57,6 +57,7 @@ class LedgerTest(unittest.TestCase):
             RelationshipLedger(operational)
         with closing(sqlite3.connect(operational)) as conn:
             self.assertEqual(conn.execute("SELECT count(*) FROM actions").fetchone()[0], 0)
+            self.assertEqual(conn.execute("PRAGMA journal_mode").fetchone()[0], "delete")
 
     def test_multi_network_three_queues_and_identity_isolation(self):
         queues = ("WEB", "API", "MOBILE")
@@ -217,6 +218,16 @@ class LedgerTest(unittest.TestCase):
             "bluesky", as_of="2026-10-10T12:00:00Z")["eligible"], 0)
         self.assertEqual(self.ledger.conversion(
             "bluesky", as_of="2026-10-12T12:00:00Z")["unknown"], 1)
+
+    def test_duplicate_follow_confirmation_does_not_reset_maturity_or_snapshot(self):
+        self.ledger.append(event(source_id="follow-1"))
+        self.ledger.append(event(kind="followback", outcome="present", source_id="snapshot",
+                                 occurred_at="2026-10-04T12:00:00Z"))
+        self.ledger.append(event(source_id="follow-2",
+                                 occurred_at="2026-10-06T12:00:00Z"))
+        stats = self.ledger.conversion("bluesky", as_of="2026-10-07T12:00:00Z")
+        self.assertEqual(stats["eligible"], 1)
+        self.assertEqual(stats["positive"], 1)
 
     def test_uncertain_and_observed_are_not_confirmed_follows(self):
         self.ledger.append(event(outcome="uncertain", source_id="uncertain"))
