@@ -1,6 +1,6 @@
 """Contratos sintéticos: PR 69. Ni red, ni estado real ni credenciales."""
 import csv
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 import json
 from pathlib import Path
 import subprocess
@@ -172,6 +172,13 @@ class InboundLoyaltyTests(unittest.TestCase):
                 obs(event_id="c", handle="bea"),
                 obs(event_id="a", kind="repost", day="2026-10-07")]
         self.assertEqual(self.build(rows), self.build(list(reversed(rows))))
+
+    def test_rejects_iso_week_dates_and_datetime_as_of(self):
+        # datetime es subclase de date, pero mezclar ambos rompe las comparaciones.
+        with self.assertRaisesRegex(ValueError, "fecha ISO"):
+            self.build([obs(day="2026-W41-6")])
+        with self.assertRaisesRegex(ValueError, "as_of"):
+            loyalty.build([obs()], as_of=datetime(2026, 10, 10))
 
     def test_bad_dates_and_unknown_types(self):
         for changed in ({"day": ""}, {"day": "10/10/2026"},

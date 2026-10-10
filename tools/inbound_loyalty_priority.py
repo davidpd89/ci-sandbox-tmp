@@ -9,6 +9,7 @@ import argparse
 import csv
 from datetime import date, timedelta
 import json
+import re
 from pathlib import Path
 
 NETWORKS = ("x", "threads", "facebook", "pinterest", "reddit", "bluesky",
@@ -26,7 +27,7 @@ WEIGHTS = {"like": 1, "save": 2, "repost": 3, "follow": 3,
 
 
 def _day(raw, label):
-    if not isinstance(raw, str) or len(raw) != 10:
+    if not isinstance(raw, str) or re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", raw) is None:
         raise ValueError(f"{label}: fecha ISO YYYY-MM-DD requerida")
     try:
         return date.fromisoformat(raw)
@@ -192,7 +193,7 @@ def build(observations, *, as_of, legacy=(), outbound=(), posts=(),
 
     API puramente funcional: jamás llama a red ni lee estados predeterminados.
     """
-    if not isinstance(as_of, date) or isinstance(as_of, type(None)):
+    if type(as_of) is not date:
         raise ValueError("as_of debe ser date")
     if (not all(type(n) is int and n > 0 for n in
                 (history_days, recent_days, post_max_age_days, per_lane))
