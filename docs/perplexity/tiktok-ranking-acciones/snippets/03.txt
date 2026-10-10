@@ -1,0 +1,46 @@
+python
+# Adaptación para davidpd89/ci-sandbox-tmp/tools/tiktok_post_freshness.py
+# Campo temporal basado en createTime documentado para perfiles/vídeos TikTok:
+# https://github.com/ChocoData-com/tiktok-profile-scraper
+# Patrón de comentarios con timestamp y respuestas:
+# https://github.com/robbytables/TikTok-Comment-Scraper
+from __future__ import annotations
+import re
+from datetime import datetime
+from typing import Iterable, Optional
+
+QUESTION_RE = re.compile(
+    r"\b(qué|que|cuál|cual|cómo|como|quién|quien|dónde|donde|recomiéndame|recomiendame|"
+    r"recomendaciones|opinión|opinion|pensáis|piensan|habéis leído|habéis leido)\b",
+    re.IGNORECASE,
+)
+
+
+def post_age_hours(create_time: Optional[datetime]) -> Optional[float]:
+    if not create_time:
+        return None
+    return max(0.0, (datetime.now().timestamp() - create_time.timestamp()) / 3600)
+
+
+def freshness_bonus(age_hours: Optional[float]) -> float:
+    if age_hours is None:
+        return 0.0
+    if age_hours < 24:
+        return 2.5
+    if age_hours < 72:
+        return 1.5
+    if age_hours < 24 * 7:
+        return 0.5
+    return 0.0
+
+
+def conversation_bonus(caption: str, comments: Iterable[dict]) -> float:
+    score = 0.0
+    if QUESTION_RE.search(caption or ""):
+        score += 1.0
+    comments = list(comments or [])
+    if comments:
+        score += 0.5
+        if any(c.get("author_is_video_author") for c in comments):
+            score += 1.5
+    return score
