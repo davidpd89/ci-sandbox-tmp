@@ -154,5 +154,5 @@ operativo, credenciales ni estados de ninguna red. Sin migración destructiva.
 
 - Matriz `availability()` explícita 9×3 con estado `unknown` donde falta fuente contrastada.
 - Estados `saltado_api_*` y `saltado_en_ledger` alineados con #84; fechas sin zona y filas malformadas cuentan `unknown` sin abortar el resto.
-- IDs de snapshots estructurados y regresión de colisiones, listas mixtas y reconciliación SQLite completa/parcial.
+- IDs de eventos y snapshots incluyen también la cola en su identidad, para que Instagram WEB y MOBILE no colisionen ante `export_id/record_id` iguales; regresiones de replay por cola, listas mixtas y reconciliación SQLite completa/parcial.
 - Sin acreditar todavía integración con productores privados: exportación estable de IDs, timestamps y ACK, canario supervisado y merge previo de #84 siguen pendientes.

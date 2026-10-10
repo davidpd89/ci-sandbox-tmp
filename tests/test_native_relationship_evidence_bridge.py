@@ -91,7 +91,7 @@ class EvidenceTest(unittest.TestCase):
         bridge_results(s, b, [row(record_id=str(i), resultado=v)
                               for i, v in enumerate(labels)])
         self.assertEqual([next(v["outcome"] for v in s.items.values()
-                         if json.loads(v["source_id"]) == ["exp", str(i), "result", None])
+                         if json.loads(v["source_id"]) == ["exp", str(i), "result", None, "WEB"])
                          for i in range(len(labels))], expected)
 
     def test_pinterest_react_and_already_done(self):
@@ -123,6 +123,17 @@ class EvidenceTest(unittest.TestCase):
                     if json.loads(x["source_id"])[1] == str(i))
                for i in range(len(labels))]
         self.assertEqual(got, ["failed"] * 4 + ["skipped", "observed"])
+
+    def test_separate_instagram_web_and_mobile_namespaces(self):
+        s = Sink()
+        for queue in ("WEB", "MOBILE"):
+            b = Batch("instagram", queue, "instagram_execute.run_plan", "same-export")
+            report = bridge_results(s, b, [row(ack=ack(queue))])
+            self.assertEqual(report["inserted"], 1)
+            self.assertEqual(bridge_results(s, b, [row(ack=ack(queue))])["replayed"], 1)
+        self.assertEqual(len(s.items), 2)
+        keys = {tuple(json.loads(v["source_id"])) for v in s.items.values()}
+        self.assertEqual({key[-1] for key in keys}, {"WEB", "MOBILE"})
 
     def test_bad_time_kind_and_reservation_do_not_abort_batch(self):
         b = Batch("x", "WEB", "x_execute.run_plan", "exp")

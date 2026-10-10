@@ -171,7 +171,7 @@ def bridge_results(ledger: LedgerSink, batch: Batch, records: Iterable[dict]) ->
                 correlation = ("reserve:" + reservation if reservation else "")
                 if ack_id:
                     correlation += ("|" if correlation else "") + "ack:" + ack_id
-                source_id = json.dumps([batch.export_id, record_id, "ack" if ack_id else "result", ack_id], ensure_ascii=False, separators=(",", ":"))
+                source_id = json.dumps([batch.export_id, record_id, "ack" if ack_id else "result", ack_id, batch.queue], ensure_ascii=False, separators=(",", ":"))
                 events.append({
                     "network": batch.network, "queue": batch.queue,
                     "source": "native/" + batch.producer, "source_id": source_id,
@@ -212,7 +212,7 @@ def bridge_snapshot(ledger: LedgerSink, batch: Batch, snapshot: dict) -> dict:
                 isinstance(coverage.get("account_scope"), str) and
                 bool(coverage["account_scope"].strip()))
     snapshot_id = _id(snapshot.get("snapshot_id"), "snapshot_id")
-    snapshot_key = json.dumps([batch.export_id, snapshot_id], ensure_ascii=False,
+    snapshot_key = json.dumps([batch.export_id, snapshot_id, batch.queue], ensure_ascii=False,
                               separators=(",", ":"))
     observed_at = _id(snapshot.get("observed_at"), "observed_at")
     # Pasar complete=False a #84 conserva positivos verificables y UNKNOWN.
