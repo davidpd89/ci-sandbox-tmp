@@ -262,10 +262,13 @@ class IsolatedActionBoundaryTests(unittest.TestCase):
             "sync_playwright": lambda: opened.append("open_browser"),
         })
         with mock.patch.object(voice, "inspect_fields",
-                               side_effect=voice.VoicePreflightUnavailable("fake")):
+                               side_effect=voice.VoicePreflightUnavailable("fake")) as audit:
             with self.assertRaises(voice.VoicePreflightUnavailable):
                 fn("synthetic.png", "Fantasía", SAMPLE, "https://example.org",
                    "Portada ficticia", "Narrativa", apply=True)
+        audit.assert_called_once_with(
+            {"titulo": "Fantasía", "descripcion": SAMPLE, "alt": "Portada ficticia"},
+            network="pinterest", queue="WEB", log=print)
         self.assertEqual(opened, [])
 
 
