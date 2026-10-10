@@ -146,6 +146,15 @@ class PreviewTests(unittest.TestCase):
         self.assertNotEqual(page["cursor"], "eof")
         self.assertEqual(self.page(cursor=page["cursor"]), {"feed": [], "cursor": "eof"})
 
+    def test_malformed_languages_skip_only_corrupt_row(self):
+        self.add("corrupt", "post", time_us=NOW - 60_000_000)
+        self.add("valid", "post", time_us=NOW - 120_000_000)
+        with closing(sqlite3.connect(self.path)) as db, db:
+            db.execute("UPDATE posts SET langs_json = ? WHERE uri = ?",
+                       ('{malformed', uri("corrupt", "post")))
+        self.assertEqual(self.page(limit=1)["feed"],
+                         [{"post": uri("valid", "post")}])
+
     def test_post_inserted_behind_cursor_is_found(self):
         self.add("first", "post", time_us=NOW - 60_000_000)
         self.add("last", "post", time_us=NOW - 180_000_000)
