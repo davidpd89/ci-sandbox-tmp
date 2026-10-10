@@ -162,7 +162,7 @@ def _rounds(rows, net, cutoff, today):
         return None
     selected = []
     for row in rows:
-        if not isinstance(row, dict) or row.get("red", "").casefold() != net:
+        if not isinstance(row, dict) or str(row.get("red") or "").casefold() != net:
             continue
         day = _date(row.get("fecha"))
         if day is None or not cutoff <= day <= today:
