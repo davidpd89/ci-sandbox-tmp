@@ -1,0 +1,22 @@
+python
+# Código original para davidpd89/rrss-davidporto-CODE
+# Integración: selección con cuotas y memoria anti-repetición.
+import random
+from collections import deque
+
+class TemplateSelector:
+    def __init__(self, templates: list[dict], memory_size: int = 50):
+        self.templates = templates
+        self.recent = deque(maxlen=memory_size)
+
+    def select(self, angle: str, network: str) -> dict:
+        pool = [
+            t for t in self.templates
+            if t["angle"] == angle and network in t.get("networks", [])
+            and t["text"] not in self.recent
+        ]
+        if not pool:
+            raise ValueError(f"Sin plantillas disponibles para {angle}/{network}")
+        chosen = random.choice(pool)
+        self.recent.append(chosen["text"])
+        return chosen
