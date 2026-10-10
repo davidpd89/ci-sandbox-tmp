@@ -155,6 +155,29 @@ class PreviewTests(unittest.TestCase):
         self.assertEqual(self.page(limit=1)["feed"],
                          [{"post": uri("valid", "post")}])
 
+    def test_valid_uris_with_mismatched_identity_are_not_exported(self):
+        # Los URI son sintácticamente válidos, pero la fila no pertenece
+        # al DID/RKEY declarado: el feed no debe apuntar a otro autor/post.
+        self.add("real", "post", time_us=NOW - 3_600_000_000)
+        for index in range(115):
+            did = f"forged{index}"
+            self.add(did, "post", time_us=NOW - 60_000_000)
+            with closing(sqlite3.connect(self.path)) as db, db:
+                if index % 2:
+                    db.execute(
+                        "UPDATE posts SET did = ? WHERE uri = ?",
+                        ("did:plc:somebodyelse", uri(did, "post")),
+                    )
+                else:
+                    db.execute(
+                        "UPDATE posts SET rkey = ? WHERE uri = ?",
+                        ("different", uri(did, "post")),
+                    )
+        result = self.page(limit=1)
+        self.assertEqual(result["feed"], [{"post": uri("real", "post")}])
+        self.assertEqual(self.page(cursor=result["cursor"]),
+                         {"feed": [], "cursor": "eof"})
+
     def test_non_array_language_values_fail_closed(self):
         # json_each también itera objetos/escalares JSON: ninguno es una lista
         # emitida por store_event, aunque contenga la cadena "es".
