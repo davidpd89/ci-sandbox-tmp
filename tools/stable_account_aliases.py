@@ -295,6 +295,8 @@ class AliasTimeline:
         for item in document["evidence"]:
             if not isinstance(item, dict) or set(item) != set(Evidence.__dataclass_fields__):
                 raise AliasError("evidence_schema_invalid")
+            if not isinstance(item["account"], str) or not isinstance(item["stable"], str):
+                raise AliasError("evidence_schema_invalid")
             network, sep, handle = item["account"].partition("|")
             if not sep:
                 raise AliasError("account_invalid")

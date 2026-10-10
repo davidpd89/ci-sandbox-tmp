@@ -204,6 +204,15 @@ class StableAliasTests(unittest.TestCase):
         with self.assertRaises(AliasError):
             AliasTimeline.from_document(snapshot)
 
+    def test_replay_rejects_non_string_account_or_stable(self):
+        add(self.g, "a", "first.bsky.social")
+        for field in ("account", "stable"):
+            with self.subTest(field=field):
+                snapshot = json.loads(json.dumps(self.g.to_document()))
+                snapshot["evidence"][0][field] = None
+                with self.assertRaisesRegex(AliasError, "evidence_schema_invalid"):
+                    AliasTimeline.from_document(snapshot)
+
     def test_history_keeps_revoked_proof_without_merging_events(self):
         add(self.g, "a", "first.bsky.social")
         self.g.revoke("a", reason="false DID")
