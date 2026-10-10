@@ -1,0 +1,19 @@
+text
+tests/fixtures/facebook/
+  page_post_basic.json
+  page_post_no_text.json
+  page_post_shared.json
+  page_comment_basic.json
+  page_comment_nested.json
+  page_comment_deleted_author.json
+  group_post_basic.json
+  group_post_membership_limited.json
+  group_comment_basic.json
+  graph_error_auth.json
+  graph_error_permission.json
+  graph_error_throttle.json
+  graph_error_duplicate_post.json
+  graph_error_invalid_parameter.json
+  graph_pagination_page1.json
+  graph_pagination_page2.json
+  graph_empty_results.json
