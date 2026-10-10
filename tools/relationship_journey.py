@@ -20,7 +20,10 @@ NETWORKS = frozenset(("x", "threads", "facebook", "pinterest", "reddit",
 KINDS = frozenset(("follow", "unfollow", "like", "comment", "reply",
                    "repost", "visit", "followback"))
 COLUMNS = frozenset(("seq", "event_id", "network", "queue", "subject", "kind",
-                     "outcome", "occurred_at", "precision"))
+                     "outcome", "occurred_at", "precision", "source", "source_id",
+                     "correlation_id", "target_id", "digest", "ingested_at"))
+OUTCOMES = frozenset(("confirmed", "observed", "uncertain", "failed", "skipped",
+                      "unverified", "present", "absent"))
 CSV_COLUMNS = ("user_id", "event", "timestamp", "network", "queue", "event_id")
 
 
@@ -57,7 +60,9 @@ def read_ledger(path: str | Path):
             ):
                 net, queue, kind = row["network"], row["queue"], row["kind"]
                 if (net not in NETWORKS or queue not in ("WEB", "API", "MOBILE")
-                        or kind not in KINDS or not isinstance(row["subject"], str)
+                        or kind not in KINDS or row["outcome"] not in OUTCOMES
+                        or ((kind == "followback") != (row["outcome"] in ("present", "absent")))
+                        or not isinstance(row["subject"], str)
                         or not row["subject"].strip()):
                     raise ValueError("fila incompatible con el contrato #84")
                 if row["precision"] == "day":
@@ -121,11 +126,14 @@ def summarize(rows, *, as_of: date):
     for seq in paths.values():
         # No inferir orden para dos acciones con hora identica.
         seq.sort(key=lambda r: r[0])
+        timestamp_counts = Counter(t for t, _, _ in seq)
         for before, after in zip(seq, seq[1:]):
-            if before[0] < after[0]:
+            if (before[0] < after[0] and timestamp_counts[before[0]] == 1
+                    and timestamp_counts[after[0]] == 1):
                 transitions[(before[2], before[1], after[1])] += 1
         follows = [r[0] for r in seq if r[1] == "follow.confirmed"]
         backs = [r[0] for r in seq if r[1] == "followback.present"]
+        unfollows = [r[0] for r in seq if r[1] == "unfollow.confirmed"]
         if not follows:
             continue
         first_follow = min(follows)
