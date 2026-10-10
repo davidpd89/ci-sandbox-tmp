@@ -1,5 +1,27 @@
 # PR #60 · Máquina de estados multired (10/10/2026)
 
+## Problema
+La clasificación de relaciones existente carecía de una transición auditable y persistente; se añade una proyección opcional sin duplicar la política.
+
+## Alternativas
+Se comparan los proyectos públicos y la continuidad local en la tabla de esta misma memoria.
+
+## Licencias y procedencia
+Fuente primaria: https://github.com/fgmacedo/python-statemachine
+Fecha de consulta: 2026-10-10
+Licencia SPDX: MIT
+Referencia inmutable: https://github.com/fgmacedo/python-statemachine/commit/525bcddcc5bb9793ce03d7b3e560f9c2ec0c5ee2
+El sistema mantiene el contrato de dominio propio y no incorpora código externo.
+
+## Decisión
+Conservar `relationship_policy` y `action_ledger`; añadir una máquina de proyección opcional implementada con sqlite3 y funciones puras.
+
+## Pruebas
+Suite sintética `tests/test_relationship_machine.py` en Python 3.11, Ubuntu y Windows, con secuencias generadas y reinicio.
+
+## Retirada
+Desconectar los adaptadores opt-in y eliminar la base aislada; ningún CSV ni SQLite operativo cambia.
+
 ## Hueco real y procedencia
 
 Se compararon en lectura **mirror** `davidpd89/ci-sandbox-tmp` y el oficial privado
