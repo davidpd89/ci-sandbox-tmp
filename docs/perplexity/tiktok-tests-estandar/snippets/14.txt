@@ -1,0 +1,41 @@
+python
+# tests/test_tiktok_identity_contract.py
+# Propuesta propia para davidpd89/rrss-davidporto-CODE
+import pytest
+
+from growth.adapters.tiktok.normalize import normalize_identity
+
+
+@pytest.mark.tiktok
+@pytest.mark.contract
+@pytest.mark.parametrize(
+    ("handle", "expected"),
+    [
+        ("@autorfantasia", "autorfantasia"),
+        ("AutorFantasia", "AutorFantasia"),
+        ("autor.fantasia", "autor.fantasia"),
+    ],
+)
+def test_handle_normalization(handle, expected):
+    identity = normalize_identity(handle=handle)
+    assert identity.author_handle == expected
+
+
+@pytest.mark.tiktok
+@pytest.mark.contract
+def test_same_author_is_deduplicated_by_id():
+    a = normalize_identity(handle="autorfantasia", author_id="7001")
+    b = normalize_identity(handle="AutorFantasia", author_id="7001")
+    assert a.dedupe_key() == b.dedupe_key()
+
+
+@pytest.mark.tiktok
+@pytest.mark.contract
+def test_missing_sec_uid_does_not_fail():
+    identity = normalize_identity(
+        handle="autorfantasia",
+        author_id="7001",
+        sec_uid=None,
+    )
+    assert identity.sec_uid is None
+    assert identity.dedupe_key() == "tiktok:author_id:7001"
