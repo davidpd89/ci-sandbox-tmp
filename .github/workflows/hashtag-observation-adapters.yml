@@ -1,0 +1,35 @@
+name: Hashtag observation adapters offline (PR 99)
+
+on:
+  push:
+    branches: [research/hashtag-observation-adapters]
+  pull_request:
+    paths:
+      - 'tools/hashtag_observation_adapters.py'
+      - 'tests/test_hashtag_observation_adapters.py'
+      - '.github/workflows/hashtag-observation-adapters.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic:
+    name: Offline contract (${{ matrix.os }}, Python 3.11)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Compile and run offline synthetic tests
+        run: |
+          python -m compileall -q tools/hashtag_observation_adapters.py
+          python -m unittest discover -s tests -p test_hashtag_observation_adapters.py -v
