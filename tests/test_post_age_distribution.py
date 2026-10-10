@@ -8,6 +8,8 @@ import pathlib
 import sys
 import tempfile
 import unittest
+import types
+from unittest import mock
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools"))
 import post_age_distribution as age
@@ -69,9 +71,9 @@ class AgeDistributionTests(unittest.TestCase):
 
     def test_reddit_and_tiktok_api_epoch(self):
         ts = int((NOW - dt.timedelta(hours=72)).timestamp())
-        self.assertEqual(age.classify("reddit", {"created_utc": ts}, now=NOW)[0], "24_72h")
-        self.assertEqual(age.classify("tiktok", {"create_time": str(ts)}, now=NOW)[0], "24_72h")
-        self.assertEqual(age.classify("tiktok", {"create_time": ts * 1000}, now=NOW)[0], "24_72h")
+        self.assertEqual(age.classify("reddit", {"source_kind": "post", "created_utc": ts}, now=NOW)[0], "24_72h")
+        self.assertEqual(age.classify("tiktok", {"source_kind": "post", "create_time": str(ts)}, now=NOW)[0], "24_72h")
+        self.assertEqual(age.classify("tiktok", {"source_kind": "post", "create_time": ts * 1000}, now=NOW)[0], "24_72h")
 
     def test_queued_time_indexed_time_first_seen_not_valid(self):
         for net in age.NETWORKS:
@@ -87,20 +89,20 @@ class AgeDistributionTests(unittest.TestCase):
 
     def test_nested_api_fields_with_origins(self):
         samples = (
-            ("bluesky", {"post": {"record": {"createdAt": iso(2)}}}, "post.record.createdAt"),
-            ("mastodon", {"status": {"created_at": iso(2)}}, "status.created_at"),
-            ("facebook", {"post": {"created_time": iso(2)}}, "post.created_time"),
-            ("instagram", {"media": {"timestamp": iso(2)}}, "media.timestamp"),
-            ("pinterest", {"post": {"published_at": iso(2)}}, "post.published_at"),
-            ("threads", {"record": {"createdAt": iso(2)}}, "record.createdAt"),
-            ("x", {"post": {"created_at": iso(2)}}, "post.created_at"),
+            ("bluesky", {"source_kind": "post", "post": {"record": {"createdAt": iso(2)}}}, "post.record.createdAt"),
+            ("mastodon", {"source_kind": "post", "status": {"created_at": iso(2)}}, "status.created_at"),
+            ("facebook", {"source_kind": "post", "post": {"created_time": iso(2)}}, "post.created_time"),
+            ("instagram", {"source_kind": "post", "media": {"timestamp": iso(2)}}, "media.timestamp"),
+            ("pinterest", {"source_kind": "post", "post": {"published_at": iso(2)}}, "post.published_at"),
+            ("threads", {"source_kind": "post", "record": {"createdAt": iso(2)}}, "record.createdAt"),
+            ("x", {"source_kind": "post", "post": {"created_at": iso(2)}}, "post.created_at"),
         )
         for net, item, source in samples:
             with self.subTest(net=net):
                 self.assertEqual(age.classify(net, item, now=NOW), ("0_24h", source))
 
     def test_contradictory_origin_never_picks_newest(self):
-        item = {"target_created_at": iso(2), "post": {"created_at": iso(200)}}
+        item = {"source_kind": "post", "target_created_at": iso(2), "post": {"created_at": iso(200)}}
         for net in age.NETWORKS:
             self.assertEqual(age.classify(net, item, now=NOW), ("conflict", "multiple"))
         result = age.distribution("bluesky", [item], now=NOW)
@@ -108,7 +110,7 @@ class AgeDistributionTests(unittest.TestCase):
         self.assertEqual(result["rangos"]["conflict"], 1)
 
     def test_equal_dates_with_millisecond_drift_are_not_conflict(self):
-        item = {"post_created_at": iso(1), "post": {"created_at": iso(1 + 0.5 / 3600)}}
+        item = {"source_kind": "post", "post_created_at": iso(1), "post": {"created_at": iso(1 + 0.5 / 3600)}}
         self.assertEqual(age.classify("instagram", item, now=NOW)[0], "0_24h")
 
     def test_far_future_is_not_fresh_and_small_clock_skew(self):
@@ -120,7 +122,7 @@ class AgeDistributionTests(unittest.TestCase):
                   float("inf"), float("nan"), object())
         for value in values:
             with self.subTest(value=str(value)):
-                self.assertEqual(age.classify("reddit", {"created_utc": value}, now=NOW)[0], "unknown")
+                self.assertEqual(age.classify("reddit", {"source_kind": "post", "created_utc": value}, now=NOW)[0], "unknown")
 
     def test_post_id_is_not_timestamp(self):
         for net in ("x", "bluesky", "mastodon", "threads"):
@@ -134,6 +136,36 @@ class AgeDistributionTests(unittest.TestCase):
             age.distribution("x", {}, now=NOW)
         with self.assertRaises(ValueError):
             age.classify("x", {}, now=dt.datetime(2026, 10, 10))
+
+    def test_wrapper_date_cannot_make_old_target_appear_recent(self):
+        # Caso adversarial: tarea con metadatos de wrapper recientes y
+        # publicacion destino vieja o sin fecha acreditada, en nueve redes.
+        for net in age.NETWORKS:
+            for nested in ("post", "record", "status", "media"):
+                with self.subTest(network=net, nested=nested):
+                    row = {"kind": "reply", nested: {"created_at": iso(1)}}
+                    self.assertEqual(age.classify(net, row, now=NOW), ("unknown", "none"))
+                    row["target_created_at"] = iso(200)
+                    self.assertEqual(age.classify(net, row, now=NOW)[0], "over_168h")
+                    row["source_kind"] = "post"
+                    self.assertEqual(age.classify(net, row, now=NOW)[0], "over_168h")
+            # Un payload de API sin marca de post no acredita el destino.
+            self.assertEqual(age.classify(net, {"post": {"created_at": iso(1)}}, now=NOW)[0], "unknown")
+
+    def test_integrated_snapshot_registry_takes_precedence_and_detects_drift(self):
+        with tempfile.TemporaryDirectory() as root:
+            path = pathlib.Path(root) / "new-path" / "x.json"
+            path.parent.mkdir()
+            path.write_text(json.dumps([{"post_created_at": iso(1)}]), encoding="utf-8")
+            os.utime(path, (NOW.timestamp(), NOW.timestamp()))
+            canonical = dict(age.PLAN_SNAPSHOTS)
+            canonical["x"] = "new-path/x.json"
+            with mock.patch.dict(sys.modules, {"post_age_policy": types.SimpleNamespace(PLAN_SNAPSHOTS=canonical)}):
+                self.assertEqual(age.audit_recent_plans(root, now=NOW)["x"]["hasta_24h"], 1)
+            bad = {"x": "new-path/x.json"}
+            with mock.patch.dict(sys.modules, {"post_age_policy": types.SimpleNamespace(PLAN_SNAPSHOTS=bad)}):
+                with self.assertRaisesRegex(ValueError, "contrato"):
+                    age.audit_recent_plans(root, now=NOW)
 
     def test_profile_actions_do_not_inflate_post_unknowns_across_networks(self):
         # Los planes reales mezclan follows a perfiles y acciones sobre posts.
