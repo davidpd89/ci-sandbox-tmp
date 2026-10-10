@@ -94,3 +94,50 @@ Rollback reversible: revertir los cuatro ficheros añadidos (módulo, tests, wor
 10. Cobertura: sin integración productiva real ni comprobación de Edge/Android. Coordinar con #72 (benchmark), #73 (corpus), #75 (repetición), #77 (hilos), #79 (voz) y herramientas del oficial antes de un despliegue. No abrir PR adicional redundante.
 
 **Sin merge y sin aprobación automática de comentarios. El controlador Claude debe revisar HEAD, CI y pruebas E2E con sus correspondientes permisos antes de integrar cualquier consumidor.**
+
+
+## Revisión externa adicional del controlador — 10/10/2026
+
+La auditoría del HEAD original `f8eea0df384e147b20143c19b4abdd9089cd32d7`
+encontró un caso reproducible no cubierto: dos fuentes con los primeros 1.200
+caracteres idénticos, pero distinta continuación, producían el mismo
+`packet_fingerprint`. Lo mismo ocurría al cambiar solo el sufijo descartado
+de `post_body`, padres, descripciones visuales o `target_id`. Por ello una
+propuesta podía conservar una huella aparentemente vigente después de cambiar
+la fuente original. Corregido: `source_digest` incluye los campos originales
+antes de recortarlos y forma parte de la huella final. Añadidos cinco subcasos
+sintéticos que verifican evidencia renderizada idéntica pero huellas distintas
+y `audit_draft` rechazando el contexto modificado.
+
+Segunda corrección: fechas ISO extremas con desfase válido pueden provocar
+`OverflowError` durante `astimezone(UTC)`. Ahora se tratan como fecha
+desconocida, no como excepción que interrumpa el lote; añadido test de regresión
+con extremos y desplazamiento inválido.
+
+**Límites pendientes de integración, no ocultarlos al consumidor:**
+- El esquema admite nueve plataformas, pero `reply_context_trial.NETWORKS`
+  del oficial también usa `reddit_micro` como modalidad Reddit. El futuro
+  adaptador #104 debe canonizar red física y conservar modalidad/límite de
+  longitud; no crear un motor separado para `reddit_micro`.
+- `audit_reply(...).ok=True` significa únicamente que pasó la auditoría
+  mecánica. Si `disposition=needs_semantic_review`, NUNCA tratar `ok` como
+  autorización para publicar. El juicio semántico debe distinguir citas
+  pertinentes de citas literales irrelevantes.
+- La huella no revalida automáticamente el reloj al consumir un
+  `ContextPacket` antiguo. La futura integración debe reconstruir el
+  paquete/revalidar frescura al ejecutar y conservar la prueba contextual
+  y de destino del oficial.
+- La presencia de un padre cualquiera no acredita que sea el padre directo
+  correcto en un hilo. Adaptadores #104 y conversaciones #77 deben transportar
+  identidad, cadena y orden comprobables.
+- Mantener la evaluación ciega de #72 y el estudio H1 del oficial para probar
+  utilidad, variedad y reciprocidad real. Este módulo demuestra contratos
+  offline, no aumento de engagement.
+
+**Reutilización investigada adicionalmente:** TruLens contiene evaluadores
+de `CitationAccuracy`, `Groundedness` y relevancia de contexto:
+https://www.trulens.org/reference/trulens/feedback/templates/rag/ .
+Sirve como candidato para evaluación semántica posterior, sin añadir
+dependencia pesada a una comprobación determinista por cita. Su incorporación,
+licencia y revisión inmutable requerirían contraste específico al aprobar el
+benchmark, no forman parte de esta PR.
