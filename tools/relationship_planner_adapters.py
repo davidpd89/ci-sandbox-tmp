@@ -222,6 +222,7 @@ def build_snapshot(sources, outbound, inbound, *, today, outbound_coverage=None)
     candidates, excluded = [], []
     # Resolver aliases antes de escoger cola; conflictos = no planificar.
     aliases = defaultdict(set)
+    vetoes, already_followed = set(), set()
     for source in sources:
         if not isinstance(source, dict) or source.get("network") not in NETWORKS:
             continue
@@ -233,8 +234,22 @@ def build_snapshot(sources, outbound, inbound, *, today, outbound_coverage=None)
             if isinstance(item, dict):
                 h = _handle(item.get("handle") or item.get("username") or item.get("author"))
                 actor = item.get("actor_id") or item.get("author_id")
-                if h and isinstance(actor, str) and actor.strip():
-                    aliases[(source["network"], h.casefold())].add(actor.strip().casefold())
+                net = source["network"]
+                actor_id = actor.strip().casefold() if isinstance(actor, str) and actor.strip() else None
+                if h and actor_id:
+                    aliases[(net, h.casefold())].add(actor_id)
+                pre = item.get("preflight")
+                if not isinstance(pre, dict):
+                    continue
+                identities = ([(net, "handle", h.casefold())] if h else [])
+                if actor_id:
+                    identities.append((net, "id", actor_id))
+                # Un veto en un colector nunca puede ser borrado por el
+                # preflight optimista de otra cola con el mismo actor.
+                if pre.get("blocked") is True or pre.get("self_account") is True:
+                    vetoes.update(identities)
+                if pre.get("follow_state_verified") is True and pre.get("already_following") is True:
+                    already_followed.update(identities)
     for key, values in event_ids.items():
         aliases[key].update(x.casefold() for x in values)
     for source_index, source in enumerate(sources):
@@ -265,6 +280,13 @@ def build_snapshot(sources, outbound, inbound, *, today, outbound_coverage=None)
                 continue
             key = (net, handle.casefold())
             alias = aliases[key]
+            actor_id = next(iter(alias)) if len(alias) == 1 else None
+            identities = [(net, "handle", handle.casefold())]
+            if actor_id:
+                identities.append((net, "id", actor_id))
+            if any(identity in vetoes for identity in identities):
+                excluded.append({**place, "reason": "veto de identidad entre colas"})
+                continue
             if len(alias) > 1:
                 excluded.append({**place, "reason": "identidad contradictoria"})
                 continue
@@ -291,8 +313,8 @@ def build_snapshot(sources, outbound, inbound, *, today, outbound_coverage=None)
             if not isinstance(following, bool) or pre.get("follow_state_verified") is not True:
                 follow = False  # ausencia de observación no equivale a no seguir
                 following = True
-            if state["following"] is True:
-                following = True  # nunca contradice el registro confirmado
+            if state["following"] is True or any(identity in already_followed for identity in identities):
+                following = True  # otra cola o el registro confirmado prevalecen
             target_day = _target_day(item)
             comment = any(a in actions for a in ("reply", "comment", "comment_external"))
             eligible_comment = (coverage_ok[net] and comment and pre.get("thread_verified") is True
@@ -306,7 +328,6 @@ def build_snapshot(sources, outbound, inbound, *, today, outbound_coverage=None)
                 continue
             affinity = _number(item.get("affinity"))
             reciprocity = _number(item.get("reciprocity"))
-            actor_id = next(iter(alias)) if len(alias) == 1 else None
             latest = _day(item.get("latest_post_at"))
             row = dict(network=net, lane=lane, handle=handle, actor_id=actor_id,
                        affinity=affinity if affinity is not None else 0.0,
