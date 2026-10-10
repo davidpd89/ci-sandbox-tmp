@@ -1,6 +1,7 @@
 """Contrato sintético sin credenciales, red ni estado vivo."""
 import json
 import pathlib
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -128,6 +129,29 @@ class HashtagExpansionTest(unittest.TestCase):
                 static.unlink()
                 self.assertEqual(discovery_terms.terms("bluesky", "hashtags"),
                                  ["fantasiaepica"])
+
+    def test_package_style_import_from_repo_root(self):
+        # Un proceso nuevo evita que el sys.path modificado por este test oculte
+        # el fallo de imports que aparece en los consumidores externos.
+        root = pathlib.Path(__file__).resolve().parents[1]
+        script = ("from tools import discovery_terms; "
+                  "print(discovery_terms.terms('bluesky', 'hashtags'))")
+        run = subprocess.run([sys.executable, "-c", script], cwd=root,
+                             capture_output=True, text=True, check=False)
+        self.assertEqual(run.returncode, 0, run.stderr)
+
+    def test_malformed_static_network_entry_falls_back_without_crashing(self):
+        with tempfile.TemporaryDirectory() as folder:
+            static = pathlib.Path(folder) / "catalog.json"
+            with patch.object(discovery_terms, "PATH", str(static)), \\
+                 patch.object(h, "snapshot_terms", return_value=[]):
+                for document in ('{"bluesky": "not-a-dict"}',
+                                 '{"bluesky": ["no"]}',
+                                 '{"bluesky": {"hashtags": "wrong-type"}}',
+                                 '["invalid-root"]'):
+                    with self.subTest(document=document):
+                        static.write_text(document, encoding="utf-8")
+                        self.assertEqual(discovery_terms.terms("bluesky", "hashtags"), [])
 
     def test_cli_synthetic_roundtrip(self):
         with tempfile.TemporaryDirectory() as folder:
