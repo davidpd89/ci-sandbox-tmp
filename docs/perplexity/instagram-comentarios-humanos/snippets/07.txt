@@ -1,0 +1,6 @@
+json
+{
+  "estilo_por_red": {
+    "instagram": "Comentario muy corto, cercano y visual. Primero un detalle concreto del post: portada, tropo, frase, libro, ambientación o situación. Una o dos frases, normalmente menos de 12 palabras. Pregunta solo si es fácil y útil. Cero o un emoji, solo si hay celebración, humor o cariño evidente. Sin autopromoción, sin hashtags, sin menciones y sin frases de IA."
+  }
+}
