@@ -109,3 +109,21 @@ def test_url_canonicalization_and_deduplication():
     assert len(rows) == 1
     assert rows[0][1] == "https://www.threads.com/@lectora/post/xyz"
     assert stats["duplicados_identicos"] == 1
+
+
+def test_real_sqlite_adapter_when_checkout_available(tmp_path):
+    """Prueba del contrato real con browser_pool cuando el checkout lo incluye."""
+    import pytest
+    browser_pool = pytest.importorskip("browser_pool")
+    rows, _ = bridge.normalize("threads", [item()], now=NOW)
+    path = tmp_path / "pool.sqlite3"
+    assert bridge.ingest_rows(rows, db_path=path) == 1
+    assert bridge.ingest_rows(rows, db_path=path) == 0
+    db = browser_pool.connect(str(path))
+    try:
+        handle, source, age, seen = db.execute(
+            "SELECT handle, source, age_hours, seen_count FROM posts").fetchone()
+        assert (handle, source, age, seen) == (
+            "lectora", "import:th_public_export", 1.0, 2)
+    finally:
+        db.close()
