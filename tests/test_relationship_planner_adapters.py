@@ -141,16 +141,36 @@ class PlannerBridge(unittest.TestCase):
 
     def test_pinterest_and_tiktok_nested_adapters(self):
         pi = {"network": "pinterest", "lane": "WEB",
-              "data": {"authors": [{"handle": "p_author", "preflight": pre()}],
-                       "pins": [{"author": "p_pins", "preflight": pre(follow_eligible=False),
+              "data": {"authors": [{"handle": "p_author", "kind": "follow", "preflight": pre()}],
+                       "pins": [{"author": "p_pins", "kind": "comment", "preflight": pre(follow_eligible=False),
                                  "target_created_at": "2026-10-10"}]}}
         tt = {"network": "tiktok", "lane": "MOBILE",
               "data": {"candidates": [{"handle": "t_author", "preflight": pre(), "kind": "follow",
-                        "posts": [{"created_at": "2026-10-10",
+                        "posts": [{"created_at": "2026-10-10", "kind": "reply",
                                    "preflight": pre(follow_eligible=False)}]}]}}
         result, _ = bridge.build_snapshot([pi, tt], {}, [], today=TODAY)
         self.assertEqual([x["handle"] for x in result["candidates"]],
                          ["p_author", "p_pins", "t_author", "t_author"])
+
+    def test_nested_native_containers_never_fabricate_actions(self):
+        # Autores/pines y posts son estructuras de descubrimiento, no permisos.
+        pinterest = {"network": "pinterest", "lane": "WEB",
+                     "data": {"authors": [{"handle": "author", "preflight": pre()}],
+                              "pins": [{"author": "pin_author",
+                                        "target_created_at": "2026-10-10",
+                                        "preflight": pre()}]}}
+        tiktok = {"network": "tiktok", "lane": "MOBILE",
+                  "data": {"candidates": [{"handle": "tt", "kind": "follow",
+                                          "preflight": pre(),
+                                          "posts": [{"created_at": "2026-10-10",
+                                                     "preflight": pre()}]}]}}
+        prepared, _ = bridge.build_snapshot([pinterest, tiktok], {}, [], today=TODAY)
+        self.assertEqual([(r["network"], r["handle"]) for r in prepared["candidates"]],
+                         [("tiktok", "tt")])
+        # La acción declarada por un autor tampoco puede heredarse por un post.
+        tiktok["data"]["candidates"][0]["actions"] = ["follow"]
+        prepared, _ = bridge.build_snapshot([tiktok], {}, [], today=TODAY)
+        self.assertEqual(len(prepared["candidates"]), 1)
 
     def test_manifest_is_explicit_and_readonly(self):
         with tempfile.TemporaryDirectory() as directory:
