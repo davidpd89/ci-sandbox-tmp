@@ -301,7 +301,7 @@ def test_manifest_rejects_windows_subdirectory_and_unhashable_entries(tmp_path):
             audit.missing_modules(tmp_path, malformed)
 
 
-@pytest.mark.parametrize("bad", (["x_scan.py", "x_scan.py"], ["../x_scan.py"],
+@pytest.mark.parametrize("bad", ([], ["x_scan.py", "x_scan.py"], ["../x_scan.py"],
                                   ["unrelated.py"], "x_scan.py"))
 def test_malformed_module_manifest_fails_closed(tmp_path, bad):
     _source(tmp_path, "x_scan.py")
@@ -313,6 +313,7 @@ def test_repository_keeps_audited_source_inventory():
     expected = json.loads(
         (ROOT / "tests" / "fixtures" / "architecture_scanned_modules.json").read_text(encoding="utf-8")
     )
+    assert {audit._network(Path(name)) for name in expected} == set(audit.NETWORKS)
     assert not audit.missing_modules(ROOT / "tools", expected)
 
 

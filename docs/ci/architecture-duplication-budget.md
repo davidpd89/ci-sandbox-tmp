@@ -151,6 +151,9 @@ original: únicamente se versionan nombres ya publicados en el mirror.
 
 `--module-manifest` rechaza módulos esperados que desaparezcan, pero acepta
 nuevas incorporaciones, que siguen sujetas al presupuesto AST de copias.
+Una lista vacía en el manifiesto es inválida (no concede cobertura cero
+silenciosamente). El test del repositorio exige que su manifiesto incluya
+las nueve redes, además de verificar que los módulos listados existen.
 La revisión de una retirada intencional actualiza el manifiesto en un commit
 explícito. Pruebas: supresión de un módulo sin perder su red, alta aditiva,
 manifiesto corrupto, CLI y verificación contra el árbol completo.

@@ -188,6 +188,7 @@ def regressions(current: list[dict], baseline: list[dict]) -> list[dict]:
 def missing_modules(tools_dir: str | Path, expected: list[str]) -> list[str]:
     """Identify a vanished audited module even if its network is still present."""
     if (not isinstance(expected, list)
+            or not expected
             or not all(isinstance(name, str)
                        and "/" not in name and "\\" not in name
                        and _network(Path(name)) is not None
