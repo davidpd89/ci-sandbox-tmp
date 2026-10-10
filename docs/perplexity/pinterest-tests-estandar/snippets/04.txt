@@ -1,0 +1,39 @@
+python
+# https://github.com/getsentry/responses/blob/master/README.rst
+    import requests
+
+    import responses
+    from responses.registries import OrderedRegistry
+
+
+    @responses.activate(registry=OrderedRegistry)
+    def test_invocation_index():
+        responses.get(
+            "http://twitter.com/api/1/foobar",
+            json={"msg": "not found"},
+            status=404,
+        )
+        responses.get(
+            "http://twitter.com/api/1/foobar",
+            json={"msg": "OK"},
+            status=200,
+        )
+        responses.get(
+            "http://twitter.com/api/1/foobar",
+            json={"msg": "OK"},
+            status=200,
+        )
+        responses.get(
+            "http://twitter.com/api/1/foobar",
+            json={"msg": "not found"},
+            status=404,
+        )
+
+        resp = requests.get("http://twitter.com/api/1/foobar")
+        assert resp.status_code == 404
+        resp = requests.get("http://twitter.com/api/1/foobar")
+        assert resp.status_code == 200
+        resp = requests.get("http://twitter.com/api/1/foobar")
+        assert resp.status_code == 200
+        resp = requests.get("http://twitter.com/api/1/foobar")
+        assert resp.status_code == 404
