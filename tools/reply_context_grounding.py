@@ -37,6 +37,7 @@ class ContextPacket:
     network: str
     queue: str
     target_id: str
+    author: str
     published_at: str | None
     context_status: str
     evidence: tuple[Evidence, ...]
@@ -95,7 +96,7 @@ def build_packet(
     queue = _clean(record.get("queue"), 20).upper()
     target = _clean(record.get("target_id"), 240)
     state = record.get("context_status", "partial")
-    if network not in NETWORKS or queue not in QUEUES or not target or state not in STATES:
+    if network not in NETWORKS or queue not in QUEUES or not target or not isinstance(state, str) or state not in STATES:
         raise ValueError("invalid network, queue, target or context state")
     if not isinstance(max_age_hours, int) or isinstance(max_age_hours, bool) or max_age_hours <= 0:
         raise ValueError("max_age_hours must be a positive integer")
@@ -119,8 +120,6 @@ def build_packet(
         evidence.append(Evidence("post", "post_text", text, "source_text"))
     if body and body != text:
         evidence.append(Evidence("body", "post_body", body, "source_text"))
-    if not text and not body:
-        warnings.append("post_text_missing")
 
     parents = record.get("parents", ())
     if not isinstance(parents, (list, tuple)) or len(parents) > 8:
@@ -144,12 +143,15 @@ def build_packet(
         vtext = _clean(item.get("description"), 300)
         provenance = item.get("provenance")
         if (vtext and item.get("verified") is True
-                and provenance in VISUAL_PROVENANCE and _clean(item.get("asset_id"), 180)):
+                and isinstance(provenance, str) and provenance in VISUAL_PROVENANCE
+                and _clean(item.get("asset_id"), 180)):
             evidence.append(Evidence(f"visual:{i}", "visual_description", vtext, provenance))
             verified_visual = True
         elif vtext:
             warnings.append(f"visual:{i}_not_verified")
 
+    if not text and not body and not verified_visual:
+        warnings.append("post_text_missing")
     if record.get("has_media") is True and not verified_visual:
         warnings.append("visual_content_not_verified")
     if record.get("requires_visual") is True and not verified_visual:
@@ -164,7 +166,8 @@ def build_packet(
     blocking = {"publication_time_unknown", "publication_time_in_future", "post_too_old",
                 "post_text_missing", "required_visual_missing", "conversation_parent_missing"}
     return ContextPacket(
-        network, queue, target, published.isoformat() if published else None,
+        network, queue, target, _clean(record.get("author"), 120),
+        published.isoformat() if published else None,
         state, tuple(evidence), not bool(set(warnings) & blocking), tuple(warnings),
     )
 
@@ -176,7 +179,8 @@ def render_packet(packet: ContextPacket) -> str:
     """
     data = {
         "network": packet.network, "queue": packet.queue,
-        "target_id": packet.target_id, "published_at": packet.published_at,
+        "target_id": packet.target_id, "author": packet.author,
+        "published_at": packet.published_at,
         "context_status": packet.context_status, "eligible": packet.eligible,
         "warnings": list(packet.warnings),
         "evidence": [e.__dict__ for e in packet.evidence],
@@ -257,3 +261,64 @@ def tally(audits: Sequence[Audit]) -> dict[str, int]:
         "quoted_units": sum(a.supported_units for a in audits),
         "total_units": sum(a.total_units for a in audits),
     }
+
+
+
+def summarize_outcomes(rows: Sequence[Mapping[str, object]]) -> dict[str, dict]:
+    """Descriptive offline-only outcomes by network and controlled variant.
+
+    Missing observations are not counted as negative outcomes. Rates have
+    denominators; no causal treatment effect is implied by this summary.
+    Consumers supply only synthetic or separately authorized anonymized rows.
+    """
+    if isinstance(rows, (str, bytes)) or not isinstance(rows, Sequence):
+        raise ValueError("rows must be a sequence")
+    groups: dict[str, dict] = {}
+    seen: set[tuple[str, str, str]] = set()
+    for row in rows:
+        if not isinstance(row, Mapping):
+            raise ValueError("outcome row must be an object")
+        variant, network, sample_id = (row.get("variant"), row.get("network"), row.get("sample_id"))
+        published, received = row.get("published"), row.get("received_reply")
+        turns, value = row.get("continuation_turns"), row.get("perceived_value")
+        if (variant not in ("baseline", "H1") or not isinstance(network, str)
+                or network not in NETWORKS or not isinstance(sample_id, str) or not sample_id):
+            raise ValueError("invalid variant, network or sample")
+        key = (variant, network, sample_id)
+        if key in seen:
+            raise ValueError("duplicate outcome")
+        seen.add(key)
+        if (not isinstance(published, bool) or received is not None and not isinstance(received, bool)
+                or isinstance(turns, bool) or turns is not None and
+                (not isinstance(turns, int) or turns < 0)
+                or isinstance(value, bool) or value is not None and
+                (not isinstance(value, int) or not 1 <= value <= 5)
+                or (not published and (received is True or turns not in (None, 0)))):
+            raise ValueError("invalid outcome observation")
+        group_id = f"{network}/{variant}"
+        group = groups.setdefault(group_id, {
+            "samples": 0, "published": 0, "reply_observed": 0,
+            "replies_received": 0, "continuations_observed": 0,
+            "continuation_turns": 0, "value_ratings": 0, "value_sum": 0,
+        })
+        group["samples"] += 1
+        group["published"] += int(published)
+        if published and received is not None:
+            group["reply_observed"] += 1
+            group["replies_received"] += int(received)
+        if published and turns is not None:
+            group["continuations_observed"] += 1
+            group["continuation_turns"] += turns
+        if value is not None:
+            group["value_ratings"] += 1
+            group["value_sum"] += value
+    for group in groups.values():
+        denominator = group["reply_observed"]
+        ratings = group["value_ratings"]
+        group["reply_rate_observed"] = (
+            group["replies_received"] / denominator if denominator else None
+        )
+        group["average_perceived_value"] = (
+            group["value_sum"] / ratings if ratings else None
+        )
+    return groups
