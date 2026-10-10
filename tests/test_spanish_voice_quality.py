@@ -53,8 +53,7 @@ class TestSpanishVoice(unittest.TestCase):
 
 
     def test_markdown_images_and_fenced_code_are_not_exclamations(self):
-        source = "![portada](https://example.org/book.png) " + chr(96)*3 + "python\\nchecar?\\n" + chr(96)*3 + "\\nchecar?"
-        source = source.replace("\\n", "\n")
+        source = "![portada](https://example.org/book.png)\n" + chr(96)*3 + "python\nchecar?\n" + chr(96)*3 + "\nchecar?"
         output = self.check(source)["findings"]
         self.assertEqual([(f["code"], source[f["start"]:f["end"]]) for f in output],
                          [("locale_variant", "checar"), ("question_opening", "?")])
