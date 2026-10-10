@@ -52,6 +52,11 @@ class AdaptersTests(unittest.TestCase):
         p = self.wrap("bluesky", "comment", payload)
         self.assertEqual(len(p["items"]), 2)
         self.assertEqual(p["unavailable"], 2)
+        self.assertFalse(p["coverage_complete"])
+        blocked = self.wrap("bluesky", "comment", {
+            "thread": {"$type": "app.bsky.feed.defs#blockedPost"}})
+        self.assertEqual(blocked["items"], [])
+        self.assertFalse(blocked["coverage_complete"])
         self.assertEqual(p["items"][0]["event_id"], "at://did:plc:one/app.bsky.feed.post/c1")
         self.assertEqual(p["items"][1]["event_id"], "at://did:plc:two/app.bsky.feed.post/c2")
         normalized = [core.normalize("bluesky", "comment", x,
