@@ -4,6 +4,7 @@ on:
     paths:
       - 'tools/target_quality_ranking.py'
       - 'tests/test_target_quality_ranking.py'
+      - 'tools/target_quality_benchmark.py'
       - '.github/workflows/target-quality-ranking.yml'
   push:
     branches:
@@ -28,3 +29,5 @@ jobs:
           python-version: '3.11'
       - name: Run synthetic ranking contracts
         run: python -m unittest discover -s tests -p test_target_quality_ranking.py -v
+      - name: Synthetic quality replay
+        run: python tools/target_quality_benchmark.py
