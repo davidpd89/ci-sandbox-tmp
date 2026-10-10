@@ -1,0 +1,46 @@
+python
+# Archivo destino: tools/x_metrics_collector.py
+# Integración con: tools/growth_attribution.py y tools/action_ledger.py
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
+
+
+@dataclass
+class XMetricObservation:
+    action_id: str
+    tweet_id: str
+    network: str
+    impressions: int
+    likes: int
+    replies: int
+    reposts: int
+    profile_visits: int | None
+    observed_at: str
+    source: str
+
+
+def build_observation(
+    action_id: str,
+    tweet_id: str,
+    metrics: dict,
+    source: str = "x_api_v2",
+) -> XMetricObservation:
+    public = metrics.get("public_metrics", {})
+    return XMetricObservation(
+        action_id=action_id,
+        tweet_id=tweet_id,
+        network="x",
+        impressions=int(public.get("impression_count", 0)),
+        likes=int(public.get("like_count", 0)),
+        replies=int(public.get("reply_count", 0)),
+        reposts=int(public.get("retweet_count", 0)),
+        profile_visits=metrics.get("profile_visits"),
+        observed_at=datetime.now(timezone.utc).isoformat(),
+        source=source,
+    )
+
+
+def observation_to_row(observation: XMetricObservation) -> dict:
+    return asdict(observation)
