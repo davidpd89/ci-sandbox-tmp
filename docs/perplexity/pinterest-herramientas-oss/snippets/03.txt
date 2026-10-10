@@ -1,0 +1,23 @@
+python
+# https://github.com/shaikhsajid1111/social-media-profile-scrapers/blob/master/pinterest.py
+@staticmethod
+def convert_text_to_number(text):
+    """Convert '556.5k' to 556500, '1.2M' to 1200000, etc."""
+    if not text:
+        return None
+
+    text = text.strip().upper()
+    multipliers = {'K': 1000, 'M': 1000000, 'B': 1000000000}
+
+    for suffix, multiplier in multipliers.items():
+        if suffix in text:
+            try:
+                number = float(text.replace(suffix, '').replace(',', ''))
+                return int(number * multiplier)
+            except Exception:
+                return None
+
+    try:
+        return int(text.replace(',', ''))
+    except Exception:
+        return None
