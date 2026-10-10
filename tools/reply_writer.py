@@ -326,7 +326,8 @@ def build_prompt(items, network, recent=None, memoria=None):
         context = f" Contexto: {item['context']}{extra}." if item.get("context") else (f" Contexto:{extra}." if extra else "")
         red = item.get("network") or network
         lines.append(f'{item["id"]} [red: {red}] Autor: {item.get("author", "")}.{context} Publicación: «{" ".join(str(item["text"]).split())[:600]}»')
-    block = memoria if memoria is not None else memoria_texto(recent if recent is not None else recent_reply_texts(14),\n                                                             items=items, network=network)
+    block = memoria if memoria is not None else memoria_texto(recent if recent is not None else recent_reply_texts(14),
+                                                             items=items, network=network)
     estilo = estilo_red_texto([i.get("network") or network for i in items])
     return PROMPT.format(n=len(items), items="\n".join(lines), memoria=block, estilo_red=estilo)
 
