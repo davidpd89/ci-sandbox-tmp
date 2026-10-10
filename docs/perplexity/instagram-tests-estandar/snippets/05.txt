@@ -1,0 +1,57 @@
+python
+# Adaptado de:
+# https://github.com/getsentry/responses#main-interface
+# y https://github.com/getsentry/responses#query-parameters-matcher
+import pytest
+import requests
+import responses
+from responses import matchers
+
+GRAPH = "https://graph.facebook.com/v21.0"
+
+
+@responses.activate
+def test_instagram_media_parses_timestamp_and_identity():
+    responses.get(
+        f"{GRAPH}/17895695668004550",
+        json={
+            "id": "17895695668004550",
+            "media_type": "IMAGE",
+            "permalink": "https://www.instagram.com/p/ABC123/",
+            "timestamp": "2026-10-10T13:44:00+0000",
+            "username": "lector_fantasia",
+        },
+        status=200,
+        match=[matchers.query_param_matcher({"fields": "id,media_type,permalink,timestamp,username"})],
+    )
+
+    response = requests.get(
+        f"{GRAPH}/17895695668004550",
+        params={"fields": "id,media_type,permalink,timestamp,username"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["id"] == "17895695668004550"
+    assert payload["timestamp"] == "2026-10-10T13:44:00+0000"
+
+
+@responses.activate
+def test_instagram_rate_limit_is_classified_without_retry():
+    responses.get(
+        f"{GRAPH}/17895695668004550/comments",
+        json={
+            "error": {
+                "message": "Application request limit reached",
+                "type": "OAuthException",
+                "code": 4,
+                "fbtrace_id": "test-trace",
+            }
+        },
+        status=429,
+    )
+
+    response = requests.get(f"{GRAPH}/17895695668004550/comments")
+
+    assert response.status_code == 429
+    assert response.json()["error"]["code"] == 4
