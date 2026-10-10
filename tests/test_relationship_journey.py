@@ -19,7 +19,8 @@ def db(tmp_path):
         con.execute("""CREATE TABLE relationship_events(
             seq INTEGER PRIMARY KEY, event_id TEXT, network TEXT, queue TEXT,
             subject TEXT, kind TEXT, outcome TEXT, occurred_at TEXT,
-            precision TEXT)""")
+            precision TEXT, source TEXT, source_id TEXT, correlation_id TEXT,
+            target_id TEXT, digest TEXT, ingested_at TEXT)""")
     return path
 
 
@@ -180,3 +181,35 @@ def test_real_retentioneering_integration_interface_with_fake_modules(monkeypatc
     assert result[0] == "eventstream"
     assert result[1].columns == ("user_id", "event", "timestamp")
     assert result[1].converted[0] == "timestamp"
+
+
+def test_simultaneous_events_do_not_choose_arbitrary_predecessor(tmp_path):
+    path = db(tmp_path)
+    add(path, "x", "follow", "confirmed", stamp="2026-09-01T12:00:00Z")
+    add(path, "x", "like", "confirmed", stamp="2026-09-01T12:00:00+00:00")
+    add(path, "x", "reply", "confirmed", stamp="2026-09-02T12:00:00Z")
+    rows, _ = journey.read_ledger(path)
+    # No inventar si el precursor fue follow o like: los dos son simultaneos.
+    assert journey.summarize(rows, as_of=date(2026, 10, 10))["transitions_strict_time"] == []
+
+
+def test_unfollow_interrupts_initial_follow_cohort(tmp_path):
+    path = db(tmp_path)
+    add(path, "threads", "follow", "confirmed", stamp="2026-09-01T12:00:00Z")
+    add(path, "threads", "unfollow", "confirmed", stamp="2026-09-02T12:00:00Z")
+    add(path, "threads", "followback", "present", stamp="2026-09-03T12:00:00Z")
+    rows, _ = journey.read_ledger(path)
+    data = journey.summarize(rows, as_of=date(2026, 10, 10))
+    assert data["followback_observed_lower_bound"]["threads"]["7"] == {
+        "eligible": 1, "observed_followback": 0,
+    }
+
+
+def test_schema_requires_all_v1_provenance_columns(tmp_path):
+    path = tmp_path / "partial.sqlite"
+    with sqlite3.connect(path) as conn:
+        conn.execute("""CREATE TABLE relationship_events(
+            seq INTEGER, event_id TEXT, network TEXT, queue TEXT, subject TEXT,
+            kind TEXT, outcome TEXT, occurred_at TEXT, precision TEXT)""")
+    with pytest.raises(ValueError, match="ledger relacional"):
+        journey.read_ledger(path)
