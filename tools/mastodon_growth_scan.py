@@ -65,7 +65,8 @@ def _load_config(path):
             config = volume_ramp.overlay_mastodon(config)
         except Exception:
             pass
-    return config
+    import hashtag_query_consumers as hqc
+    return hqc.extend_native_config("mastodon", config)
 
 
 def _load_seen(path, *, today, days):
