@@ -1,0 +1,30 @@
+name: Audience discovery offline (PR 70)
+on:
+  push:
+    branches:
+      - research/60-likers-commenters-audience-discovery
+    paths:
+      - tools/audience_discovery.py
+      - tests/test_audience_discovery.py
+      - .github/workflows/audience-discovery-offline.yml
+  pull_request:
+    paths:
+      - tools/audience_discovery.py
+      - tests/test_audience_discovery.py
+      - .github/workflows/audience-discovery-offline.yml
+permissions:
+  contents: read
+jobs:
+  synthetic-audiences:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Offline synthetic tests (no network/API/social sessions)
+        run: python -m unittest discover -s tests -p test_audience_discovery.py -v
