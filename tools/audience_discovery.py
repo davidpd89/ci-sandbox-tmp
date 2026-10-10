@@ -341,16 +341,20 @@ class AudienceStore:
                 continue
             data = people.setdefault(key, {"network": network, "lane": LANES[network],
                 "account_key": key, "handle": handle, "stable_identity": bool(stable),
-                "score": 0.0, "signals": 0, "posts": set(), "surfaces": set()})
+                "score": 0.0, "signals": 0, "posts": set(), "surfaces": set(),
+                "scoring_surfaces": set()})
             data["signals"] += 1
             data["score"] += KINDS[kind]
             data["posts"].add(post)
             data["surfaces"].update(sights.get(event_key, {surface}))
+            # Procedencias de un mismo evento NO son señales independientes.
+            data["scoring_surfaces"].add(surface)
             if NICHE.search(profile + " " + text):
                 data["score"] += 2.0
         for rec in people.values():
             rec["score"] += min(6, max(0, len(rec["posts"]) - 1) * 2)
-            rec["score"] += min(4, max(0, len(rec["surfaces"]) - 1) * 2)
+            rec["score"] += min(4, max(0, len(rec["scoring_surfaces"]) - 1) * 2)
+            del rec["scoring_surfaces"]
             rec["posts"] = len(rec["posts"])
             rec["surfaces"] = len(rec["surfaces"])
         return sorted(people.values(), key=lambda r: (-r["score"], -r["posts"],
