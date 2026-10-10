@@ -1,0 +1,40 @@
+python
+# Archivo nuevo: tools/tiktok_enrich_qbukold.py
+# Origen: https://github.com/Q-Bukold/TikTok-Content-Scraper
+# Archivo de referencia:
+# https://github.com/Q-Bukold/TikTok-Content-Scraper/blob/main/example_script.py
+
+from __future__ import annotations
+
+import json
+import subprocess
+from pathlib import Path
+from typing import Any
+
+
+def enrich_video(video_url: str, output_dir: Path) -> dict:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_file = output_dir / "enriched.json"
+
+    command = [
+        "python",
+        "example_script.py",
+        "--url",
+        video_url,
+        "--output",
+        str(output_file),
+    ]
+
+    subprocess.run(command, check=True, capture_output=True, text=True)
+    payload: Any = json.loads(output_file.read_text(encoding="utf-8"))
+
+    return {
+        "video_url": video_url,
+        "author": payload.get("author", {}).get("unique_id"),
+        "caption": payload.get("desc") or payload.get("caption"),
+        "hashtags": payload.get("hashtags", []),
+        "likes": payload.get("likes"),
+        "comments": payload.get("comments"),
+        "shares": payload.get("shares"),
+        "raw": payload,
+    }
