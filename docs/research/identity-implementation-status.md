@@ -45,6 +45,15 @@ En referencia local: `python -m unittest discover -s tests -p test_cross_network
 
 **Segunda revisión adversarial:** se corrigieron la exigencia de observación explícita de enlaces, el informe de conflictos de fusión y la asimetría de SequenceMatcher. Límites abiertos: no hay captura de enlaces verificados desde perfiles reales (los adaptadores actuales sólo transforman filas ya extraídas), no se realizó canario en Edge/móvil/Windows local, no hay historial temporal de cambios ni reconciliación de alias por DID/actor URI, la comparación todos-con-todos crece O(n²) y la comprobación del enlace no incluye recuperación HTTPS ni `rel=me`. Mantener como componente de análisis offline hasta integrar observaciones reales verificables.
 
+## Revisión de controlador REV 85 (10/10/2026)
+
+Revisión independiente sobre la implementación, sin cambiar políticas de acción ni leer estados de cuentas.
+
+- Se corrige la generación del ID entrante: día, cuenta normalizada y tipo normalizado producen el mismo hash para observaciones equivalentes de distintos adaptadores. Se añade regresión para mayúsculas y espacios.
+- Las URLs con prefijo `www.` se equiparan **sólo** para dominios oficiales conocidos de las plataformas; no para websites arbitrarias ni instancias de Mastodon. Pruebas para los hosts admitidos y un par X/Threads con enlaces cruzados.
+- `crm_view` rechaza registros de un mismo `(account, event_id)` con direcciones o tipos incompatibles, en lugar de perder datos según el orden de llegada; y preserva referencias de hilo de duplicados consistentes. Pruebas para ambos casos.
+- Límites pendientes: procedencia/fecha de las evidencias (PR #109), transición de handles y `stable_id` (PR #110), alias entre **diferentes dominios** históricos (`twitter.com`/`x.com`, `threads.net`/`threads.com`), rendimiento de comparación cuadrática y canario de integración real. No activar el agrupamiento automático sin las comprobaciones de los adaptadores.
+
 ## Retirada
 
 Cambios aditivos: eliminar los cuatro módulos y las pruebas; ninguna BD/registro operativo se migra ni modifica. Documento JSON v1 se puede conservar para auditoría o desechar sin afectar acciones. El siguiente paso es acoplar lectores sintéticos y después adaptadores de captura con canario supervisado, sin acciones reales.
