@@ -88,6 +88,14 @@ propias programadas ni pendientes de verificación**.
 
 Semántica: \`null\`/«—» si falta una fuente; \`0\` si la fuente existe y tiene cero
 eventos en la ventana. Un breaker inexistente queda \`sin_datos\`, nunca «cerrado».
+El estado de revisión manual representa una retención explícita que no caduca al terminar
+el enfriamiento; tanto la retención como un breaker corrupto generan avisos
+de retención manual o breaker inválido. Se aceptan fechas ISO de Madrid
+con offset, como las escribe circuit_breaker._record_unlocked en la rama
+oficial; las fechas legacy sin zona también son compatibles. El agregado
+«cortacircuitos activos» cuenta los abiertos por enfriamiento y los retenidos
+para revisión. El aviso es diagnóstico, nunca desbloquea ni actúa.
+
 Los avisos de auth/rate/fallos no se deshabilitan: el panel solo los observa.
 Se usa la hora local del estado legacy (el consumidor puede fijar \`--as-of\`),
 ventana inclusiva de 1–31 días y muestras p95 por nearest-rank.
