@@ -57,7 +57,7 @@ Procedencia y referencias permanentes:
 ## Qué se implementó y contrato
 
 - `tools/reddit_snapshot_preflight.py` evalúa sin red un `plan` de comentario raíz, un envelope `{http_status,retrieved_at,body}` y una revisión humana explícita de normas/lectura/historial. `body` debe tener **dos Listings** de `/comments/<id>.json`: `t3` del hilo y `t1` de comentarios, con `more` bloqueado.
-- Valida origen HTTPS canónico y coincidencia exacta de ID/subreddit, vigencia de snapshot (5 min), ventana editorial (7 días, **no límite de Reddit**), `locked`, `archived`, retirada, restricción de subreddit, revisión de reglas vigente (7 días), CSV informado como `history_state=none`, duplicado por autor, citas con ID existente y no eliminado, AutoModerator que anuncia retirada y contexto de comentarios incompleto.
+- Valida origen HTTPS canónico y coincidencia exacta de ID/subreddit, vigencia de snapshot (5 min), ventana de **3 días** para comentarios raíz externos (alineada con `post_age_policy.MAX_AGE_DAYS['comment']` de la rama oficial, **no límite de Reddit**; los 7 días de seguimiento son otro tipo de acción), `locked`, `archived`, retirada, restricción de subreddit, revisión de reglas vigente (7 días), CSV informado como `history_state=none`, duplicado por autor, citas con ID existente y no eliminado, AutoModerator que anuncia retirada y contexto de comentarios incompleto.
 - Una respuesta HTTP `429`, campos desconocidos o un error de parsing siempre **bloquean**, sin reintento. No envía comentarios, no abre navegador, no registra datos identificables y no gestiona credenciales.
 - `tests/fixtures/reddit_snapshot_preflight.json`: estructuras sintéticas con nombres ficticios y campos `Listing/t3/t1` alineados con el JSON de la API; `tests/test_reddit_snapshot_preflight.py`: pruebas de bloqueo, caso válido, comprobaciones adversariales y CLI con proceso real. No es un mock de un endpoint OAuth: **no prueba** la autenticación, cuota, propagación de moderación o veracidad de la revisión humana.
 
@@ -68,7 +68,7 @@ python tools/reddit_snapshot_preflight.py --plan plan.json --snapshot reddit_lis
 ```
 El primer comando tiene el mismo criterio que pytest, pero `python -m pytest tests/test_reddit_snapshot_preflight.py -q` es el comando de CI. CLI devuelve 0 para *apto para revisión*, 2 si bloquea. **Nunca autoriza por sí sola publicar**; el snapshot debe adquirirse de modo autorizado y revalidarse bajo el candado de escritura.
 
-## Riesgos, alcance y retirada
+**Paridad de antigüedad (REV 18, 10-10-2026):** el preflight original aceptaba 7 días para un comentario raíz, mientras el contrato común del oficial (`tools/post_age_policy.py`) establece 3 días para `comment` y 7 solo para `follow-up`. Se acota ahora a 3 días con prueba de 4 días bloqueado y 3 días permitido. Al integrar en el privado, **importar** la política compartida y no mantener dos fuentes de verdad. Este módulo sigue siendo offline y no autoriza publicación.\n\n## Riesgos, alcance y retirada
 
 - TOS: cualquier API requiere OAuth autorizado, agente de usuario honesto, consentimiento/aprobación que corresponda y respeto a cuotas; el wrapper no elude estas obligaciones. Devvit puede exigir revisión. Sin acuerdo/permisos confirmados, no consultar la API desde esta PR.
 - Privacidad: no guardar cuerpos de mensajes de usuarios, enlaces a perfiles, tokens, correos, cookies ni cookies CDP en este mirror. El snapshot de prueba es **inventado**. El repositorio privado contiene identificadores en el código antiguo; NO se portan.
