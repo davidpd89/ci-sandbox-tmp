@@ -14,6 +14,14 @@ import pinterest_organic_insights as insights
 
 
 class QueryAndMediaTests(unittest.TestCase):
+    def test_existing_growth_import_and_romantasy_filter(self):
+        import pinterest_growth as growth
+        self.assertIn(("romantasy libros recomendados", None), growth.QUERY_POOL)
+        self.assertTrue(growth.pin_ok("Mis lecturas de romantasy favoritas",
+                                      "Son novelas románticas con magia en español"))
+        self.assertFalse(growth.pin_ok("Shop romantasy merch",
+                                       "Compra con descuento en tienda"))
+
     def test_query_intentions_es_and_uniqueness(self):
         result = niche.merge_queries([("Libros de fantasía", None),
                                       ("ROMANTASY libros recomendados", "existing")])
@@ -60,6 +68,18 @@ class OrganicInsightsTests(unittest.TestCase):
         self.assertEqual(result["ranked"][0]["pin_id"], "2")
         self.assertEqual(result["ranked"][0]["clickthrough_per_impression"], .02)
         self.assertEqual(result["unranked"][1]["metrics"]["clickthrough"], None)
+
+    def test_visual_observation_has_three_states(self):
+        sample = self.sample()[:1]
+        sample[0]["media"] = {"images": {
+            "vertical": {"width": 1000, "height": 1500,
+                         "url": "https://i.pinimg.com/1000x1500/pin.jpg"}
+        }}
+        row = insights.summarize(sample)["ranked"][0]
+        self.assertTrue(row["vertical_2_3"])
+        self.assertEqual(row["image_dimensions"], [1000, 1500])
+        missing = insights.summarize([{"id": "x"}])["unranked"][0]
+        self.assertIsNone(missing["vertical_2_3"])
 
     def test_lifetime_is_not_substituted_for_90d(self):
         pins = [{"id": "10", "pin_metrics": {"lifetime_metrics": {
