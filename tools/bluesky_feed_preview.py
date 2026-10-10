@@ -111,6 +111,10 @@ def feed_page(
                         WHERE lower(value) = 'es' OR lower(value) LIKE 'es-%'
                   ))
                   AND uri LIKE 'at://did:%/app.bsky.feed.post/%'
+                  -- Una URI válida no basta: debe coincidir con el DID/RKEY
+                  -- que escribió store_event. Evita atribución cruzada si
+                  -- la caché se importa o sufre una corrupción parcial.
+                  AND uri = ('at://' || did || '/app.bsky.feed.post/' || rkey)
                   {cursor_clause}
                 ORDER BY time_us DESC, uri DESC
                 LIMIT ?
