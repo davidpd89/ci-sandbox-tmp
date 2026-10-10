@@ -133,7 +133,6 @@ class VersionedEvidenceTests(unittest.TestCase):
         registry = TrustedRegistry([audited(winner)])
         malformed = copy.deepcopy(winner)
         malformed["experiment"] = None
-        malformed["treatment"]["successes"] = 15
         report = run(winner, malformed, registry=registry)
         self.assertEqual(report["duplicate_evidence"], 0)
         self.assertEqual(report["invalid_or_unproven"], 1)
