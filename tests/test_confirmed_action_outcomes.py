@@ -112,8 +112,10 @@ class ConfirmedOutcomeTests(unittest.TestCase):
             comment=lambda u, t: "created",
             _refuse_if_paused=lambda: None,  # la pausa real se prueba en test_instagram_paused
         )
+        # load_function extracts run_plan without its module globals.
+        # Supply the real default backend used by the output voice preflight.
         ns = {"ig": ig, "dup": Dup(), "_drop_stacked_actions": lambda p: p,
-              "_pause": lambda: None, "ec": __import__("exec_common")}
+              "_pause": lambda: None, "BACKEND": "web", "ec": __import__("exec_common")}
         run = load_function("instagram_execute.py", "run_plan", ns)
         result = run([
             {"kind": "follow", "handle": "@a"},
