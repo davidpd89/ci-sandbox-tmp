@@ -315,19 +315,27 @@ class _borrow:
 
 
 def legacy_outcome(value: str) -> str:
-    s = str(value or "").strip().lower()
-    if "incierto" in s or "pendiente_verificacion" in s:
+    """Historical result semantics: never count blocked/unknown as successes."""
+    s = str(value or "").strip().casefold()
+    code = s.split(":", 1)[0]
+    if ("incierto" in s or "pendiente_verificacion" in s
+            or s.startswith(("pendiente_", "parada_", "parada:"))):
         return "uncertain"
     if s in ("confirmado", "publicado"):
         return "confirmed"
+    # Preserve ActionLedger.OUTCOME_CLASS's terminal failures. The operational
+    # ledger is intentionally not imported: this offline store remains isolated.
+    if (code.startswith("saltado_api_") or code in (
+            "saltado_en_ledger", "saltado_sin_contexto",
+            "saltado_objetivo_no_resuelto")):
+        return "failed"
     if s.startswith("saltado_ya_"):
         return "observed"
     if s.startswith("saltado_"):
         return "skipped"
-    if s.startswith(("fallo", "error", "parada_")):
+    if s.startswith(("fallo", "error")):
         return "failed"
     return "unverified"
-
 
 def legacy_time(value: str) -> tuple[str, str]:
     text = _clean(value, "fecha")

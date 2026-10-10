@@ -206,3 +206,17 @@ que emitan confirmaciones estables; mapear IDs y correlaciones entre reservas,
 confirmaciones, lectores y snapshots *sin* atribuir acción a los skips.
 Sin pruebas con actores reales ni canario supervisado, la paridad es
 de contrato/fixtures, no de cobertura productiva.
+
+
+## Revisión posterior — clasificación de estados heredados
+
+La importación mantiene la distinción del `ActionLedger.OUTCOME_CLASS` operativo:
+`saltado_api_*`, `saltado_en_ledger`, `saltado_sin_contexto` y
+`saltado_objetivo_no_resuelto` son fallos, no descartes de política.
+Los `parada_*`/`parada:*` y `pendiente_*` quedan inciertos, de acuerdo con
+el puente de evidencias de #108: no hay ACK que permita llamarlos fallo
+terminal ni acción confirmada. Las omisiones de preflight siguen siendo
+`skipped`; `saltado_ya_*` sigue siendo observación, no nueva acción.
+Regresión offline añadida para evitar sesgos en tasas de fallos o reintentos.
+La lista es una traducción limitada del CSV antiguo, no una segunda política
+operativa de ejecución.

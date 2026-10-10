@@ -245,6 +245,22 @@ class LedgerTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             legacy_time("2026-10-01 12:34:56")
 
+    def test_legacy_outcome_matches_operational_failure_and_uncertainty(self):
+        # Mirrors ActionLedger.OUTCOME_CLASS, and the native bridge's
+        # uncertain 'parada' mapping; no skipped error may hide as policy.
+        for raw in (
+            "saltado_api_429", "saltado_api_429:rate_limit",
+            "saltado_en_ledger", "saltado_sin_contexto",
+            "saltado_objetivo_no_resuelto",
+        ):
+            with self.subTest(raw=raw):
+                self.assertEqual(legacy_outcome(raw), "failed")
+        for raw in ("parada_operador", "parada:verificar", "pendiente_ack"):
+            with self.subTest(raw=raw):
+                self.assertEqual(legacy_outcome(raw), "uncertain")
+        self.assertEqual(legacy_outcome("saltado_ya_seguido"), "observed")
+        self.assertEqual(legacy_outcome("saltado_preflight_post_antiguo"), "skipped")
+
     def test_offline_csv_nine_networks_replay_and_pii_minimization(self):
         path = pathlib.Path(self.tmp.name) / "sample.csv"
         with path.open("w", encoding="utf-8", newline="") as stream:
