@@ -1,0 +1,68 @@
+python
+# Fuente: https://mastodonpy.readthedocs.io/en/stable/07_timelines.html
+# Adaptación para descubrimiento incremental en Mastodon.
+from __future__ import annotations
+
+from dataclasses import dataclass, asdict
+from typing import Iterable
+
+
+@dataclass
+class DiscoveredPost:
+    network: str
+    post_id: str
+    author_id: str
+    author_handle: str
+    content: str
+    url: str
+    created_at: str
+    language: str | None
+    favourites: int
+    reblogs: int
+    replies: int
+    hashtags: list[str]
+    source: str
+
+
+def discover_hashtag(
+    client,
+    hashtag: str,
+    *,
+    since_id: str | None = None,
+    limit: int = 40,
+) -> tuple[list[DiscoveredPost], str | None]:
+    statuses = client.timeline_hashtag(
+        hashtag=hashtag,
+        limit=limit,
+        since_id=since_id,
+    )
+
+    posts: list[DiscoveredPost] = []
+    newest_id: str | None = None
+
+    for status in statuses:
+        post = DiscoveredPost(
+            network="mastodon",
+            post_id=str(status["id"]),
+            author_id=str(status["account"]["id"]),
+            author_handle=status["account"]["acct"],
+            content=status.get("content", ""),
+            url=status.get("url", ""),
+            created_at=status.get("created_at", ""),
+            language=status.get("language"),
+            favourites=int(status.get("favourites_count", 0)),
+            reblogs=int(status.get("reblogs_count", 0)),
+            replies=int(status.get("replies_count", 0)),
+            hashtags=[tag["name"] for tag in status.get("tags", [])],
+            source=f"hashtag:{hashtag}",
+        )
+        posts.append(post)
+
+        if newest_id is None or int(post.post_id) > int(newest_id):
+            newest_id = post.post_id
+
+    return posts, newest_id
+
+
+def serialize_posts(posts: Iterable[DiscoveredPost]) -> list[dict]:
+    return [asdict(post) for post in posts]
