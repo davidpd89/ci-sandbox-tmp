@@ -1,0 +1,29 @@
+python
+# Fuente: https://github.com/d60/twikit/blob/main/README.md
+# Licencia: MIT — https://github.com/d60/twikit/blob/main/LICENSE
+import asyncio
+from twikit import Client
+
+async def buscar_nicho():
+    client = Client("es")
+
+    await client.login(
+        auth_info_1="usuario_x",
+        auth_info_2="email@example.com",
+        password="password",
+        cookies_file="cookies.json",
+    )
+
+    query = '("acabo de terminar" OR "terminé de leer") (libro OR saga) lang:es -filter:replies'
+    tweets = await client.search_tweet(query, "Latest")
+
+    for tweet in tweets:
+        yield {
+            "id": tweet.id,
+            "url": f"https://x.com/{tweet.user.screen_name}/status/{tweet.id}",
+            "handle": tweet.user.screen_name,
+            "texto": tweet.text,
+            "fecha": tweet.created_at,
+        }
+
+asyncio.run(buscar_nicho())
