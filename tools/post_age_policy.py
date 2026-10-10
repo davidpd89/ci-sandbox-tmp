@@ -11,9 +11,10 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+from urllib.parse import urlsplit
 
 # dias maximos de antiguedad del post destino por tipo de accion
-MAX_AGE_DAYS = {"reply": 3, "comment": 3, "comment_external": 3, "quote": 3, "like": 21, "like_external": 21, "favourite": 21, "like_latest": 21, "react": 21, "vote": 21, "boost": 7, "repost": 7}   # likes: como growth_policy (21 d a lector nuevo); boost/repost y texto, mas estrictos
+MAX_AGE_DAYS = {"reply": 3, "comment": 3, "comment_external": 3, "quote": 3, "like": 21, "like_external": 21, "favourite": 21, "like_latest": 21, "react": 21, "vote": 21, "boost": 7, "repost": 7, "save": 7}   # likes: como growth_policy (21 d a lector nuevo); boost/repost y texto, mas estrictos
 TEXT_KINDS = frozenset({"reply", "comment", "comment_external", "quote"})
 FOLLOWUP_MAX_AGE_DAYS = 7           # contestar a quien nos escribio: el comentario puede tardar mas en recibir respuesta, pero no semanas
 _DATE_FIELDS = ("target_created_at", "post_created_at", "created_at", "createdAt", "created_utc", "create_time", "created_time", "published_at")
@@ -69,7 +70,7 @@ def _snowflake_x(sid):
 
 def _tid_bluesky(rkey):
     rkey = str(rkey or "")
-    if len(rkey) != 13 or any(ch not in _B32 for ch in rkey):
+    if len(rkey) != 13 or rkey[0] not in "234567abcdefghij" or any(ch not in _B32 for ch in rkey):
         return None
     value = 0
     for ch in rkey:
@@ -113,11 +114,9 @@ def _target_ref(item):
 
 def _explicit_post_datetime(item):
     """No confundir created_at del trabajo/cola con fecha del objetivo de texto."""
-    fields = _DATE_FIELDS
-    if item.get("kind") in TEXT_KINDS:
-        # created_at es ambiguo en la raiz de una acción: puede ser fecha de
-        # encolado. Requerir una clave de objetivo o un record/post anidado.
-        fields = tuple(field for field in _DATE_FIELDS if field != "created_at")
+    # La fecha de la cola nunca certifica la publicación, ni para reacciones.
+    # Mantener fechas anidadas de post/record y campos explícitos del objetivo.
+    fields = tuple(f for f in _DATE_FIELDS if f not in ("created_at", "createdAt"))
     for field in fields:
         if item.get(field):
             when = _parse(item[field])
@@ -144,6 +143,27 @@ def _explicit_post_datetime(item):
 
 def post_datetime(network, item):
     """Fecha declarada por el post o estimación del identificador si no existe."""
+    if network == "x":
+        # El permalink ejecutable identifica el post real. Su snowflake
+        # prevalece ante una fecha auxiliar contradictoria de la cola.
+        for field in ("url", "post_url", "permalink"):
+            link = item.get(field)
+            if not isinstance(link, str):
+                continue
+            try:
+                parsed = urlsplit(link)
+                host = (parsed.hostname or "").casefold()
+            except ValueError:
+                continue
+            if parsed.scheme != "https" or host not in (
+                "x.com", "www.x.com", "twitter.com", "www.twitter.com",
+                "mobile.twitter.com",
+            ):
+                continue
+            match = re.search(r"/status/(\d+)(?:/|$)", parsed.path)
+            when = _snowflake_x(match.group(1)) if match else None
+            if when is not None:
+                return when
     declared = _explicit_post_datetime(item)
     if declared is not None:
         return declared
@@ -174,7 +194,7 @@ def _is_followup(item):
 
 def age_days(network, item, *, now=None):
     now = _aware(now) if now else dt.datetime.now(dt.timezone.utc)
-    if (network == "bluesky" and isinstance(item, dict)
+    if (network in ("bluesky", "threads") and isinstance(item, dict)
             and item.get("kind") in TEXT_KINDS
             and _explicit_post_datetime(item) is None):
         return None  # TID reciente no autentica la edad de una respuesta
@@ -204,7 +224,7 @@ def check(network, item, *, now=None):
             return False, "post_antiguo"
         # ATProto: un TID puede ser elegido por el autor; no autoriza texto.
         # Una fecha explícita del post sigue siendo necesaria para respuesta.
-        if network == "bluesky" and text_action and _explicit_post_datetime(item) is None:
+        if network in ("bluesky", "threads") and text_action and _explicit_post_datetime(item) is None:
             return False, "edad_desconocida"
         return True, "edad_ok"
     except Exception:       # noqa: BLE001 - las acciones de texto fallan cerradas ante datos invalidos
