@@ -463,8 +463,9 @@ def _default_fetch_archive(endpoint, start_seq):
 def recover_archive_gap(db, endpoint, terms, *, fetch_archive_fn=None, sealed_tip=None):
     """Recuperación paginada de brecha mediante archive/backfill y reconciliación de estado.
 
-    Si las páginas no alcanzan la punta sellada (`sealed_tip`), NO declara la brecha
-    como resuelta. Conserva `gap_detected = true`, `recovery_pending = true` y registra `last_error`.
+    Si las páginas no alcanzan la punta sellada (`sealed_tip`) o contienen un hueco
+    interno en la secuencia, NO declara la brecha como resuelta. Conserva `gap_detected = true`,
+    `recovery_pending = true` y registra `last_error`.
     """
     set_state(db, "gap_detected", "true")
     set_state(db, "recovery_pending", "true")
@@ -472,9 +473,11 @@ def recover_archive_gap(db, endpoint, terms, *, fetch_archive_fn=None, sealed_ti
 
     start_seq = int(get_state(db, "last_seq") or 0)
     current_seq = start_seq
+    prev_seq = start_seq if start_seq > 0 else None
     processed_count = 0
     stored_count = 0
     page_count = 0
+    has_internal_gap = False
 
     fetch_fn = fetch_archive_fn if fetch_archive_fn is not None else lambda s: _default_fetch_archive(endpoint, s)
 
@@ -507,10 +510,13 @@ def recover_archive_gap(db, endpoint, terms, *, fetch_archive_fn=None, sealed_ti
             if not event:
                 continue
             # Deduplicación por cursor inclusivo
-            if seq is not None and seq <= start_seq:
+            if seq is not None and start_seq > 0 and seq <= start_seq:
                 continue
             processed_count += 1
             if seq is not None:
+                if prev_seq is not None and seq > prev_seq + 1:
+                    has_internal_gap = True
+                prev_seq = seq
                 current_seq = max(current_seq, seq)
             if store_event(db, event, terms):
                 stored_count += 1
@@ -519,16 +525,23 @@ def recover_archive_gap(db, endpoint, terms, *, fetch_archive_fn=None, sealed_ti
                 set_state(db, "last_time_us", event_time)
 
     target_tip = sealed_tip if sealed_tip is not None else current_seq
-    incomplete = (current_seq < target_tip) or (page_count == 0 and target_tip > start_seq) or (start_seq == 0 and current_seq == 0 and page_count == 0)
+    incomplete = (
+        has_internal_gap or
+        (current_seq < target_tip) or
+        (page_count == 0 and target_tip > start_seq) or
+        (start_seq > 0 and page_count == 0) or
+        (start_seq == 0 and current_seq == 0 and page_count == 0)
+    )
 
     if incomplete:
-        err = f"incomplete_backfill:{current_seq}/{target_tip}"
+        err = f"incomplete_backfill:{current_seq}/{target_tip}" + (":internal_gap" if has_internal_gap else "")
         set_state(db, "last_error", err)
         set_state(db, "recovery_stats", json.dumps({
             "pages": page_count,
             "sealed_tip": target_tip,
             "planned_through": current_seq,
             "residual_gap": max(0, target_tip - current_seq),
+            "internal_gap": has_internal_gap,
             "error": err,
         }))
         if current_seq > start_seq:

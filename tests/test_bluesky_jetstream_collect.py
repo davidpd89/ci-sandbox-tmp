@@ -398,75 +398,61 @@ class JetstreamCollectorTests(unittest.TestCase):
             self.assertIsNone(js.get_state(db, "complete_through"))
             db.close()
 
-    def test_recover_archive_gap_inclusive_cursor_and_out_of_order(self):
+    def test_recover_archive_gap_detects_internal_sequence_gap(self):
         with tempfile.TemporaryDirectory() as tmp:
             db_path = str(pathlib.Path(tmp) / "cache.sqlite3")
             db = js.init_db(db_path)
             js.set_state(db, "last_seq", "100")
             terms = js.load_terms(self.config())
 
-            def mock_archive(start_seq):
+            def mock_archive_with_gap(start_seq):
                 return [{
                     "events": [
                         {
                             "$type": "message",
                             "payload": {
                                 "$type": "network.bsky.jetstream.subscribeEvents#commit",
-                                "seq": 100,  # Cursor inclusivo: debe omitirse
+                                "seq": 101,
                                 "did": "did:plc:user1",
                                 "time": "2026-09-29T08:00:00Z",
                                 "operation": "create",
                                 "collection": "app.bsky.feed.post",
-                                "rkey": "old",
+                                "rkey": "p1",
                                 "record": {
                                     "$type": "app.bsky.feed.post",
-                                    "text": "Lectura de fantasía vieja",
+                                    "text": "Lectura de fantasía uno",
                                     "createdAt": "2026-09-29T08:00:00Z",
                                 },
                             },
                         },
+                        # Hueco: falta seq 102
                         {
                             "$type": "message",
                             "payload": {
                                 "$type": "network.bsky.jetstream.subscribeEvents#commit",
-                                "seq": 103,  # Desordenado: llega primero 103
+                                "seq": 103,
                                 "did": "did:plc:user2",
                                 "time": "2026-09-29T08:02:00Z",
                                 "operation": "create",
                                 "collection": "app.bsky.feed.post",
-                                "rkey": "new2",
+                                "rkey": "p3",
                                 "record": {
                                     "$type": "app.bsky.feed.post",
-                                    "text": "Lectura de fantasía dos",
+                                    "text": "Lectura de fantasía tres",
                                     "createdAt": "2026-09-29T08:02:00Z",
-                                },
-                            },
-                        },
-                        {
-                            "$type": "message",
-                            "payload": {
-                                "$type": "network.bsky.jetstream.subscribeEvents#commit",
-                                "seq": 101,  # Desordenado: llega después 101
-                                "did": "did:plc:user3",
-                                "time": "2026-09-29T08:01:00Z",
-                                "operation": "create",
-                                "collection": "app.bsky.feed.post",
-                                "rkey": "new1",
-                                "record": {
-                                    "$type": "app.bsky.feed.post",
-                                    "text": "Lectura de fantasía uno",
-                                    "createdAt": "2026-09-29T08:01:00Z",
                                 },
                             },
                         },
                     ]
                 }]
 
-            res = js.recover_archive_gap(db, js.DEFAULT_ENDPOINT, terms, fetch_archive_fn=mock_archive)
+            res = js.recover_archive_gap(db, js.DEFAULT_ENDPOINT, terms, fetch_archive_fn=mock_archive_with_gap)
 
-            self.assertTrue(res["complete"])
-            self.assertEqual(res["processed"], 2)  # seq=100 fue omitido por cursor inclusivo
-            self.assertEqual(js.get_state(db, "last_seq"), "103")  # Mantiene el máximo seq visto
+            self.assertFalse(res["complete"])
+            self.assertEqual(js.get_state(db, "gap_detected"), "true")
+            self.assertEqual(js.get_state(db, "recovery_pending"), "true")
+            self.assertIn("internal_gap", js.get_state(db, "last_error"))
+            self.assertIsNone(js.get_state(db, "complete_through"))
             db.close()
 
 
