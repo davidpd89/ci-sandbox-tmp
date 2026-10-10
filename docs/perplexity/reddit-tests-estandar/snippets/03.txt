@@ -1,0 +1,19 @@
+python
+# https://github.com/leog25/reddit-cli/blob/main/src/reddit_cli/models.py
+from dataclasses import dataclass
+
+@dataclass
+class Post:
+    id: str
+    title: str
+    author: str
+    subreddit: str
+    score: int
+    upvote_ratio: float
+    num_comments: int
+    created_utc: float
+    permalink: str = ""
+    url: str = ""
+    selftext: str = ""
+    is_self: bool = True
+    over_18: bool = False
