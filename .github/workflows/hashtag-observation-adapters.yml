@@ -6,6 +6,7 @@ on:
   pull_request:
     paths:
       - 'tools/hashtag_observation_adapters.py'
+      - 'tools/hashtag_expansion.py'
       - 'tests/test_hashtag_observation_adapters.py'
       - '.github/workflows/hashtag-observation-adapters.yml'
   workflow_dispatch:
@@ -32,4 +33,4 @@ jobs:
       - name: Compile and run offline synthetic tests
         run: |
           python -m compileall -q tools/hashtag_observation_adapters.py
-          python -m unittest discover -s tests -p test_hashtag_observation_adapters.py -v
+          python -m unittest discover -s tests -p 'test_hashtag*.py' -v
