@@ -29,10 +29,14 @@ def baseline():
 
 
 class FakeReader:
-    def __init__(self, workflows, moved=False, truncate=False):
+    def __init__(self, workflows, moved=False, truncate=False, changed=(), missing=(),
+                 fork=None):
         self.data = workflows
         self.moved = moved
         self.truncate = truncate
+        self.changed = set(changed)
+        self.missing = set(missing)
+        self.fork = fork
         self.snaps = 0
         self.calls = []
 
@@ -43,19 +47,30 @@ class FakeReader:
             return {
                 "state": "open",
                 "head": {"sha": ("c" * 40 if self.moved and self.snaps == 2 else HEAD),
-                         "repo": {"full_name": REPO}},
+                         "repo": {"full_name": self.fork or REPO}},
                 "base": {"sha": BASE, "repo": {"full_name": REPO}},
             }
-        prefix = "/repos/" + REPO + "/contents/"
-        assert path.startswith(prefix), path
-        suffix = path[len(prefix):]
-        assert suffix.endswith("?ref=" + HEAD), path
-        name = suffix[:-len("?ref=" + HEAD)]
+        assert "/contents/" in path, path
+        source, suffix = path.split("/contents/", 1)
+        ref = HEAD if suffix.endswith("?ref=" + HEAD) else BASE
+        assert suffix.endswith("?ref=" + ref), path
+        if ref == HEAD and self.fork:
+            assert source == "/repos/" + self.fork
+        else:
+            assert source == "/repos/" + REPO
+        name = suffix[:-len("?ref=" + ref)]
         if name == ".github/workflows":
+            assert ref == HEAD
             files = [{"type": "file", "path": k} for k in self.data]
             if self.truncate:
                 files.append({"type": "dir", "path": ".github/workflows/dummy"})
             return files
+        if name in self.missing and ref == HEAD:
+            return {"path": name, "type": "file", "sha": None}
+        if name in p.PROTECTED_TRUST:
+            return {"path": name, "type": "file",
+                    "sha": ("f" if ref == HEAD and name in self.changed else "e") * 40}
+        assert ref == HEAD
         return {
             "type": "file", "path": name, "encoding": "base64",
             "content": base64.b64encode(self.data[name].encode()).decode(),
@@ -208,6 +223,26 @@ class InventoryTests(unittest.TestCase):
         for path in baseline():
             self.assertIn("/repos/" + REPO + "/contents/" + path + "?ref=" + HEAD,
                           reader.calls)
+
+    def test_trusted_sources_cannot_be_replaced_by_no_op(self):
+        # The job name/event remain unchanged, but executing a replaced gate
+        # after merge would be a security regression.
+        for protected in sorted(p.PROTECTED_TRUST):
+            with self.subTest(file=protected):
+                r = FakeReader(baseline(), changed={protected})
+                with self.assertRaisesRegex(p.AuditError, "trusted source modified"):
+                    p.check_pr(r, REPO, 96, HEAD, BASE)
+        with self.assertRaisesRegex(p.AuditError, "missing trusted source"):
+            p.check_pr(FakeReader(baseline(), missing={"tools/repo_hygiene.py"}),
+                       REPO, 96, HEAD, BASE)
+
+    def test_fork_reads_proposed_files_from_head_repository(self):
+        reader = FakeReader(baseline(), fork="contributor/fork")
+        self.assertEqual(p.check_pr(reader, REPO, 96, HEAD, BASE), p.OWNERS)
+        self.assertIn("/repos/contributor/fork/contents/.github/workflows?ref=" + HEAD,
+                      reader.calls)
+        self.assertIn("/repos/" + REPO + "/contents/tools/repo_hygiene.py?ref=" + BASE,
+                      reader.calls)
 
     def test_head_changes_between_snapshot_reads(self):
         with self.assertRaisesRegex(p.AuditError, "stale"):
