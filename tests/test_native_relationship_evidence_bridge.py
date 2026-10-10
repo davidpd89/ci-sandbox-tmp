@@ -1,4 +1,5 @@
 """Pruebas sintéticas y sin conectividad: puentes #108."""
+import json
 import unittest
 from tools.native_relationship_evidence_bridge import Batch, NETWORK_QUEUES, availability, bridge_results, bridge_snapshot
 
@@ -86,7 +87,7 @@ class EvidenceTest(unittest.TestCase):
         bridge_results(s, b, [row(record_id=str(i), resultado=v)
                               for i, v in enumerate(labels)])
         self.assertEqual([next(v["outcome"] for v in s.items.values()
-                         if v["source_id"] == f"exp/{i}/result")
+                         if json.loads(v["source_id"]) == ["exp", str(i), "result", None])
                          for i in range(len(labels))], expected)
 
     def test_missing_source_unknown(self):
