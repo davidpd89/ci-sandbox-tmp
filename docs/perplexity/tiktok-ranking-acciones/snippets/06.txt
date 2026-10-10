@@ -1,0 +1,11 @@
+python
+# https://github.com/davidpd89/ci-sandbox-tmp/blob/main/tools/tiktok_growth_scan.py
+ranked = sorted(
+    grouped.values(),
+    key=lambda item: (
+        -item["score"],
+        item["known"],
+        -len(item["sources"]),
+        item["handle"].casefold(),
+    ),
+)
