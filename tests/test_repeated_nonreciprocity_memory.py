@@ -76,7 +76,7 @@ class HistoricalMemoryTests(unittest.TestCase):
     def test_network_isolation_handles_and_validation(self):
         x = mem.events_from_rows(cycle("@ANA", "2026-09-01", "2026-09-02"), "x")
         self.assertEqual(mem.decision(x, "bluesky", "ana", today=TODAY)["failures"], 0)
-        self.assertNotEqual(mem.norm("@ana@masto.es"), mem.norm("@ana@otro.net"))
+        self.assertNotEqual(mem.norm("@ana@example.com"), mem.norm("@ana@example.net"))
         for args in ({"multiplier": 0}, {"max_failures": 0}, {"cap_days": 1}):
             with self.subTest(args=args), self.assertRaises(ValueError):
                 mem.Policy(**args)
