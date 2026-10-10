@@ -82,7 +82,8 @@ def _id(value):
     if isinstance(value, bool) or not isinstance(value, (str, int)):
         raise ValueError("missing stable identity")
     result = str(value).strip()
-    if not result or len(result) > 256:
+    if (not result or len(result) > 256 or
+            any(unicodedata.category(char) == "Cc" for char in str(value))):
         raise ValueError("missing stable identity")
     return result
 
@@ -242,7 +243,8 @@ class ObservationCollector:
     def _scope(network, queue, source, rows):
         if network not in NETWORKS or queue not in QUEUES:
             raise ValueError("unsupported network/queue")
-        if not isinstance(source, str) or not source.strip() or len(source) > 80:
+        if (not isinstance(source, str) or not source.strip() or len(source) > 80 or
+                any(unicodedata.category(char) == "Cc" for char in source)):
             raise ValueError("source required")
         if not isinstance(rows, (list, tuple)) or len(rows) > MAX_BATCH:
             raise ValueError("bounded list of rows required")
