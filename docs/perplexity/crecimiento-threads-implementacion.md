@@ -55,10 +55,10 @@ dispone de verificación de cuota aplicable al token real.
   desde th (JSON/JSONL directo y corpus anidado) sin conexión a Threads.
 - Contrato transversal NETWORKS de nueve redes y mapa ADAPTERS explícito:
   solo Threads está soportado; nunca se anuncia compatibilidad ficticia de
-  los otros ocho. Usa la reserva común browser_pool.record_post_rows.
+  los otros ocho. Usa el adaptador nativo threads_pool.record_posts (que reutiliza browser_pool y mantiene los filtros de campañas de la rama oficial).
 - Comprueba URL/host/autor, zona horaria y antigüedad del post sin inventar
   hora cuando falta; deduplica .net/.com, query/fragment y repetidos.
-  Conflictos del mismo enlace se descartan en bloque, sin ganador arbitrario.
+  Conflictos del mismo enlace se descartan en bloque, sin ganador arbitrario. Al importar se limita la entrada a 72 horas y se redondea la edad hacia arriba a horas enteras para preservar el contrato del parser nativo sin declarar frescura inexistente.
 - Ejecución por defecto DRY RUN con informe agregado sin texto ni handles.
   Escritura solo a una SQLite local elegida explícitamente con
   --write-pool --db. No publica, sigue, comenta ni cambia la sesión.
@@ -77,17 +77,17 @@ equivale a cobertura de todo Threads.
 
 ## Pruebas y revisión adversarial
 
-- Pruebas unitarias: tests/test_threads_research_bridge.py, ocho escenarios:
+- Pruebas unitarias: tests/test_threads_research_bridge.py, nueve escenarios:
   JSON/JSONL anidado, deduplicación, contradicciones, URL maliciosa, identidad
   y fechas, cobertura real por red, ficheros corruptos o gigantes, SQL
-  explícita con mock de browser_pool y salida sin texto de terceros.
-- En arnés local aislado Python: **8 passed**, compileall sin errores.
-  La prueba SQLite con browser_pool real NO se ejecutó (mock de contrato).
+  explícita con mock de threads_pool y salida sin texto de terceros; además, prueba real de reserva SQLite si el checkout contiene threads_pool.
+- En arnés local aislado Python: **8 passed, 1 skipped**, compileall sin errores.
+  La prueba de integración SQLite con threads_pool real se omite en el arnés aislado, pero queda como test ejecutable sin cuenta ni red cuando se usa el checkout completo.
 - Primera pasada detectó error por None tras dos registros incompatibles;
   corregido para que un tercer registro no rehabilite una clave conflictiva.
   Se añadió segunda pasada con casos de URL .net/.com y no filtrado PII.
 - Pendiente para Claude: suite completa desde rama privada integrada,
-  Python 3.11 Windows/Edge, validación real de browser_pool contra SQLite de
+  Python 3.11 Windows/Edge, validación real de threads_pool y browser_pool contra SQLite de
   ensayo, lint, checkout con dependencias, compatibilidad con PR concurrentes,
   comportamiento de colector th en Windows si decide usarlo por separado.
   Ningún token, navegador o acción en red social se probó.
