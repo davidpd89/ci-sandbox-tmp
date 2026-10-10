@@ -634,6 +634,56 @@ class TestContracts(unittest.TestCase):
                 for signal in ("spanish", "audience", "reciprocity"):
                     self.assertIsNone(parts[signal]["value"], signal)
 
+    def test_post_language_conflict_never_resurrects_spanish_opportunity(self):
+        import target_quality_ranking as quality
+        es = dict(SAMPLES["x"], created_at=FRESH, language="es",
+                  verified_actions=["reply"])
+        en = dict(es, language="en")
+        for rows in ([es, en], [en, es], [es, en, es]):
+            with self.subTest(order=[row["language"] for row in rows]):
+                result = n.normalize_candidates("x", rows, as_of=NOW)
+                self.assertEqual(result["shortlist"][0]["posts"], [])
+                ranked = quality.rank_network("x", result["shortlist"], as_of=NOW)
+                self.assertEqual(ranked["ranked"][0]["opportunities"], [])
+                self.assertIn("conflicting_post_languages",
+                              {d["reason"] for d in result["diagnostics"]})
+
+    def test_duplicate_post_permissions_are_intersected_in_any_order(self):
+        import target_quality_ranking as quality
+        permitted = dict(SAMPLES["x"], created_at=FRESH, language="es",
+                         verified_actions=["reply", "repost"])
+        partial = dict(permitted, verified_actions=["reply"])
+        for rows in ([permitted, partial], [partial, permitted],
+                     [permitted, partial, permitted]):
+            result = n.normalize_candidates("x", rows, as_of=NOW)
+            post = result["shortlist"][0]["posts"][0]
+            self.assertEqual(post["actions"], ["reply"])
+            ranked = quality.rank_network("x", result["shortlist"], as_of=NOW)
+            self.assertEqual([o["action"] for o in ranked["ranked"][0]["opportunities"]],
+                             ["reply"])
+        missing = dict(partial, verified_actions=[])
+        for rows in ([permitted, missing], [missing, permitted]):
+            result = n.normalize_candidates("x", rows, as_of=NOW)
+            self.assertEqual(result["shortlist"][0]["posts"][0]["actions"], [])
+
+    def test_conflicting_post_text_and_stats_do_not_bias_rank_by_row_order(self):
+        import target_quality_ranking as quality
+        literary = dict(SAMPLES["x"], created_at=FRESH, language="es",
+                        text="Fantasía juvenil", replies=20)
+        other = dict(literary, text="Deporte", replies=1)
+        results = []
+        for rows in ([literary, other], [other, literary],
+                     [literary, other, literary]):
+            result = n.normalize_candidates("x", rows, as_of=NOW)
+            post = result["shortlist"][0]["posts"][0]
+            self.assertEqual(post["text"], "")
+            self.assertNotIn("stats", post)
+            self.assertTrue({"conflicting_post_text", "conflicting_post_stats"}
+                            <= {d["reason"] for d in result["diagnostics"]})
+            ranked = quality.rank_network("x", result["shortlist"], as_of=NOW)
+            results.append(ranked["ranked"][0]["posts"][0]["score"])
+        self.assertEqual(results, [results[0]] * 3)
+
     def test_matching_profile_signals_keep_verified_follow(self):
         base = dict(SAMPLES["x"], account_id="stable_123",
                     permalink=None, bio="Leo fantasía", followers=40,
