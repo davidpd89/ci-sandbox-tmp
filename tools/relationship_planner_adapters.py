@@ -72,8 +72,10 @@ def _items(data, network):
     if not isinstance(data, dict):
         raise ValueError("productor: se esperaba lista u objeto")
     if network == "pinterest":
-        authors = [{**a, "kind": "follow"} for a in data.get("authors", []) if isinstance(a, dict)]
-        pins = [{**p, "handle": p.get("author"), "kind": "comment"} for p in data.get("pins", [])
+        # El tipo de contenedor no prueba que una acción esté permitida.
+        # Solo trasladar acciones que haya declarado explícitamente el productor.
+        authors = [dict(a) for a in data.get("authors", []) if isinstance(a, dict)]
+        pins = [{**p, "handle": p.get("handle") or p.get("author")} for p in data.get("pins", [])
                 if isinstance(p, dict)]
         return authors + pins
     rows = data.get("candidates", data.get("actors", []))
@@ -88,8 +90,9 @@ def _items(data, network):
             out.append(actor)
             for post in actor.get("posts", []):
                 if isinstance(post, dict):
-                    out.append({**actor, **post, "kind": "reply",
-                                "target_created_at": post.get("created_at") or post.get("create_time"),
+                    out.append({**actor, **post, "kind": post.get("kind"),
+                                "actions": post.get("actions", [post.get("kind")]),
+                                "target_created_at": post.get("target_created_at") or post.get("created_at") or post.get("create_time"),
                                 "preflight": post.get("preflight", {})})
         return out
     return rows
