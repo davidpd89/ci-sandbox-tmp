@@ -198,6 +198,7 @@ class IsolatedActionBoundaryTests(unittest.TestCase):
                  mock.patch.object(alert, "classify", return_value=statuses), \
                  mock.patch.object(alert.cq, "RED_FOLDERS", {"reddit": "sintético"}), \
                  mock.patch.object(alert, "OUT_MD", str(report)), \
+                 mock.patch.object(alert, "ROOT", tmp), \
                  mock.patch.object(voice, "inspect_fields",
                                    side_effect=voice.VoicePreflightUnavailable("synthetic")), \
                  contextlib.redirect_stdout(output):
