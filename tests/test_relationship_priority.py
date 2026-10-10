@@ -280,3 +280,34 @@ def test_evaluation_actor_id_casefold():
 def test_flag_unknown_missing_never_promotes_to_follow():
     result = rank(row(reply_eligible=False, follow_eligible=False, visit_eligible=True))
     assert result["queues"]["API"][0]["action"] == "visit"
+
+
+@pytest.mark.parametrize("bad", [
+    {"network": []}, {"network": {}}, {"network": 123},
+    {"lane": []}, {"affinity": 10 ** 400},
+    {"outbound_30d": 10 ** 400}, {"inbound": {"like": 10 ** 400}},
+])
+def test_adversarial_malformed_rows_do_not_crash_entire_batch(bad):
+    result = rank(row(handle="mal", **bad), row(handle="sana"))
+    assert result["summary"]["selected"] == 1
+    assert result["excluded"][0]["index"] == 0
+
+
+def test_boolean_age_limit_rejected():
+    with pytest.raises(ValueError, match="max_target_age"):
+        rank(row(), max_target_age=True)
+
+
+def test_duplicate_tie_independent_of_source_order():
+    a = row(handle="LectOr", actor_id="DID:PLC:UNICO")
+    b = row(handle="lector", actor_id="did:plc:unico")
+    forward = rank(a, b)["queues"]
+    backward = rank(b, a)["queues"]
+    assert forward == backward
+
+
+def test_synthetic_evaluation_canonical_actor_id_with_whitespace():
+    candidate = row(actor_id="  DID:PLC:ONE  ", converted=True)
+    snapshot = {"candidates": [candidate]}
+    ranked = p.rank_daily(snapshot, today=TODAY)
+    assert p.evaluate_synthetic(snapshot, ranked)["API"]["precision"] == 1.0
