@@ -62,6 +62,12 @@ class ReplayTests(unittest.TestCase):
         self.assertEqual(a["instagram"]["status"], "snapshot_not_instrumented")
         self.assertEqual(len(a), 9)
 
+    def test_empty_holdout_is_unknown_not_zero(self):
+        result = run([cohort(1, 100, 40)],
+                     [cohort(1, 0, 0, future=True)])["networks"]["bluesky"]
+        self.assertEqual(result["status"], "invalid_or_incomplete_cohort")
+        self.assertIsNone(result["difference"])
+
     def test_missing_holdout_never_becomes_zero(self):
         r = run([cohort(1, 2, 2), cohort(2, 100, 35)],
                 [cohort(2, 100, 40, future=True)])["networks"]["bluesky"]

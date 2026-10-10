@@ -63,7 +63,7 @@ class RankingTests(unittest.TestCase):
         self.assertEqual(r["ranked"], [])
         self.assertEqual({x["reason"] for x in r["unranked"]},
                          {"snapshot_incomplete", "identity_unverified", "outcome_not_observed",
-                          "invalid_denominator", "immature_or_invalid_date", "insufficient_sample"})
+                          "invalid_denominator", "immature_or_invalid_date", "empty_cohort"})
 
     def test_duplicate_source_fails_closed(self):
         r = ranking([row(), row(n=500, back=400)])["networks"]["bluesky"]
@@ -125,6 +125,24 @@ class RankingTests(unittest.TestCase):
         self.assertEqual(result["exploration_slots_reserved"], 2)
         self.assertEqual(result["exploration_candidates"], [f"{1:024x}", f"{2:024x}"])
         self.assertEqual(len(result["ranked"]), 1)
+
+    def test_empty_cohort_never_enters_exploration(self):
+        values = [row(key=1, n=0, back=0), row(key=2, n=2, back=1)]
+        net = ranking(values, scan_slots={"bluesky": 10},
+                      exploration_cursor={"bluesky": 0})["networks"]["bluesky"]
+        self.assertEqual(net["exploration_candidates"], [f"{2:024x}"])
+        self.assertEqual({x["source_key"]: x["reason"] for x in net["unranked"]},
+                         {f"{1:024x}": "empty_cohort",
+                          f"{2:024x}": "insufficient_sample"})
+        self.assertEqual(net["ranked"], [])
+
+    def test_positive_reserve_without_candidates_needs_no_cursor(self):
+        for values in ([row()], [row(key=1, n=0, back=0)], []):
+            with self.subTest(values=values):
+                net = ranking(values, scan_slots={"bluesky": 10})["networks"]["bluesky"]
+                self.assertEqual(net["exploration_slots_reserved"], 2)
+                self.assertFalse(net["exploration_cursor_required"])
+                self.assertEqual(net["exploration_candidates"], [])
 
     def test_zero_exploration_never_requires_cursor(self):
         cases = (

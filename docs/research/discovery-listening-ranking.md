@@ -55,7 +55,7 @@ El módulo portado usa solo biblioteca estándar y fórmula Wilson ya auditada, 
 - rank_cohorts exige tokens opacos de fuente (24 hexadecimales), datos completos de seguimiento, identidad única y procedencia certificadas upstream, cohorte homogénea, madurez mínima de 3 días, snapshot reciente y muestra mínima de 40. Los flags son **atestaciones de un importador futuro**, no verificaciones criptográficas. Los resultados observados dicen follows_us_at_snapshot, no incremento causal.
 - compare_rankings recibe entrenamiento, holdout, dos fechas de corte inyectables, top_k y min_sample. Primero valida separadamente las cohortes mediante rank_cohorts; rechaza filas sin red, periodos superpuestos y conjuntos incompletos. Solo entonces compara, por cada red, la media de tasas observadas **por fuente** en el holdout. Una fuente con seguidores solapados con otra no puede sumarse como personas únicas.
 - Estados de incertidumbre: missing_holdout, invalid_or_incomplete_cohort, overlapping_or_nonchronological_holdout, no_mature_train_cohorts, no_train_cohorts, insufficient_candidates_for_k y snapshot_not_instrumented. Esos estados devuelven tasas None: ausencia de prueba no equivale a cero.
-- Con reserva de exploración cero, no se exige cursor y la vista de candidatos es `[]`. Con reserva positiva y cursor ausente, sigue siendo `None` y `exploration_cursor_required=True`; ningún resultado programa acciones.
+- Con reserva de exploración cero, no se exige cursor y la vista de candidatos es `[]`. Con reserva positiva y **candidatos pequeños existentes** y cursor ausente, sigue siendo `None` y `exploration_cursor_required=True`; ningún resultado programa acciones. Sin candidatos no se exige cursor; las cohortes de tamaño cero se excluyen como `empty_cohort` (no son oportunidades de exploración).
 - No filtra handles, textos, URLs ni búsquedas; publica solo fuentes con pseudónimos opacos. La veracidad de marcas y la estabilidad HMAC deberán acreditarse fuera de este módulo. Sin plans, follows, publicaciones, escrituras de estado ni auto-like X.
 
 **Resultado sintético reproducible:** entrenamiento A=2/2 frente a B=35/100. Baseline elige A por 100 % aparente; la regla Wilson con mínimo 40 elige B. En holdout posterior A=5/100, B=50/100: baseline=0,05; candidato=0,50; diferencia observacional=+0,45. **Un segundo test invierte el resultado y demuestra que no garantiza ganar.** No extrapolar a mejora real ni a causalidad. El baseline es tasa cruda, **no** el rank_keys operativo del oficial; comparar contra ese ranking requerirá un importador y resultados comparables.
@@ -81,3 +81,15 @@ El workflow existente .github/workflows/validate-social-tools.yml ejecuta la sui
 **Pendiente de Claude:** validar el merge preview y los checks del último SHA; ejecutar paridad Windows/Ubuntu y suite completa oficial, realizar canario supervisado si se autoriza una futura conexión de datos. No hay canario vivo, Android ni Edge real en esta PR. La PR es lista para integrarse **como biblioteca offline** tras checks verdes, no como mejora desplegada automáticamente.
 
 **Rollback:** revertir únicamente los dos módulos nuevos, las dos suites y este informe. No hay migración de base de datos, cache, cola o estado operativo. Futuro enlace: importador que certifique actor estable, paginación de snapshot, procedencia y fecha original; mantener shadow ranking antes de sustituir el selector por red. Nunca deducir causalidad a partir de prevalencias o exposición sesgada.
+
+## Verificación adicional de controlador (10/10/2026)
+
+Comparación semántica contra la PR pública #4: el contrato anterior de esta PR aún
+clasificaba `eligible_unique=0` como `insufficient_sample` y pedía cursor con
+reserva positiva pero sin candidatos. Ahora ambos casos fallan de forma segura:
+la cohorte vacía es `empty_cohort` y no consume rotación; cuando no existen
+candidatos, la vista es `[]` y el cursor no es necesario. Regresiones nuevas
+en el ranking y en el replay. La PR #4 ya resolvió las mismas incidencias;
+Claude debe consolidar una sola versión canónica al integrar ambas ramas.
+Los dos límites previos siguen pendientes: comparación con el selector operativo
+`rank_keys` y capacidades independientes de descubrimiento/seguimiento por red.
