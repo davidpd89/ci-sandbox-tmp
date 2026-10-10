@@ -72,8 +72,8 @@ SEARCH_POOL = [
 ]
 
 
-import discovery_terms
-SEARCH_POOL += discovery_terms.terms("facebook", "busquedas", skip=SEARCH_POOL)      # 07/10: consulta M a GPT (grupos, eventos, reels, hilos de presentacion)
+# discovery_terms se consume a través del adaptador común.
+# Consumo dinámico con presupuestos estables en _rotate_*.
 
 
 def _round_index():
@@ -84,12 +84,15 @@ def _round_index():
 
 def _rotate_searches(n=10):
     base = _round_index() * n
-    return [SEARCH_POOL[(base + i) % len(SEARCH_POOL)] for i in range(n)]
+    import hashtag_query_consumers as hqc
+    return hqc.select("facebook", "busquedas", SEARCH_POOL, budget=n, tick=_round_index())
 
 
 def _rotate_hashtags(n=8):
     base = _round_index() * n
-    return [HASHTAG_POOL[(base + i) % len(HASHTAG_POOL)] for i in range(n)]
+    import hashtag_query_consumers as hqc
+    return [tag.removeprefix("#") for tag in hqc.select(
+        "facebook", "hashtags", HASHTAG_POOL, budget=n, tick=_round_index())]
 
 
 _suggest_kind_own = lambda *a, **k: sc.downgrade_for_opinion(_suggest_kind_own_raw(*a, **k), a[0], 'like')
