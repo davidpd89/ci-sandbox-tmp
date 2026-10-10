@@ -138,6 +138,25 @@ def audit(text: str, *, network: str, locale: str = "es-ES", queue: str | None =
     }
 
 
+
+def advisory(text, *, network, queue=None, log=print, label="[voz] revision_es"):
+    """Un solo adaptador informativo para todas las redes y transportes.
+
+    No reescribe, no bloquea, ni incorpora texto/autor/URL al log. Devuelve
+    hallazgos para interfaz editorial, incluso cuando no se imprimen avisos.
+    """
+    if network not in NETWORKS:
+        return []
+    try:
+        findings = audit(text, network=network, queue=queue)["findings"]
+    except Exception as exc:
+        log(label + " auditor_es_no_disponible: " + type(exc).__name__)
+        return []
+    if findings:
+        log(label + ": " + ",".join(sorted({issue["code"] for issue in findings})))
+    return findings
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Auditoría offline no destructiva")
     parser.add_argument("--network", required=True, choices=sorted(NETWORKS))
