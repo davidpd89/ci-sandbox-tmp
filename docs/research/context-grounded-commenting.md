@@ -15,13 +15,13 @@ Funciones:
 
 Pruebas: tests/test_reply_context_grounding.py y .github/workflows/research74-context-grounding.yml con unittest/py_compile en Ubuntu y Windows, Python 3.11. Instagram figura solo en el CONTRATO, no se ha demostrado un pipeline de ingesta/evidencia real para Instagram.
 
-## Código oficial privado: consulta solo lectura
+## Decisión y código oficial privado: consulta solo lectura
 
 Consultada la rama integracion/crecimiento-2026-10 de davidpd89/rrss-davidporto-CODE, revisión 5449513d9b545d0a6a72abf066ab6a779bfdad71. Existían herramientas de trabajo H1 en tools/reply_context_trial.py, tests/test_reply_context_trial.py, tests/fixtures/reply_74_context_synthetic.json y 00_OPERATIVO/PR_74_CONTEXTUALIDAD_H1_OFFLINE.md. H1 ofrece prompts baseline/alternativa idénticos en la entrada, con política contextual sin cuotas artificiales; sigue offline. No se han copiado esos ficheros al espejo. La implementación pública de esta PR es OTRA pieza complementaria: paquete de evidencia comprobable por frase, destino y huella.
 
 También se consultó .github/pr-scopes/2026-10-45-procedencia-contextual-respuestas.md: el sistema oficial protege destino real, contenido y GPT proof antes de ejecutar. No reemplazar ni duplicar esos controles en el espejo; esta prueba de texto es editorial y offline. En el espejo se inspeccionaron tools/reply_writer.py, tools/reply_queue.py, tools/conversation_followups.py, el documento tasks/64-context-grounded-commenting.md y el protocolo docs/open-source-scouting/PROTOCOL.md.
 
-## Investigación pública: licencia, mantenimiento y decisión
+## Alternativas públicas: mantenimiento y elección
 
 Fecha de corte 10/10/2026; licencias contrastadas en LICENSE y compatibilidad en pyproject.toml. Enlaces fijados a commits, no solo a README mutable.
 
@@ -32,6 +32,15 @@ Fecha de corte 10/10/2026; licencias contrastadas en LICENSE y compatibilidad en
 | [Ragas, 298b6827](https://github.com/vibrantlabsai/ragas/tree/298b68274234c060deacab3cf5fb52aa3a20e885) | Apache-2.0, commit 24/02/2026, Python >=3.9, dependencias LLM/datasets/LangChain | Puede evaluar faithfulness semántica en estudio posterior con datos autorizados, pero no es un verificador determinista barato ni local sin modelo. No instalado. |
 | [Microsoft GraphRAG, 5faaaf4f](https://github.com/microsoft/graphrag/tree/5faaaf4f5685fa2056fa8c3bf9342cb089f2942f) | MIT, commit 08/10/2026, propio README indica mantenimiento | Indexación/grafo desproporcionados para posts cortos; no instalado. |
 | Código propio mínimo de Python 3.11 y contratos existentes | Sin paquetes externos nuevos, Windows/Ubuntu por CI | Elegido: integrable como función pura, fácil de retirar, sin estado. Se adaptan patrones de procedencia; NO se copia código de terceros ni licencias. |
+
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/deepset-ai/haystack/tree/c5e13354117d1376d4d8caf0efe77abe80120fc0
+Fecha de consulta: 2026-10-10
+Licencia SPDX: Apache-2.0
+Referencia inmutable: https://github.com/deepset-ai/haystack/tree/c5e13354117d1376d4d8caf0efe77abe80120fc0
+
+La referencia identifica uno de los candidatos estudiados (su licencia está comprobada). No significa que se haya copiado código Haystack: **no hay código externo incorporado**. Otras licencias y commits fijos figuran en la tabla previa.
 
 La actividad reciente de un repositorio no demuestra que cada funcionalidad esté mantenida o probada en Windows. La selección se justifica por la función limitada, no por supuesta superioridad global. Revisar versiones y licencias de nuevo si se plantea instalar un framework en el futuro.
 
@@ -58,7 +67,7 @@ Ejemplo de evaluación *simulada*: contenido Reddit con título Audiolibros y cu
 
 Los tests demuestran contratos, no que los comentarios sean más humanos o provoquen más respuestas. Para comparación real posterior se necesita evaluación ciega con #72 y H1 del oficial con entradas equivalentes, aprobación humana y variantes trazables. summarize_outcomes admite registros autorizados o sintéticos: network, variant (baseline o H1), sample_id, published, received_reply (booleano o null), continuation_turns (entero o null), perceived_value (rating editorial 1–5 o null). Devuelve samples, published, reply_observed, replies_received, continuations_observed, continuation_turns, value_ratings, value_sum, reply_rate_observed y average_perceived_value. No convierte valores ausentes en ceros. No se ha ejecutado un A/B con usuarios ni se pueden inferir efectos causales del código.
 
-## Ejecución y evidencias
+## Pruebas ejecutables y evidencias
 
 Comandos offline:
 
@@ -66,6 +75,10 @@ Comandos offline:
     python -m py_compile tools/reply_context_grounding.py tests/test_reply_context_grounding.py
 
 Workflow separado, sin permisos de escritura, sobre ubuntu-latest y windows-latest con Python 3.11. Los checks actuales son tests simulados, no Edge vivo, navegador real o canario móvil; no prueban adaptadores de las nueve redes. Deben comprobarse en el HEAD final. El validador de campaña y suite general del espejo siguen siendo independientes.
+
+## Retirada
+
+Rollback reversible: revertir los cuatro ficheros añadidos (módulo, tests, workflow y este informe). El fichero de encargo original de la PR no se elimina. No hay estado persistido que migrar ni escritura en cuentas sociales. La futura integración debe tener su propia bandera de activación y prueba supervisada de destino/GPT proof.
 
 ## Segunda revisión adversarial
 
