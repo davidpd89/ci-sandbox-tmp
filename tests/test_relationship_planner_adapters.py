@@ -192,6 +192,24 @@ class PlannerBridge(unittest.TestCase):
         self.assertEqual(prepared["candidates"][0]["affinity"], 0.0)
         self.assertEqual(prepared["candidates"][1]["affinity"], 0.5)
 
+    def test_missing_source_and_bad_registry_do_not_abort_other_networks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "valid.json").write_text(json.dumps(source("x")["data"]), encoding="utf-8")
+            (root / "invalid.csv").write_text("cuenta,fecha,tipo\nalpha,2026-10-10,follow\n",
+                                               encoding="utf-8")
+            config = {"sources": [
+                {"network": "x", "lane": "WEB", "path": str(root / "valid.json")},
+                {"network": "threads", "lane": "API", "path": str(root / "missing.json")},
+                {"network": "reddit", "lane": "WEB", "path": str(root / "valid.json")}],
+                "outbound_csvs": {"reddit": str(root / "invalid.csv")}}
+            (root / "manifest.json").write_text(json.dumps(config), encoding="utf-8")
+            sources, outbound, inbound = bridge.read_manifest(root / "manifest.json")
+            self.assertEqual(outbound, {})
+            prepared, diag = bridge.build_snapshot(sources, outbound, inbound, today=TODAY)
+            self.assertEqual([item["network"] for item in prepared["candidates"]], ["x"])
+            self.assertEqual(len([x for x in diag["excluded"] if "reason" in x]), 2)
+
     def test_cost_read_microbenchmark_synthetic(self):
         samples = [source(net, lane, handle=f"reader_{net}_{lane}_{i}")
                    for i in range(50) for net in bridge.NETWORKS for lane in bridge.LANES]
