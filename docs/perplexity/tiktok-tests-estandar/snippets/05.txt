@@ -1,0 +1,7 @@
+python
+# https://github.com/pytest-dev/pytest-freezer#readme
+def test_frozen_date(freezer):
+    now = datetime.now()
+    time.sleep(1)
+    later = datetime.now()
+    assert now == later
