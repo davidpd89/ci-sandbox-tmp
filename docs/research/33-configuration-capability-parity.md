@@ -205,3 +205,79 @@ contratos/tests y #26 colas. No duplicar esos alcances.
   `os.environ.setdefault("CLAVE", ...)` sin evaluar valores; cuando `--root`
   apunta a otro checkout sin inyección completa de registros, el informe avisa
   de la procedencia local de los pipelines en vez de ocultar esa mezcla.
+
+
+## Actualización sobre base sincronizada y respuesta a revisión (10/10/2026)
+
+**Base incorporada sin reescritura de historial:** `research/public-reuse-parent`
+@ `250ccb019fb8683311df48c7d02d6c6d2b73a47b` (incluye el
+commit `737fc01` que Claude trajo del repositorio oficial).
+Se conservan íntegros los `tools/` y `tests/` de esa base;
+el diff propio sigue limitado a seis archivos. Esta operación es **merge de
+la base dentro de la rama de PR**, no un merge de la PR hacia su base.
+Comprobar que `behind_by=0` en el HEAD final; la base puede seguir avanzando.
+
+**Cambio de compatibilidad determinante:** la base sincronizada contiene
+`discovery_graph.NETWORKS` y
+`network_policy_contracts.TEXT_EXECUTION_ROUTES` para **ocho redes**;
+ampliar directamente `network_capabilities.NETWORKS` a nueve provocó
+cuatro fallos reales en CI: `test_discovery_graph` y tres verificaciones
+de `test_pr73_policy_runtime` (falta de ruta certificada Instagram).
+No debe añadirse una ruta ficticia de ejecución para callar esos tests.
+La solución distingue:
+- `network_capabilities.INVENTORY_NETWORKS`: **nueve** redes en el inventario
+  declarativo y en `build_matrix()`, incluida Instagram.
+- `network_capabilities.NETWORKS`: las **ocho** redes con contrato de
+  ejecución de texto/descubrimiento vigente. Mantiene retrocompatibilidad
+  con los validadores de seguridad introducidos por la base, sin afirmar
+  que Instagram ejecuta un control no verificado.
+- El auditor recorre expresamente `INVENTORY_NETWORKS`, no el subconjunto
+  operativo. Hay regresión que comprueba que la lista de rutas de texto y
+  `discovery_graph` coinciden con las redes operativas, a la vez que
+  Instagram permanece inventariada.
+
+**Portabilidad con el oficial:** eliminado el supuesto «TikTok JSON ausente».
+El test de checkout comprueba `SISTEMA_DIARIO_TIKTOK/growth_config.json`
+si existe, y exige `valid`; si no existe, exige
+`missing_in_checkout`. Los límites efectivos de Bluesky/Mastodon
+se comparan contra las funciones **reales** de `growth_policy`, no con
+valores hardcoded susceptibles de overrides. Fixture sintético cubre
+TikTok presente y ausente sin publicar su JSON de cuenta.
+
+**Dos raíces y procedencia:** el argumento `--root` sigue siendo una
+vista de *archivos*; para inventariar registros de otro checkout es
+obligatorio inyectar explícitamente
+`pipelines`, `cleanup_adapters`, `harvesters`.
+Sin ello se emite `registry_from_local_checkout`. Una regresión usa
+dos raíces con configuraciones y pipelines sintéticos divergentes,
+comprueba diferencias observables y comprueba el aviso si se omite la
+inyección. El soporte para cargar automáticamente registros Python
+ajenos queda intencionadamente excluido por riesgo de importar/ejecutar
+un checkout no confiable; no es requisito para utilizar la herramienta
+en su propio repo.
+
+**Coordinar y no duplicar:** las PR #81 y #82 del mirror ya figuran
+**cerradas sin merge en el mirror**, con nota de Claude de haberlas
+trasplantado al oficial (commit `89469ebd`); #117 también figura
+**cerrada sin merge en mirror** e integrada en oficial (commit
+`26376b6f`). `tools/executable_feature_parity.py` y
+`tools/social_plan_contract.py` ya existen en la rama oficial y cubren
+contratos distintos. La presente PR solo aporta inventario declarativo
+y validación de JSON/procedencia; no reemplaza esos contratos de
+ejecución ni los habilita automáticamente. El mapa #204 informa las
+dependencias, no se edita desde esta rama.
+
+**Segunda pasada adversarial tras sincronizar:** regresiones de la base
+aplicadas **sin desactivarlas**; no se alteraron certificados, el ledger,
+POST→ACK→TTL, reglas de antigüedad ni likes en X. Cualquier afirmación
+de que hay nueve redes **operativamente certificadas** se rechaza por
+la ausencia comprobable de una ruta de texto de Instagram en el
+contrato actual; esta PR solo prueba nueve filas de inventario.
+
+**Verificación exigida al controlador:** CI del HEAD final Ubuntu/Windows
+Python 3.11; `python tools/network_capabilities.py --json` y
+`python tools/config_capability_audit.py --json` sin acciones; si se
+trasplanta al oficial, repetir las suites en rama temporal con sus
+configuraciones completas. Edge/CDP/Android y canario supervisado siguen
+fuera del alcance de tests offline, no bloquean la incorporación de
+un **inventario read-only**, pero tampoco certifican ejecución remota.
