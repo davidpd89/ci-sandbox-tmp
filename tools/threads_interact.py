@@ -1000,7 +1000,44 @@ def like_latest(handle, vet=None, max_age_days=45):
         p.stop()
 
 
-def reply_to(target, text, source="feed"):
+def _reply_container_matches_permalink(container, permalink):
+    """Verifica el destino REAL en el contenedor antes de abrir el compositor.
+
+    El texto o el handle no bastan: pueden existir publicaciones distintas
+    con el mismo prefijo, incluso de fechas muy diferentes. No hacer fallback
+    a coincidencias aproximadas ni a otro contenedor.
+    """
+    if not isinstance(permalink, str):
+        return False
+    try:
+        target = urlsplit(permalink)
+        if (target.scheme != "https"
+                or (target.hostname or "").casefold() not in ("www.threads.com", "threads.com")
+                or target.username or target.password or target.port is not None):
+            return False
+        match = re.fullmatch(r"/@([^/]+)/post/([A-Za-z0-9_-]{4,30})/?", target.path)
+        if not match:
+            return False
+        wanted_author, wanted_code = match.groups()
+        links = container.locator('a[href^="/@"]')
+        if not links.count():
+            return False
+        first = urlsplit(links.first.get_attribute("href") or "").path
+        author = re.match(r"^/@([^/]+)(?:/|$)", first)
+        if not author or author.group(1).casefold() != wanted_author.casefold():
+            return False
+        for i in range(links.count()):
+            href = links.nth(i).get_attribute("href") or ""
+            linked = re.fullmatch(r"/@([^/]+)/post/([A-Za-z0-9_-]{4,30})/?",
+                                  urlsplit(href).path)
+            if linked and linked.group(1).casefold() == wanted_author.casefold() and linked.group(2) == wanted_code:
+                return True
+    except (ValueError, TypeError, AttributeError):
+        return False
+    return False
+
+
+def reply_to(target, text, source="feed", *, permalink=None):
     """Responde a un post localizado en una pagina de listado (feed/
     activity/perfil/busqueda) - NUNCA pg.goto() directo a la URL del post
     (ver correccion del 22/09 en el docstring del modulo: eso redirige a
@@ -1017,6 +1054,8 @@ def reply_to(target, text, source="feed"):
     tampoco se probo con un envio completo hasta el primer post real)."""
     _check_length(text)
     _check_spanish_orthography(text)
+    if not permalink:
+        raise ActionTargetNotFound("destino_no_verificado: respuesta WEB sin permalink del post")
     p, pg = _connect()
     try:
         url = "https://www.threads.com/" if source == "feed" else source
@@ -1034,6 +1073,11 @@ def reply_to(target, text, source="feed"):
         containers = _post_containers(pg)
         n_before = containers.count()  # tras el scroll de la busqueda, no antes
         c = containers.nth(index)
+        if not _reply_container_matches_permalink(c, permalink):
+            raise ActionTargetNotFound(
+                "destino_no_verificado: el contenedor elegido no coincide con "
+                "el permalink del post aprobado; no responder"
+            )
         btn = _find_action_button(c, "Responder")
         if btn is None:
             raise ActionTargetNotFound("no se encontro el boton 'Responder' en ese post")
@@ -1305,7 +1349,9 @@ if __name__ == "__main__":
         elif cmd == "follow":
             ensure_browser(); follow(sys.argv[2])
         elif cmd == "reply":
-            ensure_browser(); reply_to(sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else "feed")
+            if len(sys.argv) < 6:
+                raise SystemExit("reply requiere texto, respuesta, URL de origen y permalink del post")
+            ensure_browser(); reply_to(sys.argv[2], sys.argv[3], sys.argv[4], permalink=sys.argv[5])
         elif cmd == "post":
             ensure_browser(); post(sys.argv[2])
         elif cmd == "daily":
