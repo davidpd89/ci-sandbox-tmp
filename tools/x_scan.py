@@ -292,7 +292,7 @@ def _lexical_queries(budget):
     """Búsquedas del turno, con una plaza de hashtags si existen nuevos."""
     import hashtag_query_consumers as hqc
     tick = datetime.date.today().toordinal() * 6 + datetime.datetime.now().hour // 4
-    tags = hqc.select("x", "hashtags", [], budget=1, tick=tick)
+    tags = hqc.select("x", "hashtags", [], budget=min(1, max(0, budget)), tick=tick)
     return hqc.select("x", "busquedas", SEARCH_POOL,
                       budget=max(0, budget - len(tags)), tick=tick) + tags
 
