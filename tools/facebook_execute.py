@@ -133,6 +133,16 @@ def run_plan(plan, *, prevalidated=False):
             print(f"FALLO DE PREFLIGHT: {type(exc).__name__}: {exc}")
             return [{"kind": "plan", "resultado": f"fallo_plan:{exc}"}]
     for i, item in enumerate(plan):
+<<<<<<< HEAD
+=======
+        # Una ronda puede durar horas: revalidar la cuarentena antes de CADA
+        # acción, incluso si el lanzador aprobó el lote al comienzo.
+        import circuit_breaker as _cb
+        _write_ok, _hold_reason = _cb.write_preflight("facebook")
+        if not _write_ok:
+            print(f"[facebook] cortacircuitos ABIERTO: {_hold_reason}; detener el lote")
+            break
+>>>>>>> origin/research/public-reuse-parent
         kind = item["kind"]
         import conversation_turn_policy as ctp
         permitted, reason = ctp.check_execution("facebook", item)

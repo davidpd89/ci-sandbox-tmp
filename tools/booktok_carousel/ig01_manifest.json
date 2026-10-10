@@ -4,7 +4,11 @@
     1080,
     1350
   ],
+<<<<<<< HEAD
   "brand": "AUTORA DEMO DÍAZ",
+=======
+  "brand": "DAVID PORTO DÍAZ",
+>>>>>>> origin/research/public-reuse-parent
   "palette": {
     "bg": "#0f0c0b",
     "accent": "#c4783f",

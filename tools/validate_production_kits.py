@@ -247,7 +247,11 @@ def validate_ig10() -> None:
     require_markers(rel, ("IG10_RENDER_BLOCKED", "local('Inter')", "object-fit:contain", "Slide 5 keeps every panel complete"), "IG-10")
     if "object-fit:cover" in text:
         fail("IG-10 no puede recortar los cuatro paneles de slide 5 con object-fit:cover")
+<<<<<<< HEAD
     if '<div class="brand">AUTORA DEMO DÍAZ</div></body></html>' in text:
+=======
+    if '<div class="brand">DAVID PORTO DÍAZ</div></body></html>' in text:
+>>>>>>> origin/research/public-reuse-parent
         fail("IG-10 slide 5 recuperó la firma extra bajo el crédito")
 
 

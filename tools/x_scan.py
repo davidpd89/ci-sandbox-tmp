@@ -202,7 +202,11 @@ def _eligible_discovery(url, text, excluded=frozenset()):
     if not canonical or not isinstance(text, str) or not text.strip():
         return False
     handle = _author_from_post_url(canonical)
+<<<<<<< HEAD
     if (not handle or handle.casefold() == "autorademodiaz"
+=======
+    if (not handle or handle.casefold() == "davidportodiaz"
+>>>>>>> origin/research/public-reuse-parent
             or handle.casefold() in excluded):
         return False
     return not sc.is_political(text) and not tc.foreign_language(text)
@@ -478,7 +482,11 @@ def scan():
                     return False
                 seen_urls.add(url)
             else:
+<<<<<<< HEAD
                 if (not handle or handle == "autorademodiaz"
+=======
+                if (not handle or handle == "davidportodiaz"
+>>>>>>> origin/research/public-reuse-parent
                         or handle in excluded
                         or not isinstance(text, str) or not text.strip()
                         or sc.is_political(text)):
@@ -703,7 +711,11 @@ def scan():
             for href, text in articles:
                 url2 = f"https://x.com{href}" if href and href.startswith("/") else href
                 handle2 = _author_from_post_url(url2)
+<<<<<<< HEAD
                 if handle2 and handle2.casefold() != "autorademodiaz":
+=======
+                if handle2 and handle2.casefold() != "davidportodiaz":
+>>>>>>> origin/research/public-reuse-parent
                     add("comentaristas", url2, handle2, text)
         if seeds:
             print(f"Semillas usadas hoy: {seeds}")
@@ -779,6 +791,20 @@ def scan():
         print(f"\nVolcado estructurado: {CANDIDATES_JSON} (usar con x_build_plan.py)")
 
         print(f"\nResumen por kind sugerida: {by_kind}")
+<<<<<<< HEAD
+=======
+        # Observaciones locales, no conversiones ni estado de follow remoto.
+        import x_acquisition_audit as xa
+        source_report = xa.candidate_summary([
+            {"source": source, "handle": handle, "known_date": known.get(handle)}
+            for source, url, handle, text, kind in candidates
+        ])
+        print("X_ACQUISITION_SCAN " + json.dumps(
+            {"fecha": datetime.date.today().isoformat(),
+             "por_fuente": source_report,
+             "alcance": "candidatos del scan; nueva = sin registro local"},
+            ensure_ascii=False, sort_keys=True))
+>>>>>>> origin/research/public-reuse-parent
         print(
             "\nRecordatorio (REGLAS.md, corregido 23/09): minimos diarios 8-12 "
             "replies, 15-20 likes, 2-3 reposts, 3-5 follows. Con notificaciones "

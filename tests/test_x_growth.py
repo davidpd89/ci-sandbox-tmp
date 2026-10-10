@@ -41,7 +41,11 @@ class PoolTests(unittest.TestCase):
         self.assertNotIn("sinnicho", handles)
 
     def test_own_and_pinned_posts_are_not_stored(self):
+<<<<<<< HEAD
         added = xp.record_posts(self.db, [post("autorademodiaz", 1, "Mi novela de fantasía"), post("otra", 2, "Libro de fantasía fijado", pinned=True)], "feed", TODAY.isoformat())
+=======
+        added = xp.record_posts(self.db, [post("davidportodiaz", 1, "Mi novela de fantasía"), post("otra", 2, "Libro de fantasía fijado", pinned=True)], "feed", TODAY.isoformat())
+>>>>>>> origin/research/public-reuse-parent
         self.assertEqual(added, 0)
 
     def test_foreign_accounts_are_never_offered_and_backfollow_goes_first(self):
@@ -75,6 +79,7 @@ class PlanTests(unittest.TestCase):
     def test_plan_has_likes_follows_and_like_latest_without_repeating_accounts(self):
         plan = bp.build_from_pool(self.db, likes=8, follows=6, known={}, today=TODAY, now=NOW)
         kinds = [a["kind"] for a in plan]
+<<<<<<< HEAD
         self.assertGreaterEqual(kinds.count("like"), 5)
         self.assertGreaterEqual(kinds.count("like_latest"), 1)
         self.assertLessEqual(kinds.count("follow"), 6)
@@ -95,6 +100,28 @@ class PlanTests(unittest.TestCase):
         second = [{"kind": "follow", "handle": "A"}, {"kind": "like", "url": "u1", "handle": "a"}, {"kind": "like_latest", "handle": "b"}, {"kind": "like_latest", "handle": "B"}]
         merged = bp.merge(first, second)
         self.assertEqual([m["kind"] for m in merged], ["follow", "like", "like_latest"])
+=======
+        self.assertEqual(kinds.count("like"), 0)           # sin auto-like en X
+        self.assertEqual(kinds.count("like_latest"), 0)
+        self.assertLessEqual(kinds.count("follow"), 6)
+        self.assertIn(("follow", "seguidor"), [(a["kind"], a["handle"]) for a in plan])      # el follow-back va primero
+        follows = [a["handle"].casefold() for a in plan if a["kind"] == "follow"]
+        self.assertEqual(len(follows), len(set(follows)))
+
+    def test_recent_accounts_and_done_urls_are_skipped(self):
+        known = {"lector1": TODAY.isoformat(), "lector2": (TODAY - datetime.timedelta(days=30)).isoformat()}
+        plan = bp.build_from_pool(self.db, likes=20, follows=20, known=known, done_urls={"https://x.com/lector3/status/3"}, today=TODAY, now=NOW)
+        handles = {a.get("handle") for a in plan}
+        self.assertNotIn("lector1", handles)      # tocada hoy
+        # lector2 (conocida desde hace 30 dias) ya no recibe like; el follow sigue la politica de `known`
+        self.assertNotIn("lector3", handles)      # post ya tratado
+
+    def test_merge_keeps_one_follow_per_account_and_one_like_per_url(self):
+        first = [{"kind": "follow", "handle": "a"}, {"kind": "like", "url": "u1", "handle": "a"}]      # los likes se descartan
+        second = [{"kind": "follow", "handle": "A"}, {"kind": "like", "url": "u1", "handle": "a"}, {"kind": "like_latest", "handle": "b"}, {"kind": "like_latest", "handle": "B"}]
+        merged = bp.merge(first, second)
+        self.assertEqual([m["kind"] for m in merged], ["follow"])
+>>>>>>> origin/research/public-reuse-parent
 
     def test_done_urls_reads_confirmed_registry_rows(self):
         path = os.path.join(tempfile.mkdtemp(), "reg.csv")
@@ -117,7 +144,11 @@ class InteractParsingTests(unittest.TestCase):
         self.assertEqual(xi.parse_user_cell("foo", "Foo Bar\n@foo\nFollows you\nLectora de fantasía\nFollowing"), ("foo", "Foo Bar", "Lectora de fantasía"))
 
     def test_weighted_length_counts_links_as_23(self):
+<<<<<<< HEAD
         link = "https://autorademodiaz.com/herramientas/variedad-lexica/herramienta-muy-larga-de-url"
+=======
+        link = "https://davidportodiaz.com/herramientas/variedad-lexica/herramienta-muy-larga-de-url"
+>>>>>>> origin/research/public-reuse-parent
         xi._check_length("a" * 250 + " " + link)          # 251 + 23 = 274 <= 280
         with self.assertRaises(ValueError):
             xi._check_length("a" * 270 + " " + link)

@@ -57,6 +57,7 @@ def body_of(text):
 
 def connect(path=None):
     """RRSS_THREADS_POOL_PATH aisla los tests de la reserva real."""
+<<<<<<< HEAD
     return bpool.connect(path or os.environ.get("RRSS_THREADS_POOL_PATH") or DB_PATH)
 
 
@@ -68,6 +69,65 @@ def record_posts(db, rows, today=None):
 
 def record_accounts(db, rows, today=None):
     return bpool.record_accounts(db, rows, "autorademodiaz", today)
+=======
+    db = bpool.connect(path or os.environ.get("RRSS_THREADS_POOL_PATH") or DB_PATH)
+    db.execute("""CREATE TABLE IF NOT EXISTS thread_discovery_quarantine (
+        handle TEXT PRIMARY KEY COLLATE NOCASE,
+        reason TEXT NOT NULL,
+        first_seen TEXT NOT NULL
+    )""")
+    db.commit()
+    return db
+
+
+def quarantine_handles(db, handles, today=None):
+    """Registrar cuarentena automática sin textos, URLs ni eliminar histórico.
+
+    No se libera automáticamente una cuenta dudosa: revisión humana antes de
+    cualquier levantamiento. La tabla es local y nunca se vuelca a métricas.
+    """
+    today = today or datetime.date.today().isoformat()
+    handles = {str(handle).lstrip("@").strip().casefold() for handle in handles if handle}
+    db.executemany(
+        "INSERT OR IGNORE INTO thread_discovery_quarantine(handle, reason, first_seen) VALUES (?,?,?)",
+        [(handle, "suspected_campaign", today) for handle in sorted(handles)]
+    )
+    db.commit()
+    return len(handles)
+
+
+def record_posts(db, rows, today=None):
+    """Filtra campañas incluso cuando un productor evita threads_scan."""
+    import threads_discovery_quality as quality
+    parsed = [(handle, permalink, body_of(text), source, parse_age_hours(text), None)
+              for handle, permalink, text, source in rows]
+    suspect = quality.blocked_handles(parsed)
+    if suspect:
+        quarantine_handles(db, suspect, today=today)
+    blocked = quality.quarantined_pool_handles(db)
+    safe = [row for row in parsed
+            if str(row[0]).lstrip("@").casefold() not in blocked]
+    return bpool.record_post_rows(db, safe, today)
+
+
+def record_accounts(db, rows, today=None):
+    """Filtra engaños también en la primera escritura de perfiles/semillas.
+
+    No modifica registros existentes ni exporta identidades sospechosas.
+    """
+    import threads_discovery_quality as dq
+    rows = list(rows)
+    suspect = dq.blocked_handles([
+        {"handle": handle, "text": f"{name or ''} {bio or ''}"}
+        for handle, name, bio, _source, _seed in rows
+    ])
+    denied = suspect | dq.quarantined_pool_handles(db)
+    safe = [row for row in rows
+            if str(row[0]).lstrip("@").casefold() not in denied]
+    if suspect:
+        quarantine_handles(db, suspect, today=today)
+    return bpool.record_accounts(db, safe, "davidportodiaz", today)
+>>>>>>> origin/research/public-reuse-parent
 
 
 def main(argv=None):

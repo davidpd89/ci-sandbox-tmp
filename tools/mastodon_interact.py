@@ -66,7 +66,11 @@ from x_interact import _check_spanish_orthography  # reutilizado, no duplicado
 BASE = "https://mastodon.social"
 API = f"{BASE}/api/v1"
 API_V2 = f"{BASE}/api/v2"
+<<<<<<< HEAD
 HANDLE = "autorademodiaz"
+=======
+HANDLE = "davidportodiaz"
+>>>>>>> origin/research/public-reuse-parent
 
 _TOKENS_PATH = os.path.join(os.path.dirname(__file__), "mastodon_tokens.json")
 
@@ -171,7 +175,12 @@ _TOKEN = None
 def _headers():
     global _TOKEN
     if _TOKEN is None:
+<<<<<<< HEAD
         _TOKEN = _load_token()
+=======
+        value = _load_token()
+        _TOKEN = value
+>>>>>>> origin/research/public-reuse-parent
     return {"Authorization": f"Bearer {_TOKEN}"}
 
 
@@ -258,12 +267,56 @@ def _post(path, data=None, extra_headers=None):
     if extra_headers:
         headers.update(extra_headers)
     _wait_for_budget()
+<<<<<<< HEAD
     response = requests.post(
         f"{API}/{path}", json=data or {}, headers=headers, timeout=20
     )
     _record_rate_limit(response)
     _response_error("POST", path, response)
     return response.json()
+=======
+    # Solo la escritura de status (no follows/favourites ni comprobaciones
+    # de cuenta) necesita un ACK inequívoco antes de poderse repetir.
+    is_status_write = path == "statuses"
+    try:
+        response = requests.post(
+            f"{API}/{path}", json=data or {}, headers=headers, timeout=20
+        )
+    except Exception as exc:
+        if is_status_write:
+            import exec_common as ec
+            if ec.uncertain_transport_error(exc):
+                raise ec.WriteOutcomeUnknown("mastodon:POST_sin_respuesta") from exc
+        raise
+    try:
+        _record_rate_limit(response)
+    except Exception as exc:
+        if is_status_write:
+            # Una excepción del registro LOCAL de cuota después de POST
+            # no prueba que el servidor haya rechazado la publicación.
+            # Conservar el rechazo 4xx explícito si está presente.
+            if 400 <= response.status_code < 500:
+                _response_error("POST", path, response)
+            import exec_common as ec
+            raise ec.WriteOutcomeUnknown(
+                "mastodon:POST_cuota_no_registrada", status_code=response.status_code
+            ) from exc
+        raise
+    try:
+        _response_error("POST", path, response)
+    except MastodonAPIError as exc:
+        if is_status_write and 500 <= exc.status_code < 600:
+            import exec_common as ec
+            raise ec.WriteOutcomeUnknown("mastodon:POST_5xx_sin_confirmacion", status_code=exc.status_code) from exc
+        raise
+    try:
+        return response.json()
+    except ValueError as exc:
+        if is_status_write:
+            import exec_common as ec
+            raise ec.WriteOutcomeUnknown("mastodon:POST_respuesta_no_json") from exc
+        raise
+>>>>>>> origin/research/public-reuse-parent
 
 
 def _get_v2(path, params=None):
@@ -386,6 +439,7 @@ def search_statuses(query, *, limit=40, max_pages=3):
 
 
 def search_accounts_pages(query, *, limit=40, max_pages=2):
+<<<<<<< HEAD
     rows = []
     page_size = max(1, min(int(limit), 80))
     for page in range(max(1, int(max_pages))):
@@ -393,6 +447,35 @@ def search_accounts_pages(query, *, limit=40, max_pages=2):
         accounts = data.get("accounts") or []
         rows.extend(accounts)
         if len(accounts) < page_size:
+=======
+    """Recorrer resultados v2 sin saltos ni cuentas repetidas.
+
+    /api/v2/search acepta como máximo 40 por tipo; usar 80 como stride
+    perdía la mitad de las cuentas aunque el servidor respondiera 40.
+    Los IDs son locales a la instancia consultada, no IDs federados.
+    """
+    rows = []
+    page_size = max(1, min(int(limit), 40))
+    seen_local_ids = set()
+    for page in range(max(1, int(max_pages))):
+        data = search(query, "accounts", page_size, offset=page * page_size)
+        accounts = data.get("accounts") if isinstance(data, dict) else None
+        if not isinstance(accounts, list):
+            raise RuntimeError("Search Mastodon no devolvió accounts[]")
+        new_count = 0
+        for account in accounts:
+            raw_id = account.get("id") if isinstance(account, dict) else None
+            if (isinstance(raw_id, bool) or not isinstance(raw_id, (str, int))
+                    or not str(raw_id).strip()):
+                raise RuntimeError("Search Mastodon devolvió una cuenta sin ID local válido")
+            local_id = str(raw_id)
+            if local_id in seen_local_ids:
+                continue
+            seen_local_ids.add(local_id)
+            rows.append(account)
+            new_count += 1
+        if len(accounts) < page_size or new_count == 0:
+>>>>>>> origin/research/public-reuse-parent
             break
     return rows
 
@@ -765,20 +848,38 @@ def _status_idempotency_key(payload):
     encoded = json.dumps(
         payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
     ).encode("utf-8")
+<<<<<<< HEAD
     return "autorademo-" + hashlib.sha256(encoded).hexdigest()[:48]
 
 
 def _create_status(body, semantic_key):
     """Único creador de status usado operativamente: replies editoriales."""
+=======
+    return "davidporto-" + hashlib.sha256(encoded).hexdigest()[:48]
+
+
+def _create_status(body, semantic_key):
+    """Crea un estado con idempotencia; la frontera HTTP clasifica el ACK.
+
+    La preparación de sesión/cuenta se realiza antes del POST y, si falla,
+    NO se marca como escritura incierta.
+    """
+    import exec_common as ec
+
+>>>>>>> origin/research/public-reuse-parent
     result = _post(
         "statuses",
         body,
         {"Idempotency-Key": _status_idempotency_key(semantic_key)},
     )
     if not isinstance(result, dict) or not result.get("id"):
+<<<<<<< HEAD
         raise RuntimeError(
             "Mastodon no confirmó ID del status; revisar antes de reintentar"
         )
+=======
+        raise ec.WriteOutcomeUnknown("mastodon:status_sin_id")
+>>>>>>> origin/research/public-reuse-parent
     return result
 
 

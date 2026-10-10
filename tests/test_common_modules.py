@@ -28,7 +28,11 @@ class OtherLanguageTests(unittest.TestCase):
         self.assertEqual(tc.other_language("Sou uma leitora apaixonada, não vivo sem livros e você também não vive muito sem eles"), "pt")
 
     def test_spanish_english_galician_and_links_are_not(self):
+<<<<<<< HEAD
         for text in ("Correctora, traductora, filóloga y escritora AGENDA ABIERTA contacto@example.com https://misaleg.blogspot.com/",
+=======
+        for text in ("Correctora, traductora, filóloga y escritora AGENDA ABIERTA misaleg.info@gmail.com https://misaleg.blogspot.com/",
+>>>>>>> origin/research/public-reuse-parent
                      "Roberto González A veces panadero. https://panherido.wordpress.com/",
                      "Escritor galego en Madrid. Fantasía e libros que deixan pegada",
                      "I love fantasy books and writing novels every single day",

@@ -13,6 +13,10 @@ import subprocess
 import tempfile
 import time
 
+<<<<<<< HEAD
+=======
+from action_ledger import RoundBusy, exclusive, _pid_alive  # compartido con el turno Edge
+>>>>>>> origin/research/public-reuse-parent
 from mobile_client import (
     DEFAULT_BASE_URL,
     MobileCliClient,
@@ -23,7 +27,11 @@ from mobile_client import (
 
 EXPECTED_VERSION = "1.0.17"
 LISTEN = "127.0.0.1:12000"
+<<<<<<< HEAD
 DEFAULT_LOCK_PATH = os.path.join(tempfile.gettempdir(), "rrss-autorademo-mobile.lock")
+=======
+DEFAULT_LOCK_PATH = os.path.join(tempfile.gettempdir(), "rrss-davidporto-mobile.lock")
+>>>>>>> origin/research/public-reuse-parent
 
 
 class MobileRuntimeError(RuntimeError):
@@ -34,6 +42,7 @@ class MobileSessionBusy(MobileRuntimeError):
     pass
 
 
+<<<<<<< HEAD
 def _pid_alive(pid) -> bool:
     """True si el proceso existe (o no se puede saber: mejor bloquear que pisar una sesion viva del movil)."""
     try:
@@ -111,6 +120,25 @@ def mobile_session_lock(path: str | None = None, *, stale_after: float = 6 * 360
                 os.remove(path)
         except OSError:
             pass
+=======
+@contextlib.contextmanager
+def mobile_session_lock(path: str | None = None, *, stale_after: float = 6 * 3600):
+    """Turno Android con el mismo guard OS y control de PID que Edge.
+
+    Se conserva el nombre del fichero/variable anteriores. Los PID:timestamp
+    antiguos se reconocen para no quitar el turno a un proceso legacy vivo.
+    El archivo .oslock es persistente y nunca debe borrarse manualmente.
+    """
+    path = path or os.getenv("MOBILE_SESSION_LOCK") or DEFAULT_LOCK_PATH
+    # Traducir solo el conflicto al *adquirir*. Un RoundBusy generado por
+    # el cuerpo (p. ej. por Edge) debe propagarse sin atribuirlo al móvil.
+    with contextlib.ExitStack() as stack:
+        try:
+            stack.enter_context(exclusive("mobile", stale_after=stale_after, lock_path=path))
+        except RoundBusy as exc:
+            raise MobileSessionBusy(f"móvil ocupado por otra sesión del repo: {path}") from exc
+        yield path
+>>>>>>> origin/research/public-reuse-parent
 
 
 def _argv(binary: str, *args: str) -> list[str]:

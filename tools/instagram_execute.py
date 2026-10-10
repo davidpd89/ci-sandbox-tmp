@@ -39,6 +39,16 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 sys.stdout.reconfigure(encoding="utf-8")
 import instagram_interact as ig
+<<<<<<< HEAD
+=======
+# 09/10: backend de ejecucion. "web" (Edge/CDP, historico) o "mobile" (app Android real, mismo patron que TikTok). Con mobile,
+# `ig` pasa a ser instagram_mobile_interact: misma API funcional (follow/like/comment/ensure_browser, BotWarningDetected...).
+BACKEND = os.environ.get("RRSS_INSTAGRAM_BACKEND", "web").strip().lower()
+if BACKEND not in ("web", "mobile"):
+    raise SystemExit(f"RRSS_INSTAGRAM_BACKEND invalido: {BACKEND!r} (web|mobile)")
+if BACKEND == "mobile":
+    import instagram_mobile_interact as ig
+>>>>>>> origin/research/public-reuse-parent
 import check_duplicate_phrase as dup
 import scan_common as sc
 
@@ -172,8 +182,25 @@ def run_plan(plan, *, prevalidated=False):
             return [{"kind": "plan", "handle": "", "resultado": f"fallo_plan:{exc}"}]
     ig._refuse_if_paused()
     for i, item in enumerate(plan):
+<<<<<<< HEAD
         kind = item["kind"]
         handle = item["handle"].lstrip("@")
+=======
+        # Una ronda puede durar horas: revalidar la cuarentena antes de CADA
+        # acción, incluso si el lanzador aprobó el lote al comienzo.
+        import circuit_breaker as _cb
+        _write_ok, _hold_reason = _cb.write_preflight("instagram")
+        if not _write_ok:
+            print(f"[instagram] cortacircuitos ABIERTO: {_hold_reason}; detener el lote")
+            break
+        kind = item["kind"]
+        handle = item["handle"].lstrip("@")
+        import conversation_turn_policy as ctp         # incluye el tope de antiguedad comun (post_age_policy)
+        permitted, reason = ctp.check_execution("instagram", item)
+        if not permitted:
+            results.append({**item, "resultado": f"saltado_cierre_conversacion:{reason}"})
+            continue
+>>>>>>> origin/research/public-reuse-parent
         print(f"=== {i+1}/{len(plan)}: {kind} -> @{handle} ===")
         try:
             if kind == "follow":
@@ -202,6 +229,11 @@ def run_plan(plan, *, prevalidated=False):
             results.append({**item, "resultado": "confirmado"})
         except ig.BotWarningDetected as e:
             print(f"PARADA TOTAL: {e}")
+<<<<<<< HEAD
+=======
+            if BACKEND == "mobile":
+                ig.record_warning("warning")     # descanso propio de Instagram (no toca el de TikTok)
+>>>>>>> origin/research/public-reuse-parent
             results.append({**item, "resultado": f"parada:{e}"})
             for pending in plan[i + 1:]:
                 results.append({**pending, "resultado": "no_intentado"})
@@ -236,6 +268,11 @@ def _append_registro(results):
 
 
 def _fetch_metrics():
+<<<<<<< HEAD
+=======
+    if BACKEND == "mobile":
+        return ig.fetch_my_metrics()
+>>>>>>> origin/research/public-reuse-parent
     p, pg = ig._connect()
     try:
         pg.goto(f"https://www.instagram.com/{ig.MY_HANDLE}/", wait_until="domcontentloaded", timeout=20000)
@@ -299,9 +336,18 @@ def _update_estado(results, metrics, dias_activo):
 if __name__ == "__main__":
     import atexit
     import action_ledger as al
+<<<<<<< HEAD
     _browser_turn = al.browser_session()   # un solo Playwright a la vez en el Edge compartido (04/10)
     _browser_turn.__enter__()
     atexit.register(lambda: _browser_turn.__exit__(None, None, None))
+=======
+    if BACKEND == "web":
+        _browser_turn = al.browser_session()   # un solo Playwright a la vez en el Edge compartido (04/10)
+        _browser_turn.__enter__()
+        atexit.register(lambda: _browser_turn.__exit__(None, None, None))
+    else:
+        atexit.register(ig.release)            # el turno del movil se toma al abrir el backend y se libera al salir
+>>>>>>> origin/research/public-reuse-parent
     if len(sys.argv) < 2:
         print(__doc__)
         sys.exit(1)
@@ -337,7 +383,20 @@ if __name__ == "__main__":
         for s in skipped:
             print(f"  saltado_fase_calentamiento: {s['kind']} -> @{s['handle'].lstrip('@')}")
 
+<<<<<<< HEAD
     ig.ensure_browser()
+=======
+    try:
+        ig.ensure_browser()
+    except ig.BotWarningDetected as exc:
+        print(f"PARADA TOTAL: {exc}")
+        sys.exit(5)
+    except Exception as exc:
+        if BACKEND == "mobile" and type(exc).__name__ == "MobileSessionBusy":
+            print(f"MobileSessionBusy: el movil lo usa otra sesion; se omite Instagram ({exc})")
+            sys.exit(6)
+        raise
+>>>>>>> origin/research/public-reuse-parent
     results = run_plan(kept, prevalidated=True)
     results += [{**s, "resultado": "saltado_fase_calentamiento"} for s in skipped]
 

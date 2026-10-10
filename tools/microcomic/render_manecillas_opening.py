@@ -68,7 +68,11 @@ def narr_box(text: str, x: int = 72, y: int = 78, w: int = 850, font_size: int =
 
 
 def signature() -> str:
+<<<<<<< HEAD
     return f'<text x="64" y="1300" font-family="IG10Inter,Inter,sans-serif" font-size="21" font-weight="600" fill="{P["ink"]}" opacity=".34">AUTORA DEMO DÍAZ</text>'
+=======
+    return f'<text x="64" y="1300" font-family="IG10Inter,Inter,sans-serif" font-size="21" font-weight="600" fill="{P["ink"]}" opacity=".34">DAVID PORTO DÍAZ</text>'
+>>>>>>> origin/research/public-reuse-parent
 
 
 def page_ref() -> str:
@@ -167,7 +171,11 @@ def full_strip_html(paths: list[Path]) -> str:
     for path in paths:
         uri = "data:image/png;base64," + base64.b64encode(path.read_bytes()).decode("ascii")
         imgs.append(f'<div class="cell"><img src="{uri}"/></div>')
+<<<<<<< HEAD
     credit = "Apertura adaptada de las páginas 13–14 de Las manecillas del recuerdo · Autora Demo Díaz · Monza Ediciones"
+=======
+    credit = "Apertura adaptada de las páginas 13–14 de Las manecillas del recuerdo · David Porto Díaz · Monza Ediciones"
+>>>>>>> origin/research/public-reuse-parent
     return f'''<!doctype html><html><head><meta charset="utf-8"><style>
       {FONT_FACE}
       html,body{{margin:0;width:{W}px;height:{H}px;overflow:hidden;background:{P["paper"]};font-family:IG10Inter,Inter,sans-serif}}

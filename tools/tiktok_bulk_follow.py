@@ -22,6 +22,11 @@ import re
 import sys
 import time
 
+<<<<<<< HEAD
+=======
+import tiktok_safety as safety
+
+>>>>>>> origin/research/public-reuse-parent
 sys.path.insert(0, os.path.dirname(__file__))
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "SISTEMA_DIARIO_TIKTOK")
@@ -46,7 +51,11 @@ except Exception:
 MUTUAL_CARD = re.compile(r"apoy|sigue|sigo|follow|mutu|comunidad|presenta|emergente|escrit|autor|lector|novel|libro|booktok|lectur", re.I)
 
 
+<<<<<<< HEAD
 COOLDOWN_PATH = os.path.join(ROOT, "bulk_cooldown.json")
+=======
+COOLDOWN_PATH = safety.COOLDOWN_PATH
+>>>>>>> origin/research/public-reuse-parent
 
 
 class StopSession(RuntimeError):
@@ -58,6 +67,7 @@ class RateLimited(StopSession):
 
 
 def cooldown_left():
+<<<<<<< HEAD
     """Minutos de descanso que quedan tras un aviso de limite (0 si no hay)."""
     try:
         until = datetime.datetime.fromisoformat(json.load(open(COOLDOWN_PATH, encoding="utf-8")).get("until", ""))
@@ -78,6 +88,13 @@ def start_cooldown():
     with open(COOLDOWN_PATH, "w", encoding="utf-8") as stream:
         json.dump({"day": today, "strikes": strikes, "until": (datetime.datetime.now() + datetime.timedelta(minutes=minutes)).isoformat(timespec="seconds")}, stream)
     return minutes
+=======
+    return safety.remaining_minutes(COOLDOWN_PATH)
+
+
+def start_cooldown(reason="warning"):
+    return safety.restrict(reason, COOLDOWN_PATH)
+>>>>>>> origin/research/public-reuse-parent
 
 
 def load_config():
@@ -87,6 +104,7 @@ def load_config():
 
 def followed_before():
     """Handles que el sistema ya siguio alguna vez (nunca se vuelve a seguir a quien se dejo de seguir) y follows de hoy."""
+<<<<<<< HEAD
     done, today_n = set(), 0
     today = datetime.date.today().isoformat()
     try:
@@ -103,12 +121,43 @@ def followed_before():
 
 def record_follow(handle, note):
     new = not os.path.exists(REGISTRO_CSV)
+=======
+    done = set()
+    try:
+        with open(REGISTRO_CSV, encoding="utf-8", newline="") as stream:
+            for row in csv.DictReader(stream):
+                if (row.get("tipo") or "").strip().casefold() == "follow" and (row.get("resultado") or "").strip().casefold() in ("confirmado", "saltado_ya_seguido", "pendiente_verificacion"):
+                    handle = (row.get("cuenta") or "").strip().lstrip("@").casefold()
+                    if not handle:
+                        continue
+                    done.add(handle)
+    except OSError:
+        pass
+    # El bucle histórico detecta objetivos que no deben seguirse otra vez,
+    # pero no puede presupuestar eventos write-ahead ya conciliados. Reutilizar
+    # el plegado compartido: pending activo/confirmado suma; ya_seguido no.
+    used, _ = safety.recorded_actions(REGISTRO_CSV)
+    return done, used["follow"]
+
+
+def record_follow(handle, note, result="confirmado"):
+    if result not in ("confirmado", "pendiente_verificacion"):
+        raise ValueError("resultado inválido")
+    new = not os.path.exists(REGISTRO_CSV) or os.path.getsize(REGISTRO_CSV) == 0
+>>>>>>> origin/research/public-reuse-parent
     with open(REGISTRO_CSV, "a", newline="", encoding="utf-8") as stream:
         writer = csv.writer(stream)
         if new:
             writer.writerow(["fecha", "cuenta", "tipo", "post_resumen", "texto_usado", "resultado", "notas"])
+<<<<<<< HEAD
         writer.writerow([datetime.date.today().isoformat(), "@" + handle.lstrip("@"), "follow", "", "", "confirmado", f"{note} | transporte=android_native"])
     print(f"{'confirmado':<35} follow   @{handle}", flush=True)
+=======
+        writer.writerow([datetime.date.today().isoformat(), "@" + handle.lstrip("@"), "follow", "", "", result, f"{note} | transporte=android_native"])
+        stream.flush()
+        os.fsync(stream.fileno())
+    print(f"{result:<35} follow   @{handle}", flush=True)
+>>>>>>> origin/research/public-reuse-parent
 
 
 def vet_name(name, handle):
@@ -150,10 +199,20 @@ def parse_follower_rows(tree, handle_x=(222, 240), button_x=(770, 830)):
 
 
 def check_warning(tree):
+<<<<<<< HEAD
     from tiktok_mobile_interact import _visible_text
     hit = LIMIT_WARNING.search(_visible_text(tree) or "")
     if hit:
         raise StopSession(f"aviso de TikTok en pantalla ({hit.group(0)!r}): se para; lo revisa David")
+=======
+    safety.require_writable(COOLDOWN_PATH)
+    try:
+        safety.check_screen(tree)
+    except safety.SafetyFollowLimit as exc:
+        raise RateLimited(str(exc)) from exc          # limite de seguir: pausa solo los follows
+    except safety.SafetyWarning as exc:
+        raise StopSession(str(exc)) from exc          # captcha / aviso general: parada global
+>>>>>>> origin/research/public-reuse-parent
 
 
 class Session:
@@ -162,11 +221,32 @@ class Session:
         self.max_follows, self.deadline, self.done = max_follows, deadline, done
         self.followed = 0
         self.fails = 0
+<<<<<<< HEAD
+=======
+        self.started = time.monotonic()
+        self.progress_alarm = False
+        self.external_hold = False
+>>>>>>> origin/research/public-reuse-parent
         self.count = 0
         self.next_break = rng.randint(12, 20)
 
     @property
     def over(self):
+<<<<<<< HEAD
+=======
+        # Se consulta en cada tramo de sesión y antes de cada nuevo follow.
+        # No registrar un aviso humano como strike interno de TikTok.
+        import circuit_breaker as cb
+        allowed, reason = cb.write_preflight("tiktok")
+        if not allowed:
+            if not self.external_hold:
+                print(f"[bulk] cortacircuitos ABIERTO: {reason}; sin más follows", flush=True)
+            self.external_hold = True
+            return True
+        if not self.progress_alarm and not self.followed and time.monotonic() - self.started >= 15 * 60:
+            self.progress_alarm = True
+            print("[TIKTOK_NO_PROGRESS] bulk 15 min sin follows confirmados; diagnóstico, sin retry", flush=True)
+>>>>>>> origin/research/public-reuse-parent
         return self.followed >= self.max_follows or time.time() >= self.deadline
 
     def gap(self):
@@ -179,10 +259,17 @@ class Session:
             time.sleep(pause)
 
     def ok(self, handle, note):
+<<<<<<< HEAD
         self.followed += 1
         self.fails = 0
         self.done.add(handle.casefold())
         record_follow(handle, note)
+=======
+        record_follow(handle, note)
+        self.followed += 1
+        self.fails = 0
+        self.done.add(handle.casefold())
+>>>>>>> origin/research/public-reuse-parent
 
     def fail(self, why):
         self.fails += 1
@@ -231,10 +318,21 @@ def mine_followers(sess, seed, per_seed):
             if row["relation"] not in ("not_following", "follows_me") or row["handle"].casefold() in sess.done or not vet_name(row["name"], row["handle"]):
                 continue
             # la lista sigue deslizandose un instante tras el swipe: se vuelve a leer la fila justo antes de pulsar y se usan las coordenadas FRESCAS (con las del volcado anterior el tap caia en otra fila)
+<<<<<<< HEAD
             current = next((r for r in parse_follower_rows(nav.tree()) if r["handle"].casefold() == row["handle"].casefold()), None)
             if not current or current["relation"] not in ("not_following", "follows_me"):
                 continue
             bx, by = element_center(current["button"])
+=======
+            fresh_tree = nav.tree()
+            check_warning(fresh_tree)
+            current = next((r for r in parse_follower_rows(fresh_tree) if r["handle"].casefold() == row["handle"].casefold()), None)
+            if not current or current["relation"] not in ("not_following", "follows_me"):
+                continue
+            bx, by = element_center(current["button"])
+            record_follow(row["handle"], f"bulk:followers:@{seed}", "pendiente_verificacion")
+            sess.done.add(row["handle"].casefold())
+>>>>>>> origin/research/public-reuse-parent
             nav.c.tap(bx, by, nav.device.id)
             time.sleep(1.1)
             after = nav.tree()
@@ -286,7 +384,14 @@ def mine_mutual(sess, query, videos=3, pages=4):
                 if handle and handle.casefold() not in sess.done and vet_name(profile.get("name") or "", handle) \
                         and profile.get("relation") in ("not_following", "follows_me") \
                         and not (profile.get("followers") and profile["followers"] > 150000):
+<<<<<<< HEAD
                     bx, by = element_center(profile["relation_element"])
+=======
+                    check_warning(nav.tree())
+                    bx, by = element_center(profile["relation_element"])
+                    record_follow(handle, f"bulk:mutual:{query}", "pendiente_verificacion")
+                    sess.done.add(handle.casefold())
+>>>>>>> origin/research/public-reuse-parent
                     nav.c.tap(bx, by, nav.device.id)
                     time.sleep(1.4)
                     after = nav.read_profile()
@@ -338,10 +443,21 @@ def followback_own(sess, max_rows=120):
                 continue
             if rp:
                 rp.log_inbound("tiktok", row["handle"], "follow")
+<<<<<<< HEAD
             current = next((r for r in parse_follower_rows(nav.tree(), button_x=(690, 730)) if r["handle"].casefold() == row["handle"].casefold()), None)
             if not current or current["relation"] != "follows_me":
                 continue
             bx, by = element_center(current["button"])
+=======
+            fresh_tree = nav.tree()
+            check_warning(fresh_tree)
+            current = next((r for r in parse_follower_rows(fresh_tree, button_x=(690, 730)) if r["handle"].casefold() == row["handle"].casefold()), None)
+            if not current or current["relation"] != "follows_me":
+                continue
+            bx, by = element_center(current["button"])
+            record_follow(row["handle"], "bulk:followback:nuevo_seguidor", "pendiente_verificacion")
+            sess.done.add(row["handle"].casefold())
+>>>>>>> origin/research/public-reuse-parent
             nav.c.tap(bx, by, nav.device.id)
             time.sleep(1.1)
             after = nav.tree()
@@ -360,7 +476,11 @@ def followback_own(sess, max_rows=120):
 
 
 def pick_seeds(cfg, done_seeds, limit):
+<<<<<<< HEAD
     """Semillas: las de la config + personales del ultimo scan (ni tiendas ni gigantes); se rotan (no se repite una en 3 dias) y se prefieren las que mas follow-back dieron."""
+=======
+    """Semillas configuradas/descubiertas, con rotación de 3 días, sin ranking por follow-back no certificado."""
+>>>>>>> origin/research/public-reuse-parent
     seeds = list(cfg.get("bulk_seeds") or []) + DEFAULT_SEEDS
     try:
         state = json.load(open(STATE_PATH, encoding="utf-8"))
@@ -375,7 +495,14 @@ def pick_seeds(cfg, done_seeds, limit):
     for s in seeds:
         if s.casefold() not in {u.casefold() for u in uniq} and (done_seeds.get(s, {}).get("last") or "") < cutoff:
             uniq.append(s)
+<<<<<<< HEAD
     uniq.sort(key=lambda s: -float(done_seeds.get(s, {}).get("yield", 0.1)))      # `yield` = follow-back real suavizado (lo escribe tiktok_reciprocity_audit.py); sin datos, 10 %
+=======
+    # La tasa "yield" histórica procede de handles débiles y bases no
+    # verificadas (cohorts_v2); NO debe optimizar automáticamente el orden.
+    # Conservar el orden configurado y la rotación previa de 3 días. El
+    # analizador offline tiktok_source_evidence.py no publica una política.
+>>>>>>> origin/research/public-reuse-parent
     return uniq[:limit]
 
 
@@ -397,16 +524,37 @@ def main(argv=None):
     from tiktok_mobile_interact import MY_HANDLE, TikTokMobileAdapter, TikTokMobileChallenge, TikTokTargetNotFound, TikTokWrongAccount
     from tiktok_mobile_nav import TikTokNavigator
 
+<<<<<<< HEAD
     left = cooldown_left()
     if left > 0:
         print(f"[bulk] en descanso por el aviso de TikTok: faltan {left:.0f} min; se omite el seguimiento masivo")
         return 0
     cfg = load_config()
     done, today_n = followed_before()
+=======
+    try:
+        safety.require_writable(COOLDOWN_PATH)
+    except safety.SafetyBlocked:
+        print("[bulk] restringido: revisión manual pendiente")
+        safety.step_status("restricted")
+        return 4
+    except safety.SafetyStateError:
+        print("FALLO_LOCAL bulk: estado de cooldown corrupto")
+        safety.step_status("local_error")
+        return 2
+    cfg = load_config()
+    done, today_n = followed_before()
+    daily_usage, _ = safety.recorded_actions(REGISTRO_CSV)
+    today_n = max(today_n, daily_usage["follow"])
+>>>>>>> origin/research/public-reuse-parent
     ceiling = int((cfg.get("action_ceiling") or {}).get("follow", 400))
     budget = min(args.max_follows, max(0, ceiling - today_n))
     if budget <= 0:
         print(f"[bulk] techo diario de follows alcanzado ({today_n}/{ceiling})")
+<<<<<<< HEAD
+=======
+        safety.step_status("no_budget")
+>>>>>>> origin/research/public-reuse-parent
         return 0
     try:
         seeds_log = json.load(open(SEEDS_PATH, encoding="utf-8"))
@@ -415,6 +563,7 @@ def main(argv=None):
     rng = random.Random()
     profile = HumanProfile(**cfg["human"]) if cfg.get("human") else HumanProfile()
     modes = [m.strip() for m in args.modes.split(",") if m.strip()]
+<<<<<<< HEAD
     try:
         with mobile_session_lock():
             raw = ensure_server(device_id=args.device)
@@ -467,6 +616,108 @@ def main(argv=None):
         return 0
     except (TikTokMobileChallenge, TikTokWrongAccount, MobileCliError) as exc:
         print(f"PARADA TIKTOK: {exc}")
+=======
+    started = time.monotonic()
+    try:
+        with mobile_session_lock():
+            try:
+                # El preflight inicial precede al lock; revalidar la misma pausa bajo
+                # exclusión, porque otra fase pudo activar la restricción mientras tanto.
+                safety.require_writable(COOLDOWN_PATH)
+                current_usage, _ = safety.recorded_actions(REGISTRO_CSV)
+                locked_done, locked_today = followed_before()
+                done.update(locked_done)  # evitar un segundo follow al mismo @ durante la espera
+                current_budget = min(args.max_follows,
+                                     max(0, ceiling - max(current_usage["follow"], locked_today)))
+                if current_budget <= 0:
+                    safety.step_status("no_budget")
+                    return 0
+                budget = min(budget, current_budget)
+                raw = ensure_server(device_id=args.device)
+                client = HumanClient(raw, profile, rng)
+                adapter = TikTokMobileAdapter(client, args.device, allow_writes=True)
+                nav = TikTokNavigator(adapter)
+                adapter.verify_active_account(MY_HANDLE)
+                print(f"[TIKTOK_BULK_SETUP] segundos={time.monotonic() - started:.2f}", flush=True)
+                sess = Session(nav, Pace(profile, rng), rng, max_follows=budget, deadline=time.time() + args.max_minutes * 60, done=done)
+                try:
+                    if "followback" in modes and not sess.over:
+                        read, back = followback_own(sess)
+                        print(f"[bulk] follow-back a nuevos seguidores: {read} filas, {back} follows", flush=True)
+                    if "mutual" in modes and not sess.over:
+                        for query in rng.sample(MUTUAL_QUERIES, min(8, len(MUTUAL_QUERIES))):
+                            if sess.over:
+                                break
+                            try:
+                                n = mine_mutual(sess, query)
+                            except TikTokTargetNotFound as exc:
+                                print(f"(consulta {query!r} omitida: {str(exc)[:80]})", flush=True)
+                                continue
+                            print(f"[bulk] «{query}»: {n} follows", flush=True)
+                    if "followers" in modes and not sess.over:
+                        for seed in ([x.strip() for x in args.seeds.split(",") if x.strip()] or pick_seeds(cfg, seeds_log, 12)):
+                            if sess.over:
+                                break
+                            try:
+                                read, mine = mine_followers(sess, seed, args.per_seed)
+                            except TikTokTargetNotFound as exc:
+                                print(f"(semilla @{seed} omitida: {str(exc)[:80]})", flush=True)
+                                continue
+                            entry = seeds_log.setdefault(seed, {})
+                            entry.update({"last": datetime.date.today().isoformat(), "mined": mine, "rows": read})
+                            print(f"[bulk] semilla @{seed}: {read} filas, {mine} follows", flush=True)
+                finally:
+                    # Ante challenge/aviso/error no navegar más: antes la limpieza
+                    # hacía llamadas al teléfono incluso después de una parada total.
+                    if sys.exc_info()[0] is None:
+                        try:
+                            safety.require_writable(COOLDOWN_PATH)
+                            nav.return_to_feed()
+                        except (RateLimited, StopSession, TikTokMobileChallenge,
+                                TikTokWrongAccount, MobileCliError):
+                            # Una señal aparecida durante la limpieza también es terminal.
+                            # La captura exterior la persiste antes de liberar el lock.
+                            raise
+                        except Exception:
+                            pass
+                        with open(SEEDS_PATH, "w", encoding="utf-8") as stream:
+                            json.dump(seeds_log, stream, ensure_ascii=False, indent=1)
+                if sess.external_hold:
+                    print("[bulk] parada preventiva por cortacircuitos externo (sin strike de plataforma)", flush=True)
+                print(f"[bulk] sesion terminada: {sess.followed} follows nuevos (hoy ya {today_n} antes de la sesion)")
+                print(f"[TIKTOK_BULK_TOTAL] segundos={time.monotonic()-started:.2f}", flush=True)
+            except (RateLimited, StopSession, TikTokMobileChallenge, TikTokWrongAccount, MobileCliError) as exc:
+                # Persistir restricción ANTES de liberar el lock móvil.
+                reason = ("challenge" if isinstance(exc, TikTokMobileChallenge) else
+                          "wrong_account" if isinstance(exc, TikTokWrongAccount) else
+                          "follow_limit" if isinstance(exc, RateLimited) else
+                          "uncertain" if isinstance(exc, MobileCliError) else "warning")
+                start_cooldown(reason)
+                raise
+    except MobileSessionBusy:
+        print("MobileSessionBusy: el movil lo usa otra sesion; se omite el seguimiento masivo")
+        safety.step_status("busy")
+        return 3
+    except (RateLimited, StopSession) as exc:
+        print(f"PARADA TIKTOK: {type(exc).__name__}; revisión humana pendiente")
+        safety.step_status("restricted")
+        return 4
+    except (TikTokMobileChallenge, TikTokWrongAccount) as exc:
+        challenged = isinstance(exc, TikTokMobileChallenge)
+        print(f"PARADA TIKTOK: {type(exc).__name__}; "
+              + ("challenge_required; revisión manual" if challenged else "identidad local no confirmada"))
+        safety.step_status("restricted" if challenged else "local_error")
+        return 4 if challenged else 2
+    except safety.SafetyBlocked:
+        print("PARADA TIKTOK: se ha activado una restricción compartida")
+        safety.step_status("restricted")
+        return 4
+    except MobileCliError as exc:
+        print(f"PARADA TIKTOK: {type(exc).__name__}; última operación incierta")
+        safety.step_status("uncertain")
+        return 5
+    safety.step_status("completed")
+>>>>>>> origin/research/public-reuse-parent
     return 0
 
 
@@ -475,6 +726,13 @@ if __name__ == "__main__":
         raise SystemExit(main())
     except SystemExit:
         raise
+<<<<<<< HEAD
     except Exception as exc:                       # nunca tumba la ronda
         print(f"FALLO bulk: {type(exc).__name__}: {str(exc)[:160]}")
         raise SystemExit(0)
+=======
+    except Exception as exc:
+        print(f"FALLO_LOCAL bulk: {type(exc).__name__}")
+        safety.step_status("local_error")
+        raise SystemExit(2)
+>>>>>>> origin/research/public-reuse-parent

@@ -37,6 +37,16 @@ class FakeAdapter:
 
 
 class TikTokMobileExecuteTests(unittest.TestCase):
+<<<<<<< HEAD
+=======
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        guard = patch.object(te.safety, "COOLDOWN_PATH", str(pathlib.Path(self._tmp.name) / "pause.json"))
+        guard.start()
+        self.addCleanup(guard.stop)
+
+>>>>>>> origin/research/public-reuse-parent
     def test_preflight_validates_without_mobile(self):
         plan = [
             {"kind": "follow", "handle": "@lectora"},
@@ -112,6 +122,17 @@ class TikTokMobileExecuteTests(unittest.TestCase):
         self.assertEqual(len(kept), 2)
         self.assertEqual(skipped[0]["resultado"], "saltado_techo_sesion")
 
+<<<<<<< HEAD
+=======
+    def test_daily_cap_counts_confirmed_and_pending_from_prior_session(self):
+        config = {"action_ceiling": {"follow": 2, "like": 1, "comment": 1}}
+        planned = [{"kind": "follow", "handle": "nueva"},
+                   {"kind": "like", "handle": "h", "url": "https://www.tiktok.com/@h/video/1"}]
+        kept, skipped, _ = te._apply_action_ceiling(planned, config, used_today={"follow": 2, "like": 0, "comment": 0})
+        self.assertEqual([x["kind"] for x in kept], ["like"])
+        self.assertEqual(skipped[0]["resultado"], "saltado_techo_diario")
+
+>>>>>>> origin/research/public-reuse-parent
     def test_comment_with_stray_trailing_tokens_is_rejected(self):
         for bad in ("Qué bueno, me encantó GT GT", "Me la apunto ya ya", "Gran reseña GT"):
             plan = [{"kind": "comment", "handle": "a", "url": "https://www.tiktok.com/@a/video/1", "text": bad}]
@@ -120,14 +141,23 @@ class TikTokMobileExecuteTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 te.preflight_plan(plan, already_commented_urls=set())
 
+<<<<<<< HEAD
     def test_single_unverified_write_is_a_soft_failure_and_session_continues(self):
+=======
+    def test_single_unverified_write_stops_without_retry(self):
+>>>>>>> origin/research/public-reuse-parent
         adapter = FakeAdapter(fail_on="like")
         results = te.run_plan([
             {"kind": "like", "handle": "a", "url": "https://www.tiktok.com/@a/video/1"},
             {"kind": "follow", "handle": "b"},
         ], adapter, pause=False)
+<<<<<<< HEAD
         self.assertTrue(results[0]["resultado"].startswith("fallo:"))
         self.assertEqual(results[1]["resultado"], "confirmado")
+=======
+        self.assertEqual(results[0]["resultado"], "pendiente_verificacion")
+        self.assertEqual(results[1]["resultado"], "no_intentado")
+>>>>>>> origin/research/public-reuse-parent
 
     def test_three_consecutive_soft_failures_stop_the_session(self):
         adapter = FakeAdapter(fail_on="like")
@@ -135,14 +165,24 @@ class TikTokMobileExecuteTests(unittest.TestCase):
                 for i in range(5)]
         results = te.run_plan(plan, adapter, pause=False)
         self.assertEqual([r["resultado"].split(":")[0] for r in results],
+<<<<<<< HEAD
                          ["fallo", "fallo", "fallo", "no_intentado", "no_intentado"])
+=======
+                         ["pendiente_verificacion", "no_intentado", "no_intentado", "no_intentado", "no_intentado"])
+>>>>>>> origin/research/public-reuse-parent
 
     def test_challenge_is_always_a_total_stop(self):
         class A:
             def follow(self, handle):
                 raise te.TikTokMobileChallenge("captcha")
+<<<<<<< HEAD
         results = te.run_plan([{"kind": "follow", "handle": "a"}, {"kind": "follow", "handle": "b"}],
                               A(), pause=False)
+=======
+        with tempfile.TemporaryDirectory() as folder, patch.object(te.safety, "COOLDOWN_PATH", str(pathlib.Path(folder) / "pause.json")):
+            results = te.run_plan([{"kind": "follow", "handle": "a"}, {"kind": "follow", "handle": "b"}],
+                                  A(), pause=False)
+>>>>>>> origin/research/public-reuse-parent
         self.assertTrue(results[0]["resultado"].startswith("parada:"))
         self.assertEqual(results[1]["resultado"], "no_intentado")
 

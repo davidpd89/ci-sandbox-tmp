@@ -30,7 +30,13 @@ def pick_posts(state, limit=25):
         for post in candidate.get("posts") or []:
             caption = " ".join(str(post.get("caption") or "").split())
             if "comment" in (post.get("actions") or []) and len(caption) >= 25:
+<<<<<<< HEAD
                 out.append({"id": post["id"], "author": candidate.get("handle"), "text": caption, "context": f"bio del creador: {(candidate.get('bio') or '')[:120]}"})
+=======
+                out.append({"id": post["id"], "author": candidate.get("handle"),
+                            "url": post.get("url"), "text": caption,
+                            "context": f"bio del creador: {(candidate.get('bio') or '')[:120]}"})
+>>>>>>> origin/research/public-reuse-parent
                 seen.add(handle)
                 break
         if len(out) >= limit:
@@ -53,7 +59,16 @@ def main(argv=None):
         state = json.load(open(STATE, encoding="utf-8"))
         items = pick_posts(state, limit)
         written = rq.get_or_enqueue(items, "tiktok", wait_min=4) if items else {}
+<<<<<<< HEAD
         actions = [{"kind": "comment", "post": item["id"], "text": written[item["id"]]} for item in items if item["id"] in written]
+=======
+        import reply_provenance as proof
+        actions = [a for item in items if item["id"] in written
+                   for a in [proof.attach({"kind": "comment", "post": item["id"],
+                                           "url": item.get("url"), "handle": item.get("author"),
+                                           "text": written[item["id"]]}, item, "tiktok")]
+                   if a is not None]
+>>>>>>> origin/research/public-reuse-parent
         print(f"[tiktok_comment_writer] {len(actions)} comentarios escritos de {len(items)} videos propuestos")
     except Exception as exc:                       # nunca tumba la ronda
         print(f"[tiktok_comment_writer] error ({type(exc).__name__}: {str(exc)[:100]}); la ronda sigue sin comentarios")

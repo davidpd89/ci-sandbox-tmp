@@ -1,7 +1,11 @@
 """
 Procesa las imagenes _v3 y produce los assets listos para publicar:
 - Redimensiona a 1080x1350 (4:5 Instagram estandar) recortando centrado
+<<<<<<< HEAD
 - Anade marca de agua "autorademodiaz.com" arriba a la derecha (texto blanco con
+=======
+- Anade marca de agua "davidportodiaz.com" arriba a la derecha (texto blanco con
+>>>>>>> origin/research/public-reuse-parent
   sombra oscura discreta, no un parche rectangular)
 - Genera un slide de CTA final para carruseles
 
@@ -16,15 +20,24 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 sys.stdout.reconfigure(encoding="utf-8")
 
+<<<<<<< HEAD
 IMAGES_DIR = Path(r"C:\GIT\RRSS_AutoraDemo\nuevo_flujo\Imagenes david")
 OUT_DIR = Path(r"C:\GIT\RRSS_AutoraDemo\nuevo_flujo\Piezas_listas")
+=======
+IMAGES_DIR = Path(r"C:\GIT\RRSS_DavidPorto\nuevo_flujo\Imagenes david")
+OUT_DIR = Path(r"C:\GIT\RRSS_DavidPorto\nuevo_flujo\Piezas_listas")
+>>>>>>> origin/research/public-reuse-parent
 OUT_DIR.mkdir(exist_ok=True)
 
 # Formato estandar Instagram feed (4:5 portrait)
 TARGET_W, TARGET_H = 1080, 1350
 
 # Marca de agua
+<<<<<<< HEAD
 WATERMARK_TEXT = "autorademodiaz.com"
+=======
+WATERMARK_TEXT = "davidportodiaz.com"
+>>>>>>> origin/research/public-reuse-parent
 WATERMARK_FONT_SIZE = 28
 WATERMARK_MARGIN = 24  # px desde el borde
 

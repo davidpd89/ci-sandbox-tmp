@@ -21,6 +21,11 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 import scan_common as sc
+<<<<<<< HEAD
+=======
+import x_automation_policy as xap
+import x_acquisition_audit as xa
+>>>>>>> origin/research/public-reuse-parent
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "SISTEMA_DIARIO_X")
 CANDIDATES_JSON = os.path.join(ROOT, "x_candidates.json")
@@ -56,6 +61,7 @@ def build(candidates, max_follows=12, max_reposts=3, max_likes=None):
                 continue
             seen_handles.add(handle)
             follows += 1
+<<<<<<< HEAD
             plan.append({"kind": "follow", "handle": handle})
         elif kind == "like":
             if not url or url in seen_urls or (max_likes is not None and likes >= max_likes):
@@ -67,6 +73,24 @@ def build(candidates, max_follows=12, max_reposts=3, max_likes=None):
             else:
                 likes += 1
                 plan.append({"kind": "like", "url": url})
+=======
+            action = {"kind": "follow", "handle": handle}
+            if item.get("source"):
+                action["motivo"] = "growth:scan:src=" + xa.source_family(item["source"])
+            plan.append(action)
+        elif kind == "like":
+            if not url or url in seen_urls:
+                continue
+            seen_urls.add(url)
+            # Solo preservar reposts curados; los likes automáticos están
+            # prohibidos también cuando el scan propone kind="like".
+            if reposts < max_reposts and _repostable(item):
+                reposts += 1
+                action = {"kind": "repost", "url": url, "handle": handle}
+                if item.get("source"):
+                    action["motivo"] = "growth:scan:src=" + xa.source_family(item["source"])
+                plan.append(action)
+>>>>>>> origin/research/public-reuse-parent
         elif kind == "reply":
             if item.get("ya_comentado"):
                 continue
@@ -106,7 +130,11 @@ def build_from_pool(db, *, likes, follows, known=None, done_urls=frozenset(), ex
     plan, nfollows = [], 0
     post_follow_budget = follows - min(follows // 2, len(accounts))       # la mitad de los follows para cuentas de la reserva si las hay; si no, todos a autores de posts
     for row in picked:
+<<<<<<< HEAD
         plan.append({"kind": "like", "url": row["permalink"], "handle": row["handle"], "motivo": f"growth:pool:score={row['score']}:src={row['source']}"})
+=======
+        # La reserva de posts aporta candidatos para follow, nunca auto-like.
+>>>>>>> origin/research/public-reuse-parent
         if nfollows < post_follow_budget and row["handle"].casefold() not in known_cf:
             plan.append({"kind": "follow", "handle": row["handle"], "motivo": f"growth:pool:autor/lector del nicho:src={row['source']}"})
             nfollows += 1
@@ -114,8 +142,13 @@ def build_from_pool(db, *, likes, follows, known=None, done_urls=frozenset(), ex
         if nfollows < follows and (row["source"] == "backfollow" or row["handle"].casefold() not in known_cf):      # a quien nos sigue se le devuelve el follow aunque lo conozcamos
             plan.append({"kind": "follow", "handle": row["handle"], "motivo": f"growth:acct:score={row['score']}:src={row['source']}"})
             nfollows += 1
+<<<<<<< HEAD
         plan.append({"kind": "like_latest", "handle": row["handle"], "motivo": f"growth:acct:score={row['score']}:src={row['source']}"})
     return plan
+=======
+        # Las cuentas de la reserva no generan like_latest.
+    return xap.without_automatic_likes(plan)
+>>>>>>> origin/research/public-reuse-parent
 
 
 def done_urls(registro_csv):
@@ -137,6 +170,11 @@ def merge(first, second):
     """Une dos planes sin repetir acciones: un follow por cuenta, un like por URL y a lo sumo un like_latest por cuenta."""
     out, handles_follow, urls, latest = [], set(), set(), set()
     for item in list(first) + list(second):
+<<<<<<< HEAD
+=======
+        if xap.is_automatic_like(item):
+            continue
+>>>>>>> origin/research/public-reuse-parent
         kind = item["kind"]
         if kind == "follow":
             key = item["handle"].casefold()
@@ -182,11 +220,26 @@ def main(argv=None):
     likes = int(argv[argv.index("--max-likes") + 1]) if "--max-likes" in argv else likes
     follows = int(argv[argv.index("--max-follows") + 1]) if "--max-follows" in argv else follows
 
+<<<<<<< HEAD
     # candidatos del scan (reciprocidad: notificaciones, listas curadas, comentaristas): follows hasta el tope de la etapa y reposts de listas curadas
     plan, pending_replies = build(candidates, max_follows=follows, max_reposts=2 + 2 * stage_number, max_likes=max(likes // 2, 10))   # la otra mitad la elige la reserva (mejor puntuada)
     try:
         import x_pool as pool
         registro = os.path.join(ROOT, "registro_interacciones.csv")
+=======
+    # Reservar presupuesto con candidatos REALMENTE elegibles: si primero
+    # contamos follows repetidos, desplazamos follows nuevos de la reserva.
+    registro = os.path.join(ROOT, "registro_interacciones.csv")
+    followed, treated = xa.read_history(registro)
+    # Filtrar ANTES de aplicar max_follows: los primeros doce duplicados
+    # no deben desplazar al decimotercer candidato, que sí es nuevo.
+    candidates, candidate_filter = xa.filter_known_plan(candidates, followed, treated)
+    plan, pending_replies = build(candidates, max_follows=follows, max_reposts=2 + 2 * stage_number, max_likes=max(likes // 2, 10))
+    plan, scan_filter = xa.filter_known_plan(plan, followed, treated)
+    pending_replies, reply_filter = xa.filter_known_plan(pending_replies, followed, treated)
+    try:
+        import x_pool as pool
+>>>>>>> origin/research/public-reuse-parent
         db = pool.connect()
         try:
             used_follows = sum(1 for a in plan if a["kind"] == "follow")
@@ -206,6 +259,19 @@ def main(argv=None):
     except Exception as exc:
         print(f"(reserva no disponible: {type(exc).__name__}: {exc}; solo el volcado del scan)")
 
+<<<<<<< HEAD
+=======
+    # Una segunda barrera cubre reserva y replies generadas después.
+    # Solo estados explícitos, nunca inferir follow a partir de "conocida".
+    plan, final_filter = xa.filter_known_plan(plan, followed, treated)
+    print("X_ACQUISITION_PLAN " + json.dumps(
+        {"fecha": datetime.date.today().isoformat(),
+         "filtro_candidatos": candidate_filter, "filtro_scan": scan_filter,
+         "filtro_replies_pendientes": reply_filter, "filtro_final": final_filter,
+         "resultados_persistidos_hoy": xa.observed_results(registro),
+         "alcance": "resultados por fuente solo cuando el registro los persiste; no mide fallos sin ACK"},
+        ensure_ascii=False, sort_keys=True))
+>>>>>>> origin/research/public-reuse-parent
     with open(PLAN_OUT, "w", encoding="utf-8") as stream:
         json.dump(plan, stream, ensure_ascii=False, indent=2)
     with open(REPLY_OUT, "w", encoding="utf-8") as stream:

@@ -2,6 +2,10 @@ import datetime
 import os
 import sys
 import unittest
+<<<<<<< HEAD
+=======
+from unittest import mock
+>>>>>>> origin/research/public-reuse-parent
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
 import threads_api as ta
@@ -14,9 +18,15 @@ def reply(id, text, user="ana", ts="2026-10-02T10:00:00+0000"):
 class UnansweredTests(unittest.TestCase):
     def test_only_questions_from_others_not_already_answered(self):
         replies = [reply("1", "¿Cuál recomiendas?"), reply("2", "Gracias, apuntado."),
+<<<<<<< HEAD
                    reply("3", "¿Y tú?", user="autorademodiaz"), reply("4", "¿Lo has leído?"),
                    reply("5", "¿Seguro?", ts="2026-10-03T09:00:00+0000")]
         out = ta.unanswered(replies, "AutoraDemoDiaz", answered_ids={"4"})
+=======
+                   reply("3", "¿Y tú?", user="davidportodiaz"), reply("4", "¿Lo has leído?"),
+                   reply("5", "¿Seguro?", ts="2026-10-03T09:00:00+0000")]
+        out = ta.unanswered(replies, "DavidPortoDiaz", answered_ids={"4"})
+>>>>>>> origin/research/public-reuse-parent
         self.assertEqual([r["id"] for r in out], ["5", "1"])   # mas reciente primero
 
     def test_token_days_left(self):
@@ -75,8 +85,22 @@ class ReplyBuildTests(unittest.TestCase):
         old = ta.api_post
         ta.api_post = fake_post
         try:
+<<<<<<< HEAD
             with self.assertRaises(ta.ReplyNotCreated):
                 ta.publish_reply('t', '1', '99', 'Hola.')
+=======
+            # El test de transporte parte de un preflight contextual ya probado
+            # por separado. No permitir que un reply sin firma llegue al POST.
+            import tempfile
+            with tempfile.TemporaryDirectory() as temp, \
+                 mock.patch.dict(os.environ, {
+                     "RRSS_THREADS_ACTION_LEDGER_PATH": os.path.join(temp, "ledger.sqlite3")}), \
+                 mock.patch.object(ta, "_verify_reply_destination", return_value=None):
+                with self.assertRaises(ta.ReplyNotCreated):
+                    ta.publish_reply('t', '1', '99', 'Hola.', proof_action={"kind": "reply",
+                    "post_created_at": (datetime.datetime.now(datetime.timezone.utc)
+                                        - datetime.timedelta(hours=2)).isoformat()})
+>>>>>>> origin/research/public-reuse-parent
         finally:
             ta.api_post = old
         self.assertEqual(calls, ['1/threads'])

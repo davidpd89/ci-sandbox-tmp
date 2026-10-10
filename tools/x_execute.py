@@ -94,6 +94,13 @@ def _preflight_plan(plan):
             raise ValueError(f"elemento {index}: debe ser un objeto")
         item = dict(raw)
         kind = item.get("kind")
+<<<<<<< HEAD
+=======
+        if kind in ("like", "like_latest"):
+            # Plan heredado: descartarlo ANTES de validar/publicar;
+            # no deshabilitar el resto de la ronda.
+            continue
+>>>>>>> origin/research/public-reuse-parent
         if kind not in _VALID_KINDS:
             raise ValueError(f"elemento {index}: kind inválido {kind!r}")
         if kind in _HANDLE_KINDS:
@@ -153,7 +160,23 @@ def run_plan(plan, *, prevalidated=False, on_result=None):
             message = f"FALLO DE PREFLIGHT: {type(exc).__name__}: {exc}"
             print(message)
             return [{"kind": "plan", "handle": "", "resultado": f"fallo_plan:{exc}"}]
+<<<<<<< HEAD
     for i, item in enumerate(plan):
+=======
+    import x_automation_policy as xap
+    for i, item in enumerate(plan):
+        # Barrera también para prevalidated=True y planes históricos/externos.
+        if xap.is_automatic_like(item):
+            results.append({**item, "resultado": "saltado_politica_auto_like"})
+            continue
+        # Una ronda puede durar horas: revalidar la cuarentena antes de CADA
+        # acción, incluso si el lanzador aprobó el lote al comienzo.
+        import circuit_breaker as _cb
+        _write_ok, _hold_reason = _cb.write_preflight("x")
+        if not _write_ok:
+            print(f"[x] cortacircuitos ABIERTO: {_hold_reason}; detener el lote")
+            break
+>>>>>>> origin/research/public-reuse-parent
         kind = item["kind"]
         import conversation_turn_policy as ctp
         permitted, reason = ctp.check_execution("x", item)
@@ -179,7 +202,13 @@ def run_plan(plan, *, prevalidated=False, on_result=None):
                 outcome, own_uri = x.repost(item["url"], item["text"])
                 if outcome == "unverified":
                     results.append({**item, "resultado": "pendiente_verificacion"})
+<<<<<<< HEAD
                     continue
+=======
+                    for pending in plan[i + 1:]:
+                        results.append({**pending, "resultado": "no_intentado"})
+                    break
+>>>>>>> origin/research/public-reuse-parent
                 if outcome != "created":
                     raise RuntimeError(f"quote devolvió estado inesperado: {outcome!r}")
                 item = {**item, "own_uri": own_uri}
@@ -217,8 +246,25 @@ def run_plan(plan, *, prevalidated=False, on_result=None):
                 raise ValueError(f"kind desconocido: {kind}")
             results.append({**item, "resultado": "confirmado"})
         except (x.BotWarningDetected, x.WrongAccountActive) as e:
+<<<<<<< HEAD
             print(f"PARADA TOTAL: {e}")
             results.append({**item, "resultado": f"parada:{e}"})
+=======
+            print(f"PARADA TOTAL: {type(e).__name__}")
+            # Si el aviso llegó DESPUÉS de un tap, guardar también el
+            # posible ACK. La pausa de plataforma sigue siendo obligatoria.
+            status = ("pendiente_verificacion" if getattr(e, "possible_write", False)
+                      else f"parada:{type(e).__name__}")
+            results.append({**item, "resultado": status})
+            for pending in plan[i + 1:]:
+                results.append({**pending, "resultado": "no_intentado"})
+            break
+        except x.XWriteUnverified as e:
+            # El POST/click pudo haberse ejecutado: registrar incierto y
+            # DETENER la sesión. Nunca degradar a fallo reintentable.
+            print(f"PARADA ACK INCIERTO: {type(e).__name__}")
+            results.append({**item, "resultado": "pendiente_verificacion"})
+>>>>>>> origin/research/public-reuse-parent
             for pending in plan[i + 1:]:
                 results.append({**pending, "resultado": "no_intentado"})
             break
@@ -239,21 +285,56 @@ def run_plan(plan, *, prevalidated=False, on_result=None):
 
 
 def _append_registro(results):
+<<<<<<< HEAD
     fecha = datetime.date.today().isoformat()
+=======
+    if not any(r.get("resultado") in (
+            "confirmado", "pendiente_verificacion", "pendiente_aprobacion",
+            "saltado_ya_seguido", "saltado_ya_like",
+            "saltado_ya_comentado", "saltado_ya_reposteado") for r in results):
+        return
+    fecha = datetime.date.today().isoformat()
+    expected = ["fecha", "cuenta", "tipo", "post_resumen", "texto_usado", "resultado", "notas"]
+    # No añadir columnas a un CSV truncado/migrado sin comprobar el esquema.
+    with open(REGISTRO_CSV, encoding="utf-8-sig", newline="") as current:
+        if next(csv.reader(current), None) != expected:
+            raise ValueError("CSV X: cabecera incompatible, revisión manual")
+>>>>>>> origin/research/public-reuse-parent
     with open(REGISTRO_CSV, "a", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         for r in results:
             outcome = r["resultado"]
+<<<<<<< HEAD
             if outcome not in ("confirmado", "pendiente_verificacion", "pendiente_aprobacion"):
                 continue
             stored = (
                 outcome if outcome.startswith("pendiente_")
+=======
+            observed = {
+                "follow": "saltado_ya_seguido",
+                "like": "saltado_ya_like",
+                "like_latest": "saltado_ya_like",
+                "reply": "saltado_ya_comentado",
+                "repost": "saltado_ya_reposteado",
+            }.get(r.get("kind"))
+            if outcome not in ("confirmado", "pendiente_verificacion", "pendiente_aprobacion", observed):
+                continue
+            # 'Ya estaba hecho' es observación, NO un nuevo follow/like
+            # confirmado. Guardarlo permite evitar volver al mismo destino.
+            stored = (
+                outcome if outcome.startswith(("pendiente_", "saltado_ya_"))
+>>>>>>> origin/research/public-reuse-parent
                 else ("publicado" if r["kind"] in ("reply", "quote") else "confirmado")
             )
             w.writerow([
                 fecha, r.get("handle", ""), r["kind"], r.get("url") or r.get("resumen", ""),
                 r.get("text", ""), stored, r.get("motivo", ""),
             ])
+<<<<<<< HEAD
+=======
+        f.flush()
+        os.fsync(f.fileno())
+>>>>>>> origin/research/public-reuse-parent
 
 
 REPOST_TTL_CSV = os.path.join(ROOT, "reposts_activos.csv")
@@ -295,7 +376,11 @@ def _append_repost_ttl(results):
 def _fetch_metrics():
     p, pg = x._connect()
     try:
+<<<<<<< HEAD
         pg.goto("https://x.com/autorademodiaz", wait_until="domcontentloaded", timeout=50000)
+=======
+        pg.goto("https://x.com/davidportodiaz", wait_until="domcontentloaded", timeout=50000)
+>>>>>>> origin/research/public-reuse-parent
         pg.wait_for_timeout(2000)
         body = pg.inner_text("main")[:800]
         import re
@@ -359,6 +444,18 @@ def _update_estado(results, metrics):
         f.write(content)
 
 
+<<<<<<< HEAD
+=======
+def _pool_post_status(resultado):
+    """No atribuir intento/fallo a un destino cuyo turno nunca ocurrió."""
+    if resultado in ("confirmado", "saltado_ya_like", "saltado_ya_reposteado"):
+        return "done"
+    if resultado == "pendiente_verificacion":
+        return "uncertain"
+    return None
+
+
+>>>>>>> origin/research/public-reuse-parent
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print(__doc__)
@@ -373,6 +470,20 @@ if __name__ == "__main__":
         print(f"FALLO DE PREFLIGHT: {type(exc).__name__}: {exc}")
         raise SystemExit(2)
 
+<<<<<<< HEAD
+=======
+    # Un fichero de plan antiguo puede sobrevivir a otra ejecución. La
+    # comprobación se repite JUSTO antes de conectar con Edge.
+    import x_acquisition_audit as xa
+    followed, treated = xa.read_history(REGISTRO_CSV)
+    plan, skipped = xa.filter_known_plan(plan, followed, treated)
+    if any(group["descartadas_registro"] for group in skipped.values()):
+        print("X_DEDUPE_PREFLIGHT: destinos ya tratados omitidos; no se repiten")
+    if not plan:
+        print("X_DEDUPE_PREFLIGHT: cero acciones pendientes, no se abre Edge")
+        raise SystemExit(0)
+
+>>>>>>> origin/research/public-reuse-parent
     x.ensure_browser()
     persisted = set()
 
@@ -385,9 +496,20 @@ if __name__ == "__main__":
             try:
                 outcome = r["resultado"]
                 if r.get("url") and r.get("kind") in ("like", "repost"):
+<<<<<<< HEAD
                     pool.mark(db, r["url"], "done" if outcome in ("confirmado", "saltado_ya_like", "saltado_ya_reposteado") else "failed")
                 if r.get("handle") and (r["kind"] == "follow" or (r["kind"] == "like" and not r.get("url"))):       # follow o like_latest (que se registra como like sin URL)
                     status = ("done" if outcome in ("confirmado", "saltado_ya_like", "saltado_ya_seguido", "pendiente_aprobacion")
+=======
+                    status = _pool_post_status(outcome)
+                    if status:
+                        # no_intentado, saltados de política y fallos previos
+                        # al tap NO deben consumir el candidato de la reserva.
+                        pool.mark(db, r["url"], status)
+                if r.get("handle") and (r["kind"] in ("follow", "like_latest") or (r["kind"] == "like" and not r.get("url"))):       # follow o like_latest (que se registra como like sin URL)
+                    status = ("done" if outcome in ("confirmado", "saltado_ya_like", "saltado_ya_seguido", "pendiente_aprobacion")
+                              else "uncertain" if outcome == "pendiente_verificacion"
+>>>>>>> origin/research/public-reuse-parent
                               else "rejected" if outcome.startswith("saltado_perfil") else None)
                     if status:       # una cuenta tocada o rechazada no vuelve a ofrecerse; un fallo puntual si
                         pool.mark_account(db, r["handle"], status)
@@ -410,8 +532,14 @@ if __name__ == "__main__":
     # PARADA TOTAL debe incluir la recogida de métricas: esta función
     # navega por el perfil y antes volvía a abrir la red tras un CAPTCHA,
     # bloqueo o cuenta incorrecta detectados en run_plan.
+<<<<<<< HEAD
     if any(str(item.get("resultado", "")).startswith("parada:") for item in results):
         print("PARADA TOTAL: resultados guardados; no se abre de nuevo el navegador para métricas.")
+=======
+    if any(str(item.get("resultado", "")).startswith("parada:")
+           or item.get("resultado") == "pendiente_verificacion" for item in results):
+        print("PARADA TOTAL: ACK incierto/seguridad; revisión manual, no se consultan métricas.")
+>>>>>>> origin/research/public-reuse-parent
         sys.exit(5)
     metrics = _fetch_metrics()
     _append_metricas(results, metrics)

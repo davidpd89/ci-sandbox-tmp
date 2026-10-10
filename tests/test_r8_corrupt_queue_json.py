@@ -321,6 +321,11 @@ for i in range(5):
                 self.assertFalse(th.is_alive(), "El lock no puede durar la consulta a GPT")
             self.assertEqual(errors, [])
             status["consulted"] = True
+<<<<<<< HEAD
+=======
+            # Un None solo es terminal si el escritor certifica null explícito.
+            status["outcomes"] = {"q1": "null"}
+>>>>>>> origin/research/public-reuse-parent
             return {"q1": None}
         with mock.patch.object(rq.rw, "write_replies", side_effect=consultation):
             self.assertEqual(rq.work_once(log=lambda *_: None), 0)

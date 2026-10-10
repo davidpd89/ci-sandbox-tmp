@@ -81,6 +81,18 @@ def blockers_of(item, issues_by_path, now=None):
     for media in item.get("media") or []:
         if not media.get("exists"):
             reasons.append(f"falta el archivo {media.get('filename')}")
+<<<<<<< HEAD
+=======
+    # Validacion comun *antes* de elegir adaptador WEB/API/MOBILE.
+    # Una ficha con media corrupta o incompatible no puede parecer elegible.
+    if any(media.get("exists") for media in item.get("media") or []):
+        try:
+            import media_preflight
+        except ImportError:
+            reasons.append("media: Pillow no disponible; imagen/video sin verificar")
+        else:
+            reasons.extend("media: " + message for message in media_preflight.inspect_item(item))
+>>>>>>> origin/research/public-reuse-parent
     return reasons
 
 
@@ -107,7 +119,11 @@ def publish_bluesky(item):
     if item.get("imagen"):
         record["embed"] = b._upload_image(item["imagen"], item["alt"])
     created = b._require_created_record(b._post_xrpc("com.atproto.repo.createRecord", {"repo": sess["did"], "collection": "app.bsky.feed.post", "record": record}), "app.bsky.feed.post")
+<<<<<<< HEAD
     handle = sess.get("handle") or "autorademoescritor.bsky.social"
+=======
+    handle = sess.get("handle") or "davidportoescritor.bsky.social"
+>>>>>>> origin/research/public-reuse-parent
     return f"https://bsky.app/profile/{handle}/post/{created['uri'].rsplit('/', 1)[-1]}"
 
 
@@ -144,10 +160,25 @@ def publish_facebook(item):
 def publish_instagram(item):
     import meta_common as mc
     import meta_publish as mp
+<<<<<<< HEAD
     env = mc.read_env()
     images, alts = _media(item)
     urls = [mp.public_image_url(env["FB_PAGE_TOKEN"], env["FB_PAGE_ID"], path) for path in images]
     media_id = mp.publish_instagram(env["IG_ACCESS_TOKEN"], env["IG_USER_ID"], item["texto"], urls, alts)
+=======
+    import instagram_publish_guard as guard
+    env = mc.read_env()
+    images, alts = _media(item)
+
+    def submit(before_publish):
+        urls = [mp.public_image_url(env["FB_PAGE_TOKEN"], env["FB_PAGE_ID"], path) for path in images]
+        return mp.publish_instagram(
+            env["IG_ACCESS_TOKEN"], env["IG_USER_ID"], item["texto"], urls, alts,
+            before_publish=before_publish,
+        )
+
+    media_id = guard.publish_guarded(item["md_path"], env["IG_USER_ID"], submit)
+>>>>>>> origin/research/public-reuse-parent
     return mp.instagram_permalink(env["IG_ACCESS_TOKEN"], media_id)
 
 
@@ -227,6 +258,20 @@ def _verify(red, now):
     return cqa.classify(red, now, allow_browser=True)
 
 
+<<<<<<< HEAD
+=======
+def _voice_diagnostics(red, text, out):
+    """Adaptador mínimo: sirve tanto en vista previa como antes de publicar."""
+    try:
+        from spanish_voice_quality import advisory
+        return advisory(text, network=red,
+                        queue="WEB" if red in BROWSER else "API",
+                        log=out, label=f"[{red}] revision_es")
+    except Exception as exc:
+        out(f"[{red}] auditor_es_no_disponible: {type(exc).__name__}")
+        return []
+
+>>>>>>> origin/research/public-reuse-parent
 def run(red, *, apply=False, now=None, out=print, publishers=None, verify=_verify, log_path=None):
     """Publica como mucho una ficha de `red`. Devuelve la URL o None."""
     now = now or datetime.datetime.now(ZoneInfo("Europe/Madrid")).replace(tzinfo=None)
@@ -237,7 +282,15 @@ def run(red, *, apply=False, now=None, out=print, publishers=None, verify=_verif
     if red not in publishers or not config["enabled"].get(red):
         return None
     issues = {path: missing for path, missing in cq.pending_parse_issues(red, auto_only=False)}
+<<<<<<< HEAD
     verify(red, now)                      # marca solas las fichas que ya estan publicadas en la red (David publica a mano y a veces no actualiza la ficha)
+=======
+    verification = verify(red, now)
+    if red == "instagram" and apply and (
+        not isinstance(verification, dict) or verification.get("unverifiable") is not False
+    ):
+        raise RuntimeError("Instagram: no se puede verificar el perfil; publicacion detenida")
+>>>>>>> origin/research/public-reuse-parent
     ready, skipped = eligible(red, now, config, issues)
     for item, reasons in skipped:
         out(f"[{red}] NO se publica {os.path.basename(item['carpeta'])} ({item['fecha_hora']:%d/%m %H:%M}): " + "; ".join(reasons))
@@ -300,10 +353,31 @@ def run(red, *, apply=False, now=None, out=print, publishers=None, verify=_verif
                     f"(mínimo {xb.MIN_GAP_HOURS} h entre banco y ficha)")
                 return None
     item = ready[0]
+<<<<<<< HEAD
+=======
+    _voice_diagnostics(red, item.get("texto") or "", out)
+>>>>>>> origin/research/public-reuse-parent
     label = f"{os.path.basename(item['carpeta'])} ({item['fecha_hora']:%d/%m %H:%M}) «{' '.join(item['texto'].split())[:60]}»"
     if not apply:
         out(f"[{red}] publicaria: {label}")
         return None
+<<<<<<< HEAD
+=======
+    # También se ejecuta fuera de mechanical_round desde la tarea horaria.
+    # Comprobar tras esperar el turno Edge, justo antes de escribir.
+    import circuit_breaker as cb
+    allowed, why = cb.write_preflight(red)
+    if not allowed:
+        out(f"[{red}] no se publica: cortacircuitos ABIERTO ({why})")
+        return None
+    # Segundo preflight inmediatamente antes del adaptador: el archivo puede
+    # haber cambiado mientras se obtenia el turno de la cola/navegador.
+    if item.get("media"):
+        final_reasons = blockers_of(item, issues, now)
+        if final_reasons:
+            out(f"[{red}] NO se publica {label}: media modificada/invalida: " + "; ".join(final_reasons))
+            return None
+>>>>>>> origin/research/public-reuse-parent
     try:
         url = publishers[red](item)
     except Exception:

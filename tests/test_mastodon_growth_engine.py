@@ -137,7 +137,11 @@ class MastodonGrowthScanTests(unittest.TestCase):
 
     def test_scan_captures_profiles_posts_and_dynamic_tags(self):
         c = self.collector()
+<<<<<<< HEAD
         c.own = "autorademodiaz"
+=======
+        c.own = "davidportodiaz"
+>>>>>>> origin/research/public-reuse-parent
         c.own_id = "david"
         c.use_surface("health")
         c.add_status(status("1"), "post_search", "fantasia")
@@ -147,15 +151,26 @@ class MastodonGrowthScanTests(unittest.TestCase):
 
     def test_own_post_is_seed_without_self_becoming_candidate(self):
         c = self.collector()
+<<<<<<< HEAD
         c.own = "autorademodiaz"
         own_status = status("2", "autorademodiaz@mastodon.social")
         self.assertTrue(c.add_status(own_status, "own_post", "me"))
         self.assertNotIn("autorademodiaz@mastodon.social", c.candidates)
+=======
+        c.own = "davidportodiaz"
+        own_status = status("2", "davidportodiaz@mastodon.social")
+        self.assertTrue(c.add_status(own_status, "own_post", "me"))
+        self.assertNotIn("davidportodiaz@mastodon.social", c.candidates)
+>>>>>>> origin/research/public-reuse-parent
         self.assertIn("2", c.posts)
 
     def test_private_and_sensitive_statuses_do_not_offer_interactions(self):
         c = self.collector()
+<<<<<<< HEAD
         c.own = "autorademodiaz"
+=======
+        c.own = "davidportodiaz"
+>>>>>>> origin/research/public-reuse-parent
         private = status("3", visibility="private")
         sensitive = status("4", sensitive=True)
         self.assertFalse(c.add_status(private, "post_search"))
@@ -213,7 +228,11 @@ class MastodonGrowthScanTests(unittest.TestCase):
 
     def test_rate_limit_stops_further_reads(self):
         c = self.collector()
+<<<<<<< HEAD
         c.own = "autorademodiaz"
+=======
+        c.own = "davidportodiaz"
+>>>>>>> origin/research/public-reuse-parent
         c.exhausted = True
         before = c.reads
         result = c.collect("post_search", "q", lambda: self.fail("no HTTP after stop"), lambda _: True)
@@ -256,7 +275,11 @@ class MastodonGrowthScanTests(unittest.TestCase):
         # - una resta de sets directa lo marcaba siempre "missing" aunque se
         # hubiera ejecutado varias veces.
         c = self.collector()
+<<<<<<< HEAD
         c.own = "autorademodiaz"
+=======
+        c.own = "davidportodiaz"
+>>>>>>> origin/research/public-reuse-parent
         self.assertIn("post_search", c.config["coverage"]["required_surfaces"])
         c.use_surface("post_search:fantasia")
         c.use_surface("post_search:autores")
@@ -270,7 +293,11 @@ class MastodonGrowthScanTests(unittest.TestCase):
         # reventaba con AttributeError en cualquier sesion con historial real
         # (o sea, siempre que exista al menos una cuenta conocida).
         c = self.collector()
+<<<<<<< HEAD
         c.own = "autorademodiaz"
+=======
+        c.own = "davidportodiaz"
+>>>>>>> origin/research/public-reuse-parent
         c.known["lectora@mastodon.social"] = "2026-09-20"
         c.add_status(status("30"), "post_search", "fantasia")
         result = gs._build_output(c)
@@ -280,7 +307,11 @@ class MastodonGrowthScanTests(unittest.TestCase):
 
     def test_stream_cached_viewer_flags_are_refreshed_before_shortlist(self):
         c = self.collector()
+<<<<<<< HEAD
         c.own = "autorademodiaz"
+=======
+        c.own = "davidportodiaz"
+>>>>>>> origin/research/public-reuse-parent
         cached = status("25")
         self.assertTrue(c.add_status(cached, "stream_cache", "test"))
         shortlist = [c.candidates["lectora@mastodon.social"]]
