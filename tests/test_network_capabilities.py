@@ -82,7 +82,7 @@ class CapabilityMatrixTests(unittest.TestCase):
         self.assertFalse(matrix["bluesky"]["unfollow_scheduled"])
         self.assertFalse(matrix["bluesky"]["inbound_harvest"])
         self.assertFalse(matrix["bluesky"]["loyalty_scheduled"])
-        self.assertTrue(matrix["bluesky"]["gpt_writer_scheduled"])
+        self.assertFalse(matrix["bluesky"]["gpt_writer_scheduled"])  # escritor solo cuenta en pre
 
     def test_scheduler_requires_network_argument(self):
         sample = {"bluesky": {"post": [["python", "tools/unfollow_cleanup.py", "mastodon"]]}}
