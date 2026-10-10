@@ -329,7 +329,8 @@ def write_replies(items, network, *, wait_min=10, consult=None, recent=None, log
         item_id, reply = entry.get("id"), entry.get("reply")
         if not isinstance(reply, str) or item_id in out:
             continue
-        net = next((i.get("network") for i in items if i["id"] == item_id), None) or network
+        source = next((i for i in items if i["id"] == item_id), {})
+        net = source.get("network") or network
         ok, why = valid_reply(reply, net, recent)
         if ok:
             # Diagnóstico editorial común: WEB/API/MOBILE, jamás una nueva
@@ -338,7 +339,8 @@ def write_replies(items, network, *, wait_min=10, consult=None, recent=None, log
                 import spanish_voice_quality as voice_qa
                 qa_net = "reddit" if net == "reddit_micro" else net
                 if qa_net in voice_qa.NETWORKS:
-                    findings = voice_qa.audit(reply, network=qa_net)["findings"]
+                    findings = voice_qa.audit(reply, network=qa_net,
+                                                   queue=source.get("queue"))["findings"]
                     if findings:
                         codes = sorted({item["code"] for item in findings})
                         log("[reply_writer] revision_es_" + qa_net + ": " + ",".join(codes))
