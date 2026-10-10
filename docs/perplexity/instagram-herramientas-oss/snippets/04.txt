@@ -1,0 +1,45 @@
+python
+# tools/instagram_ingest_schema.py
+from dataclasses import dataclass, field, asdict
+from datetime import datetime, timezone
+from typing import Any, Optional
+
+@dataclass
+class InstagramCandidate:
+    external_id: str
+    source: str                      # instaloader | graph_api | apify | brightdata
+    kind: str                        # post | reel | comment | profile
+    author_username: str
+    author_external_id: Optional[str]
+    caption: Optional[str]
+    hashtags: list[str] = field(default_factory=list)
+    metrics: dict[str, Any] = field(default_factory=dict)
+    lang: Optional[str] = None
+    permalink: Optional[str] = None
+    captured_at: str = field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
+    raw: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        data = asdict(self)
+        data["network"] = "instagram"
+        return data
+
+def normalize_instaloader_post(post) -> InstagramCandidate:
+    return InstagramCandidate(
+        external_id=post.shortcode,
+        source="instaloader",
+        kind="reel" if post.is_video else "post",
+        author_username=post.owner_username,
+        author_external_id=str(post.owner_id),
+        caption=post.caption,
+        hashtags=[h.lower() for h in post.caption_hashtags],
+        metrics={
+            "likes": post.likes,
+            "comments": post.comments,
+            "video_views": getattr(post, "video_view_count", None),
+        },
+        permalink=f"https://www.instagram.com/p/{post.shortcode}/",
+        raw={"typename": post.typename},
+    )
