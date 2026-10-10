@@ -106,7 +106,9 @@ def replay(rows, *, network, today, followers=(), following=None,
                     pending = False
                 elif outcome in ("pendiente_aprobacion", "requested") and since is None:
                     pending = True
-            elif "reply" in parts and outcome in ("confirmado", "publicado") and since is not None:
+            # Un evento combinado (follow+reply) cuenta ambas acciones; el
+            # `elif` anterior omitia la conversacion y marcaba eligible.
+            if "reply" in parts and outcome in ("confirmado", "publicado") and since is not None:
                 reply_after_follow = True
 
         # Un positivo parcial prevalece; no sustituirlo por ausencia inferida.
