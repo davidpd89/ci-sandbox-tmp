@@ -137,6 +137,7 @@ class RelationshipLedger:
             version = conn.execute("PRAGMA user_version").fetchone()[0]
             if version not in (0, SCHEMA_VERSION):
                 raise ValueError("unsupported ledger schema version")
+            conn.execute("PRAGMA journal_mode=WAL")
             conn.executescript(_SCHEMA)
             conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
 
@@ -146,7 +147,6 @@ class RelationshipLedger:
         conn = sqlite3.connect(self.path, timeout=30, isolation_level=None)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA busy_timeout=30000")
-        conn.execute("PRAGMA journal_mode=WAL")
         return conn
 
     def _connection(self):
@@ -248,9 +248,11 @@ class RelationshipLedger:
             subject, kind, outcome, at = row["subject"], row["kind"], row["outcome"], row["occurred_at"]
             person = by_person.setdefault(subject, {"follow": None, "unfollow": None, "snapshot": None})
             if kind == "follow" and outcome == "confirmed":
-                person["follow"] = at
-                person["unfollow"] = None
-                person["snapshot"] = None
+                # Repeated confirmations are not a second follow epoch.
+                if person["follow"] is None or person["unfollow"] is not None:
+                    person["follow"] = at
+                    person["unfollow"] = None
+                    person["snapshot"] = None
             elif kind == "unfollow" and outcome == "confirmed" and person["follow"] is not None:
                 person["unfollow"] = at
             elif kind == "followback" and person["follow"] is not None and at >= person["follow"]:
