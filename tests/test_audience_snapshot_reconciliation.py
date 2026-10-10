@@ -181,6 +181,108 @@ class SnapshotReconciliationTests(unittest.TestCase):
         self.assertEqual(res["deactivated_events"], 0)
         self.assertEqual(len(self.store.ranked("bluesky")), 1)
 
+    def test_missing_coverage_complete_field_aborts_reconciliation(self):
+        def fetch_initial(cur):
+            return {
+                "items": [{"actor": actor("bluesky", "1", "u1"), "event_id": "1"}],
+                "kind": "like",
+                "post_key": "post_1",
+                "post_created_at": POST,
+                "next_cursor": None,
+                "coverage_complete": True,
+            }
+
+        ad.collect_pages(self.store, network="bluesky", surface="liked_by", seed="s1",
+                         fetch_page=fetch_initial, observed_at=NOW, use_snapshot_reconciliation=True)
+
+        # Snapshot que omite el campo coverage_complete
+        def fetch_missing_flag(cur):
+            return {
+                "items": [],
+                "kind": "like",
+                "post_key": "post_1",
+                "post_created_at": POST,
+                "next_cursor": None,
+                # Sin campo coverage_complete
+            }
+
+        res = ad.collect_pages(self.store, network="bluesky", surface="liked_by", seed="s1",
+                               fetch_page=fetch_missing_flag, observed_at="2026-10-10T12:21:00+00:00",
+                               use_snapshot_reconciliation=True)
+        self.assertFalse(res["complete"])
+        self.assertEqual(res["deactivated_events"], 0)
+        self.assertEqual(len(self.store.ranked("bluesky")), 1)
+
+    def test_inconsistent_post_key_across_pages_aborts_snapshot(self):
+        def fetch_mismatched(cur):
+            if cur is None:
+                return {
+                    "items": [{"actor": actor("bluesky", "1", "u1"), "event_id": "1"}],
+                    "kind": "like",
+                    "post_key": "post_A",
+                    "post_created_at": POST,
+                    "next_cursor": "p2",
+                }
+            return {
+                "items": [{"actor": actor("bluesky", "2", "u2"), "event_id": "2"}],
+                "kind": "like",
+                "post_key": "post_B",  # Incoherente con post_A
+                "post_created_at": POST,
+                "next_cursor": None,
+                "coverage_complete": True,
+            }
+
+        with self.assertRaisesRegex(ad.ObservationError, "incoherente"):
+            ad.collect_pages(self.store, network="bluesky", surface="liked_by", seed="s1",
+                             fetch_page=fetch_mismatched, observed_at=NOW, use_snapshot_reconciliation=True)
+
+    def test_active_snapshot_collision_raises_error(self):
+        sid1 = self.store.start_snapshot("bluesky", "liked_by", "s1", "post_1", "like", NOW)
+        self.assertTrue(sid1)
+
+        # Intentar iniciar un segundo snapshot activo en el mismo ámbito
+        with self.assertRaisesRegex(ad.ObservationError, "snapshot_activo_existente"):
+            self.store.start_snapshot("bluesky", "liked_by", "s1", "post_1", "like", NOW)
+
+        self.store.abort_snapshot(sid1)
+        # Una vez abortado, se puede iniciar uno nuevo
+        sid2 = self.store.start_snapshot("bluesky", "liked_by", "s1", "post_1", "like", NOW)
+        self.assertTrue(sid2)
+
+    def test_reactivation_after_deactivation(self):
+        # Snapshot 1: u1 activo
+        def snap1(cur):
+            return {
+                "items": [{"actor": actor("bluesky", "1", "u1"), "event_id": "1"}],
+                "kind": "like", "post_key": "p1", "post_created_at": POST,
+                "next_cursor": None, "coverage_complete": True,
+            }
+        ad.collect_pages(self.store, network="bluesky", surface="liked_by", seed="s1",
+                         fetch_page=snap1, observed_at=NOW, use_snapshot_reconciliation=True)
+        self.assertEqual(len(self.store.ranked("bluesky")), 1)
+
+        # Snapshot 2: u1 ausente (desactivado)
+        def snap2(cur):
+            return {
+                "items": [],
+                "kind": "like", "post_key": "p1", "post_created_at": POST,
+                "next_cursor": None, "coverage_complete": True,
+            }
+        ad.collect_pages(self.store, network="bluesky", surface="liked_by", seed="s1",
+                         fetch_page=snap2, observed_at="2026-10-10T12:05:00+00:00", use_snapshot_reconciliation=True)
+        self.assertEqual(len(self.store.ranked("bluesky")), 0)
+
+        # Snapshot 3: u1 vuelve a dar like (reactivación)
+        def snap3(cur):
+            return {
+                "items": [{"actor": actor("bluesky", "1", "u1"), "event_id": "1"}],
+                "kind": "like", "post_key": "p1", "post_created_at": POST,
+                "next_cursor": None, "coverage_complete": True,
+            }
+        ad.collect_pages(self.store, network="bluesky", surface="liked_by", seed="s1",
+                         fetch_page=snap3, observed_at="2026-10-10T12:10:00+00:00", use_snapshot_reconciliation=True)
+        self.assertEqual(len(self.store.ranked("bluesky")), 1)
+
     def test_multi_network_isolation_during_snapshot_reconciliation(self):
         def fetch_bsky(cur):
             return {

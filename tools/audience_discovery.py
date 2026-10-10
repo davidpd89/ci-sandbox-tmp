@@ -168,6 +168,8 @@ class AudienceStore:
                 PRIMARY KEY(network, surface, seed, cursor));
             CREATE INDEX IF NOT EXISTS idx_audience_events_account
                 ON audience_events(network, account_key, active);
+            CREATE INDEX IF NOT EXISTS idx_audience_events_reconcile
+                ON audience_events(network, post_key, kind, active, event_key);
             CREATE TABLE IF NOT EXISTS audience_cursors (
                 network TEXT NOT NULL, surface TEXT NOT NULL, seed TEXT NOT NULL,
                 cursor TEXT, PRIMARY KEY(network, surface, seed));
@@ -183,6 +185,9 @@ class AudienceStore:
                 completed_at TEXT,
                 status TEXT NOT NULL,
                 PRIMARY KEY(snapshot_id));
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_audience_snapshots_active
+                ON audience_snapshots(network, surface, seed, post_key, kind)
+                WHERE status='active';
             CREATE TABLE IF NOT EXISTS audience_snapshot_staging (
                 snapshot_id TEXT NOT NULL,
                 network TEXT NOT NULL,
@@ -225,23 +230,26 @@ class AudienceStore:
         sid = str(uuid.uuid4())
         now_ts = timestamp(now)
         with self.db:
-            self.db.execute(
-                "INSERT INTO audience_snapshots(snapshot_id, network, surface, seed, post_key, kind, started_at, status) "
-                "VALUES(?,?,?,?,?,?,?,'active')",
-                (sid, network, surface, seed, post_key, kind, now_ts))
+            try:
+                self.db.execute(
+                    "INSERT INTO audience_snapshots(snapshot_id, network, surface, seed, post_key, kind, started_at, status) "
+                    "VALUES(?,?,?,?,?,?,?,'active')",
+                    (sid, network, surface, seed, post_key, kind, now_ts))
+            except sqlite3.IntegrityError as exc:
+                raise ObservationError("snapshot_activo_existente") from exc
         return sid
 
     def stage_snapshot_observations(self, snapshot_id: str, rows: Sequence[Observation]) -> None:
         with self.db:
             snap = self.db.execute(
-                "SELECT network, status FROM audience_snapshots WHERE snapshot_id=?",
+                "SELECT network, post_key, kind, status FROM audience_snapshots WHERE snapshot_id=?",
                 (snapshot_id,)).fetchone()
-            if not snap or snap[1] != "active":
+            if not snap or snap[3] != "active":
                 raise ObservationError("snapshot_no_activo")
-            network = snap[0]
+            expected_network, expected_post_key, expected_kind = snap[0], snap[1], snap[2]
             for row in rows:
-                if row.network != network:
-                    raise ObservationError("origen_cruzado")
+                if row.network != expected_network or row.post_key != expected_post_key or row.kind != expected_kind:
+                    raise ObservationError("origen_o_ambito_incoherente_en_snapshot")
                 self.db.execute("""
                     INSERT INTO audience_snapshot_staging
                     (snapshot_id, network, event_key, account_key, kind, post_key, surface,
@@ -282,9 +290,7 @@ class AudienceStore:
             """, (snapshot_id,)).fetchall()
 
             staged_observations = []
-            staged_event_keys = set()
             for r in staged_rows:
-                staged_event_keys.add(r[1])
                 staged_observations.append(Observation(
                     network=r[0], event_key=r[1], account_key=r[2], kind=r[3],
                     post_key=r[4], surface=r[5], occurred_at=r[6], observed_at=r[7],
@@ -292,7 +298,7 @@ class AudienceStore:
                     profile=r[12], deleted=bool(r[13])
                 ))
 
-            # Reutilizar lógica de ingesta para consolidar los eventos del snapshot
+            # Consolidation of events present in staging
             ingest_stats = self._ingest_unlocked(
                 staged_observations, network=network, surface=surface, seed=seed,
                 next_cursor=None, now=now_ts, max_post_age_hours=max_post_age_hours,
@@ -302,20 +308,23 @@ class AudienceStore:
                 if k in counts:
                     counts[k] += v
 
-            # RECONCILIACIÓN DE BAJAS:
-            # Marcar inactivos (active = 0) los eventos previamente activos para este (network, post_key, kind)
-            # que NO estuvieron presentes en el snapshot actual.
-            existing_active = self.db.execute("""
-                SELECT event_key FROM audience_events
-                WHERE network=? AND post_key=? AND kind=? AND active=1
-            """, (network, post_key, kind)).fetchall()
-
-            for (ekey,) in existing_active:
-                if ekey not in staged_event_keys:
-                    self.db.execute(
-                        "UPDATE audience_events SET active=0 WHERE network=? AND event_key=?",
-                        (network, ekey))
-                    counts["deactivated_events"] += 1
+            # Anti-join SQL optimizado para marcar inactivos (active = 0) los ausentes
+            cursor = self.db.execute("""
+                UPDATE audience_events AS old
+                SET active = 0
+                WHERE old.network = ?
+                  AND old.post_key = ?
+                  AND old.kind = ?
+                  AND old.active = 1
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM audience_snapshot_staging AS st
+                      WHERE st.snapshot_id = ?
+                        AND st.network = old.network
+                        AND st.event_key = old.event_key
+                  )
+            """, (network, post_key, kind, snapshot_id))
+            counts["deactivated_events"] = cursor.rowcount
 
             self.db.execute(
                 "UPDATE audience_snapshots SET status='committed', completed_at=? WHERE snapshot_id=?",
@@ -411,8 +420,6 @@ class AudienceStore:
                 incoming_version = row.occurred_at or row.observed_at
                 was_active = previous[2] == 1
                 if previous_version >= incoming_version:
-                    # En commit de snapshot, si el evento estaba inactivo (was_active=False)
-                    # y reaparece en el snapshot (not row.deleted), debe reactivarse (not replay).
                     if was_active or not is_snapshot_commit:
                         self.db.execute(
                             "INSERT INTO audience_sightings VALUES(?,?,?,?,?) "
@@ -534,6 +541,8 @@ def collect_pages(store: AudienceStore, *, network: str, surface: str, seed: str
               "replays": 0, "stale_posts": 0, "unverified_age": 0, "deactivated_events": 0}
     done = False
     snapshot_id = None
+    expected_post_key = None
+    expected_kind = None
 
     try:
         for page_num in range(max_pages):
@@ -551,6 +560,12 @@ def collect_pages(store: AudienceStore, *, network: str, surface: str, seed: str
 
             post_key = str(page.get("post_key") or "")
             kind = str(page.get("kind") or "")
+
+            if expected_post_key is None:
+                expected_post_key = post_key
+                expected_kind = kind
+            elif post_key != expected_post_key or kind != expected_kind:
+                raise ObservationError("post_key_o_kind_incoherente_entre_paginas")
 
             normalized = [
                 normalize(network, kind, item, surface=surface,
@@ -574,7 +589,12 @@ def collect_pages(store: AudienceStore, *, network: str, surface: str, seed: str
 
             cursor = nxt
             if nxt is None:
-                done = page.get("coverage_complete", True) is True
+                if use_snapshot_reconciliation:
+                    # Exigir coverage_complete is True explícito para reconciliación por snapshot
+                    done = page.get("coverage_complete") is True
+                else:
+                    # En modo incremental estándar, si no se indica se presupone True para mantener compatibilidad
+                    done = page.get("coverage_complete", True) is True
                 break
             visited.add(nxt)
 
@@ -585,7 +605,6 @@ def collect_pages(store: AudienceStore, *, network: str, surface: str, seed: str
                 for field in recon_stats:
                     if field in totals:
                         totals[field] += recon_stats[field]
-                # Actualizar cursor únicamente tras el commit exitoso del snapshot
                 with store.db:
                     if cursor is None:
                         store.db.execute(
@@ -600,7 +619,6 @@ def collect_pages(store: AudienceStore, *, network: str, surface: str, seed: str
                         "ON CONFLICT(network,surface,seed) DO UPDATE SET cursor=excluded.cursor",
                         (network, surface, seed, cursor))
             else:
-                # Si el snapshot no terminó con coverage_complete=True, descartar staging sin avanzar cursor
                 store.abort_snapshot(snapshot_id)
 
     except Exception:
