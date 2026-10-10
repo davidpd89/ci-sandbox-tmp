@@ -283,6 +283,32 @@ class ObservationTests(unittest.TestCase):
         self.assertEqual(c.feedback_aggregates(), [])
         self.assertEqual(c.counts["feedback_invalid"], 1)
 
+    def test_engine_identity_length_boundary(self):
+        # #63 validates both identity fields to <=256 characters.
+        bridge = ObservationCollector(now=NOW)
+        bridge.add_posts("x", "API", "ids", [
+            sample("x", post="p" * 256, author="a" * 256),
+            sample("x", post="p" * 257, author="short"),
+            sample("x", post="short", author="a" * 257),
+        ])
+        rows = bridge.to_engine_rows()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(len(rows[0]["post_id"]), 256)
+        self.assertEqual(len(rows[0]["author_id"]), 256)
+        self.assertEqual(bridge.counts["invalid"], 2)
+
+    def test_engine_rows_do_not_expose_mutable_collector_tags(self):
+        bridge = ObservationCollector(now=NOW)
+        sample_post = sample("bluesky")
+        bridge.add_posts("bluesky", "API", "a", [sample_post])
+        bridge.add_posts("bluesky", "WEB", "b", [sample_post])
+        rows = bridge.to_engine_rows()
+        self.assertEqual(len(rows), 2)
+        original = list(rows[0]["tags"])
+        rows[0]["tags"].append("inyectado")
+        self.assertEqual(rows[1]["tags"], original)
+        self.assertEqual(bridge.to_engine_rows()[0]["tags"], original)
+
     def test_strict_bad_scope_bounds_and_rollback(self):
         c = ObservationCollector(now=NOW)
         for args in (("fake", "WEB", "test", []),
