@@ -1,28 +1,49 @@
-"""Terminos de descubrimiento ampliados con GPT (consulta M, 07/10/2026: `00_OPERATIVO/_consultas_gpt/RESPUESTA_M_descubrimiento.md`).
+"""Consulta del banco operativo más expansión local de intención lectora.
 
-David: «no me puedo creer que una red social se termine con lo que tenemos». Las listas de busquedas, hashtags y hubs por red salen de `00_OPERATIVO/descubrimiento_gpt.json`; cada escaner las
-suma a sus propios pools con `terms(red, "busquedas")`. Para ampliar solo hay que editar ese JSON (o volver a consultar a GPT).
+El banco original vive en 00_OPERATIVO/descubrimiento_gpt.json (puede faltar
+intencionadamente en el espejo público). Sin cambiar escáneres ni credenciales,
+las búsquedas reciben términos del nicho antes de que la rotación existente elija
+sus consultas. Hashtags/hubs/semillas no se modifican; #63/#99/#101 los gestionan.
 """
 from __future__ import annotations
 
 import json
 import os
+import unicodedata
+
+from niche_query_bank import NETWORKS, queries
 
 PATH = os.path.join(os.path.dirname(__file__), "..", "00_OPERATIVO", "descubrimiento_gpt.json")
 
 
-def terms(network, kind="busquedas", suffix="", skip=()):
-    """Lista de terminos (sin duplicados ni los de `skip`), con `suffix` opcional (p. ej. ' lang:es' en X). [] si falta el fichero."""
+def _key(raw):
+    return " ".join(unicodedata.normalize("NFC", str(raw)).casefold().split())
+
+
+def terms(network, kind="busquedas", suffix="", skip=(), *, include_niche=True):
+    """Lista estable, sin repetidos, con sufijo del adaptador (p.ej. lang:es).
+
+    Sin IO de redes. Si el JSON no existe o está dañado, únicamente «busquedas»
+    recibe frases editoriales estáticas, nunca inventa estados de cuenta.
+    """
     try:
         with open(PATH, encoding="utf-8") as stream:
             data = json.load(stream)
     except (OSError, ValueError):
-        return []
-    skip_keys = {str(s).casefold() for s in skip}
+        data = {}
+    catalog = data.get(network) if isinstance(data, dict) else {}
+    catalog = catalog if isinstance(catalog, dict) else {}
+    rows = catalog.get(kind)
+    rows = rows if isinstance(rows, list) else []
+    if kind == "busquedas" and include_niche and network in NETWORKS:
+        rows = [*rows, *queries(network)]
+    skip_keys = {_key(s) for s in skip if isinstance(s, str)}
     out, seen = [], set()
-    for term in (data.get(network) or {}).get(kind) or []:
-        text = str(term).strip().lstrip("#") if kind == "hashtags" else str(term).strip()
-        key = text.casefold()
+    for raw in rows:
+        if not isinstance(raw, str):
+            continue
+        text = raw.strip().lstrip("#") if kind == "hashtags" else raw.strip()
+        key = _key(text)
         if text and key not in seen and key not in skip_keys:
             seen.add(key)
             out.append(text + suffix)
