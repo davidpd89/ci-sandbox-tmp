@@ -238,6 +238,8 @@ def run_plan(plan, *, prevalidated=False, on_result=None):
             elif kind == "reply" and item.get("reply_to_id"):
                 import threads_api as api
                 env = api._env()
+                import voice_output_finalization as voice
+                voice.inspect(item["text"], network="threads", queue="API")
                 api.publish_reply(env["THREADS_ACCESS_TOKEN"], env["THREADS_USER_ID"],
                                   item["reply_to_id"], item["text"], proof_action=item)
             elif kind == "reply":
@@ -247,6 +249,8 @@ def run_plan(plan, *, prevalidated=False, on_result=None):
                     results.append({**item, "resultado": "saltado_ya_comentado"})
                     continue
                 profile_url = f"https://www.threads.com/@{handle}"
+                import voice_output_finalization as voice
+                voice.inspect(item["text"], network="threads", queue="WEB")
                 outcome = t.reply_to(item.get("text_fragment", ""), item["text"], profile_url)
                 if outcome == "unverified":
                     # la interfaz no siempre muestra la respuesta al instante: la API oficial es la fuente fiable
