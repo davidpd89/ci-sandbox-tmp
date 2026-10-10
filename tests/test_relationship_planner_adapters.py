@@ -240,8 +240,37 @@ class PlannerBridge(unittest.TestCase):
             sources, outbound, inbound = bridge.read_manifest(root / "manifest.json")
             self.assertEqual(outbound, {})
             prepared, diag = bridge.build_snapshot(sources, outbound, inbound, today=TODAY)
-            self.assertEqual([item["network"] for item in prepared["candidates"]], ["x"])
-            self.assertEqual(len([x for x in diag["excluded"] if "reason" in x]), 2)
+            self.assertEqual([item["network"] for item in prepared["candidates"]],
+                             ["x", "reddit"])
+            self.assertEqual(len([x for x in diag["excluded"] if "reason" in x]), 1)
+            self.assertEqual(diag["outbound_read_errors"], ["reddit"])
+            self.assertEqual(diag["outbound_coverage"]["reddit"], "unknown_or_incomplete")
+
+    def test_malformed_outbound_disables_reply_not_verified_follow(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            rows = source("x", "WEB", actions=["follow", "reply"],
+                          target_created_at="2026-10-10")["data"]
+            (root / "source.json").write_text(json.dumps(rows), encoding="utf-8")
+            (root / "broken.csv").write_text(
+                "cuenta,fecha,tipo\\nreader_x,2026-10-10,comment\\n",
+                encoding="utf-8")
+            config = {
+                "sources": [{"network": "x", "lane": "WEB",
+                             "path": str(root / "source.json")}],
+                "outbound_csvs": {"x": str(root / "broken.csv")},
+                "outbound_coverage": proof("x"),
+            }
+            (root / "manifest.json").write_text(json.dumps(config),
+                                                 encoding="utf-8")
+            sources, outbound, inbound = bridge.read_manifest(root / "manifest.json")
+            snapshot, diag = bridge.build_snapshot(
+                sources, outbound, inbound, today=TODAY)
+            self.assertEqual(len(snapshot["candidates"]), 1)
+            self.assertTrue(snapshot["candidates"][0]["follow_eligible"])
+            self.assertFalse(snapshot["candidates"][0]["reply_eligible"])
+            self.assertEqual(diag["outbound_read_errors"], ["x"])
+            self.assertEqual(diag["outbound_coverage"]["x"], "unknown_or_incomplete")
 
     def test_missing_or_partial_outbound_does_not_offer_reply(self):
         # Los flags de preflight no acreditan cobertura del histórico entero.

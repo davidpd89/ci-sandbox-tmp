@@ -354,6 +354,12 @@ def build_snapshot(sources, outbound, inbound, *, today, outbound_coverage=None)
                                         "inbound_source": ("unavailable" if any(
                                             isinstance(src, dict) and src.get("_inbound_read_error")
                                             for src in sources) else "uncertified"),
+                                        "outbound_read_errors": sorted({
+                                            src["network"] for src in sources
+                                            if isinstance(src, dict)
+                                            and src.get("network") in NETWORKS
+                                            and src.get("_outbound_read_error")
+                                        }),
                                         "sources": len(sources), "prepared": len(candidates)}
 
 
@@ -402,7 +408,10 @@ def read_manifest(path):
             unavailable.add(net)
     for item in sources:
         if item["network"] in unavailable:
-            item["_read_error"] = "registro confirmado ausente o inválido"
+            # Un CSV dañado no invalida el productor ni un follow con
+            # preflight verificado; solo bloquea acciones dependientes
+            # de la cobertura del ledger (reply).
+            item["_outbound_read_error"] = "registro confirmado ausente o inválido"
     inbound = []
     if manifest.get("verified_inbound_sqlite"):
         # Una fuente inbound ausente no debe impedir procesar otras redes.
