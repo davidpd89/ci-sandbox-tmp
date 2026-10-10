@@ -356,6 +356,28 @@ class AudienceTests(unittest.TestCase):
             seed="s", fetch_page=fetch, observed_at=NOW)
         self.assertTrue(again["complete"])
 
+    def test_newer_sparse_import_cannot_erase_verified_age_or_text(self):
+        self.ingest([event()])
+        raw = {"actor": actor("bluesky"), "event_id": "event-7"}
+        newer = ad.normalize("bluesky", "comment", raw, surface="external_post",
+            post_key="p1", observed_at="2026-10-10T12:02:00Z")
+        self.store.ingest([newer], network="bluesky", surface="external_post",
+            seed="s2", next_cursor=None, now=NOW)
+        self.assertEqual(self.store.ranked("bluesky")[0]["signals"], 1)
+        row = self.store.db.execute(
+            "SELECT post_created_at,text FROM audience_events").fetchone()
+        self.assertIsNotNone(row[0])
+        self.assertIn("fantasía", row[1])
+
+    def test_incomplete_roster_never_claims_complete_snapshot(self):
+        result = ad.collect_pages(self.store, network="bluesky", surface="thread",
+            seed="s", fetch_page=lambda _: {
+                "items": [], "kind": "comment", "post_key": "p1",
+                "next_cursor": None, "coverage_complete": False},
+            observed_at=NOW)
+        self.assertEqual(result["pages"], 1)
+        self.assertFalse(result["complete"])
+
     def test_sqlite_reopen_persists_cursor_and_rank(self):
         with tempfile.TemporaryDirectory() as directory:
             path = str(pathlib.Path(directory) / "audience.db")
