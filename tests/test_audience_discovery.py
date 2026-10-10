@@ -194,6 +194,29 @@ class AudienceTests(unittest.TestCase):
             first.close()
             second.close()
 
+    def test_concurrent_collectors_cannot_roll_back_cursor(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = str(pathlib.Path(directory) / "audience.sqlite")
+            first = ad.AudienceStore(path)
+            second = ad.AudienceStore(path)
+            try:
+                first.ingest([], network="bluesky", surface="liked_by", seed="s",
+                             next_cursor="A", now=NOW)
+                stale_read = second.cursor("bluesky", "liked_by", "s")
+                self.assertEqual(stale_read, "A")
+                first.ingest([], network="bluesky", surface="liked_by", seed="s",
+                             next_cursor="B", now=NOW, expected_cursor="A")
+                with self.assertRaisesRegex(ad.ObservationError, "cursor_cambiado"):
+                    second.ingest([event(uid="99")], network="bluesky",
+                        surface="liked_by", seed="s", next_cursor="C",
+                        now=NOW, expected_cursor=stale_read)
+                self.assertEqual(first.cursor("bluesky", "liked_by", "s"), "B")
+                self.assertEqual(first.db.execute(
+                    "SELECT count(*) FROM audience_events").fetchone()[0], 0)
+            finally:
+                first.close()
+                second.close()
+
     def test_stale_posts_excluded_but_recent_stored(self):
         old = event(post_created_at="2026-09-01T12:00:00Z")
         stats = self.ingest([old])
