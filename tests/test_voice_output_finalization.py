@@ -165,38 +165,44 @@ class StaticLastBoundaryTests(unittest.TestCase):
     def source(path):
         return (ROOT / "tools" / path).read_text(encoding="utf-8")
 
-    def assert_before(self, path, earlier, later):
+    def assert_before(self, path, earlier, later, scope):
         src = self.source(path)
-        self.assertIn(earlier, src, path)
-        self.assertIn(later, src, path)
-        self.assertLess(src.index(earlier), src.index(later), path)
-        ast.parse(src, filename=path)
+        parsed = ast.parse(src, filename=path)
+        matches = [node for node in ast.walk(parsed)
+                   if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                   and node.name == scope]
+        self.assertEqual(len(matches), 1, (path, scope))
+        node = matches[0]
+        segment = "\n".join(src.splitlines()[node.lineno - 1:node.end_lineno])
+        self.assertIn(earlier, segment, (path, scope))
+        self.assertIn(later, segment, (path, scope))
+        self.assertLess(segment.index(earlier), segment.index(later), (path, scope))
 
     def test_reddit_post_audited_before_durable_intent(self):
         self.assert_before("reddit_publish.py", "voice.inspect_fields(",
-                           'before_submit()')
+                           'before_submit()', "publish_post")
 
     def test_reddit_inline_reply_before_ui(self):
         self.assert_before("reddit_comments.py", 'voice.inspect(item["text"]',
-                           "node = pg.locator(")
+                           "node = pg.locator(", "reply_in_thread")
 
     def test_reddit_direct_comment_before_browser_connect(self):
         self.assert_before("reddit_interact.py", "voice.inspect(text, network=",
-                           "p, pg = _connect()")
+                           "p, pg = _connect()", "comment")
 
     def test_tiktok_mobile_before_open_target(self):
         self.assert_before("tiktok_mobile_interact.py", "voice.inspect(text, network=",
-                           "self._open_target(url)")
+                           "self._open_target(url)", "comment")
 
     def test_pinterest_direct_before_playwright_and_no_second_caption(self):
         self.assert_before("pinterest_publish.py", "voice.inspect_fields(fields,",
-                           "p = sync_playwright().start()")
+                           "p = sync_playwright().start()", "publish_pin")
         self.assertIn("voice_checked=True", self.source("content_publisher.py"))
         self.assertIn('if voice_checked else', self.source("pinterest_publish.py"))
 
     def test_manual_pending_is_not_marked_web(self):
         self.assert_before("content_queue_alert.py", "voice.inspect_fields(fields,",
-                           'with open(OUT_MD, "w"')
+                           'with open(OUT_MD, "w"', "main")
         self.assertIn("queue=None", self.source("content_queue_alert.py"))
 
     def test_all_paths_share_only_one_audit_engine(self):
