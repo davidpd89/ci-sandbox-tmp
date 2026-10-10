@@ -1,0 +1,30 @@
+json
+{
+  "network": "instagram",
+  "candidate_type": "post|comment|profile",
+  "external_id": "17895695668004550",
+  "canonical_key": "instagram:media:17895695668004550",
+  "author": {
+    "user_id": "17841400000000000",
+    "username": "lector_fantasia",
+    "permalink": "https://www.instagram.com/lector_fantasia/"
+  },
+  "media": {
+    "media_id": "17895695668004550",
+    "media_type": "IMAGE|VIDEO|CAROUSEL_ALBUM",
+    "permalink": "https://www.instagram.com/p/ABC123/",
+    "timestamp": "2026-10-10T13:44:00+0000"
+  },
+  "parent_comment_id": null,
+  "text": "Me encanta la ambientación de tu novela.",
+  "captured_at": "2026-10-10T13:44:00Z",
+  "signals": {
+    "like_count": 12,
+    "reply_count": 3
+  },
+  "action": {
+    "kind": "like|comment|follow",
+    "eligible": true,
+    "reason": "context_match"
+  }
+}
