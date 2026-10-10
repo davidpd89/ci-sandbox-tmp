@@ -15,7 +15,7 @@ Resultado: **implementación experimental y verificable, no conectada a publicac
 | [IBM/diveye](https://github.com/IBM/diveye) | repositorio inspeccionado | NOASSERTION en metadatos | 2026-02-20 | No reutilizar sin licencia aclarada; detector de IA no equivale a naturalidad. |
 | [confident-ai/deepeval](https://github.com/confident-ai/deepeval) | repositorio inspeccionado | **Apache-2.0**, no asumir MIT del informe | 2026-10-10 | No integrar sin comparación calibrada; coste innecesario en esta PR. |
 
-La compatibilidad **Windows/Python 3.11 del adaptador local** se apoya en biblioteca estándar (sin llamadas de shell, red, NLTK ni instalación externa); tests ejecutados en Linux/Python 3.11. Windows real **no ha sido probado**.
+La compatibilidad **Windows/Python 3.11 del adaptador local** se apoya en biblioteca estándar (sin llamadas de shell, red, NLTK ni instalación externa); tests ejecutados en Linux/Python **3.13.5**. Windows y Python **3.11** **no han sido probados**; la compatibilidad 3.11 es solo una inferencia estática (anotaciones PEP 604 y biblioteca estándar).
 
 ## Revisión de duplicidad: oficial y PR abiertas
 
@@ -33,14 +33,14 @@ Consultada la rama oficial `davidpd89/rrss-davidporto-CODE:integracion/crecimien
 
 ## Pruebas y auditoría adversarial
 
-En la copia local de estos cuatro archivos de código/test de PR #114:
+En una copia local del código/test de PR #114 (Linux, Python 3.13.5):
 
 ```
 python -m unittest discover -s tests -p test_reply_candidate_diversity.py -v
 Ran 10 tests ... OK
 ```
 
-Cubren las 9 redes + Reddit micro, casos sin aprobación (abstención), normalización con tildes, candidatos duplicados, selección de variante novedosa frente a histórico, preflight opcional que rechaza, rechazo de formato/URLs/hashtags/red desconocida, exactitud de Distinct-N para n-gramas cortos y vacíos, CLI portátil y no filtración de texto en el JSON. Sin claims de rendimiento real.
+Además: `python -m compileall -q` OK; 1.500 casos sintéticos aleatorios de selección sin excepción y sin escoger respuestas no aprobadas (fuzz local, semilla fija).\n\nCubren las 9 redes + Reddit micro, casos sin aprobación (abstención), normalización con tildes, candidatos duplicados, selección de variante novedosa frente a histórico, preflight opcional que rechaza, rechazo de formato/URLs/hashtags/red desconocida, exactitud de Distinct-N para n-gramas cortos y vacíos, CLI portátil y no filtración de texto en el JSON. Sin claims de rendimiento real.
 
 Segunda pasada adversarial: falsar la hipótesis «Distict-N alto = comentario relevante»; queda prohibido seleccionar por distintividad antes de validar el contexto. Separar la futura conexión a un adaptador distinto evita colisiones con los ejecutores existentes y #106/#121.
 
