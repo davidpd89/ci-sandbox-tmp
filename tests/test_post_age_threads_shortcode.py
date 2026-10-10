@@ -1,4 +1,4 @@
-"""Threads: la edad del destino sale del shortcode del permalink (ID de servidor), con fecha relativa y sin datos reales."""
+"""Threads: el shortcode permite vetar antigüedad, no demostrar publicación reciente."""
 import datetime as dt
 import pathlib
 import sys
@@ -30,9 +30,15 @@ class ThreadsShortcodeTests(unittest.TestCase):
         decoded = pap.post_datetime("threads", item("reply", when))
         self.assertLess(abs((decoded - when).total_seconds()), 1)
 
-    def test_recent_reply_allowed_old_reply_blocked(self):
-        self.assertEqual(pap.check("threads", item("reply", NOW - dt.timedelta(hours=5))), (True, "edad_ok"))
-        self.assertEqual(pap.check("threads", item("reply", NOW - dt.timedelta(days=9))), (False, "post_antiguo"))
+    def test_recent_shortcode_is_not_proof_but_old_one_vetoes(self):
+        recent = NOW - dt.timedelta(hours=5)
+        self.assertEqual(pap.check("threads", item("reply", recent)),
+                         (False, "edad_desconocida"))
+        self.assertEqual(pap.check("threads", item("reply", NOW - dt.timedelta(days=9))),
+                         (False, "post_antiguo"))
+        self.assertEqual(pap.check("threads", item(
+            "reply", recent, post_created_at=recent.isoformat())),
+            (True, "edad_ok"))
 
     def test_explicit_date_wins_over_shortcode(self):
         old_code_recent_date = item("reply", NOW - dt.timedelta(days=30), post_created_at=(NOW - dt.timedelta(hours=1)).isoformat())
