@@ -241,5 +241,27 @@ class RankingTests(unittest.TestCase):
         self.assertEqual(len(result["posts"]), 1)
 
 
+    def test_synthetic_replay_quality_vs_native_proxy(self):
+        from target_quality_benchmark import replay
+        data = replay()
+        self.assertEqual(data["top_k"], 4)
+        self.assertNotEqual(data["candidate_order"], data["legacy_order"])
+        for metric in ("followback", "response", "conversation", "traffic"):
+            self.assertEqual(data["metrics"][metric]["candidate"]["precision"], 1.)
+            self.assertEqual(data["metrics"][metric]["baseline"]["precision"], 0.)
+            self.assertEqual(data["metrics"][metric]["candidate"]["ndcg"], 1.)
+            self.assertEqual(data["metrics"][metric]["baseline"]["ndcg"], 0.)
+
+    def test_incomplete_outcomes_and_missing_posts_never_become_success(self):
+        outcomes = {"bluesky:reader.example": {"verified": True, "mature": False,
+                    "trials": 100, "followbacks": 80, "responses": 80,
+                    "conversations": 80, "traffic": 80}}
+        got = rank("bluesky", [account(posts=[{"text": "fantasía", "es": True}])],
+                   outcomes=outcomes)["ranked"][0]
+        self.assertIsNone(got["explanation"]["outcomes"]["value"])
+        self.assertEqual(got["posts"], [])
+        self.assertEqual(got["post_rejections"][0]["reason"], "missing_or_duplicate_post_key")
+
+
 if __name__ == "__main__":
     unittest.main()
