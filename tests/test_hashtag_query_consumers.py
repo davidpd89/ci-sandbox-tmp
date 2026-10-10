@@ -136,6 +136,25 @@ class ConsumerParityTests(unittest.TestCase):
             self.assertTrue(any("semilla" in term for term in seen))
             self.assertTrue(any("fantasía" in term for term in seen))
 
+    def test_native_budget_reservation_without_mutating_rankings(self):
+        old = [("family", f"semilla_{i}") for i in range(38)]
+        extra = [("lexical_expansion", "lectura ñ"),
+                 ("lexical_expansion", "año")]
+        for tick in range(8):
+            chosen = hqc.reserve_fresh(old, extra, budget=38, tick=tick)
+            self.assertEqual(len(chosen), 38)
+            self.assertEqual(chosen[:37], old[:37])
+            self.assertIn(chosen[-1], extra)
+            self.assertEqual(old[-1], ("family", "semilla_37"))
+            self.assertEqual(hqc.reserve_fresh(old, [], budget=38, tick=tick), old)
+        self.assertEqual(hqc.reserve_fresh(old, extra, budget=0, tick=0), [])
+        self.assertEqual(hqc.reserve_fresh(
+            [{"tag": "semilla"}, {"tag": "año"}],
+            [{"tag": "año"}, {"tag": "niño"}], budget=2, tick=1),
+            [{"tag": "semilla"}, {"tag": "niño"}])
+        with self.assertRaises(ValueError):
+            hqc.reserve_fresh(old, extra, budget=-1, tick=0)
+
     def test_budget_and_missing_reader_guard(self):
         with self.assertRaises(ValueError):
             hqc.select("x", "busquedas", [], budget=-1, tick=0)
