@@ -91,3 +91,73 @@ Ejecución: `python -m unittest discover -s tests -p test_audience_discovery.py 
 - El test de tres colas es de **importación y persistencia offline**. No se verificó Edge ni TikTok móvil ni un canario con cuentas; queda para Claude.
 
 **Hallazgo no resuelto en esta PR:** los endpoints que enumeran likers/boosters como snapshots completos no anuncian necesariamente un evento `delete` cuando una cuenta desaparece de la siguiente captura. No se debe inferir ausencia hasta terminar todas las páginas; necesita reconciliación específica con watermark, aislamiento por post y rollback ante páginas faltantes. Es distinto del replay del listener Jetstream cubierto por #95.
+
+## Auditoría de control posterior (10/10/2026)
+
+Se revisaron cuatro observaciones inline del HEAD inicial de la PR y se corrigieron
+con pruebas de regresión offline. El identificador canónico de cada evento deja
+de depender de la superficie; `audience_sightings` conserva las procedencias
+por superficie y semilla. Un evento repetido mantiene **una señal y un único
+incremento de afinidad**, aunque aparezca en varios listados.
+
+La promoción provisional→estable exige evidencia del **mismo evento remoto**
+y del mismo handle. Una coincidencia de handle en eventos diferentes **no**
+es prueba suficiente, especialmente ante reciclado de nombres. Un replay
+provisional posterior no revierte una promoción. Esta restricción no equivale
+a un servicio general de resolución de alias; coordinar con #85.
+
+La historia de cursores por (red, superficie, semilla) persiste en SQLite durante
+capturas parciales y se limpia solo al alcanzar el final. Se rechazan ciclos que
+crucen varias ejecuciones con `max_pages=1`. La capa de importación acepta
+respuestas `thread.replies` anidadas de Bluesky (sin atribuir el post raíz),
+`descendants` de Mastodon y árboles Reddit ya expandidos. Un placeholder
+`BlockedPost`/`NotFoundPost` hace que `coverage_complete=False`, y el
+resultado de `collect_pages` no debe darse por snapshot completo. Los
+`MoreComments` de Reddit sin expandir se rechazan. Los registros posteriores
+sin fecha de post/texto no borran valores anteriormente verificados.
+
+**Compatibilidad y límites:** no hubo migración de tablas operativas porque estos
+módulos no están conectados al producto. Las SQLite experimentales hechas con
+commits antiguos de esta PR usaban claves de evento que incluían `surface`;
+**no reutilizarlas sin migración**. Para pruebas sintéticas, archivar/eliminar
+únicamente esa SQLite experimental y crear otra; nunca borrar estados de
+producción. Antes de activar lectores reales, preparar migración explícita
+desde cualquier prototipo persistente, backfill y rollback. Los nueve nombres
+de red no equivalen a nueve puentes operativos: contrastar la cobertura
+con #100, #66, #85 y el código oficial. Las capturas de snapshots de likes
+incompletos y `unlike` siguen delegadas a #102; no resolverlo mediante
+desapariciones inferidas.
+
+La comparativa de clientes permanece: el SDK
+[atproto](https://atp.readthedocs.io/en/latest/guides/reading/)
+ya describe `get_post_thread`, `get_likes` y `get_reposted_by`;
+[Mastodon.py](https://mastodonpy.readthedocs.io/en/stable/05_statuses.html)
+ofrece `status_favourited_by` y `status_reblogged_by` como listados de
+cuentas (no asumir una paginación genérica del wrapper); PRAW resulta útil
+para comentarios y `MoreComments` pero no revela votantes; 
+[granary](https://github.com/snarfed/granary) aporta conversiones
+multiplataforma con más complejidad de la necesaria para esta capa de
+normalización. No se incorpora código ni dependencia nueva.
+
+### Comprobaciones para el integrador (sin sesiones ni acciones sociales)
+
+1. En un checkout limpio de la rama, verificar `git rev-parse HEAD`,
+   `git diff --check origin/research/public-reuse-parent...HEAD`
+   y `git rev-list --left-right --count origin/research/public-reuse-parent...HEAD`.
+   Antes de integrar, actualizar/sincronizar la base y repetir los checks del
+   merge resultante, pues la rama base avanzó durante esta auditoría.
+2. En Linux: `python3.11 -m unittest discover -s tests -p 'test_audience_*.py' -v`;
+   `python3.11 -m compileall -q tools/audience_discovery.py tools/audience_adapters.py`.
+   En Windows PowerShell: `py -3.11 -m unittest discover -s tests -p 'test_audience_*.py' -v`;
+   `py -3.11 -m compileall -q tools/audience_discovery.py tools/audience_adapters.py`.
+3. En el checkout del repositorio privado, con fixtures y dependencias propias,
+   lanzar la suite general definida por su CI. No suponer que esta suite
+   aislada valida `round_queue`, escáneres Edge, Android ni ejecución real.
+4. Contrastar payloads **de lectura** de cuentas de prueba para Bluesky
+   `getPostThread/getLikes/getRepostedBy`, Mastodon
+   `status_context/favourited_by/reblogged_by`, Reddit `MoreComments`
+   y los exports WEB/MOBILE. Verificar `actor`, `event_id`, `post_key`,
+   `post_created_at`, `coverage_complete` y cambio de handle.
+5. Antes de cualquier conexión productiva, comprobar independencia de la
+   SQLite de audiencia, permisos de lectura, snapshot parcial e interrupción
+   tras la primera página; no activar follows, comentarios ni publicaciones.
