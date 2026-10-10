@@ -1,4 +1,5 @@
 """Regresiones de memoria histórica. No hay credenciales ni acciones externas."""
+import contextlib
 import csv
 import datetime as dt
 import pathlib
@@ -152,7 +153,7 @@ class HistoricalMemoryTests(unittest.TestCase):
     def test_sqlite_rejects_neighbor_state_machine_schema_without_writing(self):
         with tempfile.TemporaryDirectory() as folder:
             db = pathlib.Path(folder) / "shared.db"
-            with sqlite3.connect(db) as conn:
+            with contextlib.closing(sqlite3.connect(db)) as conn, conn:
                 conn.executescript("""CREATE TABLE relation_events (
                     network TEXT, account TEXT, event_id TEXT, kind TEXT,
                     lane TEXT, occurred_at TEXT, before_state TEXT,
@@ -165,7 +166,7 @@ class HistoricalMemoryTests(unittest.TestCase):
             memory = mem.RelationshipMemory(db)
             with self.assertRaisesRegex(RuntimeError, "dedicada"):
                 memory.initialize()
-            with sqlite3.connect(db) as conn:
+            with contextlib.closing(sqlite3.connect(db)) as conn, conn:
                 self.assertEqual(conn.execute("SELECT * FROM relation_events").fetchall(), before)
                 self.assertEqual(conn.execute("PRAGMA user_version").fetchone()[0], 0)
                 self.assertEqual(conn.execute("SELECT name FROM sqlite_master WHERE name='idx_relation_lookup'").fetchall(), [])
@@ -175,7 +176,7 @@ class HistoricalMemoryTests(unittest.TestCase):
     def test_sqlite_rejects_same_name_incompatible_columns(self):
         with tempfile.TemporaryDirectory() as folder:
             db = pathlib.Path(folder) / "other.db"
-            with sqlite3.connect(db) as conn:
+            with contextlib.closing(sqlite3.connect(db)) as conn, conn:
                 conn.execute("CREATE TABLE relation_events(network TEXT, account TEXT)")
             with self.assertRaisesRegex(RuntimeError, "incompatible"):
                 mem.RelationshipMemory(db).initialize()
