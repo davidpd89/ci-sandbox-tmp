@@ -331,12 +331,17 @@ def _os_guard_for_exclusive(path, name):
 
 
 @contextlib.contextmanager
-def exclusive(name, stale_after=7200, directory=None):
-    """Bloqueo por fichero entre procesos. Lanza RoundBusy si otro proceso lo tiene
-    (y no esta caducado)."""
+def exclusive(name, stale_after=7200, directory=None, *, lock_path=None):
+    """Turno exclusivo entre procesos, también para una ruta móvil heredada.
+
+    ``lock_path`` es optativo: sin él se conserva exactamente la ruta Edge.
+    No se roba un turno vivo por edad; un guard OS serializa reclamadores.
+    """
     # RRSS_LOCK_DIR permite aislar los tests de una ronda real en curso (comparten la carpeta temporal).
     directory = directory or os.environ.get("RRSS_LOCK_DIR") or tempfile.gettempdir()
-    path = os.path.join(directory, f"rrss_lock_{name}.lock")
+    path = os.path.abspath(os.fspath(lock_path)) if lock_path is not None else os.path.join(directory, f"rrss_lock_{name}.lock")
+    if lock_path is not None:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
     with _os_guard_for_exclusive(path, name):
         for _ in range(2):
             try:
@@ -378,7 +383,7 @@ def exclusive(name, stale_after=7200, directory=None):
                 # muerto. Un proceso Edge legítimo puede durar > stale_after
                 # (suspensión del equipo, espera de red): nunca robarle el lock.
                 try:
-                    old_pid = int(owner.split()[0])
+                    old_pid = int(owner.split()[0].split(":", 1)[0])  # admite tokens móviles anteriores PID:timestamp
                 except (IndexError, TypeError, ValueError):
                     old_pid = 0
                 if old_pid > _MAX_PID:
