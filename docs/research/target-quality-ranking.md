@@ -8,7 +8,7 @@ común y adaptadores ligeros. La PR **no** ejecuta, selecciona cupos ni agenda a
 `tests/test_target_quality_ranking.py` y
 `.github/workflows/target-quality-ranking.yml`.
 
-## Problema real y contexto contrastado
+## Problema
 
 Leídos `docs/open-source-scouting/tasks/56-target-quality-ranking.md` y
 `docs/open-source-scouting/PROTOCOL.md`. En el espejo se verificaron
@@ -47,7 +47,18 @@ Dependencias de integración:
 - [#66](https://github.com/davidpd89/ci-sandbox-tmp/pull/66)
   no altera ninguna rama de las anteriores.
 
-## Alternativas públicas estudiadas
+## Alternativas
+
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/lightgbm-org/LightGBM/tree/1910cd9f8c90b3207f348ce2c78d17d07bf042d7
+Fecha de consulta: 2026-10-10
+Licencia SPDX: MIT
+Referencia inmutable: N/A (sin codigo incorporado)
+
+Los cuatro campos anteriores documentan una fuente contrastada: la licencia MIT
+pertenece a LightGBM, no se atribuye al código original de esta PR. No se ha
+copiado código de LightGBM ni de ningún tercero.
 
 Comprobaciones de GitHub REST a 10-10-2026; los enlaces de commit fijan la
 versión observada. Se consultó licencia SPDX declarada por cada repositorio;
@@ -68,7 +79,13 @@ Sin dependencias externas ni importaciones del repositorio privado: stdlib
 Python 3.11; OS-independiente. No se copian implementaciones de las bibliotecas
 externas; por tanto no se arrastran notices ni licencias de terceros.
 
-## Contrato
+## Decisión
+
+Conservar los algoritmos de ranking de fuentes existentes y añadir un módulo
+stdlib, de solo lectura, para candidatos. El enfoque conservador es reversible,
+explicable e independiente de credenciales.
+
+### Contrato
 
 `rank_network(network, candidates, *, as_of, outcomes={}, ...)` devuelve
 `ranked`, `rejected`, `adapter` y `note`.
@@ -148,7 +165,7 @@ observación y separación temporal, fuera del alcance de este espejo.
 Una cohorte con señales contrarias puede invertir el resultado; ajustar
 pesos solo tras probar en holdout y documentar deriva y calibración.
 
-## Validación, revisión adversarial y retirada
+## Pruebas y revisión adversarial
 
 Comandos (no acceden a ninguna cuenta):
 
@@ -179,6 +196,8 @@ En concreto TikTok carece de fecha fiable en la shortlist publicada, y otras
 redes no tienen mapping nativo auditado. Comparar con PR #21 y #4 para
 mantener separadas métricas de fuentes y candidaturas. No se cambió ningún
 formato/estado real ni se activaron oportunidades.
+
+## Retirada
 
 **Rollback:** revertir commits de esta PR (nuevos módulos, tests y workflow),
 sin migraciones, tablas ni efectos secundarios; código de producción existente
