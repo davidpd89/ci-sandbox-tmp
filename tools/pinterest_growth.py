@@ -70,8 +70,8 @@ QUERY_POOL = [      # 06/10 (GPT, intencion de busqueda): ~75 % consultas de des
     ("bloqueo del escritor", None), ("rutina de escritura", None), ("inspiración para escritores", None),
     ("rincón de lectura", None), ("bibliotecas bonitas", None), ("club de lectura", None), ("frases de libros", None),
 ]
-import discovery_terms
-QUERY_POOL += [(q, None) for q in discovery_terms.terms("pinterest", "busquedas", skip=[q for q, _ in QUERY_POOL])]      # 07/10: consulta M a GPT (tableros grupales/colaborativos, estetica de lectura, escritura)
+# discovery_terms se consume a través del adaptador común.
+# Consumo dinámico al seleccionar consultas, no durante el import.
 QUERIES_PER_DAY = 8          # por RONDA (3 rondas al dia): rotan por dia y por ronda
 PINS_PER_QUERY = 8
 MAX_PROFILE_VISITS = 40
@@ -136,7 +136,13 @@ def author_ok(handle, bio, followers, *, known=frozenset(), sample_text=""):
 def day_queries(today=None, n=QUERIES_PER_DAY, round_index=0):
     """`n` consultas del pool que rotan por dia y por ronda (3 rondas/dia: cada una prueba consultas distintas)."""
     day = (today or datetime.date.today()).toordinal()
-    return [QUERY_POOL[(day * n * 3 + round_index * n + i) % len(QUERY_POOL)] for i in range(n)]
+    import hashtag_query_consumers as hqc
+    tick = day * 3 + round_index
+    tags = hqc.select("pinterest", "hashtags", [], budget=1, tick=tick)
+    queries = hqc.select("pinterest", "busquedas", [q for q, _ in QUERY_POOL],
+                         budget=max(0, n - len(tags)), tick=tick) + tags
+    board_by_query = dict(QUERY_POOL)
+    return [(query, board_by_query.get(query)) for query in queries]
 
 
 def build_plan(candidates, max_follows=10, max_saves=10, max_reacts=15, max_comments=0, done_comments=frozenset(), rng=None):
