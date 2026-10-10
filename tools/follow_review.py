@@ -40,9 +40,12 @@ def review(rows, followers, today, days=30, *, network=None):
                 continue
             if account not in followed or when < followed[account]:
                 followed[account] = when
-        actions[account] |= {part for part in parts if part not in ga.FOLLOW_KINDS and part}
         if kind == "unfollow":
             followed.pop(account, None)
+            actions.pop(account, None)  # una nueva relacion no hereda conversaciones antiguas
+            continue
+        if account in followed:
+            actions[account] |= {part for part in parts if part not in ga.FOLLOW_KINDS and part}
     followers = {ga.norm(f) for f in followers}
     out = []
     for account, since in followed.items():
