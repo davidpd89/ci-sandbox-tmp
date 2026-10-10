@@ -86,6 +86,17 @@ class MatrixContractTests(unittest.TestCase):
             matrix = parity.build_matrix(root=root, pipelines=specs)
             self.assertEqual(matrix["x"]["like"]["status"], "missing")
 
+    def test_negative_kind_guard_is_not_positive_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "tools").mkdir()
+            (root / "tools" / "x_execute.py").write_text(
+                'def run_plan(plan):\n    if kind != "like": return\n', encoding="utf-8"
+            )
+            specs = {"x": {"execute": ["python", "tools/x_execute.py"]}}
+            matrix = parity.build_matrix(root=root, pipelines=specs)
+            self.assertEqual(matrix["x"]["like"]["status"], "missing")
+
     def test_cli_json_strict_and_requirement_gate(self):
         script = parity.ROOT / "tools/executable_feature_parity.py"
         result = subprocess.run(
