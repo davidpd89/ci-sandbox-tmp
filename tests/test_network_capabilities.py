@@ -14,12 +14,15 @@ class CapabilityMatrixTests(unittest.TestCase):
     def test_coverage_is_exactly_nine_networks_including_instagram(self):
         from mechanical_round import PIPELINES, CONTENT_QUEUE_NETWORKS
         matrix = cap.build_matrix()
-        self.assertTrue(CONTENT_QUEUE_NETWORKS.issubset(set(cap.NETWORKS)))
-        self.assertEqual(set(matrix), set(cap.NETWORKS))
+        self.assertTrue(CONTENT_QUEUE_NETWORKS.issubset(set(cap.INVENTORY_NETWORKS)))
+        self.assertEqual(set(matrix), set(cap.INVENTORY_NETWORKS))
         self.assertIn("instagram", matrix)
+        # Compatibilidad explícita con contratos de texto y descubrimiento
+        # del oficial, que todavía cubren ocho redes verificadas.
+        self.assertEqual(set(cap.NETWORKS), set(cap.INVENTORY_NETWORKS) - {"instagram"})
         # Algunas redes (p. ej. Reddit) usan una ruta propia fuera de
         # mechanical_round: inventariar ausencia no es un error del informe.
-        for net in cap.NETWORKS:
+        for net in cap.INVENTORY_NETWORKS:
             self.assertEqual(matrix[net]["pipeline"], net in PIPELINES, net)
 
     def test_flags_are_explicit_and_not_inferred_from_platform_name(self):
@@ -35,7 +38,7 @@ class CapabilityMatrixTests(unittest.TestCase):
         from unfollow_cleanup import ADAPTERS
         from loyalty import HARVEST
         matrix = cap.build_matrix()
-        for net in cap.NETWORKS:
+        for net in cap.INVENTORY_NETWORKS:
             with self.subTest(network=net):
                 self.assertEqual(matrix[net]["unfollow_adapter"], net in ADAPTERS)
                 self.assertEqual(matrix[net]["inbound_harvest"], net in HARVEST)
@@ -93,7 +96,7 @@ class CapabilityMatrixTests(unittest.TestCase):
     def test_gaps_expose_missing_not_prove_impossible(self):
         matrix = cap.build_matrix(pipelines={}, cleanup_adapters={}, harvesters={})
         gaps = cap.gaps(matrix)
-        self.assertEqual(set(gaps), set(cap.NETWORKS))
+        self.assertEqual(set(gaps), set(cap.INVENTORY_NETWORKS))
         self.assertIn("adaptador de unfollow no implementado", gaps["tiktok"])
         self.assertTrue(all("imposible" not in " ".join(lines) for lines in gaps.values()))
 
