@@ -177,6 +177,8 @@ class ExperimentStore:
         if network not in NETWORKS or queue not in QUEUES:
             raise ValueError("red o cola desconocida")
         occurred_at = _utc(occurred_at)
+        if datetime.fromisoformat(occurred_at) > datetime.now(timezone.utc):
+            raise ValueError("evento futuro: no puede constar como observado")
         if kind == "exposure":
             if value is not None or source != "confirmed":
                 raise ValueError("exposición debe estar confirmada")
@@ -261,7 +263,8 @@ class ExperimentStore:
                 "mature": row["mature"], "successes": row["successes"]}
         results = []
         for (name, network), arms in sorted(groups.items()):
-            _, variants, metric, days = INITIAL_EXPERIMENTS[name]
+            # Leer la definición inmutable almacenada, no el catálogo mutable del código.
+            _, (_, variants, metric, days) = self._design(name)
             posteriors, simulations = {}, {}
             for arm in variants:
                 stats = arms.setdefault(arm, {
@@ -285,7 +288,8 @@ class ExperimentStore:
             results.append({
                 "experiment": name, "network": network, "metric": metric,
                 "window_days": days, "variants": arms, "posterior": posteriors,
-                "p_second_better_exploratory": probability,
+                "p_second_better_exploratory": (probability if min(
+                    arms[a]["mature"], arms[b]["mature"]) else None),
                 "coverage": {"assigned": total_assigned, "exposed": total_exposed,
                              "mature": total_mature,
                              "unexposed": total_assigned - total_exposed,
@@ -304,9 +308,11 @@ class ExperimentStore:
                  "|---|---|---:|---:|---:|---:|"]
         for row in self.report()["studies"]:
             c = row["coverage"]
+            p = row["p_second_better_exploratory"]
+            probability_label = "sin datos" if p is None else f"{p:.3f}"
             lines.append(f"| {row['experiment']} | {row['network']} | "
                          f"{c['assigned']} | {c['exposed']} | {c['mature']} | "
-                         f"{row['p_second_better_exploratory']:.3f} |")
+                         f"{probability_label} |")
         lines += ["", "* Beta(1,1), Monte Carlo determinista; comparación descriptiva.",
                   "Sin atribución validada, ventanas completas ni aleatorización auditada, no decidir ganadores.",
                   "Los no expuestos y los pendientes no son fracasos. Sin agregación entre redes.",
