@@ -149,14 +149,20 @@ def _verified_inbound(events, today):
                 conflicts.add(key)
             continue
         seen[key] = payload
+    # Ventana móvil de 30 días, ambos extremos incluidos (hoy y hoy-29).
+    # Preservar señales de identidad antiguas, pero no volver a premiar
+    # actividad histórica cuando aparece una interacción nueva.
+    cutoff = (today - dt.timedelta(days=29)).isoformat()
     for (net, event_id), (handle, kind, day, author_id) in seen.items():
         if (net, event_id) in conflicts:
             continue
         key = (net, handle)
-        counts[key][kind] += 1
-        last[key] = max(last.get(key, day), day)
         if author_id:
             ids.setdefault(key, set()).add(author_id)
+        if day < cutoff:
+            continue
+        counts[key][kind] += 1
+        last[key] = max(last.get(key, day), day)
     return counts, last, ids, len(conflicts)
 
 
@@ -174,7 +180,25 @@ def _target_day(row):
     return None
 
 
-def build_snapshot(sources, outbound, inbound, *, today):
+def _coverage_complete(proof, rows, today):
+    """Prueba positiva DECLARADA de cobertura integral del registro de salidas.
+
+    La ventana completa es necesaria para la regla de reciprocidad histórica:
+    dos comentarios iniciales + uno por cada respuesta inbound. Una exportación
+    truncada nunca equivale a un contador cero.
+    """
+    if not isinstance(proof, dict) or not isinstance(rows, list):
+        return False
+    if proof.get("status") != "complete":
+        return False
+    start = _day(proof.get("from"))
+    account = _day(proof.get("account_since"))
+    end = _day(proof.get("through"))
+    current = today.isoformat()
+    return bool(start and account and end and start <= account <= current <= end)
+
+
+def build_snapshot(sources, outbound, inbound, *, today, outbound_coverage=None):
     """Devuelve (snapshot #71, diagnóstico). Aísla errores por fuente y fila."""
     if not isinstance(today, dt.date) or isinstance(today, dt.datetime):
         raise ValueError("today requiere datetime.date")
@@ -183,6 +207,16 @@ def build_snapshot(sources, outbound, inbound, *, today):
     if not isinstance(outbound, dict) or not isinstance(inbound, list):
         raise ValueError("outbound debe ser objeto e inbound lista")
     inc, last_in, event_ids, conflicts = _verified_inbound(inbound, today)
+    if outbound_coverage is not None and not isinstance(outbound_coverage, dict):
+        raise ValueError("outbound_coverage requiere objeto")
+    # read_manifest adjunta los certificados declarados de cada exportación;
+    # callers programáticos también pueden suministrarlos explícitamente.
+    proofs = {src["network"]: src["_outbound_coverage"] for src in sources
+              if isinstance(src, dict) and src.get("network") in NETWORKS
+              and "_outbound_coverage" in src}
+    proofs.update(outbound_coverage or {})
+    coverage_ok = {net: net in outbound and _coverage_complete(
+        proofs.get(net), outbound.get(net), today) for net in NETWORKS}
     history = {network: _confirmed_outbound(outbound.get(network, []), network, today)
                for network in NETWORKS}
     candidates, excluded = [], []
@@ -261,7 +295,7 @@ def build_snapshot(sources, outbound, inbound, *, today):
                 following = True  # nunca contradice el registro confirmado
             target_day = _target_day(item)
             comment = any(a in actions for a in ("reply", "comment", "comment_external"))
-            eligible_comment = (comment and pre.get("thread_verified") is True
+            eligible_comment = (coverage_ok[net] and comment and pre.get("thread_verified") is True
                                 and pre.get("comment_allowed") is True
                                 and state["comments"] < 2 + inc[key]["comment"]
                                 and target_day is not None
@@ -284,22 +318,31 @@ def build_snapshot(sources, outbound, inbound, *, today):
                        follow_eligible=bool(follow and not following), already_following=following,
                        reactivation_eligible=pre.get("reactivation_eligible") is True,
                        visit_eligible=pre.get("visit_eligible") is True)
+            # Sin certificación de inbound no presentar el cero como conocido.
+            # El scorer común ya distingue ausencia de campo de un agregado 0.
+            if not inc[key]:
+                row.pop("inbound")
             candidates.append(row)
             # No incluir handle/IDs/textos en diagnósticos exportables.
             if affinity is None or reciprocity is None:
                 excluded.append({**place, "note": "afinidad o reciprocidad desconocida; no imputada"})
     return {"candidates": candidates}, {"excluded": excluded, "inbound_id_conflicts": conflicts,
+                                        "outbound_coverage": {
+                                            net: "complete" if coverage_ok[net] else "unknown_or_incomplete"
+                                            for net in NETWORKS},
                                         "sources": len(sources), "prepared": len(candidates)}
 
 
-def plan_dry_run(sources, outbound, inbound, *, today, scorer=None, limits=None):
+def plan_dry_run(sources, outbound, inbound, *, today, scorer=None, limits=None,
+                 outbound_coverage=None):
     """Consume score #71 sin duplicar la función ni generar planes ejecutables."""
     if scorer is None:
         try:
             from relationship_priority import rank_daily as scorer
         except ImportError as exc:
             raise RuntimeError("Falta tools/relationship_priority.py (#71); integrar dependencia antes de planificar") from exc
-    snapshot, diagnostics = build_snapshot(sources, outbound, inbound, today=today)
+    snapshot, diagnostics = build_snapshot(sources, outbound, inbound, today=today,
+                                           outbound_coverage=outbound_coverage)
     result = scorer(snapshot, today=today, limits=limits)
     # El ranking es recomendación exclusivamente; jamás devolver kind/text accionable.
     return {"version": VERSION, "mode": "offline_dry_run_not_executable",
@@ -311,8 +354,13 @@ def read_manifest(path):
     """Solo lectura de rutas EXPLÍCITAS; SQLite 'mode=ro'; sin globs ni red."""
     manifest = json.loads(Path(path).read_text(encoding="utf-8"))
     sources = []
+    coverages = manifest.get("outbound_coverage", {})
+    if not isinstance(coverages, dict):
+        raise ValueError("outbound_coverage: se esperaba objeto")
     for entry in manifest["sources"]:
         source = {"network": entry["network"], "lane": entry["lane"]}
+        if entry["network"] in coverages:
+            source["_outbound_coverage"] = coverages[entry["network"]]
         try:
             source["data"] = json.loads(Path(entry["path"]).read_text(encoding="utf-8"))
         except (OSError, ValueError, TypeError):
