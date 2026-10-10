@@ -1,0 +1,4 @@
+python
+# https://github.com/praw-dev/praw/blob/main/docs/getting_started/quick_start.rst
+top_level_comments = list(submission.comments)
+all_comments = submission.comments.list()
