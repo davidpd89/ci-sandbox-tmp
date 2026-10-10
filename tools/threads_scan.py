@@ -92,7 +92,7 @@ def _rotate_searches(n=4, round_index=None):
     start = day * 3 + (round_index if round_index is not None else datetime.datetime.now().hour // 6)
     import hashtag_query_consumers as hqc
     tick = start
-    tags = hqc.select("threads", "hashtags", [], budget=1, tick=tick)
+    tags = hqc.select("threads", "hashtags", [], budget=min(1, max(0, n)), tick=tick)
     return hqc.select("threads", "busquedas", SEARCH_POOL,
                       budget=max(0, n - len(tags)), tick=tick) + tags
 
