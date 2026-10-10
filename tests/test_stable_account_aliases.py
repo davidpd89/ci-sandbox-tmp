@@ -98,6 +98,18 @@ class StableAliasTests(unittest.TestCase):
         self.assertEqual(self.g.resolve("bluesky", "first.bsky.social", T1)["status"],
                          "conflict_stable_multiple_handles")
 
+    def test_link_rejects_third_party_conflict_at_observation(self):
+        add(self.g, "a", "first.bsky.social", when=T1)
+        add(self.g, "b", "second.bsky.social", when=T2)
+        add(self.g, "c", "third.bsky.social", when=T2)
+        with self.assertRaisesRegex(AliasError, "link_evidence_ambiguous"):
+            self.g.link("a", "b")
+        self.g.revoke("c", reason="false concurrent handle")
+        self.assertEqual(self.g.link("a", "b"), "bluesky|" + D1)
+        add(self.g, "d", "second.bsky.social", sid=D2, when=T2)
+        with self.assertRaisesRegex(AliasError, "link_evidence_ambiguous"):
+            self.g.link("a", "b")
+
     def test_link_requires_same_verified_native_id(self):
         add(self.g, "a", "first.bsky.social")
         add(self.g, "b", "second.bsky.social", D2, T2)

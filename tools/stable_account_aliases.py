@@ -219,6 +219,14 @@ class AliasTimeline:
             raise AliasError("stable_identity_conflict")
         if a.account != b.account and a.observed_at == b.observed_at:
             raise AliasError("simultaneous_handles_conflict")
+        # A third claim at either endpoint can invalidate an otherwise matching
+        # pair. Never confirm a link whose observations are individually ambiguous.
+        for record in (a, b):
+            network, handle = record.account.split("|", 1)
+            current = self.resolve(network, handle, record.observed_at)
+            if (current["stable_key"] != record.stable
+                    or current["status"] != "verified_at_observation"):
+                raise AliasError("link_evidence_ambiguous")
         return a.stable
 
     def history(self, stable: str) -> list[dict]:
