@@ -1,0 +1,32 @@
+python
+# Fuente: https://github.com/halcy/Mastodon.py/blob/master/mastodon/Mastodon.py
+# Adaptación para el sistema multired de David Porto.
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Protocol
+
+from mastodon import Mastodon
+
+
+@dataclass(frozen=True)
+class MastodonCredentials:
+    api_base_url: str
+    access_token: str
+
+
+class MastodonClient(Protocol):
+    def timeline_hashtag(self, hashtag: str, limit: int = 20): ...
+    def search_v2(self, q: str, result_type: str | None = None, limit: int = 20): ...
+    def status_post(self, status: str, **kwargs): ...
+    def status_favourite(self, status_id: str): ...
+    def status_reblog(self, status_id: str): ...
+    def account_follow(self, account_id: str): ...
+    def notifications(self, **kwargs): ...
+
+
+def build_mastodon_client(credentials: MastodonCredentials) -> MastodonClient:
+    return Mastodon(
+        api_base_url=credentials.api_base_url,
+        access_token=credentials.access_token,
+    )
