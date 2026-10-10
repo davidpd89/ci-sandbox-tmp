@@ -1,0 +1,28 @@
+python
+# Fuente: https://github.com/vladkens/twscrape/blob/main/README.md
+# Licencia: MIT — https://github.com/vladkens/twscrape/blob/main/LICENSE
+import asyncio
+from twscrape import AccountsPool, API
+
+async def buscar_nicho():
+    pool = AccountsPool()
+    await pool.add_account(
+        "usuario_x", "password", "email@example.com", "email_password"
+    )
+    await pool.login_all()
+
+    api = API(pool)
+
+    query = '("recomendadme" OR "me recomendáis") (libro OR novela OR fantasía) lang:es -filter:replies'
+
+    async for tweet in api.search(query, limit=50):
+        yield {
+            "id": tweet.id,
+            "url": f"https://x.com/{tweet.user.username}/status/{tweet.id}",
+            "handle": tweet.user.username,
+            "texto": tweet.rawContent,
+            "fecha": tweet.date.isoformat(),
+            "idioma": tweet.lang,
+        }
+
+asyncio.run(buscar_nicho())
