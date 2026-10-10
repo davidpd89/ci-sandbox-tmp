@@ -165,6 +165,8 @@ La base vigente ya contiene `tools/relationship_event_ledger.py`, `tools/intent_
 
 **Matriz 9×3:** la fuente identificada no supone adaptador operativo. Se añadieron nueve casos con formatos de resultados `run_plan` sin `record_id/occurred_at`; el puente debe registrarlos como `unknown`, sin atribuir éxitos. Pinterest requiere extracción específica del CSV; no se declara integración automática.
 
+**Cierre adicional (control 10/10):** si dos `record_id` distintos del mismo export reutilizan `ack.id`, ambos se degradan a `unverified` y se contabilizan en `downgraded_reused_ack`; prueba de replay incluida. La comprobación es local al lote: para impedir reciclaje entre exports sigue siendo necesario un índice de ACK remoto persistente, con namespace por productor/cuenta/operación, coordinado con #112.
+
 **Todavía bloqueante:** un `ack` añadido por el llamador no prueba una respuesta nativa ni correlación con el registro duradero de #112. Faltan exportes contrastados por red, canarios supervisados y comprobación de la validación LIVE del manifiesto del padre. No realizar acciones sociales.
 
 **Verificación en cualquier sistema con Python 3.11 (desde raíz):**
