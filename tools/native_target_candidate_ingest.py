@@ -88,11 +88,16 @@ def _when(value, *, epoch=False):
 
 def _language(obs):
     """Only explicit, observed language fields, not query hints or text inference."""
-    value = obs.get("language", obs.get("lang"))
+    value = obs.get("language") or obs.get("lang")
     if not isinstance(value, str) or not value.strip():
         return None
     value = value.strip().lower()
     return value if re.fullmatch(r"[a-z]{2,3}(?:-[a-z0-9]{2,8})*", value) else None
+
+
+def _is_spanish(value):
+    """Only `es` and `es-*`, never `est` (Estonian)."""
+    return value == "es" or (isinstance(value, str) and value.startswith("es-"))
 
 
 def _permalink(network, value):
@@ -168,7 +173,7 @@ def _handle(network, row):
 
 
 def _account_identity(network, row):
-    stable = _id(row.get("account_id", row.get("user_id")))
+    stable = _id(row.get("account_id")) or _id(row.get("user_id"))
     handle = _handle(network, row)
     if stable:
         return "id:" + stable, handle, stable
@@ -181,7 +186,8 @@ def _native_rows(network, rows):
     if network == "facebook":
         for row in rows:
             if isinstance(row, Mapping):
-                yield {**row, "source": row.get("tag"), "url": row.get("permalink")}
+                yield {**row, "source": row.get("tag") or row.get("source"),
+                       "url": row.get("permalink") or row.get("url")}
             else:
                 yield row
     else:
@@ -283,6 +289,11 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
                 if post.get("url") or post.get("permalink"):
                     diagnostics.append({"index": i, "reason": "invalid_post_permalink"})
                 continue
+            # Explicit remote author identity must match the account on any network.
+            post_author_id = _id(post.get("author_id"))
+            if stable and post_author_id and post_author_id != stable:
+                diagnostics.append({"index": i, "reason": "post_author_mismatch"})
+                continue
             # Check that X and Threads post permalinks do not contradict an
             # author handle (URL is author evidence; not display text).
             if network in ("x", "threads") and handle:
@@ -290,7 +301,6 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
                 claimed_post_handle = _valid_handle(post.get("handle"))
                 # Historical links can show the old handle only when a
                 # trusted immutable author id links them to this account.
-                post_author_id = _id(post.get("author_id"))
                 id_matches = bool(stable and post_author_id == stable)
                 if ((handle != url_handle or
                      (claimed_post_handle and claimed_post_handle != handle))
@@ -314,7 +324,7 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
             post_lang = _language(post)
             if post_lang is None:
                 diagnostics.append({"index": i, "reason": "unknown_post_language"})
-            if post_lang is not None and not post_lang.startswith("es"):
+            if post_lang is not None and not _is_spanish(post_lang):
                 diagnostics.append({"index": i, "reason": "non_spanish_post"})
                 continue
             text = post.get("text") or post.get("title")
@@ -325,7 +335,7 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
                      "actions": [a for a in (post.get("verified_actions") or ())
                                  if isinstance(a, str) and a in _ALLOWED_ACTIONS]
                      if isinstance(post.get("verified_actions"), (tuple, list)) and
-                        post_lang is not None and post_lang.startswith("es") else []}
+                        _is_spanish(post_lang) else []}
             # No fake reply counts or engagement stats.
             replies = post.get("replies")
             if replies is None and network == "reddit":

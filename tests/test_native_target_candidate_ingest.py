@@ -340,6 +340,40 @@ class TestContracts(unittest.TestCase):
                        permalink=url, created_at=FRESH, language="es")
             self.assertEqual(run("facebook", row)["shortlist"][0]["posts"], [])
 
+
+    def test_estonian_is_not_spanish_but_regional_spanish_is(self):
+        example = dict(SAMPLES["x"], created_at=FRESH, verified_actions=["reply"])
+        rejected = run("x", dict(example, language="est"))
+        self.assertEqual(rejected["shortlist"][0]["posts"], [])
+        self.assertIn("non_spanish_post", [d["reason"] for d in rejected["diagnostics"]])
+        accepted = run("x", dict(example, language="es-MX"))
+        self.assertEqual(accepted["shortlist"][0]["posts"][0]["actions"], ["reply"])
+
+    def test_explicit_post_author_id_mismatch_rejected_on_five_networks(self):
+        for network in ("x", "threads", "facebook", "reddit", "instagram"):
+            with self.subTest(network=network):
+                row = dict(SAMPLES[network], account_id="111", author_id="222",
+                           created_at=FRESH, language="es")
+                result = run(network, row)
+                self.assertEqual(result["shortlist"][0]["posts"], [])
+                self.assertIn("post_author_mismatch",
+                              [d["reason"] for d in result["diagnostics"]])
+
+    def test_nullable_language_and_account_id_fallbacks(self):
+        row = dict(SAMPLES["x"], account_id=None, user_id="111",
+                   created_at=FRESH, language=None, lang="es")
+        result = run("x", row)
+        self.assertEqual(result["shortlist"][0]["account_id"], "111")
+        self.assertEqual(result["shortlist"][0]["posts"][0]["language"], "es")
+
+    def test_facebook_generic_source_and_url_are_preserved(self):
+        row = {"account_id": "111", "source": "lecturas",
+               "url": "https://www.facebook.com/lectores/posts/12345",
+               "created_at": FRESH, "language": "es"}
+        result = run("facebook", row)
+        self.assertEqual(result["shortlist"][0]["sources"], ["lecturas"])
+        self.assertEqual(len(result["shortlist"][0]["posts"]), 1)
+
     def test_invalid_nested_shape_and_network(self):
         with self.assertRaises(ValueError):
             n.normalize_candidates("pinterest", {"authors": [], "pins": None}, as_of=NOW)
