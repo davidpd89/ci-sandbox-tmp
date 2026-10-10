@@ -51,7 +51,7 @@ class TestSpanishVoice(unittest.TestCase):
             ["question_opening"])
 
     def test_windows_crlf_fenced_code_is_protected(self):
-        sample = "```python\\r\\nchecar?\\r\\n```\\r\\n¡Correcto!"
+        sample = "```python\r\nchecar?\r\n```\r\n¡Correcto!"
         self.assertEqual(len(_mask(sample)), len(sample))
         self.assertEqual(self.check(sample)["findings"], [])
 
