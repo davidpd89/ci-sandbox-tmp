@@ -132,8 +132,10 @@ def _age_hours(event_time: str, reference: str) -> float:
 class AudienceStore:
     """SQLite separada del estado operativo real; una transacción por página."""
     def __init__(self, path: str = ":memory:"):
-        self.db = sqlite3.connect(path)
+        self.db = sqlite3.connect(path, timeout=30)
         self.db.execute("PRAGMA foreign_keys=ON")
+        if path != ":memory:":
+            self.db.execute("PRAGMA journal_mode=WAL")
         self.db.executescript("""
             CREATE TABLE IF NOT EXISTS audience_accounts (
                 network TEXT NOT NULL, account_key TEXT NOT NULL,
@@ -172,6 +174,9 @@ class AudienceStore:
         counts = {"new_people": 0, "new_events": 0, "updated_events": 0,
                   "replays": 0, "stale_posts": 0, "unverified_age": 0}
         with self.db:
+            # BEGIN IMMEDIATE serializa escritores de las tres colas sin bloquear
+            # lecturas SQLite; evita dos inserciones concurrentes de una cuenta.
+            self.db.execute("BEGIN IMMEDIATE")
             for row in rows:
                 if row.network != network or row.surface != surface:
                     raise ObservationError("origen_cruzado")
@@ -197,13 +202,13 @@ class AudienceStore:
                 account = self.db.execute(
                     "SELECT last_seen FROM audience_accounts WHERE network=? AND account_key=?",
                     (network, row.account_key)).fetchone()
-                if not account:
+                if not account and not row.deleted:
                     self.db.execute(
                         "INSERT INTO audience_accounts VALUES(?,?,?,?,?,?,?)",
                         (network, row.account_key, row.handle, int(row.stable_identity),
                          row.profile, row.observed_at, row.observed_at))
                     counts["new_people"] += 1
-                elif row.observed_at >= account[0]:
+                elif account and row.observed_at >= account[0] and not row.deleted:
                     self.db.execute(
                         "UPDATE audience_accounts SET handle=?, profile=?, stable=?, last_seen=? "
                         "WHERE network=? AND account_key=?",
