@@ -1,0 +1,19 @@
+python
+# Fuente exacta: https://github.com/MarshalX/atproto/blob/main/examples/send_rich_text.py
+from atproto import Client, client_utils
+
+
+def main() -> None:
+    client = Client()
+    client.login('my-handle', 'my-password')
+
+    text_builder = client_utils.TextBuilder()
+    text_builder.text('Hello World from Python SDK! ')
+    text_builder.link('Python SDK', 'https://atproto.blue/')
+
+    # You can pass instance of TextBuilder instead of str to the "text" argument.
+    client.send_post(text_builder)  # same with send_image method
+
+
+if __name__ == '__main__':
+    main()
