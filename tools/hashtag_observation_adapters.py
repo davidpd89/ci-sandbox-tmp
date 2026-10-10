@@ -82,7 +82,7 @@ def _id(value):
     if isinstance(value, bool) or not isinstance(value, (str, int)):
         raise ValueError("missing stable identity")
     result = str(value).strip()
-    if not result or len(result) > 512:
+    if not result or len(result) > 256:
         raise ValueError("missing stable identity")
     return result
 
@@ -286,7 +286,7 @@ class ObservationCollector:
         for key in sorted(self._posts):
             item = self._posts[key]
             for origin in sorted(item["sources"]):
-                rows.append({k: item[k] for k in ("network", "post_id",
+                rows.append({k: list(item[k]) if k == "tags" else item[k] for k in ("network", "post_id",
                              "author_id", "created_at", "text", "tags")}
                             | {"source": origin})
         return rows
