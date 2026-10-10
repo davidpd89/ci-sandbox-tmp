@@ -24,7 +24,7 @@ esos esta estaba están estar este esto estos fue ha hay hacia hasta la las le l
 lo los más me mi mis muy nada ni no nos o os otra otro para pero por porque que
 quien se ser si sin sobre son su sus también te ti tiene todo todos tu tus un una
 unas uno unos va ya y yo libro libros leer leído lectura lecturas novela novelas
-fantasía autor autora autores post publicación publicaciones
+fantasia autor autora autores post publicación publicaciones
 """.split())
 WORD = re.compile(r"[^\W_]+", re.UNICODE)
 
@@ -69,7 +69,7 @@ def _records(memory: object, kind: str):
     return result
 
 
-def select_for_item(item: object, memory: object, *, per_kind: int = 1) -> list[dict]:
+def select_for_item(item: object, memory: object, *, per_kind: int = 1,\n                    default_network: str | None = None) -> list[dict]:
     """Recupera solo ejemplos temáticamente solapados, no inferencias personales.
 
     Un resultado vacío es normal: evita fabricar una memoria o trasladar un
@@ -78,7 +78,7 @@ def select_for_item(item: object, memory: object, *, per_kind: int = 1) -> list[
     if not isinstance(item, Mapping) or type(per_kind) is not int or not 1 <= per_kind <= 3:
         return []
     query = tokens(item.get("text"))
-    network = item.get("network")
+    network = item.get("network") or default_network
     if network not in NETWORKS or len(query) < 2:
         return []
     selected = []
@@ -103,7 +103,7 @@ def select_for_item(item: object, memory: object, *, per_kind: int = 1) -> list[
     return selected
 
 
-def render_for_batch(items: object, memory: object) -> str:
+def render_for_batch(items: object, memory: object, *,\n                     default_network: str | None = None) -> str:
     """Bloque compacto dirigido por ID, idéntico para las tres colas.
 
     El JSON delimita texto de terceros como DATOS, nunca como órdenes. La
@@ -120,7 +120,7 @@ def render_for_batch(items: object, memory: object) -> str:
         if not isinstance(item_id, str) or not item_id or item_id in seen:
             continue
         seen.add(item_id)
-        memories = select_for_item(item, memory)
+        memories = select_for_item(item, memory, default_network=default_network)
         if memories:
             lines.append(json.dumps({"id": item_id, "referencias": memories},
                                     ensure_ascii=False, sort_keys=True))
