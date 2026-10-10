@@ -1,0 +1,55 @@
+python
+# tests/contracts/network_adapter.py
+from typing import Literal, Protocol
+from dataclasses import dataclass
+from datetime import datetime
+
+
+Network = Literal[
+    "x", "threads", "facebook", "pinterest",
+    "reddit", "bluesky", "mastodon", "tiktok", "instagram",
+]
+
+
+@dataclass(frozen=True)
+class PostRef:
+    network: Network
+    external_id: str
+    instance: str | None = None
+    url: str | None = None
+
+
+@dataclass(frozen=True)
+class SocialAuthor:
+    network: Network
+    external_id: str
+    handle: str
+    display_name: str | None = None
+    instance: str | None = None
+    url: str | None = None
+
+
+@dataclass(frozen=True)
+class SocialPost:
+    network: Network
+    external_id: str
+    author: SocialAuthor
+    text: str
+    url: str
+    created_at: datetime
+    visibility: Literal["public", "unlisted", "private", "direct"]
+    language: str | None = None
+    in_reply_to_external_id: str | None = None
+    reblog_of_external_id: str | None = None
+    sensitive: bool = False
+    raw: dict | None = None
+
+
+class NetworkAdapter(Protocol):
+    network: Network
+
+    def discover(self, query: str, cursor: str | None = None) -> tuple[list[SocialPost], str | None]:
+        ...
+
+    def read_thread(self, post_ref: PostRef) -> list[SocialPost]:
+        ...
