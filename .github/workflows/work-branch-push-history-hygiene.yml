@@ -1,0 +1,48 @@
+name: Work branch push history hygiene
+
+on:
+  push:
+    branches:
+      - '**'
+      - '!main'
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  work-branch-history:
+    name: branch push DAG (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout event SHA and all history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+          sparse-checkout: |
+            tools
+            tests
+      # Temporary until #93 is merged; remove in controller integration.
+      - name: Pinned common Git history core from PR 93
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: 636786baf5facce2d6457f6bf5c0dc5aed02fd5c
+          path: .ci97-pr93-core
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: tools
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Offline synthetic Git regressions
+        run: python -m unittest discover -s tests -p test_work_branch_push_hygiene.py -v
+      - name: Audit actual push event (not a PR simulation)
+        if: github.event_name == 'push'
+        run: python tools/work_branch_push_hygiene.py
