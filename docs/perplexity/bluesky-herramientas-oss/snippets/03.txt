@@ -1,0 +1,43 @@
+python
+# Fuente base: https://github.com/MarshalX/bluesky-feed-generator/blob/main/server/data_filter.py
+# Objetivo: reutilizar la separación ingesta -> filtro -> ranking,
+# pero sin publicar un feed hasta validar el modelo con datos históricos.
+
+from dataclasses import dataclass
+from datetime import datetime, timezone
+
+@dataclass(frozen=True)
+class Candidate:
+    uri: str
+    cid: str
+    author_did: str
+    text: str
+    created_at: datetime
+    like_count: int = 0
+    reply_count: int = 0
+    repost_count: int = 0
+    topic_score: float = 0.0
+    author_affinity: float = 0.0
+    already_actioned: bool = False
+
+def recency_score(created_at: datetime, now: datetime | None = None) -> float:
+    now = now or datetime.now(timezone.utc)
+    hours = max((now - created_at).total_seconds() / 3600, 0)
+    return 1.0 / (1.0 + hours / 6.0)
+
+def engagement_score(c: Candidate) -> float:
+    return min(1.0, (c.like_count + 3 * c.reply_count + 2 * c.repost_count) / 100)
+
+def rank_candidates(items: list[Candidate]) -> list[Candidate]:
+    scored = []
+    for c in items:
+        if c.already_actioned:
+            continue
+        score = (
+            0.30 * c.topic_score
+            + 0.25 * c.author_affinity
+            + 0.20 * recency_score(c.created_at)
+            + 0.15 * engagement_score(c)
+        )
+        scored.append((score, c))
+    return [c for _, c in sorted(scored, key=lambda pair: pair[0], reverse=True)]
