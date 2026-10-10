@@ -213,6 +213,13 @@ def _hourly_guard(done_times, ledger, sleeper=None, now=None, limit=None):
     return waited
 
 
+def _voice_quote(item, bridge):
+    """El quote lleva texto propio incluso cuando no es una reply."""
+    import voice_output_finalization as voice
+    voice.inspect(item["text"], network="bluesky", queue="API")
+    return bridge.quote(item["url"], item["text"])
+
+
 def run_plan(plan, ledger=None, on_result=None):
     import reply_writer as _rw
     plan = _rw.require_gpt(plan, "bluesky")      # 08/10: nunca se publica texto que no venga de ChatGPT
@@ -302,7 +309,7 @@ def run_plan(plan, ledger=None, on_result=None):
             elif kind in ("repost", "quote"):
                 outcome, own_uri = (
                     ec.with_retries(lambda: b.repost(item["url"])) if kind == "repost"
-                    else b.quote(item["url"], item["text"])
+                    else _voice_quote(item, b)
                 )
                 if outcome == "already":
                     results.append({
@@ -314,6 +321,8 @@ def run_plan(plan, ledger=None, on_result=None):
                     raise RuntimeError(f"{kind} devolvió estado inesperado: {outcome!r}")
                 item = {**item, "own_uri": own_uri}
             elif kind == "reply":
+                import voice_output_finalization as voice
+                voice.inspect(item["text"], network="bluesky", queue="API")
                 b.reply_to(item["url"], item["text"])
             else:
                 raise ValueError(f"kind desconocido: {kind}")
