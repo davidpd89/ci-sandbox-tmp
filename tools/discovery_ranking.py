@@ -16,7 +16,7 @@ NETWORKS = ("bluesky", "mastodon", "x", "threads", "facebook",
             "pinterest", "reddit", "tiktok", "instagram")
 # Only these networks currently have a follower-list reader in growth_attribution.
 SUPPORTED_SNAPSHOTS = frozenset(("bluesky", "mastodon"))
-_TOKEN = re.compile(r"[0-9a-f]{24}\Z")
+_OPAQUE_ID_RE = re.compile(r"[0-9a-f]{24}\Z")
 _MAX_ROWS = 10000
 
 
@@ -36,7 +36,7 @@ def _reason(row, min_sample, min_age_days, as_of, max_snapshot_age_days):
     net, key = row.get("network"), row.get("source_key")
     if not isinstance(net, str) or net not in NETWORKS:
         return "invalid_network"
-    if not isinstance(key, str) or not _TOKEN.fullmatch(key):
+    if not isinstance(key, str) or not _OPAQUE_ID_RE.fullmatch(key):
         return "invalid_source_key"
     if net not in SUPPORTED_SNAPSHOTS:
         return "snapshot_adapter_unverified"
@@ -130,7 +130,7 @@ def rank_cohorts(cohorts, *, min_sample=40, min_age_days=3,
         key = row.get("source_key")
         # Group plausible source keys BEFORE validation so an invalid duplicate
         # cannot be silently ignored in favor of a valid entry.
-        if isinstance(key, str) and _TOKEN.fullmatch(key):
+        if isinstance(key, str) and _OPAQUE_ID_RE.fullmatch(key):
             buckets[(net, key)].append(row)
         else:
             unranked[net].append({"source_key": None, "reason": "invalid_source_key"})
