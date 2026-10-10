@@ -26,7 +26,7 @@ class AdaptersTests(unittest.TestCase):
 
     def test_mastodon_favourited_by_instance(self):
         p = self.wrap("mastodon", "like",
-            {"items": [{"id": "21", "acct": "lectora@ejemplo.social"}],
+            {"items": [{"id": "21", "acct": "lectora@ejemplo.example"}],
              "paging": {"cursors": {"after": "page2"}, "next": "https://example/?token=x"}},
             source_instance="mastodon.example")
         self.assertEqual(p["next_cursor"], "page2")
