@@ -1,0 +1,9 @@
+python
+# https://github.com/pinterest/pinterest-python-sdk/blob/main/README.md
+from pinterest.client import PinterestSDKClient
+
+client = PinterestSDKClient.create_client_with_refresh_token(
+    refresh_token=pinterest_refresh_token,
+    app_id=pinterest_app_id,
+    app_secret=pinterest_app_secret,
+)
