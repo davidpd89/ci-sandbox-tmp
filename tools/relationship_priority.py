@@ -44,8 +44,8 @@ def _date(value, field, today, *, required=False):
         if required:
             raise ValueError(f"{field}: fecha requerida")
         return None
-    if not isinstance(value, str):
-        raise ValueError(f"{field}: fecha ISO requerida")
+    if not isinstance(value, str) or not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value):
+        raise ValueError(f"{field}: fecha ISO YYYY-MM-DD requerida")
     try:
         parsed = dt.date.fromisoformat(value)
     except ValueError as exc:
@@ -94,7 +94,7 @@ def _normalize(row, today):
     # Si hay actividad entrante registrada, se exige fecha: evita premios eternos.
     if any(incoming.values()) and last_in is None:
         raise ValueError("last_inbound_at requerido si inbound no esta vacio")
-    identity = (network, actor_id.strip() if actor_id else handle.lstrip("@").casefold())
+    identity = (network, actor_id.strip().casefold() if actor_id else handle.lstrip("@").casefold())
     return dict(network=network, lane=lane, handle=handle, identity=identity,
                 actor_id=actor_id, inbound=incoming, affinity=affinity,
                 reciprocity=reciprocal, last_in=last_in, last_out=last_out,
@@ -240,7 +240,7 @@ def evaluate_synthetic(snapshot, output, *, k=10):
             continue
         if not isinstance(row["converted"], bool):
             raise ValueError("converted requiere booleano")
-        key = (row.get("network"), str(row.get("actor_id") or row.get("handle", "")).lstrip("@").casefold())
+        key = (row.get("network"), (str(row.get("actor_id") or "").strip().casefold() if row.get("actor_id") else str(row.get("handle", "")).lstrip("@").casefold()))
         if key in labels and labels[key] != row["converted"]:
             raise ValueError("etiquetas contradictorias para misma identidad")
         labels[key] = row["converted"]
@@ -249,7 +249,7 @@ def evaluate_synthetic(snapshot, output, *, k=10):
     result = {}
     for lane, items in output["queues"].items():
         first = items[:k]
-        known = [labels[(row["network"], str(row["actor_id"] or row["handle"]).lstrip("@").casefold())]
+        known = [labels[(row["network"], (str(row["actor_id"]).strip().casefold() if row["actor_id"] else str(row["handle"]).lstrip("@").casefold()))]
                  for row in first if (row["network"], str(row["actor_id"] or row["handle"]).lstrip("@").casefold()) in labels]
         result[lane] = dict(k=min(k, len(first)), observed=len(known),
                             precision=(round(sum(known) / len(known), 3) if known else None))
