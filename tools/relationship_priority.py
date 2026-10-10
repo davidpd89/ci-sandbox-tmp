@@ -20,7 +20,7 @@ NETWORKS = frozenset(("x", "threads", "facebook", "pinterest", "reddit",
 LANES = ("WEB", "API", "MOBILE")
 ACTIONS = ("reply", "follow", "reactivate", "visit")
 KINDS = ("comment", "repost", "follow", "like")
-HANDLE_RE = re.compile(r"^[\\w@.:-]{1,120}$", re.UNICODE)
+HANDLE_RE = re.compile(r"^[\w@.:-]{1,120}$", re.UNICODE)
 VERSION = "relationship-priority/v1"
 
 
