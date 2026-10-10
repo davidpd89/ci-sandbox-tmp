@@ -160,6 +160,28 @@ necesita diseño previo, potencia, análisis de asignación y SRM,
 ventanas completas y revisión humana. No extrapolar el mismo efecto
 de una red a otra.
 
+Tercera revisión adversarial (REV 80): se corrigió el uso del catálogo vivo
+al calcular un informe histórico: las variantes, métricas y ventanas se
+recuperan ahora de la definición registrada e inmutable en SQLite. No se
+presenta P(B>A) si alguno de los brazos carece de resultados finales; el
+panel muestra «sin datos». Una exposición/observación fechada después del
+reloj UTC actual se rechaza en la ingesta. Nuevas regresiones cubren los
+tres casos (no acreditan la veracidad externa del reloj ni de la evidencia).
+
+**Integración transversal pendiente para el controlador:** una instancia solo
+admite un registro por nombre de experimento: no equivale a un identificador
+versionado de *campaña/cohorte* reutilizable. Antes de usar en producción,
+hacer interoperable la identidad de #91 (procedencia de ensayos) y los
+adaptadores de ACK/resultados de #107; verificar que las métricas sean
+equivalentes en nueve redes y que la extracción de WEB/API/MOBILE no mezcle
+poblaciones por falta de estratificación. El panel distingue estudios por
+red, pero los agrupa entre colas dentro de cada red; no interpretar como
+prueba de paridad operativa. El conteo «pending_maturity» significa
+«sin observación final» e incluye observaciones vencidas que aún faltan.
+La rama partía de una base más antigua que el HEAD posterior de
+`research/public-reuse-parent`; se requiere prueba de integración
+contra esa base antes de fusionar.
+
 Segunda revisión adversarial: se corrigió explícitamente el sesgo
 de comparar **cuantiles ordenados** de dos posteriores; se permutan
 las muestras del brazo B antes del Monte Carlo, de forma reproducible.
