@@ -1648,7 +1648,7 @@ def _search_popular_feeds(c):
         # Antes se aceptaba cualquiera si la CONSULTA era afín (casi siempre).
         # Seleccionar por señales del propio feed, sin duplicar URIs.
         relevant = []
-        for feed in feeds:
+        for index, feed in enumerate(feeds):
             if not isinstance(feed, dict) or not feed.get("uri"):
                 continue
             label = " ".join([
@@ -1659,9 +1659,9 @@ def _search_popular_feeds(c):
             if not hits or sc.is_political(label):
                 continue
             relevant.append((-hits, -(int(feed.get("likeCount") or 0)),
-                             str(feed["uri"]), feed))
+                             str(feed["uri"]), index, feed))
         seen_feeds = set()
-        for _, _, uri, feed in sorted(relevant):
+        for _, _, uri, _, feed in sorted(relevant):
             if uri in seen_feeds:
                 continue
             seen_feeds.add(uri)
