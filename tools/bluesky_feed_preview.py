@@ -102,7 +102,8 @@ def feed_page(
                   AND match_count >= ?
                   AND reply_parent IS NULL
                   AND (langs_json = '[]' OR EXISTS (
-                        SELECT 1 FROM json_each(posts.langs_json)
+                        SELECT 1 FROM json_each(CASE WHEN json_valid(posts.langs_json)
+                            THEN posts.langs_json ELSE 'null' END)
                         WHERE lower(value) = 'es' OR lower(value) LIKE 'es-%'
                   ))
                   AND uri LIKE 'at://did:%/app.bsky.feed.post/%'
