@@ -309,6 +309,37 @@ class ObservationTests(unittest.TestCase):
         self.assertEqual(rows[1]["tags"], original)
         self.assertEqual(bridge.to_engine_rows()[0]["tags"], original)
 
+
+    def test_end_to_end_with_current_hashtag_expansion_engine(self):
+        # Genuine producer -> adapter -> current #63 engine composition,
+        # not a mocked engine signature or an assumption about live feeds.
+        from hashtag_expansion import build_snapshot
+
+        collector = ObservationCollector(now=NOW)
+        post_a = sample("bluesky", post="post-a", author="author-a")
+        post_b = sample("bluesky", post="post-b", author="author-b")
+        collector.add_posts("bluesky", "API", "feed", [post_a, post_b])
+        collector.add_posts("bluesky", "WEB", "feed", [post_a])
+        collector.add_posts("bluesky", "MOBILE", "missing-author",
+                            [{"uri": "at://did:plc:fake/app.bsky.feed.post/unknown",
+                              "record": {"text": "romantasy #Año", "createdAt": STAMP}}])
+        collector.add_feedback("bluesky", "API", "measured", [
+            {"event_id": "qualified-event", "window": STAMP, "tag": "#Año",
+             "eligible": 10, "engaged": 3, "replies": 1, "followers": 0}])
+        snapshot = build_snapshot(collector.to_engine_rows(),
+                                  feedback=collector.feedback_aggregates(),
+                                  now=NOW, seeds={"fantasia": ["romantasy"]})
+        self.assertEqual(snapshot["diagnostics"]["invalid"], 0)
+        self.assertEqual(snapshot["diagnostics"]["unique"], 2)
+        self.assertEqual(collector.counts["invalid"], 1)
+        candidates = snapshot["networks"]["bluesky"]["candidates"]
+        year = next(row for row in candidates if row["tag"] == "año")
+        self.assertEqual(year["authors"], 2)
+        self.assertEqual(year["feedback_eligible"], 10)
+        self.assertEqual(year["sources"], ["API:feed", "WEB:feed"])
+        self.assertIn("año", snapshot["networks"]["bluesky"]["hashtags"])
+        self.assertEqual(snapshot["networks"]["reddit"]["hashtags"], [])
+
     def test_strict_bad_scope_bounds_and_rollback(self):
         c = ObservationCollector(now=NOW)
         for args in (("fake", "WEB", "test", []),
