@@ -45,7 +45,14 @@ def _fold(text):
 
 
 def declares_followback(bio):
-    return bool(FOLLOWBACK_BIO.search(_fold(bio)))
+    # Compartido por todos los adaptadores que ya llaman declared_bonus.
+    # Una mención explicativa o negativa NO es intención explícita.
+    try:
+        from reciprocity_signals import classify_text
+    except ImportError:
+        from tools.reciprocity_signals import classify_text
+    return any(s["kind"] == "follow_exchange" and s["intent"] == "explicit"
+               for s in classify_text(bio))
 
 
 def declared_bonus(bio):
