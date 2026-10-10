@@ -417,28 +417,28 @@ class ObservationTests(unittest.TestCase):
             bridge = ObservationCollector(now=NOW)
             invalid = sample(network, post="valid", author="author")
             if network == "reddit":
-                invalid["author_fullname"] = "t2_au\\nthor"
+                invalid["author_fullname"] = "t2_au\nthor"
             elif network == "bluesky":
-                invalid["author"]["did"] = "did:plc:au\\nthor"
+                invalid["author"]["did"] = "did:plc:au\nthor"
             elif network == "mastodon":
-                invalid["account"]["url"] = "https://example.social/@au\\nthor"
+                invalid["account"]["url"] = "https://example.social/@au\nthor"
             elif network == "x":
-                invalid["user"]["id_str"] = "au\\nthor"
+                invalid["user"]["id_str"] = "au\nthor"
             elif network == "threads":
-                invalid["user_id"] = "au\\nthor"
+                invalid["user_id"] = "au\nthor"
             elif network == "facebook":
-                invalid["from"]["id"] = "au\\nthor"
+                invalid["from"]["id"] = "au\nthor"
             elif network == "pinterest":
-                invalid["creator"]["id"] = "au\\nthor"
+                invalid["creator"]["id"] = "au\nthor"
             elif network == "tiktok":
-                invalid["author"]["uid"] = "au\\nthor"
+                invalid["author"]["uid"] = "au\nthor"
             elif network == "instagram":
-                invalid["user"]["id"] = "au\\nthor"
+                invalid["user"]["id"] = "au\nthor"
             bridge.add_posts(network, "API", "read-only", [invalid])
             self.assertEqual(bridge.to_engine_rows(), [], network)
             self.assertEqual(bridge.counts["invalid"], 1, network)
         bridge = ObservationCollector(now=NOW)
-        for source in ("channel\\nspoof", "channel\\x00spoof", "\\rreader"):
+        for source in ("channel\nspoof", "channel\x00spoof", "\rreader"):
             with self.assertRaises(ValueError):
                 bridge.add_posts("x", "WEB", source, [sample("x")])
             with self.assertRaises(ValueError):
