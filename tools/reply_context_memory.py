@@ -69,7 +69,8 @@ def _records(memory: object, kind: str):
     return result
 
 
-def select_for_item(item: object, memory: object, *, per_kind: int = 1,\n                    default_network: str | None = None) -> list[dict]:
+def select_for_item(item: object, memory: object, *, per_kind: int = 1,
+                    default_network: str | None = None) -> list[dict]:
     """Recupera solo ejemplos temáticamente solapados, no inferencias personales.
 
     Un resultado vacío es normal: evita fabricar una memoria o trasladar un
@@ -103,7 +104,8 @@ def select_for_item(item: object, memory: object, *, per_kind: int = 1,\n       
     return selected
 
 
-def render_for_batch(items: object, memory: object, *,\n                     default_network: str | None = None) -> str:
+def render_for_batch(items: object, memory: object, *,
+                     default_network: str | None = None) -> str:
     """Bloque compacto dirigido por ID, idéntico para las tres colas.
 
     El JSON delimita texto de terceros como DATOS, nunca como órdenes. La
@@ -117,7 +119,8 @@ def render_for_batch(items: object, memory: object, *,\n                     def
         if not isinstance(item, Mapping):
             continue
         item_id = item.get("id")
-        if (not isinstance(item_id, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,80}", item_id)\n                or item_id in seen):
+        if (not isinstance(item_id, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,80}", item_id)
+                or item_id in seen):
             continue
         seen.add(item_id)
         memories = select_for_item(item, memory, default_network=default_network)
