@@ -124,6 +124,24 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(matrix["tiktok"]["channel"], "MOBILE")
         self.assertIsNone(matrix["instagram"]["followback_source"])
 
+    def test_previous_cycle_reciprocity_is_not_inherited_after_unfollow(self):
+        rows = [row("ana", "2026-09-01"),
+                row("ana", "2026-09-02", "followback_observed"),
+                row("ana", "2026-09-03", "unfollow"),
+                row("ana", "2026-09-20", "follow")]
+        partial = self.calc("mastodon", rows)
+        self.assertEqual(partial["state"], "due_unverified")
+        self.assertIsNone(partial["observed_back"])
+        complete = self.calc("mastodon", rows, followers_complete=True)
+        self.assertEqual(complete["state"], "eligible")
+        self.assertTrue(complete["eligible"])
+
+    def test_manually_followed_account_can_be_confirmed_reciprocal(self):
+        state = self.calc("bluesky", [], followers=("ana",))
+        self.assertEqual(state["state"], "reciprocal")
+        self.assertIsNone(state["age_days"])
+        self.assertFalse(state["eligible"])
+
 
 if __name__ == "__main__":
     unittest.main()

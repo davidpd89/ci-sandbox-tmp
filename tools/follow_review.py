@@ -26,12 +26,14 @@ def review(rows, followers, today, days=30, *, network=None):
     followed = {}
     actions = defaultdict(set)
     for row in rows:
-        if row.get("resultado") not in ("confirmado", "publicado"):
+        kind = row.get("tipo", "")
+        outcome = row.get("resultado")
+        if outcome not in ("confirmado", "publicado") and not (
+                kind == "unfollow" and outcome == "saltado_ya_no_seguido"):
             continue
         account = ga.norm(row.get("cuenta"))
         if not account or account.startswith("https"):
             continue
-        kind = row.get("tipo", "")
         parts = set(kind.split("+"))
         if parts & ga.FOLLOW_KINDS:
             try:
@@ -67,7 +69,7 @@ def main(argv=None):
     net = argv[0]
     rows = ga.load_registro(os.path.join(ROOT, f"SISTEMA_DIARIO_{net.upper()}", "registro_interacciones.csv"))
     followers = ga.bluesky_followers() if net == "bluesky" else ga.mastodon_followers()
-    result = review(rows, followers, datetime.date.today(), days)
+    result = review(rows, followers, datetime.date.today(), days, network=net)
     print(f"{net}: {len(result)} follows de >= {days} dias sin devolver ({len(followers)} seguidores reales)")
     for item in result[:40]:
         print(f"  {item['since']} ({item['age_days']}d) {item['account']:<40} {item['actions']}")

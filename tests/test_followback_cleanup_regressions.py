@@ -63,6 +63,22 @@ class CleanupCandidateRegressionTests(unittest.TestCase):
         out = fr.review(rows, [], NOW, days=7, network="mastodon")
         self.assertEqual(out, [])
 
+    def test_already_unfollowed_marker_closes_the_old_cycle(self):
+        rows = [event("ana", "2026-09-01"),
+                {**event("ana", "2026-09-02", "unfollow"),
+                 "resultado": "saltado_ya_no_seguido"}]
+        self.assertEqual(fr.review(rows, [], NOW, days=7, network="mastodon"), [])
+        with mock.patch.object(uc, "protected_accounts", return_value=set()):
+            self.assertEqual(uc.candidates(rows, [], NOW,
+                                           following={"ana": ""}, network="mastodon"), [])
+
+    def test_mastodon_ids_do_not_fallback_to_other_servers(self):
+        adapter = uc.Mastodon()
+        adapter.ids = {"ana@example.com": "remote-one", "ana": "local"}
+        self.assertEqual(adapter._id("ana@example.com"), "remote-one")
+        self.assertEqual(adapter._id("ana"), "local")
+        self.assertIsNone(adapter._id("ana@example.org"))
+
 
 if __name__ == "__main__":
     unittest.main()

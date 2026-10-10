@@ -96,6 +96,8 @@ def replay(rows, *, network, today, followers=(), following=None,
                 observed_back = False
             elif kind == "unfollow" and outcome in ("confirmado", "publicado", "saltado_ya_no_seguido"):
                 since, pending, reply_after_follow = None, False, False
+                # Una observacion del ciclo anterior no certifica el nuevo follow.
+                observed_back, ever_back = None, False
             elif "follow" in parts:
                 if outcome in ("confirmado", "publicado"):
                     if since is None:
@@ -124,7 +126,10 @@ def replay(rows, *, network, today, followers=(), following=None,
         if active is False:
             state = "not_following"
         elif since is None:
-            state = "pending_approval" if pending else "manual_unknown_age"
+            # Un follow manual sin antiguedad conocida puede ser reciproco
+            # cuando ambas listas confirman la relacion actual.
+            state = ("reciprocal" if active is True and observed_back is True
+                     else "pending_approval" if pending else "manual_unknown_age")
         elif observed_back is True:
             state = "reciprocal"
         elif not due:

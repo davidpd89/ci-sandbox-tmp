@@ -144,13 +144,13 @@ class Mastodon:
         for account in m.patient(lambda: m.account_neighbors(me["id"], "following", limit=80, max_pages=15)):
             text = m._plain_text(f"{account.get('display_name', '')} {account.get('note', '')}")
             following[account["acct"].casefold()] = text
-            for key in {account["acct"].casefold(), account["acct"].split("@")[0].casefold()}:
-                self.ids.setdefault(key, account["id"])
+            # En Mastodon un nombre local puede pertenecer a varios servidores.
+            self.ids.setdefault(account["acct"].casefold(), account["id"])
         return following, ga.mastodon_followers()
 
     def _id(self, account):
         key = ga.norm(account).casefold()
-        return self.ids.get(key) or self.ids.get(key.split("@")[0])
+        return self.ids.get(key)
 
     def follows_me(self, account):
         account_id = self._id(account) or self.m._resolve_account_id(account)
