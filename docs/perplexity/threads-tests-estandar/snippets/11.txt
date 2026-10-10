@@ -1,0 +1,5 @@
+json
+// tests/fixtures/threads/publish_success.json
+{
+  "id": "threads_published_1"
+}
