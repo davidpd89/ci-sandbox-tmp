@@ -51,7 +51,9 @@ _PATTERNS = {k: tuple(re.compile(p) for p in v) for k, v in _RULES.items()}
 # El metacomentario y el rechazo no son una oferta; nunca se usa como prueba.
 _META = re.compile(
     r"\b(?:que es|que significa|como funciona|que opinas|"
-    r"no hago|no participo|nunca hago|evita|evitad|cuidado con|"
+    r"no hago|no participo|nunca hago|no sigo|nunca sigo|"
+    r"no devuelvo|nunca devuelvo|no quiero|no me gusta|"
+    r"evita|evitad|cuidado con|"
     r"odio|estafa|trampa|no recomiendo|desaconsejo|"
     r"definicion de|hablamos de|debate sobre|contra el|"
     r"ejemplo de|explicar el|explico el|en mi novela|personaje dice|prefiero no|no recomendar)\b"
