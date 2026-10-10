@@ -22,7 +22,7 @@ PROTECTED = re.compile(
     r"(?<!\w)@[\w.]+|(?<!\w)#[\wáéíóúüñÁÉÍÓÚÜÑ]+|"
     + re.escape(chr(96)) + r"[^" + re.escape(chr(96)) + r"\n]*" + re.escape(chr(96))
     + r'|«[^»\n]*»|“[^”\n]*”|"[^"\n]*"', re.UNICODE)
-FENCED_CODE = re.compile(r"(?ms)^[ \\t]*(\\`{3,}|~{3,})[^\\n]*\\n.*?^[ \\t]*\\1[ \\t]*$")
+FENCED_CODE = re.compile(r"(?ms)^[ \t]*(`{3,}|~{3,})[^\n]*\n.*?^[ \t]*\1[ \t]*$")
 
 VARIANT_ES_ES = {
     "platicar": "conversar", "chambear": "trabajar", "checar": "comprobar",
