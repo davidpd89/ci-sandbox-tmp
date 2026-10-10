@@ -1,0 +1,23 @@
+python
+# Adaptación para davidpd89/ci-sandbox-tmp/tools/tiktok_reciprocity_signals.py
+# Núcleo reutilizado de: https://github.com/davidpd89/ci-sandbox-tmp/blob/main/tools/reciprocity.py
+from __future__ import annotations
+from typing import Optional
+
+import reciprocity
+
+
+def enrich_profile(profile: dict) -> dict:
+    followers = profile.get("followers")
+    following = profile.get("following")
+    statuses = profile.get("video_count")
+    bio = profile.get("bio") or ""
+
+    kind = reciprocity.classify(followers, following, statuses)
+    return {
+        **profile,
+        "reciprocity_class": kind,
+        "affinity_bonus": reciprocity.affinity_bonus(followers, following, statuses),
+        "declares_followback": reciprocity.declares_followback(bio),
+        "followback_bonus": reciprocity.declared_bonus(bio),
+    }
