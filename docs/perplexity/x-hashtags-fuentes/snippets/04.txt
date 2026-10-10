@@ -1,0 +1,44 @@
+json
+// Archivo propuesto: 00_OPERATIVO/x/discovery_x_v2.json
+// Licencia: MIT — proyecto interno davidpd89/ci-sandbox-tmp
+{
+  "hashtags_core": [
+    {
+      "id": "x_hashtag_romantasy",
+      "texto": "#Romantasy",
+      "tipo": "hashtag",
+      "subnicho": "romantasy",
+      "idioma": "es",
+      "origen_url": "https://help.x.com/en/using-x/x-search",
+      "fecha_alta": "2026-10-10",
+      "estado": "trial",
+      "notas": "Núcleo del subgénero; medir antes de promocionar."
+    }
+  ],
+  "hashtags_intent": [
+    {
+      "id": "x_hashtag_tbr",
+      "texto": "#TBR",
+      "tipo": "hashtag",
+      "subnicho": "lectura_general",
+      "idioma": "es",
+      "origen_url": "https://help.x.com/en/using-x/x-search",
+      "fecha_alta": "2026-10-10",
+      "estado": "trial",
+      "notas": "Alta intención lectora; puede traer ruido internacional."
+    }
+  ],
+  "search_queries": [
+    {
+      "id": "x_query_recomendacion_fantasia",
+      "texto": "(\"recomendadme\" OR \"me recomendáis\") (libro OR novela OR fantasía) lang:es -filter:replies",
+      "tipo": "conversacion",
+      "subnicho": "lectura_general",
+      "idioma": "es",
+      "origen_url": "https://docs.x.com/x-api/posts/search/integrate/operators",
+      "fecha_alta": "2026-10-10",
+      "estado": "trial",
+      "notas": "Detecta peticiones explícitas de recomendación."
+    }
+  ]
+}
