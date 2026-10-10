@@ -1,0 +1,55 @@
+python
+# Archivo nuevo: tools/tiktok_source_riyagoelrs.py
+# Origen: https://github.com/riyagoelrs/tiktok-scraper
+# Archivo de referencia: https://github.com/riyagoelrs/tiktok-scraper/blob/main/tiktok_scraper.py
+# Uso: adaptador externo; no copiar el scraper al repo.
+
+from __future__ import annotations
+
+import json
+import subprocess
+from pathlib import Path
+from typing import Any
+
+from tools.tiktok_niche_sources import DiscoverySource, normalize_candidate
+
+
+def run_scraper(
+    source: DiscoverySource,
+    output_dir: Path,
+    max_items: int = 30,
+) -> list[dict]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_file = output_dir / f"{source.source_type}_{abs(hash(source.term))}.json"
+
+    if source.source_type == "hashtag":
+        mode = "hashtag"
+    elif source.source_type == "search":
+        mode = "search"
+    else:
+        raise ValueError(f"Fuente no soportada: {source.source_type}")
+
+    command = [
+        "python",
+        "-m",
+        "tiktok_scraper",
+        mode,
+        source.term.removeprefix("#"),
+        "--limit",
+        str(max_items),
+        "--output",
+        str(output_file),
+    ]
+
+    subprocess.run(command, check=True, capture_output=True, text=True)
+
+    payload: Any = json.loads(output_file.read_text(encoding="utf-8"))
+    items = payload if isinstance(payload, list) else payload.get("videos", [])
+    candidates = []
+
+    for raw in items:
+        candidate = normalize_candidate(raw, source)
+        if candidate:
+            candidates.append(candidate)
+
+    return candidates
