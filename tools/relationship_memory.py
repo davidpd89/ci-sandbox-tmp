@@ -90,6 +90,8 @@ def events_from_rows(rows, network, *, source="registro.csv"):
             event_kind, reason = "follow", "outbound_confirmed"
         elif kind == "unfollow" and "no devuelve" in notes and status in OK:
             event_kind, reason = "nonreciprocal", "no_followback"
+        elif kind == "unfollow" and "no devuelve" in notes:
+            continue  # sin confirmación no hay fracaso ni exclusión permanente
         elif kind in {"unfollow", "block"}:
             event_kind, reason = "permanent", "block" if kind == "block" else "other_unfollow"
         elif kind in {"reciprocated", "followback_verified"}:
