@@ -140,7 +140,7 @@ def prepare_blind(cases: list[dict], candidates: list[dict], salt: str) -> tuple
     blind, key = [], []
     for candidate in candidates:
         case = indexed[candidate["case_id"]]
-        token = hashlib.sha256((salt + "\0" + case["id"] + "\0" + candidate["strategy"]).encode("utf-8")).hexdigest()[:20]
+        token = (\n            hashlib.sha256((salt + "\0" + case["id"] + "\0" + candidate["strategy"]).encode("utf-8")).hexdigest()[:20]\n        )
         if token in tokens:
             raise ValueError("Colisión de identificadores ciegos")
         tokens.add(token)
