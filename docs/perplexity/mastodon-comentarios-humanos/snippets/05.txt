@@ -1,0 +1,39 @@
+python
+# Nuevo archivo: SISTEMA_DIARIO_MASTODON/style_guard.py
+# Reglas propias del sistema; no reutiliza código de terceros.
+import re
+
+GENERIC_PHRASES = [
+    r"^¡qué buen post!",
+    r"^me encanta tu contenido",
+    r"^sígueme para más",
+    r"^gracias por compartir$",
+    r"^totalmente de acuerdo$",
+]
+
+
+class SpanishStyleGuard:
+    def __init__(self, max_chars: int = 280, max_emojis: int = 1, max_questions: int = 1):
+        self.max_chars = max_chars
+        self.max_emojis = max_emojis
+        self.max_questions = max_questions
+
+    def validate(self, text: str) -> tuple[bool, str]:
+        if not text.strip():
+            return False, "Respuesta vacía"
+
+        if len(text) > self.max_chars:
+            return False, "Demasiado larga para Mastodon"
+
+        if sum(ch in "?!¡¿" for ch in text if ch in "?!") > self.max_questions:
+            return False, "Más de una pregunta"
+
+        emoji_count = sum(1 for ch in text if ord(ch) > 0x1F000)
+        if emoji_count > self.max_emojis:
+            return False, "Demasiados emojis"
+
+        lowered = text.strip().lower()
+        if any(re.search(pattern, lowered) for pattern in GENERIC_PHRASES):
+            return False, "Fórmula genérica de crecimiento"
+
+        return True, "OK"
