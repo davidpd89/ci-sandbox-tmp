@@ -155,6 +155,78 @@ class PreviewTests(unittest.TestCase):
         self.assertEqual(self.page(limit=1)["feed"],
                          [{"post": uri("valid", "post")}])
 
+    def test_non_array_language_values_fail_closed(self):
+        # json_each también itera objetos/escalares JSON: ninguno es una lista
+        # emitida por store_event, aunque contenga la cadena "es".
+        self.add("valid", "post", time_us=NOW - 120_000_000)
+        for idx, payload in enumerate(('{"lang":"es"}', '"es"', 'null')):
+            did = f"invalidlang{idx}"
+            self.add(did, "post", time_us=NOW - 60_000_000)
+            with closing(sqlite3.connect(self.path)) as db, db:
+                db.execute(
+                    "UPDATE posts SET langs_json = ? WHERE uri = ?",
+                    (payload, uri(did, "post")),
+                )
+        self.assertEqual(
+            self.page(limit=1)["feed"], [{"post": uri("valid", "post")}],
+        )
+
+    def test_contract_with_real_jetstream_writer_and_deletes(self):
+        # A diferencia del resto de fixtures, aquí escribe el productor real:
+        # detecta cambios de esquema, etiquetas, updates y borrados.
+        import datetime as dt
+        import bluesky_jetstream_collect as js
+
+        created = dt.datetime.fromtimestamp(
+            (NOW - 120_000_000) / 1_000_000, dt.timezone.utc
+        ).isoformat()
+
+        def event(operation, *, text="Estoy leyendo un libro de fantasía y romantasy",
+                  langs=None):
+            return {
+                "kind": "commit",
+                "did": "did:plc:integracion",
+                "time_us": NOW - 60_000_000,
+                "commit": {
+                    "collection": "app.bsky.feed.post",
+                    "operation": operation,
+                    "rkey": "original",
+                    "record": {
+                        "text": text,
+                        "langs": ["es"] if langs is None else langs,
+                        "createdAt": created,
+                    },
+                },
+            }
+
+        with closing(js.init_db(str(self.path))) as db:
+            self.assertTrue(js.store_event(
+                db, event("create"), ["fantasia", "romantasy"],
+            ))
+            db.commit()
+            self.assertEqual(
+                self.page()["feed"],
+                [{"post": uri("integracion", "original")}],
+            )
+
+            # Update con idioma ajeno debe retirar lo previamente seleccionado.
+            self.assertFalse(js.store_event(
+                db, event("update", langs=["en"]), ["fantasia", "romantasy"],
+            ))
+            db.commit()
+            self.assertEqual(self.page()["feed"], [])
+
+            # Comprobar también borrado explícito del recolector.
+            self.assertTrue(js.store_event(
+                db, event("create"), ["fantasia", "romantasy"],
+            ))
+            db.commit()
+            self.assertFalse(js.store_event(
+                db, event("delete"), ["fantasia", "romantasy"],
+            ))
+            db.commit()
+            self.assertEqual(self.page()["feed"], [])
+
     def test_post_inserted_behind_cursor_is_found(self):
         self.add("first", "post", time_us=NOW - 60_000_000)
         self.add("last", "post", time_us=NOW - 180_000_000)
