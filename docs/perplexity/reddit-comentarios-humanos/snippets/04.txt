@@ -1,0 +1,44 @@
+python
+# Fuente conceptual: https://github.com/trentmkelly/reddit-llm-comment-detector
+# Adaptación: filtro ligero de señales de texto artificial; devuelve avisos, no bloqueos.
+
+import re
+from dataclasses import dataclass
+
+AI_PHRASES = [
+    "¡Claro!", "¡Por supuesto!", "Espero que esto te ayude",
+    "En resumen,", "Como modelo de lenguaje", "No dudes en",
+]
+
+@dataclass
+class HumanityResult:
+    score: float
+    warnings: list[str]
+
+def score_comment(text: str) -> HumanityResult:
+    warnings = []
+    score = 1.0
+
+    lowered = text.lower()
+
+    for phrase in AI_PHRASES:
+        if phrase.lower() in lowered:
+            warnings.append(f"frase_generica:{phrase}")
+            score -= 0.2
+
+    if text.count("?") > 1:
+        warnings.append("demasiadas_preguntas")
+        score -= 0.15
+
+    if len(re.findall(r"[\U0001F300-\U0001FAFF]", text)) > 1:
+        warnings.append("demasiados_emojis")
+        score -= 0.15
+
+    sentences = [s for s in re.split(r"[.!?]+", text) if s.strip()]
+    if len(sentences) >= 3:
+        starts = [s.strip().split()[0].lower() for s in sentences if s.strip().split()]
+        if len(set(starts)) < len(starts) * 0.7:
+            warnings.append("estructura_repetitiva")
+            score -= 0.2
+
+    return HumanityResult(score=max(0.0, score), warnings=warnings)
