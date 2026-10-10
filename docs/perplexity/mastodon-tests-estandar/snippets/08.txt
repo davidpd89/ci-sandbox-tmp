@@ -1,0 +1,35 @@
+python
+# tests/test_mastodon_adapter_http.py
+# Patrón de uso tomado de:
+# https://github.com/getsentry/responses/blob/master/responses/tests/test_matchers.py
+import json
+from pathlib import Path
+
+import pytest
+import responses
+
+from growth.adapters.mastodon import MastodonAdapter
+
+
+FIXTURES = Path(__file__).parents[1] / "fixtures" / "mastodon"
+
+
+@pytest.fixture
+def adapter():
+    return MastodonAdapter(instance="mastodon.social")
+
+
+@responses.activate
+def test_discovery_handles_rate_limit(adapter):
+    responses.get(
+        "https://mastodon.social/api/v1/timelines/tag/fantasy",
+        json={"error": "Too many requests"},
+        status=429,
+        headers={"Retry-After": "30"},
+    )
+
+    result = adapter.discover("#fantasy")
+
+    assert result.error.kind == "rate_limit"
+    assert result.error.retryable is True
+    assert result.error.retry_after_seconds == 30
