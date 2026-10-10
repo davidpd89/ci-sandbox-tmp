@@ -1,5 +1,10 @@
 # Benchmark multired de comentarios — PR #72 (10/10/2026)
 
+Fuente primaria: https://github.com/promptfoo/promptfoo/tree/37cfe7146f7abe770867659ad7b01ff57b723033
+Fecha de consulta: 2026-10-10
+Licencia SPDX: MIT
+Referencia inmutable: https://github.com/promptfoo/promptfoo/tree/37cfe7146f7abe770867659ad7b01ff57b723033
+
 ## Problema
 
 En el mirror, `tools/reply_writer.py` genera texto por lote, `valid_reply` comprueba
@@ -39,7 +44,7 @@ dependencias ya instaladas.
 
 **Prompts/modelos comparados:** el baseline genérico y el candidato
 contextual del fixture no son LLMs ni salidas de proveedores;
-son textos sintéticos escritos para exercitar el comparador.
+son textos sintéticos escritos para ejercitar el comparador.
 La generación real continúa en el prompt del proyecto (`reply_writer.PROMPT`).
 No se ha medido una superioridad entre GPT, Claude, modelos locales,
 promptfoo o DeepEval; esa afirmación exigiría ejecutar un mismo corpus
