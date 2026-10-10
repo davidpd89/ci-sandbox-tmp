@@ -115,6 +115,7 @@ def decision(events, network, account, *, today=None, policy=None):
     failures = 0
     active = False
     seen_follow = False
+    orphan_dates = set()
     last_failure = None
     last_evidence = None
     permanent = False
@@ -127,16 +128,19 @@ def decision(events, network, account, *, today=None, policy=None):
             last_failure = None
             active = False
             seen_follow = False
+            orphan_dates.clear()
         elif event.kind == "follow":
             active = True
             seen_follow = True
         elif event.kind == "nonreciprocal":
-            # No contar filas repetidas si no existe otro ciclo de follow.
-            # Un unfollow histórico huérfano se admite una sola vez.
-            if active or (not seen_follow and failures == 0):
+            # Los CSV anteriores registraban un unfollow sin el follow de origen.
+            # Distintos dias son ciclos historicos; filas duplicadas del mismo
+            # dia no deben crear nuevos fracasos.
+            if active or (not seen_follow and event.date not in orphan_dates):
                 failures += 1
+                if not active:
+                    orphan_dates.add(event.date)
                 active = False
-                seen_follow = True
                 last_failure = event.date
                 last_evidence = event.evidence
     status = "eligible"
