@@ -1,0 +1,46 @@
+python
+# Pseudocódigo de integración en tools/reddit_scan.py
+from reddit_candidate_score import (
+    profile_quality_signals,
+    passes_minimum_quality,
+    score_profile,
+    score_post,
+)
+
+def enrich_reddit_candidate(item, reciprocity_data, language_detector, topic_matcher):
+    author_signals = profile_quality_signals(item.get("author"))
+
+    if not passes_minimum_quality(author_signals):
+        return None
+
+    profile_score = score_profile(
+        recent_activity_7d=item.get("author_recent_activity_7d", 0),
+        reciprocity_events=reciprocity_data.get("reciprocity_events", 0),
+        topic_affinity=topic_matcher.score(item.get("text", "")),
+        spanish_probability=language_detector.spanish_probability(item.get("text", "")),
+        account_age_days=author_signals["account_age_days"],
+        karma_total=author_signals["karma_total"],
+    )
+
+    post_score = score_post(
+        age_hours=item["age_hours"],
+        comment_count=item.get("num_comments", 0),
+        question_or_request=item.get("is_question_or_request", False),
+        topic_affinity=topic_matcher.score(item.get("text", "")),
+        spanish_probability=language_detector.spanish_probability(item.get("text", "")),
+        author_active_recently=item.get("author_recent_activity_7d", 0) > 0,
+    )
+
+    return {
+        "submission_id": item["submission_id"],
+        "comment_id": item.get("comment_id"),
+        "author": item.get("author_name"),
+        "profile_score": profile_score,
+        "post_score": post_score,
+        "action_type": "reply" if post_score >= 0.55 else "none",
+        "features": {
+            **author_signals,
+            "age_hours": item["age_hours"],
+            "comment_count": item.get("num_comments", 0),
+        },
+    }
