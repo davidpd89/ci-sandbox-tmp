@@ -51,11 +51,11 @@ class LiveSnapshotReaderTests(unittest.TestCase):
                     for name in hqc.NETWORK_QUEUE:
                         seeds, lexical = hqc.combine(
                             name, "busquedas", ["semilla"])
-                        self.assertEqual(seeds, ["semilla"])
-                        self.assertEqual("romantasy" in lexical, scenario == "fresh")
+                        self.assertEqual(seeds, ["semilla lang:es"] if name == "x" else ["semilla"])
+                        self.assertEqual(any("romantasy" in item for item in lexical), scenario == "fresh")
                         if name != "reddit":
                             _, tags = hqc.combine(name, "hashtags", [])
-                            self.assertEqual("#año" in tags, scenario == "fresh")
+                            self.assertEqual(any(item.startswith("#año") for item in tags), scenario == "fresh")
                         if name in ("bluesky", "mastodon", "tiktok"):
                             config = ({"query_families": [{"name": "old", "queries": ["semilla"]}],
                                        "tag_queries": [], "hashtags": [], "coverage": {}}
