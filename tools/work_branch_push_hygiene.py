@@ -123,6 +123,12 @@ def scan_work_push(event: dict, *, root: Path, expected_sha: str,
         history.commit_id(root, before)
         baseline = before
         classification = "fast-forward" if _ancestor(root, before, after) else "rewrite"
+        if classification == "rewrite" and _ancestor(root, after, before):
+            # A rewind introduces no commits, but may restore a sensitive path
+            # from an earlier tree. Compare the before/after trees explicitly.
+            paths = history.touched_paths(root, after, [before])
+            count = sum(bool(repo_hygiene.forbidden_path(path)) for path in paths)
+            return "rewrite", [(after, count)] if count else []
     return classification, history.scan_history(root, baseline, after, repo_hygiene.forbidden_path)
 
 

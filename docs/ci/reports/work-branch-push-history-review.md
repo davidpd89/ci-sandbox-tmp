@@ -15,7 +15,7 @@
 
 ## Pruebas y revisión adversarial
 
-23 tests sintéticos en tests/test_work_branch_push_hygiene.py: add-delete en un push, pushes separados, force-push/objeto anterior perdido, nueva rama desde commit antiguo de main, nueva divergencia y orphan, merge con segundo padre, merge que resucita ruta histórica, deuda no tocada vs modificada, espacios y NUL, borrado de ref, flags incoherentes, SHA inconsistentes, refs ilegales, referencia default inexistente, shallow, errores de ancestry/merge-base, eventos JSON malformados sin fuga de rutas.
+25 tests sintéticos en tests/test_work_branch_push_hygiene.py: add-delete en un push, pushes separados, force-push/objeto anterior perdido, nueva rama desde commit antiguo de main, nueva divergencia y orphan, merge con segundo padre, merge que resucita ruta histórica, deuda no tocada vs modificada, espacios y NUL, borrado de ref, flags incoherentes, SHA inconsistentes, refs ilegales, referencia default inexistente, shallow, errores de ancestry/merge-base, eventos JSON malformados sin fuga de rutas.
 
 **Suite local previa:** 23/23 en Linux Python 3.13, Git 2.47.3, con stand-in *solo local* del clasificador. **Evidencia CI confirmada sobre HEAD de código `956fb5195e30d67ea1b07a3b68162e3902b3f2b6`:** [workflow push 38008577659](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38008577659), **23/23 en Ubuntu y Windows Python 3.11**, y escaneo del evento real `push` limpio en ambas plataformas; [workflow pull_request 38008582496](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38008582496), **23/23 en ambos runners** (solo tests simulados para PR). Estas ejecuciones verifican el adaptador con el núcleo #93 real. No demuestran el canario de alta-baja remoto; sigue pendiente. El commit de esta actualización documental crea un HEAD nuevo que debe volver a comprobarse. No confundir la prueba sintética de una función con la prueba real de llegada de webhook push. El resultado de Actions debe añadirse después de leer los runs del HEAD.
 
@@ -26,6 +26,7 @@ Segunda revisión adversarial realizada:
 4. Detectadas salidas limpias posibles sin comprobar shallow al crear/borrar rama; comprobación previa global.
 5. Detectada confusión entre exit 1 (no ancestor/no merge-base) y exit 128 (Git roto); separadas con _git_predicate y regresiones.
 6. Eliminado concepto de «último check verde implica que ningún push histórico fue rojo». Los runs se auditan por evento independiente.
+7. Revisión del controlador: un `force-push` que rebobina a un ancestro deja el rango `after ^ before` vacío. No debe generar error espurio, pero tampoco dar verde si el nuevo árbol reintroduce una ruta sensible. La rama #97 comprueba el delta A/M/T de `before` a `after` usando el núcleo #93, con dos nuevas regresiones. La CI histórica 23/23 documentada arriba corresponde al HEAD anterior; ejecutar la nueva versión con 25 casos antes de integrarla.
 
 ## Reutilización y mantenimiento contrastados el 10/10/2026
 

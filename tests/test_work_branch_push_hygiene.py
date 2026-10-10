@@ -87,6 +87,20 @@ class WorkPushTests(unittest.TestCase):
         self.put("docs/final.md"); self.commit("new force tip")
         self.assertEqual(self.scan(self.event(before=bad, forced=True)), ("rewrite", []))
 
+    def test_force_rewind_to_safe_ancestor_is_empty_range(self):
+        self.put("docs/safe.md"); future = self.commit("safe future")
+        self.git("reset", "--hard", self.base)
+        event = self.event(before=future, after=self.base, forced=True)
+        self.assertEqual(self.scan(event, expected=self.base), ("rewrite", []))
+
+    def test_force_rewind_restores_sensitive_tree_path(self):
+        self.put("secrets/restored.json"); sensitive = self.commit("historic sensitive")
+        self.git("rm", "-q", "secrets/restored.json"); clean = self.commit("historic cleanup")
+        self.git("reset", "--hard", sensitive)
+        event = self.event(before=clean, after=sensitive, forced=True)
+        self.assertEqual(self.scan(event, expected=sensitive),
+                         ("rewrite", [(sensitive, 1)]))
+
     def test_force_missing_old_sha_fails_closed(self):
         self.put("docs/safe.md"); self.commit("new tip")
         with self.assertRaises(history.HistoryError):
