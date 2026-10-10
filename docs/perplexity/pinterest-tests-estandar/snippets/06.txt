@@ -1,0 +1,31 @@
+python
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Literal
+
+
+@dataclass(frozen=True)
+class PinterestPinCandidate:
+    network: Literal["pinterest"]
+    pin_id: str | None
+    board_id: str
+    canonical_url: str | None
+    title: str
+    description: str
+    destination_url: str | None
+    media_kind: Literal["image", "carousel", "video"]
+    media_ref: str
+    cover_image_url: str | None
+    created_at: datetime | None
+    payload_hash: str
+
+
+@dataclass(frozen=True)
+class PinterestAdapterResult:
+    ok: bool
+    pin_id: str | None
+    canonical_url: str | None
+    created_at: datetime | None
+    error_code: str | None
+    retryable: bool
+    raw_status: int | None
