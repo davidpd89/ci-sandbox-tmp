@@ -3,6 +3,7 @@
 Verified remote IDs are distinct from handles and from #85 entity_snapshot_id.
 """
 from __future__ import annotations
+from bisect import bisect_left, bisect_right
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import Mapping
@@ -104,6 +105,8 @@ class AliasTimeline:
         self.evidence: dict[str, Evidence] = {}
         self.actions: list[dict[str, str]] = []
         self._inactive: set[str] = set()
+        self._epoch = 0
+        self._indexed_epoch = -1
 
     def observe(self, *, evidence_id: str, network: str, handle: str, stable_id: str,
                 observed_at: str, queue: str, source: str, proof: str,
@@ -123,6 +126,7 @@ class AliasTimeline:
                 raise AliasError("evidence_id_collision")
             return evidence_id
         self.evidence[evidence_id] = record
+        self._epoch += 1
         return evidence_id
 
     def _audit(self, verb: str, evidence_id: str, reason: str) -> None:
@@ -138,6 +142,7 @@ class AliasTimeline:
         else:
             self._inactive.remove(evidence_id)
         self.actions.append({"action": verb, "evidence_id": evidence_id, "reason": reason.strip()})
+        self._epoch += 1
 
     def revoke(self, evidence_id: str, *, reason: str) -> None:
         self._audit("revoke", evidence_id, reason)
@@ -148,16 +153,41 @@ class AliasTimeline:
     def _active(self) -> list[Evidence]:
         return [r for k, r in self.evidence.items() if k not in self._inactive]
 
-    def _claims(self, account: str, at: datetime) -> list[Evidence]:
-        rows = [r for r in self._active() if r.account == account and _when(r.observed_at) <= at]
-        if not rows:
+    def _ensure_index(self) -> None:
+        """Rebuild sorted indexes lazily after mutations, not for every event."""
+        if self._indexed_epoch == self._epoch:
+            return
+        by_account, by_stable = {}, {}
+        for row in self._active():
+            by_account.setdefault(row.account, []).append(row)
+            by_stable.setdefault(row.stable, []).append(row)
+
+        def pack(groups):
+            result = {}
+            for key, records in groups.items():
+                ordered = sorted(records, key=lambda r: (r.observed_at, r.evidence_id))
+                result[key] = ([r.observed_at for r in ordered], ordered)
+            return result
+
+        self._account_index = pack(by_account)
+        self._stable_index = pack(by_stable)
+        self._indexed_epoch = self._epoch
+
+    def _claims(self, account: str, moment: str) -> list[Evidence]:
+        self._ensure_index()
+        pair = self._account_index.get(account)
+        if pair is None:
             return []
-        latest = max(_when(r.observed_at) for r in rows)
-        return sorted((r for r in rows if _when(r.observed_at) == latest), key=lambda r: r.evidence_id)
+        times, rows = pair
+        pos = bisect_right(times, moment)
+        if pos == 0:
+            return []
+        first = bisect_left(times, times[pos - 1])
+        return rows[first:pos]
 
     def resolve(self, network: str, handle: str, as_of: str) -> dict:
         account = self.key_builder(network, handle)
-        moment = _when(as_of)
+        moment = _stamp(_when(as_of))
         rows = self._claims(account, moment)
         if not rows:
             return {"account": account, "status": "unknown", "stable_key": None, "evidence_ids": []}
@@ -166,15 +196,16 @@ class AliasTimeline:
             return {"account": account, "status": "conflict_handle_recycled_same_time",
                     "stable_key": None, "evidence_ids": [r.evidence_id for r in rows]}
         stable = next(iter(owners))
-        all_stable = [r for r in self._active() if r.stable == stable and _when(r.observed_at) <= moment]
-        latest = max(_when(r.observed_at) for r in all_stable)
-        current = {r.account for r in all_stable if _when(r.observed_at) == latest}
+        times, records = self._stable_index[stable]
+        pos = bisect_right(times, moment)
+        first = bisect_left(times, times[pos - 1])
+        current = {r.account for r in records[first:pos]}
         if len(current) > 1:
             status, stable_out = "conflict_stable_multiple_handles", None
         elif account not in current:
             status, stable_out = "superseded_alias", stable
         else:
-            status = "verified_at_observation" if _when(rows[0].observed_at) == moment else "inferred_interval"
+            status = "verified_at_observation" if rows[0].observed_at == moment else "inferred_interval"
             stable_out = stable
         return {"account": account, "status": status, "stable_key": stable_out,
                 "evidence_ids": [r.evidence_id for r in rows]}
