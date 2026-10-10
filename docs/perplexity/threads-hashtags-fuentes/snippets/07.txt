@@ -1,0 +1,23 @@
+text
+# Origen: formato documentado en
+# https://github.com/galihkjaya/threadscraper
+# Archivo propuesto: config/discovery/threads_keywords.txt
+# Prioridad 1
+romantasy recomendación
+fantasía juvenil libros
+libros de fantasía en español
+romance fantástico recomendación
+lectores de fantasía
+booktok español
+bookstagram español
+reseña fantasía
+autor independiente fantasía
+novela romantasy
+
+# Prioridad 2
+lectura fantasía
+libros parecidos a
+TBR fantasía
+club de lectura fantasía
+escritora fantasía
+escritor independiente libros
