@@ -90,6 +90,26 @@ class SignalTests(unittest.TestCase):
             as_of=TODAY)
         self.assertEqual(positive["status"], "eligible")
 
+    def test_legacy_followback_and_opposed_intentions_in_one_sentence(self):
+        # El contrato heredado reconocía «sigo a mis seguidores».
+        self.assertEqual(reciprocity.declared_bonus("Sigo a mis seguidores; leo libros"), 2.5)
+        # La negación de una intención no debe borrar una oferta distinta.
+        signals = rs.classify_text(
+            "No hago f4f, sí hago intercambio de reseñas de fantasía"
+        )
+        self.assertEqual(
+            [(s["kind"], s["intent"]) for s in signals],
+            [("follow_exchange", "mention"), ("reading_chain", "explicit")],
+        )
+        self.assertEqual(
+            reciprocity.declared_bonus("No hago f4f, sí hago followback; libros"),
+            2.5,
+        )
+        # El metacomentario sin oferta sigue sin recibir puntos.
+        self.assertEqual(
+            reciprocity.declared_bonus("No hago f4f, sí hablo de followback"), 0.0
+        )
+
     def test_missing_niche_is_review_not_promotion(self):
         value = rs.assess_candidate({"network": "x", "surface": "bio",
                                      "text": "f4f fotografía"}, as_of=TODAY)
@@ -167,6 +187,19 @@ class SignalTests(unittest.TestCase):
         self.assertEqual(f["comments"], {"confirmed": 1, "observed": 3, "rate": 0.333})
         self.assertEqual(f["visits"], {"confirmed": 1, "observed": 1, "rate": 1.0})
         self.assertEqual(report["x/reading_chain"]["relation_active"]["observed"], 1)
+
+    def test_outcome_report_preserves_two_signal_kinds_from_same_source(self):
+        shared = {"network": "x", "actor_id": "synthetic-a", "source_id": "search-1",
+                  "observed_on": "2026-10-01", "verified": True}
+        records = [
+            {**shared, "kind": "follow_exchange", "relation_active": True},
+            {**shared, "kind": "reading_chain", "comments": True},
+        ]
+        report = rs.outcome_report(records, as_of=TODAY)
+        self.assertEqual(
+            report["x/follow_exchange"]["relation_active"]["observed"], 1
+        )
+        self.assertEqual(report["x/reading_chain"]["comments"]["confirmed"], 1)
 
     def test_outcomes_do_not_confuse_platform_identity(self):
         records = [
