@@ -17,10 +17,17 @@ def terms(network, kind="busquedas", suffix="", skip=()):
         with open(PATH, encoding="utf-8") as stream:
             data = json.load(stream)
     except (OSError, ValueError):
-        return []
+        data = {}
+    # Ampliación común: los escáneres que usan terms(red, kind) reciben
+    # consultas explícitas de reciprocidad sin ninguna operación adicional.
+    try:
+        from reciprocity_signals import search_terms
+    except ImportError:
+        from tools.reciprocity_signals import search_terms
+    extra = search_terms(network, kind)
     skip_keys = {str(s).casefold() for s in skip}
     out, seen = [], set()
-    for term in (data.get(network) or {}).get(kind) or []:
+    for term in list((data.get(network) or {}).get(kind) or []) + list(extra):
         text = str(term).strip().lstrip("#") if kind == "hashtags" else str(term).strip()
         key = text.casefold()
         if text and key not in seen and key not in skip_keys:
