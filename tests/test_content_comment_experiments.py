@@ -218,8 +218,8 @@ class ExperimentEngineTests(unittest.TestCase):
     def test_readonly_open_non_database_does_not_initialize_schema(self):
         random_file = pathlib.Path(self.temp.name) / "not-a-database.txt"
         random_file.write_text("original content", encoding="utf-8")
-        with ce.ExperimentStore(random_file, read_only=True) as reader:
-            with self.assertRaises(sqlite3.DatabaseError):
+        with self.assertRaises(sqlite3.DatabaseError):
+            with ce.ExperimentStore(random_file, read_only=True) as reader:
                 reader.report(draws=256)
         self.assertEqual(random_file.read_text(encoding="utf-8"), "original content")
 
