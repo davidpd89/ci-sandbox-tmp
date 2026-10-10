@@ -1,0 +1,10 @@
+bash
+# Uso documentado por Instaloader; fuente:
+# https://github.com/instaloader/instaloader/blob/master/instaloader/__main__.py
+pip install instaloader
+
+# Descubrir posts recientes de un hashtag del nicho
+instaloader "#romantasy" --login TU_USUARIO --fast-update --max-count 100
+
+# Descubrir posts de un hashtag español más amplio
+instaloader "#bookstagramespaña" --login TU_USUARIO --fast-update --max-count 100
