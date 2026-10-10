@@ -129,6 +129,44 @@ def select(network: str, kind: str, seeds, *, budget: int, tick: int,
     return selected
 
 
+
+def select_mixed(network: str, seeds, *, budget: int, tick: int,
+                 reader: Reader | None = None, tag_slots: int = 1):
+    """Selecciona texto y etiquetas sin duplicar la consulta final.
+
+    Una etiqueta que ya figure entre las búsquedas no debe consumir dos
+    plazas. Conserva la reserva léxica, los topes y el orden del plan.
+    """
+    if (not isinstance(budget, int) or budget < 0 or
+            not isinstance(tick, int) or
+            not isinstance(tag_slots, int) or tag_slots < 0):
+        raise ValueError("presupuesto, tick o plazas de tags invalidos")
+    if not budget:
+        return []
+    tags = select(network, "hashtags", [], budget=min(tag_slots, budget),
+                  tick=tick, reader=reader)
+    text_limit = budget - len(tags)
+    candidates = select(network, "busquedas", seeds, budget=text_limit,
+                        tick=tick, reader=reader)
+    used = {_key(tag) for tag in tags}
+    words = []
+    for query in candidates:
+        key = _key(query)
+        if key not in used:
+            words.append(query)
+            used.add(key)
+    if len(words) < text_limit:
+        # Reponer plazas perdidas por una colisión texto/hashtag.
+        for query in select(network, "busquedas", seeds, budget=budget,
+                            tick=tick, reader=reader):
+            key = _key(query)
+            if key not in used:
+                words.append(query)
+                used.add(key)
+                if len(words) == text_limit:
+                    break
+    return words + tags
+
 def _entry_key(item):
     """Identidad de consulta: también admite (familia, query) y filas tag."""
     if isinstance(item, tuple):

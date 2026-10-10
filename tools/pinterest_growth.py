@@ -138,9 +138,8 @@ def day_queries(today=None, n=QUERIES_PER_DAY, round_index=0):
     day = (today or datetime.date.today()).toordinal()
     import hashtag_query_consumers as hqc
     tick = day * 3 + round_index
-    tags = hqc.select("pinterest", "hashtags", [], budget=min(1, max(0, n)), tick=tick)
-    queries = hqc.select("pinterest", "busquedas", [q for q, _ in QUERY_POOL],
-                         budget=max(0, n - len(tags)), tick=tick) + tags
+    queries = hqc.select_mixed("pinterest", [q for q, _ in QUERY_POOL],
+                               budget=n, tick=tick)
     board_by_query = dict(QUERY_POOL)
     return [(query, board_by_query.get(query)) for query in queries]
 

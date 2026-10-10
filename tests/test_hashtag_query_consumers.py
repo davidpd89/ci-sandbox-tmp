@@ -136,6 +136,26 @@ class ConsumerParityTests(unittest.TestCase):
             self.assertTrue(any("semilla" in term for term in seen))
             self.assertTrue(any("fantasía" in term for term in seen))
 
+
+    def test_mixed_text_and_hashtag_dedup_preserves_available_budget(self):
+        def colliding(network, kind):
+            return ["año"] if kind == "hashtags" else ["#año", "poesía", "narrativa"]
+        for network in ("x", "threads", "pinterest"):
+            with self.subTest(network=network):
+                output = hqc.select_mixed(
+                    network, ["lectores", "#año"], budget=3, tick=1,
+                    reader=colliding,
+                )
+                self.assertEqual(len(output), 3)
+                self.assertEqual(len(set(map(str.casefold, output))), 3)
+                self.assertIn(hqc.format_term(network, "hashtags", "año"), output)
+                self.assertIn(hqc.format_term(network, "busquedas", "lectores"), output)
+                self.assertEqual(
+                    hqc.select_mixed(network, ["lectores"], budget=0,
+                                     tick=0, reader=colliding), [])
+        with self.assertRaises(ValueError):
+            hqc.select_mixed("x", ["lectores"], budget=1, tick=0, tag_slots=-1)
+
     def test_native_budget_reservation_without_mutating_rankings(self):
         old = [("family", f"semilla_{i}") for i in range(38)]
         extra = [("lexical_expansion", "lectura ñ"),
