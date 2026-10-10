@@ -43,6 +43,20 @@ def test_spanish_accent_folding_and_generic_word_filter():
     assert cm.tokens(None) == frozenset()
 
 
+def test_accented_stopwords_cannot_create_false_contextual_match():
+    # La normalización quita las tildes; las stopwords deben seguir el mismo camino.
+    assert "leido" not in cm.tokens("Ya he leído más libros este mes")
+    assert "mas" not in cm.tokens("Ya he leído más libros este mes")
+    irrelevant = {"buenas": [{
+        "post": "He leído más historias sobre dragones enormes",
+        "respuesta": "Qué grandes esos dragones"
+    }]}
+    assert cm.select_for_item(
+        item(text="Este mes he leído más historias sobre molinos azules"),
+        irrelevant,
+    ) == []
+
+
 def test_relevant_approval_and_rejection_without_copying_bad_reply():
     got = cm.select_for_item(item(), DATA)
     assert [g["tipo"] for g in got] == ["aprobado_solo_estilo", "error_a_evitar"]

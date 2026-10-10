@@ -17,7 +17,10 @@ NETWORKS = frozenset({
 })
 # Términos genéricos: dos publicaciones sobre «libros de fantasía» no constituyen
 # necesariamente una situación conversacional parecida.
-STOP = frozenset("""
+STOP = frozenset(
+    "".join(ch for ch in unicodedata.normalize("NFKD", word.casefold())
+             if not unicodedata.combining(ch))
+    for word in """
 a al algo alguna algunas alguno algunos ante así aunque cada casi como con contra
 cuando de del desde donde dos el ella ello ellos en entre era es esa esas ese eso
 esos esta estaba están estar este esto estos fue ha hay hacia hasta la las le les
@@ -25,7 +28,8 @@ lo los más me mi mis muy nada ni no nos o os otra otro para pero por porque que
 quien se ser si sin sobre son su sus también te ti tiene todo todos tu tus un una
 unas uno unos va ya y yo libro libros leer leído lectura lecturas novela novelas
 fantasia autor autora autores post publicación publicaciones
-""".split())
+""".split()
+)
 WORD = re.compile(r"[^\W_]+", re.UNICODE)
 
 
