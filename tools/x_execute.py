@@ -188,10 +188,14 @@ def run_plan(plan, *, prevalidated=False, on_result=None):
 
         try:
             if kind == "reply":
+                import voice_output_finalization as voice
+                voice.inspect(item["text"], network="x", queue="WEB")
                 outcome = x.reply_to(item["url"], item["text"])
                 if outcome != "created":
                     raise RuntimeError(f"reply devolvió estado inesperado: {outcome!r}")
             elif kind == "quote":
+                import voice_output_finalization as voice
+                voice.inspect(item["text"], network="x", queue="WEB")
                 outcome, own_uri = x.repost(item["url"], item["text"])
                 if outcome == "unverified":
                     results.append({**item, "resultado": "pendiente_verificacion"})
