@@ -1,0 +1,35 @@
+python
+# Basado en el límite y flujo oficial de comentarios de Pinterest:
+# https://help.pinterest.com/en/article/comment-on-a-pin
+import re
+
+EMOJI_RE = re.compile(
+    "[\U0001F300-\U0001FAFF\U00002700-\U000027BF\U0001F000-\U0001F02F]"
+)
+
+def validar_comentario_pinterest(texto: str) -> dict:
+    texto = texto.strip()
+    errores = []
+
+    if not texto:
+        errores.append("comentario_vacio")
+
+    if len(texto) > 500:
+        errores.append("supera_500_caracteres")
+
+    if len(texto) < 40:
+        errores.append("demasiado_corto")
+
+    if len(texto) > 180:
+        errores.append("fuera_objetivo_60_180")
+
+    if len(EMOJI_RE.findall(texto)) > 1:
+        errores.append("mas_de_un_emoji")
+
+    if re.search(r"https?://|www\.|\.com|\.es", texto, re.I):
+        errores.append("contiene_enlace")
+
+    if re.search(r"\b(compra|compra ahora|link en bio|descarga|regístrate)\b", texto, re.I):
+        errores.append("contiene_cta_comercial")
+
+    return {"ok": not errores, "errores": errores, "longitud": len(texto)}
