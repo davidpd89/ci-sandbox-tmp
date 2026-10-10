@@ -162,6 +162,24 @@ class HistoricalMemoryTests(unittest.TestCase):
         self.assertEqual((len(old), sum(old)), (9, 3))
         self.assertEqual((len(new), sum(new)), (7, 3))
 
+    def test_bulk_projection_processes_each_event_once_per_account(self):
+        # Una entrada por cuenta: evita la regresión cuadrática en discovery.
+        rows = [row(f"reader{i}", "unfollow", "2026-09-01", notes="no devuelve")
+                for i in range(500)]
+        processed = []
+        original = mem.decision
+
+        def observe(events, network, account, **kwargs):
+            processed.extend(events)
+            self.assertTrue(all(event.account == account for event in events))
+            return original(events, network, account, **kwargs)
+
+        with mock.patch.object(mem, "decision", side_effect=observe):
+            states = mem.decisions_from_rows(rows, "bluesky", today=TODAY)
+        self.assertEqual(len(states), 500)
+        self.assertEqual(len(processed), 500)
+        self.assertTrue(all(state["failures"] == 1 for state in states.values()))
+
     def test_network_override_and_invalid_config_fallback(self):
         import json
         with tempfile.TemporaryDirectory() as folder:

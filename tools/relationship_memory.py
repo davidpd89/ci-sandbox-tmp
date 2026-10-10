@@ -167,9 +167,14 @@ def decision(events, network, account, *, today=None, policy=None):
 
 def decisions_from_rows(rows, network, *, today=None, policy=None):
     events = events_from_rows(rows, network)
-    accounts = {event.account for event in events}
-    return {account: decision(events, network, account, today=today, policy=policy)
-            for account in accounts}
+    # Agrupar primero evita recorrer todos los eventos por cada cuenta:
+    # los registros largos pasan de O(cuentas * eventos) a O(eventos).
+    by_account = {}
+    for event in events:
+        by_account.setdefault(event.account, []).append(event)
+    return {account: decision(account_events, network, account,
+                              today=today, policy=policy)
+            for account, account_events in by_account.items()}
 
 
 class RelationshipMemory:
