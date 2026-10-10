@@ -142,8 +142,9 @@ def day_queries(today=None, n=QUERIES_PER_DAY, round_index=0):
 def build_plan(candidates, max_follows=10, max_saves=10, max_reacts=15, max_comments=0, done_comments=frozenset(), rng=None):
     """Plan a partir de candidatos {pins:[...], authors:[...]}. Un pin y un autor una sola vez por accion."""
     plan, seen_pin_react, seen_pin_save, seen_follow, authors_used = [], set(), set(), set(), set()
-    pins = [p for p in candidates.get("pins", []) if p.get("ok") and not p.get("done_react") ]
-    for pin in pins:
+    # Cada accion evalua su propio estado: un react confirmado no bloquea save/comment.
+    pins = [p for p in candidates.get("pins", []) if p.get("ok")]
+    for pin in (p for p in pins if not p.get("done_react")):
         if len([a for a in plan if a["kind"] == "react"]) >= max_reacts:
             break
         if pin["url"] not in seen_pin_react:
