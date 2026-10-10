@@ -1,0 +1,28 @@
+json
+{
+  "facebook": {
+    "hashtags": [
+      "romantasy", "darkromance", "novelaromantica", "fantasiaromantica",
+      "librosfantasticos", "librosjuveniles", "lectoresespañoles",
+      "recomendacionesliterarias", "lecturasrecomendadas", "booktok",
+      "bookstagram", "autopublicacion", "libreriasindependientes"
+    ],
+    "busquedas": [
+      "romantasy español", "novela romantasy reseña", "fantasía romántica recomendaciones",
+      "club de lectura romantasy", "libros parecidos a", "lecturas juveniles fantásticas",
+      "reseña novela fantástica", "autor de fantasía español", "editorial fantástica española",
+      "booktuber romantasy", "bookstagrammer español", "lecturas de octubre",
+      "reto lectura 2026", "tbr fantasía", "novedades romantasy", "libros de fantasía recomendados"
+    ],
+    "grupos": [
+      "https://www.facebook.com/groups/207124236162026/",
+      "https://www.facebook.com/groups/lecturasfantasticas/",
+      "https://www.facebook.com/groups/215627118464853/",
+      "https://www.facebook.com/groups/RecomiendaLibros/",
+      "https://www.facebook.com/groups/403666423153977/",
+      "https://www.facebook.com/groups/247845471929442/",
+      "https://www.facebook.com/groups/599577785909907/"
+    ],
+    "paginas": []
+  }
+}
