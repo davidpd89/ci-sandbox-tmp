@@ -1,0 +1,12 @@
+text
+# data/reply_templates/es/fantasia/pregunta_tropo.yaml
+# Licencia: código propio del proyecto; formato inspirado en un patrón público ISC.
+angle: pregunta
+networks: [x, threads, bluesky, mastodon]
+tone: cercano
+min_length: 70
+max_length: 180
+templates:
+  - "Enemies to lovers funciona mejor cuando el conflicto no desaparece al enamorarse. ¿Cuál es el tropo que nunca te cansa?"
+  - "El mapa siempre me gana, pero un buen sistema de magia me retiene. ¿Qué pesa más para ti al entrar en una fantasía?"
+  - "Prefiero que el romance tarde en confirmarse si la tensión se sostiene. ¿Te gusta más el enamoramiento lento o el vínculo inmediato?"
