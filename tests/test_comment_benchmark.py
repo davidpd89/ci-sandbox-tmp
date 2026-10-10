@@ -107,6 +107,22 @@ class BenchmarkTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         b.evaluate(self.cases, self.candidates, str(path), salt="review")
 
+    def test_ratings_reject_altered_text_or_context(self):
+        blind, _ = b.prepare_blind(self.cases, self.candidates, "integrity")
+        original = {**blind[0], "judge": "reviewer",
+                    **{axis: 2 for axis in b.AXES}}
+        for field in ("network", "kind", "post", "thread", "reply"):
+            with self.subTest(field=field):
+                tampered = {**original, field: original[field] + " alterado"}
+                with tempfile.TemporaryDirectory() as directory:
+                    path = Path(directory) / "ratings.csv"
+                    with path.open("w", encoding="utf-8", newline="") as handle:
+                        writer = csv.DictWriter(handle, fieldnames=b.COLUMNS)
+                        writer.writeheader()
+                        writer.writerow(tampered)
+                    with self.assertRaisesRegex(ValueError, "difieren"):
+                        b.evaluate(self.cases, self.candidates, str(path), salt="integrity")
+
     def test_adversarial_unbalanced_cohorts_and_invalid_winner_cannot_win(self):
         for condition in ("missing_variant", "invalid_best"):
             with self.subTest(condition=condition):
