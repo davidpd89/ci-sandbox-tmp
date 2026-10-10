@@ -101,7 +101,8 @@ def _preflight_plan(plan):
             item["text_fragment"] = fragment.strip()
         permalink = item.get("permalink")
         if permalink is not None:
-            # Conservar solo permalink del mismo autor; sin el enlace,\n            # un reply WEB se omite, no se sustituye por texto aproximado.
+            # Conservar solo permalink del mismo autor; sin el enlace,
+            # un reply WEB se omite, no se sustituye por texto aproximado.
             ok = (isinstance(permalink, str) and permalink.startswith("https://www.threads.com/@") and "/post/" in permalink
                   and permalink[len("https://www.threads.com/@"):].split("/")[0].casefold() == item["handle"].casefold())
             if ok and kind in {"like", "reply"}:
