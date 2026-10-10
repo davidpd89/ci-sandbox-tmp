@@ -142,7 +142,7 @@ class ThreadsWebTargetBindingTests(unittest.TestCase):
              patch.object(executor.t, "reply_to", side_effect=AssertionError("intentó responder")), \
              patch.object(executor.t, "beat", create=True):
             result = executor.run_plan([item], prevalidated=True)
-        self.assertEqual(result[0]["resultado"], "saltado_destino_no_verificado")
+        self.assertEqual(result[0]["resultado"], "saltado_destino_web_no_verificable")
 
 
 if __name__ == "__main__":
