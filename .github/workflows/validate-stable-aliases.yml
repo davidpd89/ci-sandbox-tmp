@@ -7,6 +7,8 @@ on:
     paths:
       - tools/stable_account_aliases.py
       - tests/test_stable_account_aliases.py
+      - tests/test_native_alias_observations.py
+      - tools/native_alias_observations.py
       - .github/workflows/validate-stable-aliases.yml
 permissions:
   contents: read
@@ -26,6 +28,8 @@ jobs:
         with:
           python-version: '3.11'
       - name: Offline Python 3.11 unittest
-        run: python -m unittest discover -s tests -p test_stable_account_aliases.py -v
+        run: |
+          python -m unittest discover -s tests -p test_stable_account_aliases.py -v
+          python -m unittest discover -s tests -p test_native_alias_observations.py -v
       - name: Static compilation
-        run: python -m py_compile tools/stable_account_aliases.py tests/test_stable_account_aliases.py
+        run: python -m py_compile tools/stable_account_aliases.py tools/native_alias_observations.py tests/test_stable_account_aliases.py tests/test_native_alias_observations.py
