@@ -184,3 +184,63 @@ productiva necesita revisión conjunta posterior de Claude.
 exacto y se canonizó el actor_id en mayúsculas/minúsculas para evitar
 duplicados; ambos tienen tests de regresión. Las métricas finales se separaron
 por red y cola para que un éxito agregado no oculte una plataforma.
+
+
+## Tercera revisión correctiva independiente (10/10/2026)
+
+**Contexto:** revisión inline #5477357727, que descubrió dos P1
+(cupos y vetos por identidad) y dos P2 (alias con ID opcional y señales
+históricas). Cambios sobre la misma rama, sin acciones remotas ni merge.
+
+- **Cupos:** se retiene una opción por cuenta **y cola** antes de asignar.
+  Un matching determinista por caminos aumentantes puede reubicar una cuenta
+  entre WEB/API/MOBILE y llenar una plaza compatible que antes quedaba vacía.
+  Maximiza la *cantidad* de actores elegibles bajo los cupos, priorizando
+  puntuación y diversidad blanda durante la selección. No promete óptimo
+  global de puntuación ni equidad estadística calibrada.
+- **Vetos:** todos los registros bien formados se normalizan antes de
+  seleccionar. Un bloqueo/cuenta propia confirmado en cualquiera de los
+  colectores veta todas las observaciones de la misma identidad de red.
+  Los alias sin ID se unen a un actor con ID únicamente si la asignación es
+  inequívoca. Con varios IDs para un mismo handle, la fila sin ID se excluye
+  y un veto ambiguo afecta conservadoramente a los IDs candidatos; nunca
+  se fusionan IDs distintos solo por compartir handle. La reconciliación
+  entre distintas redes es trabajo de #85.
+- **Recencia:** volumen y diversidad de interacciones entrantes se atenúan
+  exponencialmente con la fecha del último inbound (semivida 14 días), además
+  de la bonificación por recencia. No se confunde un contador ausente con
+  uno verificado de cero; el primero incorpora nota de desconocimiento.
+  **Importante para #103:** el decaimiento por última fecha NO sustituye
+  una ventana real de eventos; un evento nuevo podría revitalizar volúmenes
+  históricos si el productor entrega agregados de toda la vida. Claude
+  debe pasar conteos deduplicados **solo de los últimos 30 días** (con
+  procedencia por evento) y tratar cobertura no observada como desconocida.
+- **Medición:** precision@k sintética requiere etiquetas para los
+  seleccionados evaluados; las faltantes producen `null` y el campo
+  `observed` deja constancia de la cobertura. Una etiqueta desconocida
+  jamás significa conversión negativa ni permite afirmar 100 %.
+- **Regresiones:** capacidad cero/saturación/reasignación, vetos contradictorios
+  en ambos órdenes, alias Unicode y cambio de handle, conflicto de IDs,
+  caducidad de señales en nueve redes, datos desconocidos y precisión parcial.
+  El resultado de Actions debe comprobarse en el **HEAD final**, no inferirse
+  de runs anteriores.
+
+### Validación que corresponde al integrador Claude
+
+Desde el checkout del mirror, rama de la PR:
+
+```bash
+python -m pytest tests/test_relationship_priority.py -q
+python tools/relationship_priority_backtest.py
+python -m pytest -q
+git fetch origin research/public-reuse-parent
+git merge-tree "$(git merge-base HEAD origin/research/public-reuse-parent)" HEAD origin/research/public-reuse-parent
+```
+
+En la rama privada `integracion/crecimiento-2026-10`, tras importar
+esta biblioteca y los puentes de #103: `python -m pytest -q` (suite
+completa real), revalidar alias, bloqueos y los presupuestos con nueve
+redes y tres colas; probar preflight sin emitir acciones en un Windows
+real con Edge, y en Android/ADB con cuentas de prueba autorizadas.
+Conservar un canario supervisado y cohortes maduras antes de activar
+decisiones basadas en el score. No se ha ejecutado esa integración aquí.
