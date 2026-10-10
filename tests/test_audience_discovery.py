@@ -17,7 +17,7 @@ def actor(network, uid="7", handle="lectora"):
     if network == "bluesky":
         return {"did": "did:plc:" + uid, "handle": handle, "bio": "Leo romantasy"}
     if network == "mastodon":
-        return {"id": uid, "acct": handle + "@book.example", "bio": "Leo romantasy"}
+        return {"id": uid, "acct": handle + "@example.org", "bio": "Leo romantasy"}
     return {"id": uid, "username": handle, "bio": "Leo romantasy"}
 
 
