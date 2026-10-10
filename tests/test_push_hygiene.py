@@ -211,6 +211,26 @@ class PushHygieneTests(unittest.TestCase):
         self.assertIn(repr(error_text), output.getvalue())
         self.assertNotIn(chr(10) + "::warning::", output.getvalue())
 
+    def test_paths_with_spaces_and_nul_delimiter_are_not_lost(self):
+        self.write("docs/file name with spaces.md")
+        self.commit("whitespace path")
+        self.write("sensitive folder/metricas.csv")
+        self.commit("sensitive path with spaces")
+        paths = ph.push_paths(self.event(), root=self.root, expected_sha=self.sha())
+        self.assertIn("docs/file name with spaces.md", paths)
+        self.assertIn("sensitive folder/metricas.csv", paths)
+        self.assertEqual(rh.violations_for_paths(paths), ["sensitive folder/metricas.csv"])
+
+    def test_cli_invalid_json_fails_without_approving(self):
+        event_file = Path(self.temp.name) / "truncated.json"
+        event_file.write_text('{"before":', encoding="utf-8")
+        log = io.StringIO()
+        with patch.dict(os.environ, {"GITHUB_EVENT_PATH": str(event_file),
+                                     "GITHUB_SHA": self.sha()}), \
+                contextlib.redirect_stderr(log):
+            self.assertEqual(ph.main(), 2)
+        self.assertIn("HIGIENE PUSH ERROR", log.getvalue())
+
     def test_missing_event_file_fails_closed(self):
         with patch.dict(os.environ, {"GITHUB_EVENT_PATH": ""}), \
                 contextlib.redirect_stderr(io.StringIO()):
