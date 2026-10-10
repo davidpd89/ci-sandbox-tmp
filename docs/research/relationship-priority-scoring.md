@@ -172,3 +172,15 @@ reciprocidad, #66 ranking de posts/cuentas, #60 estados de relación,
 #25 CRM. #71 toma esas señales ya validadas y selecciona la
 **agenda relacional diaria**, no reemplaza esos módulos. La integración
 productiva necesita revisión conjunta posterior de Claude.
+
+## Evidencia ejecutada en GitHub Actions
+
+- [CI específica en HEAD `dc5cbb9d`](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38016193769): **60/60 tests** sintéticos tanto Ubuntu como Windows, Python 3.11. Backtest determinista ejecutado en ambos.
+- [Validador público en el mismo HEAD](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38016193694): **success** en ambos OS, incluidos metadata SPDX, evidencia offline y diff hygiene.
+- Backtest solo sintético: **216 cuentas / nueve redes**, precision@10 **1.00** en cada cola frente a **0.70** del control por likes; precision@5 **1.00** frente a **0.80** por cada red. Cobertura: **3 redes/cola**; Jaccard de seleccionados al día siguiente sin datos nuevos: **1.00** en las tres. La construcción de etiquetas favorece las señales del nuevo score: **no interpretar esas cifras como lift real**, ni como una validación estadística o robustez frente a cambios de distribución.
+- La suite general `Validar herramientas RRSS sin acceso a cuentas` es independiente; consultar su resultado definitivo antes de integrar. Los flujos de Edge/ADB/servicios reales no se han ensayado.
+
+**Segunda pasada correctiva:** además del regex de Unicode, se exigió YYYY-MM-DD
+exacto y se canonizó el actor_id en mayúsculas/minúsculas para evitar
+duplicados; ambos tienen tests de regresión. Las métricas finales se separaron
+por red y cola para que un éxito agregado no oculte una plataforma.
