@@ -1,8 +1,9 @@
 # PR #100 — Puentes nativos de candidatos al ranking compartido
 
 Fecha de revisión: 2026-10-10. Estado: implementación offline; ninguna cuenta,
-acción social ni estado real ha sido consultado o modificado. El ranker #66
-permanece en otra rama y se inyecta por parámetro, no se copia ni importa.
+acción social ni estado real ha sido consultado o modificado. El ranker compartido,
+originado en #66, ya existe en la base sincronizada y se inyecta por parámetro;
+no se copia ni reimplementa.
 
 ## Problema y evidencia
 
@@ -64,8 +65,9 @@ Se añade tools/native_target_candidate_ingest.py, con tres interfaces:
 - normalize_all: devuelve las seis redes, con unsupported cuando falta
   snapshot y normalized_offline cuando se ha suministrado una captura;
   no confunde ausencia con cero candidatos.
-- rank_with_66: exige inyección explícita de la función rank_all de #66.
-  Al no estar #66 integrada en la base, se prueba con consumidor sintético.
+- rank_with_66: exige inyección explícita de la función rank_all compartida.
+  Se prueba tanto con un consumidor sintético como con el rank_all real de
+  la base, en nueve redes y con entradas ausentes explícitas.
 
 NATIVE_CAPTURE distingue JSON persistido (X, Threads, Facebook, Pinterest)
 de lectura solo en memoria (Reddit, Instagram). WEB/API/MOBILE se registran
@@ -143,7 +145,8 @@ explícitamente. No es una mejora de conversiones medida ni despliegue.
 7. Cuenta FB sin ID: se rechaza, nunca se atribuye nombre DOM a handle.
 8. Adaptador no garantiza ingest real: capture=memory_only o
    persisted_json es clasificación de **emisor**, no despliegue.
-9. No se importa #66 ni se suplanta API original: merge-preview pendiente.
+9. No se copia #66 ni se suplanta su API: preview offline con rank_all real
+   verificado tras sincronizar la base; pendiente solo integración operativa.
 
 Limitaciones para Claude: ejecución en Windows vivo/Edge, móvil real,
 trazabilidad de las API, IDs y fechas efectivamente visibles,
@@ -156,7 +159,8 @@ No existe llamada desde ejecutores, feature flag lógico default-off
 (al no importar este módulo). Revertir commits de #100 o no invocar
 normalize_candidates/rank_with_66. Sin migración, estados, secretos ni
 side effects. Verificar tras revertir la suite previa de #66 y escáneres.
-Solo Claude integrará posteriormente #66 y luego #100, sin auto-merge.
+Claude deberá verificar la integración operativa de #100 en el oficial;
+el ranker común ya forma parte de la base actual. Sin auto-merge.
 
 
 ## Resultado de la segunda pasada y CI verificada
@@ -251,3 +255,27 @@ Comprobación combinada en Ubuntu y Windows con Python 3.11:
 Pendientes externos: contrato real y procedencia de lectores Edge/Windows,
 API/MOBILE y Android, canario supervisado sin automatización y suite completa
 del repo privado; no convertir fechas de escaneo en fechas de publicación.
+
+## Cuarta revisión sobre HEAD actualizado (2026-10-10)
+
+Las regresiones anteriores no cubrían dos errores de atribución:
+
+- Cuando una fila declaraba `account_id` y `user_id` remotos diferentes,
+  se elegía el primero sin aviso. Se rechaza la observación contradictoria
+  (`conflicting_account_ids`) antes del preescaneo de handles y de agrupar;
+  las seis redes comparten el mismo comportamiento. Una fila contradictoria
+  tampoco puede suprimir una fila legítima sin ID.
+- Cuando `author_id` del post era distinto del `account_id`, se rechazaba
+  el post pero la misma fila aún podía autorizar un `follow` de cuenta.
+  Ahora se retira también esa autorización, conservando diagnóstico
+  `post_author_mismatch`. El ranker real no emite oportunidades a partir
+  de esta evidencia cruzada errónea.
+
+Se añadieron tres pruebas de regresión (seis redes y ranker real). No se
+modificó ninguna protección de ejecución, ledger, ACK, TTL o auto-like.
+
+Persisten dos condiciones externas de salida: registrar la hija en el
+manifiesto/índice del padre para superar el gate LIVE, y demostrar
+lectores productores con IDs, fechas de publicación y lenguas verificables
+para cada red/cola que se quiera activar. Las capturas actuales no
+acreditan producción completa; el normalizador permanece desconectado.
