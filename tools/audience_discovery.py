@@ -224,12 +224,23 @@ class AudienceStore:
             (network, surface, seed, cursor)).fetchone() is not None
 
     def start_snapshot(self, network: str, surface: str, seed: str,
-                       post_key: str, kind: str, now: str) -> str:
+                       post_key: str, kind: str, now: str,
+                       recover_abandoned: bool = True) -> str:
         if network not in LANES or not surface or not seed or not post_key or kind not in KINDS:
             raise ObservationError("parametros_snapshot_invalidos")
         sid = str(uuid.uuid4())
         now_ts = timestamp(now)
         with self.db:
+            if recover_abandoned:
+                # Recuperación de snapshots abandonados: marcar como 'aborted' y limpiar staging
+                old_active = self.db.execute("""
+                    SELECT snapshot_id FROM audience_snapshots
+                    WHERE network=? AND surface=? AND seed=? AND post_key=? AND kind=? AND status='active'
+                """, (network, surface, seed, post_key, kind)).fetchall()
+                for (old_sid,) in old_active:
+                    self.db.execute("UPDATE audience_snapshots SET status='aborted' WHERE snapshot_id=?", (old_sid,))
+                    self.db.execute("DELETE FROM audience_snapshot_staging WHERE snapshot_id=?", (old_sid,))
+
             try:
                 self.db.execute(
                     "INSERT INTO audience_snapshots(snapshot_id, network, surface, seed, post_key, kind, started_at, status) "
@@ -277,11 +288,11 @@ class AudienceStore:
         with self.db:
             self.db.execute("BEGIN IMMEDIATE")
             snap = self.db.execute(
-                "SELECT network, surface, seed, post_key, kind, status FROM audience_snapshots WHERE snapshot_id=?",
+                "SELECT network, surface, seed, post_key, kind, status, started_at FROM audience_snapshots WHERE snapshot_id=?",
                 (snapshot_id,)).fetchone()
             if not snap or snap[5] != "active":
                 raise ObservationError("snapshot_no_activo")
-            network, surface, seed, post_key, kind = snap[0], snap[1], snap[2], snap[3], snap[4]
+            network, surface, seed, post_key, kind, started_at = snap[0], snap[1], snap[2], snap[3], snap[4], snap[6]
 
             staged_rows = self.db.execute("""
                 SELECT network, event_key, account_key, kind, post_key, surface,
@@ -298,7 +309,6 @@ class AudienceStore:
                     profile=r[12], deleted=bool(r[13])
                 ))
 
-            # Consolidation of events present in staging
             ingest_stats = self._ingest_unlocked(
                 staged_observations, network=network, surface=surface, seed=seed,
                 next_cursor=None, now=now_ts, max_post_age_hours=max_post_age_hours,
@@ -308,7 +318,10 @@ class AudienceStore:
                 if k in counts:
                     counts[k] += v
 
-            # Anti-join SQL optimizado para marcar inactivos (active = 0) los ausentes
+            # Anti-join SQL optimizado con BARRERA DE CONSISTENCIA DE TIMESTAMP:
+            # Solo marcar inactivos (active = 0) los eventos que existían ANTES O AL INICIO del snapshot
+            # (old.observed_at <= started_at). Ingestas concurrentes observadas después de started_at
+            # NO serán desactivadas falsamente por no figurar en la captura previa.
             cursor = self.db.execute("""
                 UPDATE audience_events AS old
                 SET active = 0
@@ -316,6 +329,7 @@ class AudienceStore:
                   AND old.post_key = ?
                   AND old.kind = ?
                   AND old.active = 1
+                  AND old.observed_at <= ?
                   AND NOT EXISTS (
                       SELECT 1
                       FROM audience_snapshot_staging AS st
@@ -323,7 +337,7 @@ class AudienceStore:
                         AND st.network = old.network
                         AND st.event_key = old.event_key
                   )
-            """, (network, post_key, kind, snapshot_id))
+            """, (network, post_key, kind, started_at, snapshot_id))
             counts["deactivated_events"] = cursor.rowcount
 
             self.db.execute(
@@ -359,8 +373,6 @@ class AudienceStore:
                          is_snapshot_commit: bool = False) -> dict[str, int]:
         counts = {"new_people": 0, "new_events": 0, "updated_events": 0,
                   "replays": 0, "stale_posts": 0, "unverified_age": 0}
-        # Compare-and-swap: la lectura de páginas ocurre fuera del lock.
-        # Si otro recolector avanzó, no escribir datos ni retrasar cursor.
         if (expected_cursor is not _CURSOR_UNSET and
                 self.cursor(network, surface, seed) != expected_cursor):
             raise ObservationError("cursor_cambiado_durante_fetch")
@@ -590,7 +602,7 @@ def collect_pages(store: AudienceStore, *, network: str, surface: str, seed: str
             cursor = nxt
             if nxt is None:
                 if use_snapshot_reconciliation:
-                    # Exigir coverage_complete is True explícito para reconciliación por snapshot
+                    # Exigir coverage_complete is True explícito para reconciliación por snapshot en página terminal
                     done = page.get("coverage_complete") is True
                 else:
                     # En modo incremental estándar, si no se indica se presupone True para mantener compatibilidad

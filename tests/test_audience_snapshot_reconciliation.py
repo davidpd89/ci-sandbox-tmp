@@ -236,18 +236,47 @@ class SnapshotReconciliationTests(unittest.TestCase):
             ad.collect_pages(self.store, network="bluesky", surface="liked_by", seed="s1",
                              fetch_page=fetch_mismatched, observed_at=NOW, use_snapshot_reconciliation=True)
 
-    def test_active_snapshot_collision_raises_error(self):
+    def test_active_snapshot_collision_and_recovery(self):
+        # Iniciar snapshot sin recuperar abandonados para forzar error
         sid1 = self.store.start_snapshot("bluesky", "liked_by", "s1", "post_1", "like", NOW)
         self.assertTrue(sid1)
 
-        # Intentar iniciar un segundo snapshot activo en el mismo ámbito
         with self.assertRaisesRegex(ad.ObservationError, "snapshot_activo_existente"):
-            self.store.start_snapshot("bluesky", "liked_by", "s1", "post_1", "like", NOW)
+            self.store.start_snapshot("bluesky", "liked_by", "s1", "post_1", "like", NOW, recover_abandoned=False)
 
-        self.store.abort_snapshot(sid1)
-        # Una vez abortado, se puede iniciar uno nuevo
-        sid2 = self.store.start_snapshot("bluesky", "liked_by", "s1", "post_1", "like", NOW)
+        # Con recover_abandoned=True (defecto), se aborta automáticamente el anterior y se crea el nuevo
+        sid2 = self.store.start_snapshot("bluesky", "liked_by", "s1", "post_1", "like", NOW, recover_abandoned=True)
         self.assertTrue(sid2)
+        status_old = self.store.db.execute("SELECT status FROM audience_snapshots WHERE snapshot_id=?", (sid1,)).fetchone()[0]
+        self.assertEqual(status_old, "aborted")
+
+    def test_concurrent_ingestion_after_snapshot_started_is_preserved(self):
+        # Initial active: u1
+        def snap1(cur):
+            return {
+                "items": [{"actor": actor("bluesky", "1", "u1"), "event_id": "1"}],
+                "kind": "like", "post_key": "p1", "post_created_at": POST,
+                "next_cursor": None, "coverage_complete": True,
+            }
+        ad.collect_pages(self.store, network="bluesky", surface="liked_by", seed="s1",
+                         fetch_page=snap1, observed_at="2026-10-10T10:00:00+00:00", use_snapshot_reconciliation=True)
+
+        # Iniciar snapshot 2 a las 11:00 (llegará staging sin u1)
+        sid = self.store.start_snapshot("bluesky", "liked_by", "s1", "p1", "like", "2026-10-10T11:00:00+00:00")
+
+        # Ingesta normal paralela de un nuevo like u2 a las 11:30 (posterior a started_at del snapshot)
+        new_obs = ad.normalize("bluesky", "like", {"actor": actor("bluesky", "2", "u2"), "event_id": "2"},
+                               surface="liked_by", post_key="p1", observed_at="2026-10-10T11:30:00+00:00", post_created_at=POST)
+        self.store.ingest([new_obs], network="bluesky", surface="liked_by", seed="s1", next_cursor=None, now="2026-10-10T11:30:00+00:00")
+
+        # Confirmar snapshot 2 (que se inició a las 11:00 y no traía ni u1 ni u2)
+        # u1 estaba antes de 11:00 -> se desactiva. u2 ocurrió después de 11:00 -> BARRERA DE CONSISTENCIA lo preserva activo.
+        self.store.commit_snapshot_reconciliation(sid, now="2026-10-10T12:00:00+00:00")
+
+        ranked = self.store.ranked("bluesky")
+        handles = {r["handle"] for r in ranked}
+        self.assertNotIn("u1", handles)
+        self.assertIn("u2", handles)
 
     def test_reactivation_after_deactivation(self):
         # Snapshot 1: u1 activo
