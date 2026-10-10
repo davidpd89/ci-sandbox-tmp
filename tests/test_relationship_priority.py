@@ -416,3 +416,17 @@ def test_missing_inbound_observation_distinguished_from_verified_zero():
     result = rank(r)
     assert "inbound: observacion desconocida" in result["queues"]["API"][0]["notes"]
     assert result["queues"]["API"][0]["features"]["inbound"] == 0
+
+
+def test_partial_synthetic_labels_do_not_claim_perfect_precision():
+    candidates = [row(handle="a", converted=True), row(handle="b")]
+    output = p.rank_daily({"candidates": candidates}, today=TODAY)
+    result = p.evaluate_synthetic({"candidates": candidates}, output, k=2)["API"]
+    assert result["observed"] == 1
+    assert result["precision"] is None
+
+
+def test_synthetic_evaluation_k_cannot_be_bool():
+    snap = {"candidates": [row()]}
+    with pytest.raises(ValueError, match="k debe"):
+        p.evaluate_synthetic(snap, p.rank_daily(snap, today=TODAY), k=True)
