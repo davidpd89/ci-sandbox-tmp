@@ -156,18 +156,21 @@ def prepare_blind(cases: list[dict], candidates: list[dict], salt: str) -> tuple
     return blind, key
 
 
-def _ratings(path: str | Path, tokens: set[str]) -> dict[str, dict[str, float]]:
+def _ratings(path: str | Path, expected: dict[str, dict]) -> dict[str, dict[str, float]]:
     """Cada evaluador juzga todos los ejes 0-4; se aceptan varias filas por token."""
     grouped = defaultdict(list)
     with Path(path).open(encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
-        if not reader.fieldnames or not set(("token", "judge") + AXES).issubset(reader.fieldnames):
+        if not reader.fieldnames or not set(COLUMNS).issubset(reader.fieldnames):
             raise ValueError("Columnas de evaluación ausentes")
         seen = set()
         for row in reader:
             token, judge = row["token"], row["judge"].strip()
-            if token not in tokens or not judge:
+            if token not in expected or not judge:
                 raise ValueError("Token desconocido o evaluador vacío")
+            if any(row[field] != expected[token][field]
+                   for field in ("network", "kind", "post", "thread", "reply")):
+                raise ValueError("El contexto o la respuesta evaluada difieren del original")
             if (token, judge) in seen:
                 raise ValueError("Evaluación duplicada del mismo evaluador")
             seen.add((token, judge))
@@ -188,7 +191,7 @@ def evaluate(cases: list[dict], candidates: list[dict], ratings_path: str | None
         result["human"] = {"status": "pending", "winners": [], "reason": "Faltan dos evaluadores independientes por muestra"}
         return result
     blind, key = prepare_blind(cases, candidates, salt)
-    grades = _ratings(ratings_path, {r["token"] for r in blind})
+    grades = _ratings(ratings_path, {r["token"]: r for r in blind})
     lookup = {r["token"]: r for r in key}
     indexed = {c["id"]: c for c in cases}
     by_case = defaultdict(dict)
