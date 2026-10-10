@@ -1,0 +1,58 @@
+python
+# Fuente: https://github.com/hodgesmr/mastodon_digest
+# Adaptación: ranking de candidatos para interacción contextual.
+from __future__ import annotations
+
+import math
+from datetime import datetime, timezone
+
+
+def _safe_int(value) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _age_hours(created_at: str) -> float:
+    try:
+        created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+    except ValueError:
+        return 999.0
+
+    now = datetime.now(timezone.utc)
+    return max(0.0, (now - created).total_seconds() / 3600)
+
+
+def score_post(
+    post,
+    *,
+    topic_match: float,
+    author_relevance: float,
+    seen_before: bool = False,
+) -> float:
+    if seen_before:
+        return 0.0
+
+    engagement = (
+        _safe_int(post.favourites)
+        + 2 * _safe_int(post.reblogs)
+        + 3 * _safe_int(post.replies)
+    )
+
+    # Logaritmo evita que un post viral domine todo el ranking.
+    engagement_score = math.log1p(engagement)
+
+    age = _age_hours(post.created_at)
+    freshness = max(0.0, 1.0 - min(age / 48.0, 1.0))
+
+    language_bonus = 0.15 if post.language == "es" else 0.0
+
+    return round(
+        0.35 * topic_match
+        + 0.25 * engagement_score
+        + 0.20 * freshness
+        + 0.10 * author_relevance
+        + language_bonus,
+        4,
+    )
