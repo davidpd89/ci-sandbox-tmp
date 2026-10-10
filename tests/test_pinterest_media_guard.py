@@ -75,10 +75,11 @@ class PinterestImageContractTests(unittest.TestCase):
     def test_field_contract_and_https_links(self):
         good = ("Una novela", "Una descripción útil", "https://example.org/guia/?utm_source=pinterest", "Libro sobre mesa")
         guard.validate_web_pin_fields(*good)
+        guard.validate_web_pin_fields(*good[:3], "x" * 500)
         for idx, bad in [(0, ""), (0, "x" * 101), (1, ""), (1, "x" * 801),
                          (2, "http://example.org/guia"), (2, "https://user:pass@example.org/"),
                          (2, "https://example.org:444/"), (2, "https://[host/"),
-                         (2, "https://example.org/\nsecret"), (3, "")]:
+                         (2, "https://example.org/\nsecret"), (3, ""), (3, "x" * 501)]:
             with self.subTest(index=idx, bad=bad[:35]):
                 args = list(good)
                 args[idx] = bad
@@ -118,6 +119,26 @@ class PinterestPublisherWiringTests(unittest.TestCase):
         with patch.object(self.publisher, "sync_playwright", side_effect=AssertionError("browser opened")):
             with self.assertRaisesRegex(self.publisher.PinterestPublishError, "enlace"):
                 self.publisher.publish_pin(*args, apply=True)
+
+    def test_image_changed_after_browser_setup_cannot_be_uploaded(self):
+        from unittest.mock import MagicMock
+
+        pg = MagicMock()
+        client = MagicMock()
+        client.start.return_value.chromium.connect_over_cdp.return_value.contexts = [
+            MagicMock(new_page=MagicMock(return_value=pg))
+        ]
+
+        def replace_image_during_wait(_pg):
+            self.path.write_bytes(b"imagen modificada durante la espera")
+
+        with (patch.object(self.publisher, "sync_playwright", return_value=client),
+              patch.object(self.publisher, "_check", side_effect=replace_image_during_wait),
+              patch.object(self.publisher, "_assert_account")):
+            with self.assertRaisesRegex(self.publisher.PinterestPublishError, "imagen"):
+                self.publisher.publish_pin(*self.valid, apply=True)
+        pg.set_input_files.assert_not_called()
+        client.start.return_value.stop.assert_called_once()
 
     def test_oversize_image_is_rejected_without_decoding_or_browser(self):
         with self.path.open("wb") as stream:

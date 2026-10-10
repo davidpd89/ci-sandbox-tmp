@@ -65,7 +65,7 @@ def validate_web_pin_image(path):
 def validate_web_pin_fields(title, description, link, alt):
     """Valida metadatos entregados al compositor web, sin suponer publicación."""
     fields = (("título", title, 100), ("descripción", description, 800),
-              ("texto alternativo", alt, None))
+              ("texto alternativo", alt, 500))
     for label, value, maximum in fields:
         if not isinstance(value, str) or not value.strip():
             raise PinPreflightError(f"{label}: obligatorio")
