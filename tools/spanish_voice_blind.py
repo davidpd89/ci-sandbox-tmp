@@ -45,8 +45,16 @@ def pack(pairs, *, seed=None):
     if not isinstance(seed, str) or not seed:
         raise ValueError("seed inválida")
     review, after_side, integrity = [], {}, {}
+    # Balancear izquierda/derecha para no confundir preferencia por posición.
+    # Orden aleatorio pero reproducible con la semilla secreta.
+    ranked = sorted(pairs, key=lambda row: hashlib.sha256(
+        (seed + "\0" + row["id"]).encode("utf-8")).digest())
+    half = len(pairs) // 2
+    if len(pairs) % 2 and hashlib.sha256(seed.encode("utf-8")).digest()[0] & 1:
+        half += 1
+    after_on_left = {row["id"] for row in ranked[:half]}
     for pair in sorted(pairs, key=lambda p: p["id"]):
-        flip = bool(hashlib.sha256((seed + "\0" + pair["id"]).encode("utf-8")).digest()[0] & 1)
+        flip = pair["id"] in after_on_left
         row = {
             "id": pair["id"], "network": pair["network"], "context": pair["context"],
             "left": pair["after"] if flip else pair["before"],
