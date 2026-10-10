@@ -194,3 +194,40 @@ entre procesos: no asegura la autenticidad del archivo externo.
 - **Conflictos v2:** una fila sin `experiment` válido ya no puede contaminar el recuento de duplicados ni vetar un ensayo auditado. Las réplicas negativas con identidad sintácticamente válida siguen vetando; el comportamiento legacy de `schema=1` se conserva. Se añadió una regresión con los tres escenarios.
 - **Cobertura CI:** `.github/workflows/experiment-evidence-lineage.yml` vuelve a ejecutar las regresiones en Ubuntu/Windows si cambia `tools/growth_attribution.py`, dependencia del intervalo de Wilson usada por este gate. Una prueba estática exige el disparador en `push` y `pull_request`.
 - **Sin cambio operativo:** no se construyen registros desde JSON ni se incorporan aprobaciones al CLI. Falta un auditor real independiente para acreditar manifests; los fixtures solo prueban el contrato. Verificar los checks para el último SHA, no reutilizar ejecuciones anteriores.
+
+## Sincronización con la base vigente y respuesta a revisiones — 10/10/2026
+
+Revisión de **todas** las conversaciones principales, dos reviews formales e hilos
+inline (ninguno), último HEAD de #91, #3, y oficial privado. Las incidencias
+comunicadas por el controlador ya constaban corregidas en esta rama: conflicto de
+identidad y design/assignment por ID, cierre del snapshot y subclases,
+700 registros/800 como límite, fixtures multidestino, precisión Wilson y
+colisiones v2 que ignoran identidad inválida pero incluyen réplica negativa.
+Se mantienen las pruebas correspondientes.
+
+**Actualización de base:** la PR apuntaba a `ci/test-campaign-parent` y
+estaba un commit detrás del nuevo `3d0304c0704e31c8a1ecbd62944d22c330bd7ea5`.
+Se incorporó mediante merge de dos padres, trasladando intactos los ocho
+archivos de la PR #87 (Gitleaks fijado, escaneo de secretos y regresiones).
+Para la única colisión, `tests/test_tiktok_safety.py`, la base vigente ya
+había resuelto la caducidad de la fixture de cuota diaria con una fecha actual
+obtenida durante el test: se usa la versión de la **base** y se elimina de #91
+la modificación redundante de una prueba ajena a identidad de experimentos.
+No se toca `tools/tiktok_*` ni se relaja la comprobación de cuotas.
+Comparación esperada: cero commits detrás y diff de #91 de ocho archivos.
+
+**Dependencia #3 y rama oficial:** #3 figura cerrada sin merge en este mirror;
+el blob del evaluador oficial sigue siendo
+`673c74ab2c19831debc1827812eeb1b47a259f31` (v1). Por eso #91 incluye
+el gate por colas y todos los cambios auditados de #3 necesarios para v2.
+No se debe volver a portar #3 a ciegas al integrar #91. La rama sincronizada
+`research/public-reuse-parent` mencionada en los comentarios NO es la base
+de esta PR; cambiar la base sin instrucción expresa transformaría su alcance.
+Esta actualización mantiene la base solicitada `ci/test-campaign-parent`.
+
+**Sin inventar evidencia:** las suites y el escáner de secretos deben pasar
+sobre el nuevo HEAD exacto; esa validación no convierte manifiestos sintéticos
+en auditorías reales y no representa un canario supervisado. Para portar al
+oficial, el controlador contrastará los hashes del código receptor y ejecutará
+sus pruebas aisladas; la procedencia auditada del registro debe verificarse
+fuera del agregado, por un auditor independiente, antes de habilitar propuestas.
