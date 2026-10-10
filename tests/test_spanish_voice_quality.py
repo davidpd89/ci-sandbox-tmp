@@ -33,6 +33,28 @@ class TestSpanishVoice(unittest.TestCase):
                     "En «libro?» aparece Ñuño.", "¿Y el móvil?"):
             self.assertEqual(self.check(txt)["findings"], [], txt)
 
+    def test_combined_openings_and_ellipsis_are_valid_spanish(self):
+        for sample in ("¡¿De verdad?!", "¿¡En serio!?", "¿De verdad...?",
+                       "¡No puede ser...!", "¿Una pausa… y luego qué?"):
+            self.assertEqual(self.check(sample)["findings"], [], sample)
+        # Los dos signos siguen siendo necesarios cuando se usan ambas
+        # modalidades; una apertura no puede satisfacer la otra.
+        self.assertEqual(
+            [f["code"] for f in self.check("¿Qué?!")["findings"]],
+            ["exclamation_opening"])
+        # Una apertura previa, ya cerrada, no valida la siguiente pregunta.
+        self.assertEqual(
+            [f["code"] for f in self.check("¿Primero? Segundo?")["findings"]],
+            ["question_opening"])
+        self.assertEqual(
+            [f["code"] for f in self.check("¿Frase. Y otra?")["findings"]],
+            ["question_opening"])
+
+    def test_windows_crlf_fenced_code_is_protected(self):
+        sample = "```python\\r\\nchecar?\\r\\n```\\r\\n¡Correcto!"
+        self.assertEqual(len(_mask(sample)), len(sample))
+        self.assertEqual(self.check(sample)["findings"], [])
+
     def test_calque_and_locale_are_hints(self):
         txt = "Eso hace sentido, voy a checar el carro."
         self.assertEqual(self.check(txt)["counts"]["hint"], 3)
