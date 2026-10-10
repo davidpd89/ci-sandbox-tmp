@@ -23,7 +23,7 @@ existente en Ubuntu y Windows, Python 3.11.
 - Omite docstring inicial; mantiene el umbral heredado de tres sentencias
   directas y de tamaño AST para no inventar deuda que no estaba en el
   baseline. Omite agrupaciones que no involucren al menos dos redes.
-- Los seis grupos históricos no cambian. Para cada huella, la identidad
+- Los siete grupos originales no cambian. Para cada huella, la identidad
   permitida es (red, archivo, nombre de función) y su multiplicidad.
   Una entrada nueva no puede ocupar un hueco liberado por una eliminada.
 - Reducir o eliminar copias pasa sin actualizar baseline; desplazar líneas
@@ -88,7 +88,7 @@ davidpd89/rrss-davidporto-CODE, rama integracion/crecimiento-2026-10,
 el 09/10/2026. Históricamente el original tenía 40 módulos elegibles y el espejo 39: faltaba `tools/instagram_mobile_interact.py`.
 **Revalidación 10/10/2026:** tras sincronizar `research/public-reuse-parent` con el original, ambos inventarios coinciden en **40 ficheros elegibles**. Ahora el espejo también contiene ese módulo. La diferencia histórica queda resuelta en el snapshot; no garantiza que futuras sincronizaciones mantengan paridad.
 
-**Límite de aceptación:** la baseline de seis grupos certifica solo el
+**Límite de aceptación:** la baseline de siete grupos certifica solo el
 mirror. Claude debe ejecutar este detector sobre una copia local del
 código oficial actualizado; revisar cualquier grupo extra sin aumentar
 automáticamente la baseline y decidir si necesita una importación mínima
@@ -135,7 +135,7 @@ duplicada cuando aparecía otra definición homónima en una línea diferente.
 Ahora se rechaza esa baseline malformada. Se conserva el soporte legítimo
 para dos definiciones homónimas situadas en líneas distintas, y la
 comparación de regresiones sigue ignorando desplazamientos de línea.
-Hay dos pruebas sintéticas específicas; las seis huellas existentes no
+Hay dos pruebas sintéticas específicas; las seis huellas originales no
 cambian.
 
 
@@ -160,3 +160,23 @@ Los controles de duplicación e inventario son genéricos para las nueve redes:
 no alteran sus adaptadores, colas ni políticas operativas. El antiguo
 comentario sobre desajuste 39/40 documenta un estado anterior al commit de
 sincronización `737fc01`; no debe seguir tratándose como brecha actual.
+
+## Deuda histórica incorporada al sincronizar el original (10/10/2026)
+
+El primer test sobre la base sincronizada `737fc01` detectó una séptima
+huella (`2bc04b376aabb285`) que no existía en el snapshot anterior.
+Corresponde a `_connect` en `instagram_interact.py:302` y
+`tiktok_interact.py:227`. Se cotejaron sus cuerpos completos en esa
+base y se comprobó que ambos ejecutan, en el mismo orden, la puerta
+`_refuse_if_paused`, apertura de Playwright, conexión CDP mediante
+`browser_common`, creación de página propia y cierre de Playwright
+en caso de error. La coincidencia exacta **ya existe en el padre**:
+no fue introducida por esta PR.
+
+Decisión consciente: **registrar solo esas dos identidades preexistentes**
+en el baseline (7 grupos en total) para que CI mida nuevas regresiones
+respecto al código vigente, sin tocar el runtime ni alterar el flujo de
+seguridad de Edge. Centralizar la conexión es una posibilidad posterior
+que exige tests específicos del ciclo de recursos; no debe hacerse solo
+para reducir una métrica. El test sigue fallando si una tercera red copia
+el cuerpo o si otra función lo reutiliza sin estar presupuestada.
