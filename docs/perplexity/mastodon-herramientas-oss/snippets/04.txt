@@ -1,0 +1,57 @@
+python
+# Fuente: https://buerviper.github.io/blog/2024/writing-a-mastodon-bot-in-python/
+# Adaptación: publicación segura, trazable y reanudable.
+from __future__ import annotations
+
+import hashlib
+import json
+from dataclasses import dataclass
+
+
+@dataclass
+class CommentAction:
+    post_id: str
+    author_id: str
+    comment: str
+    visibility: str = "public"
+    language: str = "es"
+
+
+def action_idempotency_key(action: CommentAction) -> str:
+    payload = json.dumps(
+        {
+            "network": "mastodon",
+            "post_id": action.post_id,
+            "author_id": action.author_id,
+            "comment": action.comment,
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def publish_comment(client, action: CommentAction, *, dry_run: bool = True) -> dict:
+    key = action_idempotency_key(action)
+
+    if dry_run:
+        return {
+            "status": "dry_run",
+            "idempotency_key": key,
+            "post_id": action.post_id,
+        }
+
+    result = client.status_post(
+        status=action.comment,
+        in_reply_to_id=action.post_id,
+        visibility=action.visibility,
+        language=action.language,
+        idempotency_key=key,
+    )
+
+    return {
+        "status": "published",
+        "idempotency_key": key,
+        "mastodon_status_id": str(result["id"]),
+        "post_id": action.post_id,
+    }
