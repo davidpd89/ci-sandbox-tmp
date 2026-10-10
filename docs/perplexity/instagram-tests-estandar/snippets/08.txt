@@ -1,0 +1,46 @@
+json
+{
+  "meta": {
+    "contract_version": "instagram-adapter-v1",
+    "network": "instagram",
+    "source": "synthetic",
+    "captured_at": "2026-10-10T13:44:00Z"
+  },
+  "request": {
+    "method": "GET",
+    "url": "https://graph.facebook.com/v21.0/17895695668004550/comments",
+    "params": {
+      "fields": "id,text,timestamp,username,from",
+      "limit": 25
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "17899990000000001",
+          "text": "La tensión del capítulo final es brutal.",
+          "timestamp": "2026-10-10T12:30:00+0000",
+          "username": "lectora_rpg",
+          "from": {
+            "id": "17841400000000001",
+            "username": "lectora_rpg"
+          }
+        }
+      ],
+      "paging": {
+        "cursors": {
+          "after": "CURSOR_2"
+        },
+        "next": "https://graph.facebook.com/v21.0/17895695668004550/comments?after=CURSOR_2"
+      }
+    }
+  },
+  "expectation": {
+    "canonical_key": "instagram:comment:17899990000000001",
+    "author_user_id": "17841400000000001",
+    "media_id": "17895695668004550",
+    "normalized_timestamp": "2026-10-10T12:30:00Z"
+  }
+}
