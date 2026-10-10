@@ -58,6 +58,14 @@ class TestSpanishVoice(unittest.TestCase):
         self.assertEqual([(f["code"], source[f["start"]:f["end"]]) for f in output],
                          [("locale_variant", "checar"), ("question_opening", "?")])
 
+
+    def test_html_tags_masked_but_visible_reply_is_audited(self):
+        sample = '<p>Voy a <a href="https://example.org/car?" title="checar?">checar?</a></p>'
+        findings = self.check(sample, network="mastodon")["findings"]
+        self.assertEqual([(f["code"], sample[f["start"]:f["end"]]) for f in findings],
+                         [("locale_variant", "checar"), ("question_opening", "?")])
+        self.assertEqual(self.check("Me gusta <3")["findings"], [])
+
     def test_multiline_fence_tilde(self):
         text = "~~~text\nChecar?\n~~~\n¡Buen título!"
         self.assertEqual(self.check(text)["findings"], [])
