@@ -1,0 +1,31 @@
+python
+# Origen: contrato oficial documentado en
+# https://developers.facebook.com/documentation/threads/keyword-search
+# Archivo propuesto: tools/discovery/threads_keyword_search.py
+from __future__ import annotations
+
+import os
+from typing import Any
+
+import requests
+
+GRAPH_URL = "https://graph.threads.net/v1.0/keyword_search"
+
+
+class ThreadsKeywordSearchClient:
+    def __init__(self, access_token: str | None = None, timeout: int = 20) -> None:
+        self.access_token = access_token or os.environ["THREADS_ACCESS_TOKEN"]
+        self.timeout = timeout
+
+    def search(self, query: str, limit: int = 25) -> list[dict[str, Any]]:
+        if not query.strip():
+            raise ValueError("La keyword no puede estar vacía")
+
+        response = requests.get(
+            GRAPH_URL,
+            params={"q": query, "limit": limit, "access_token": self.access_token},
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        return payload.get("data", [])
