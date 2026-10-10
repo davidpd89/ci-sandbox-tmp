@@ -1,0 +1,15 @@
+python
+# Nuevo código para tools/bluesky_reply_queue.py
+def is_replyable(thread) -> bool:
+    if thread is None:
+        return False
+
+    post = getattr(thread, "post", None)
+    if post is None:
+        return False
+
+    record = getattr(post, "record", None)
+    if record is None or not getattr(record, "text", "").strip():
+        return False
+
+    return bool(post.uri and post.cid)
