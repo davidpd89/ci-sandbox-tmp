@@ -164,6 +164,8 @@ def run_plan(plan, *, prevalidated=False):
                 if outcome != "created":
                     raise RuntimeError(f"like devolvió estado inesperado: {outcome!r}")
             elif kind == "comment":
+                import voice_output_finalization as voice
+                voice.inspect(item["text"], network="facebook", queue="WEB")
                 outcome = fb.comment(item["text"], item["index"])
                 if outcome == "unverified":
                     results.append({**item, "resultado": "pendiente_verificacion"})
@@ -175,6 +177,8 @@ def run_plan(plan, *, prevalidated=False):
                 if outcome != "created":
                     raise RuntimeError(f"like_external devolvió estado inesperado: {outcome!r}")
             elif kind == "comment_external":
+                import voice_output_finalization as voice
+                voice.inspect(item["text"], network="facebook", queue="WEB")
                 outcome = fb.comment_external(item["text"], item["permalink"])
                 if outcome == "unverified":
                     results.append({**item, "resultado": "pendiente_verificacion"})
