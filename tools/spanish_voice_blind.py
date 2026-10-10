@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import secrets
 from collections import Counter
 from spanish_voice_quality import NETWORKS
 
@@ -36,11 +37,13 @@ def _validate(pairs):
             raise ValueError("contexto o propuestas no válidas")
 
 
-def pack(pairs, *, seed):
-    """Las claves quedan en un documento aparte, nunca junto a la revisión."""
+def pack(pairs, *, seed=None):
+    """Semilla criptográfica por defecto; claves aparte del formulario de revisión."""
     _validate(pairs)
+    if seed is None:
+        seed = secrets.token_hex(32)
     if not isinstance(seed, str) or not seed:
-        raise ValueError("seed requerida")
+        raise ValueError("seed inválida")
     review, after_side, integrity = [], {}, {}
     for pair in sorted(pairs, key=lambda p: p["id"]):
         flip = bool(hashlib.sha256((seed + "\0" + pair["id"]).encode("utf-8")).digest()[0] & 1)
