@@ -343,7 +343,7 @@ def evaluate_synthetic(snapshot, output, *, k=10):
         if key in labels and labels[key] != row["converted"]:
             raise ValueError("etiquetas contradictorias para misma identidad")
         labels[key] = row["converted"]
-    if not isinstance(k, int) or k < 1:
+    if isinstance(k, bool) or not isinstance(k, int) or k < 1:
         raise ValueError("k debe ser positivo")
     result = {}
     for lane, items in output["queues"].items():
@@ -356,7 +356,8 @@ def evaluate_synthetic(snapshot, output, *, k=10):
             if key in labels:
                 known.append(labels[key])
         result[lane] = dict(k=min(k, len(first)), observed=len(known),
-                            precision=(round(sum(known) / len(known), 3) if known else None))
+                            precision=(round(sum(known) / len(first), 3)
+                                       if first and len(known) == len(first) else None))
     return result
 
 
