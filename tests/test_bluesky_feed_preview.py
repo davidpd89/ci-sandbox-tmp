@@ -54,7 +54,8 @@ class PreviewTests(unittest.TestCase):
             ))
 
     def page(self, **kw):
-        return preview.feed_page(self.path, now_us=NOW, **kw)
+        kw.setdefault("now_us", NOW)
+        return preview.feed_page(self.path, **kw)
 
     def test_schema_skeleton_and_deterministic_cursor_pagination(self):
         # Empates de timestamp: desempate por URI para no perder ni repetir.
