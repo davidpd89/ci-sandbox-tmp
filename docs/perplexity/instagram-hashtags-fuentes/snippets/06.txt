@@ -1,0 +1,13 @@
+text
+# Archivo nuevo: queries/instagram/profiles_es.yaml
+version: 1
+network: instagram
+language: es
+
+queries:
+  - "bookstagram fantasía"
+  - "bookstagram romantasy"
+  - "lectora fantasía"
+  - "reseñas libros fantasía"
+  - "romantasy español"
+  - "bookstagramespaña romantasy"
