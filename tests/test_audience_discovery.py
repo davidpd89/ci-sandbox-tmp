@@ -293,6 +293,8 @@ class AudienceTests(unittest.TestCase):
         self.assertEqual(stats["replays"], 1)
         self.assertEqual(self.store.ranked("bluesky")[0]["signals"], 1)
         self.assertEqual(self.store.ranked("bluesky")[0]["surfaces"], 2)
+        # Dos avistamientos del mismo comentario no merecen bonus de afinidad.
+        self.assertEqual(self.store.ranked("bluesky")[0]["score"], 6.0)
         self.assertEqual(self.store.db.execute(
             "SELECT count(*) FROM audience_sightings").fetchone()[0], 2)
 
