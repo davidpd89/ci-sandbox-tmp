@@ -72,7 +72,7 @@ QUERY_POOL = [      # 06/10 (GPT, intencion de busqueda): ~75 % consultas de des
 ]
 import discovery_terms
 QUERY_POOL += [(q, None) for q in discovery_terms.terms("pinterest", "busquedas", skip=[q for q, _ in QUERY_POOL])]      # 07/10: consulta M a GPT (tableros grupales/colaborativos, estetica de lectura, escritura)
-QUERIES_PER_DAY = 8          # por RONDA (3 rondas al dia): rotan por dia y por ronda
+# #125: sumamos búsquedas de intención sin reemplazar búsquedas actuales ni sus límites.\nimport pinterest_niche\nQUERY_POOL = pinterest_niche.merge_queries(QUERY_POOL)\nQUERIES_PER_DAY = 8          # por RONDA (3 rondas al dia): rotan por dia y por ronda
 PINS_PER_QUERY = 8
 MAX_PROFILE_VISITS = 40
 PENDING_TEXT = "(pendiente de ChatGPT)"      # 08/10: ya no hay banco de comentarios; los escribe ChatGPT (write_comments) y el ejecutor rechaza texto que no venga de ahi
@@ -85,7 +85,7 @@ ENGLISH = re.compile(r"\b(the|and|of|to|is|my|for|with|you|your|books?|reading|b
 COMMERCIAL = re.compile(r"(amazon|temu|aliexpress|shein|comprar|oferta|descuento|cupon|cupón|rebajas|envío gratis|"
                         r"dropship|tienda|shop\b|store\b|affiliate|afiliad|pdf gratis|descarga gratis|drive\.google)", re.I)
 NICHE = re.compile(r"(libro|lectur|leer|novela|fantas|saga|escrit|escribir|autor|biblioteca|librer|poes|relato|cuento|"
-                   r"literari|narrativa|manuscrito|capitulo|capítulo)", re.I)
+                   r"literari|narrativa|manuscrito|capitulo|capítulo|romantasy|fantasía romántica)", re.I)
 BOT_SIGNALS = ["actividad inusual", "unusual activity", "verifica que eres", "verify you are", "tu cuenta ha sido",
                "cuenta suspendida", "account suspended", "has superado el límite", "try again later",
                "inténtalo de nuevo más tarde", "temporalmente bloquead", "temporarily blocked",
