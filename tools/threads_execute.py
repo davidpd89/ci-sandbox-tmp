@@ -120,10 +120,12 @@ def _preflight_plan(plan):
             if hits:
                 raise ValueError(f"elemento {index}: texto duplicado - {hits[0]}")
             item["text"] = text
-        # Misma accion sobre el mismo objetivo dos veces en un plan (follow repetido al mismo
-        # handle, like/reply repetido sobre el mismo fragmento): bloquea el lote entero antes de
-        # escribir, como ya hacen X, Bluesky y Mastodon (revision de ChatGPT, 03/10).
-        duplicate_key = (kind, item["handle"].casefold(), (item.get("text_fragment") or "").casefold())
+        # Priorizar el ID del destino en replies API: dos posts de un mismo
+        # autor pueden compartir extracto, pero un mismo ID no se responde dos veces.
+        # Para WEB/follow/like se conserva la clave previa autor + fragmento.
+        duplicate_key = sc.plan_action_duplicate_key(
+            item, stable_target_fields=("reply_to_id",) if kind == "reply" else (),
+        )
         if duplicate_key in seen_actions:
             raise ValueError(f"elemento {index}: accion duplicada ({kind} sobre @{item['handle']})")
         seen_actions.add(duplicate_key)
