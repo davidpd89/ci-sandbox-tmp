@@ -110,6 +110,18 @@ class SignalTests(unittest.TestCase):
             reciprocity.declared_bonus("No hago f4f, sí hablo de followback"), 0.0
         )
 
+    def test_declared_followback_refusal_is_never_a_positive_bonus(self):
+        for bio in (
+            "No sigo de vuelta, libros",
+            "Nunca devuelvo el follow. Leo fantasía",
+            "No quiero f4f, escribo novelas",
+            "No me gusta el followback entre escritores",
+        ):
+            with self.subTest(bio=bio):
+                self.assertEqual(reciprocity.declared_bonus(bio), 0.0)
+                self.assertTrue(all(s["intent"] == "mention"
+                                    for s in rs.classify_text(bio)))
+
     def test_missing_niche_is_review_not_promotion(self):
         value = rs.assess_candidate({"network": "x", "surface": "bio",
                                      "text": "f4f fotografía"}, as_of=TODAY)
