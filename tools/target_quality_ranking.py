@@ -395,7 +395,7 @@ def evaluate_orders(ranked_ids, baseline_ids, heldout, *, k=10):
         ideal = sum(1 / math.log2(i + 2) for i in range(min(k, positives)))
         dcg = sum(v / math.log2(i + 2) for i, v in enumerate(values))
         return {"observed": observed, "exposed": len(exposure), "unjudged": 0,
-                "precision": round(sum(values) / len(exposure), 4),
+                "precision": round(sum(values) / k, 4),  # P@k penalizes unfilled positions
                 "ndcg": round(dcg / ideal, 4) if ideal else 0.}
 
     if (not isinstance(ranked_ids, (list, tuple)) or
