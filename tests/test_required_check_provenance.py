@@ -240,6 +240,15 @@ class InventoryTests(unittest.TestCase):
             p.check_pr(FakeReader(baseline(), missing={"tools/repo_hygiene.py"}),
                        REPO, 96, HEAD, BASE)
 
+    def test_supervised_run_emits_pr_head_base_identity_from_trusted_event(self):
+        root = Path(__file__).resolve().parents[1]
+        yaml_text = (root / ".github/workflows/required-check-provenance.yml").read_text("utf-8")
+        self.assertIn("trusted-event run_id=%s pr=%s head=%s base=%s", yaml_text)
+        self.assertIn("AUDIT_HEAD: DOLLAR_OPEN github.event.pull_request.head.sha }}".replace(
+            "DOLLAR_OPEN", "$" + "{{"), yaml_text)
+        self.assertIn('"$GITHUB_RUN_ID"', yaml_text)
+        self.assertNotIn("github.event.pull_request.head.repo.clone_url", yaml_text)
+
     def test_fork_reads_proposed_files_from_head_repository(self):
         reader = FakeReader(baseline(), fork="contributor/fork")
         self.assertEqual(p.check_pr(reader, REPO, 96, HEAD, BASE), p.OWNERS)
