@@ -1,0 +1,6 @@
+json
+{
+  "_source": "https://github.com/pinterest/api-description",
+  "_schema_version": "v5",
+  "_used_by": ["tests/test_pinterest_contract.py"]
+}
