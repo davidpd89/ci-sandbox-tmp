@@ -188,3 +188,9 @@ entre procesos: no asegura la autenticidad del archivo externo.
   del gate y añade el contrato v2; no debe restaurarse el verificador legacy.
 - La integración operativa exige repetir CI y comparar el gate del oficial
   con el de esta PR, además de la suite offline.
+
+## Control adversarial final — 10/10/2026
+
+- **Conflictos v2:** una fila sin `experiment` válido ya no puede contaminar el recuento de duplicados ni vetar un ensayo auditado. Las réplicas negativas con identidad sintácticamente válida siguen vetando; el comportamiento legacy de `schema=1` se conserva. Se añadió una regresión con los tres escenarios.
+- **Cobertura CI:** `.github/workflows/experiment-evidence-lineage.yml` vuelve a ejecutar las regresiones en Ubuntu/Windows si cambia `tools/growth_attribution.py`, dependencia del intervalo de Wilson usada por este gate. Una prueba estática exige el disparador en `push` y `pull_request`.
+- **Sin cambio operativo:** no se construyen registros desde JSON ni se incorporan aprobaciones al CLI. Falta un auditor real independiente para acreditar manifests; los fixtures solo prueban el contrato. Verificar los checks para el último SHA, no reutilizar ejecuciones anteriores.
