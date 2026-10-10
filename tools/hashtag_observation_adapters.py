@@ -30,7 +30,7 @@ FIELDS = {
                  ("message", "text"), ("created_time", "created_at")),
     "pinterest": (("id", "post_id"), ("creator.id", "owner.id", "author_id"),
                   ("description", "text"), ("created_at", "created_time")),
-    "reddit": (("name", "post_id"), ("author_fullname", "author_id"),
+    "reddit": (("name", "post_id"), ("author_fullname", "author_id", "author.name", "author"),
                ("selftext", "text"), ("created_utc", "created_at")),
     "bluesky": (("uri", "post.uri", "post_id"),
                 ("author.did", "post.author.did", "author_id"),
@@ -174,7 +174,7 @@ def _tags(network, row):
             for facet in facets[:100]:
                 if not isinstance(facet, Mapping):
                     continue
-                for feature in (facet.get("features") or [])[:10]:
+                for feature in (facet.get("features") if isinstance(facet.get("features"), list) else [])[:10]:
                     if (isinstance(feature, Mapping)
                             and feature.get("$type") == "app.bsky.richtext.facet#tag"):
                         raw.append(feature.get("tag"))
@@ -298,7 +298,7 @@ class ObservationCollector:
                     raise ValueError
                 vals = tuple(row[k] for k in ("eligible", "engaged", "replies", "followers"))
                 if (not label or any(type(v) is not int or v < 0 for v in vals)
-                        or vals[1] > vals[0]):
+                        or vals[1] > vals[0] or (vals[0] == 0 and any(vals[1:]))):
                     raise ValueError
             except (ValueError, KeyError, TypeError, OverflowError):
                 self.counts["feedback_invalid"] += 1
