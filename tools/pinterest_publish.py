@@ -168,7 +168,7 @@ def _verify(pg, title, description, link, alt, board):
     return problems
 
 
-def publish_pin(image, title, description, link, alt, board, apply=False, log=print, before_submit=None, voice_checked=False):
+def publish_pin(image, title, description, link, alt, board, apply=False, log=print, before_submit=None):
     """Publica un Pin. Sin --apply: comprueba entrada local, sin red ni borradores.
 
     Después de iniciar un clic, cualquier excepción requiere conciliación
@@ -183,9 +183,8 @@ def publish_pin(image, title, description, link, alt, board, apply=False, log=pr
         log("  ensayo offline: imagen, tablero y longitudes validables; no se crea borrador")
         return "ensayo"
     import voice_output_finalization as voice
-    # content_publisher/#79 ya revisa descripcion: no auditarla otra vez.
-    fields = {"titulo": title, "alt": alt} if voice_checked else {
-        "titulo": title, "descripcion": description, "alt": alt}
+    # Un aviso editorial previo no acredita que el auditor haya terminado correctamente.
+    fields = {"titulo": title, "descripcion": description, "alt": alt}
     voice.inspect_fields(fields, network="pinterest", queue="WEB", log=log)
     p = sync_playwright().start()
     try:
