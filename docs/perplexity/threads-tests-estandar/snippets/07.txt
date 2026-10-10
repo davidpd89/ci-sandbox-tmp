@@ -1,0 +1,44 @@
+python
+# Propuesto: tests/test_threads_candidate_identity.py
+import pytest
+
+from tools.candidate_identity import CandidateIdentityError, resolve_author, resolve_post_ref
+
+
+@pytest.mark.parametrize(
+    "candidate",
+    [
+        {"username": "davidporto"},
+        {"username": "David.Porto"},
+        {"username": "david_porto"},
+    ],
+)
+def test_username_threads_valido(candidate):
+    assert resolve_author("threads", candidate) == candidate["username"].casefold()
+
+
+@pytest.mark.parametrize(
+    "candidate",
+    [
+        {},
+        {"username": ""},
+        {"username": "  "},
+        {"username": "david porto"},
+        {"username": "david\nporto"},
+        {"username": "@davidporto"},
+        {"username": "x" * 31},
+    ],
+)
+def test_username_threads_invalido(candidate):
+    with pytest.raises(CandidateIdentityError):
+        resolve_author("threads", candidate)
+
+
+def test_post_id_valido():
+    assert resolve_post_ref("threads", {"id": "179284402"}) == "179284402"
+
+
+@pytest.mark.parametrize("post", [{}, {"id": ""}, {"id": "   "}, {"id": "12 34"}, {"id": True}])
+def test_post_id_invalido(post):
+    with pytest.raises(CandidateIdentityError):
+        resolve_post_ref("threads", post)
