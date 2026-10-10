@@ -6,6 +6,7 @@ El productor entrega un export INMUTABLE con IDs de fila estables.
 from __future__ import annotations
 
 from collections.abc import Iterable
+import json
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -148,8 +149,7 @@ def bridge_results(ledger: LedgerSink, batch: Batch, records: Iterable[dict]) ->
                 correlation = ("reserve:" + reservation if reservation else "")
                 if ack_id:
                     correlation += ("|" if correlation else "") + "ack:" + ack_id
-                source_id = "/".join((batch.export_id, record_id,
-                                      "ack:" + ack_id if ack_id else "result"))
+                source_id = json.dumps([batch.export_id, record_id, "ack" if ack_id else "result", ack_id], ensure_ascii=False, separators=(",", ":"))
                 events.append({
                     "network": batch.network, "queue": batch.queue,
                     "source": "native/" + batch.producer, "source_id": source_id,
