@@ -1605,5 +1605,47 @@ class GrowthScanTests(unittest.TestCase):
         self.assertEqual([a for a in gs._build_output(c)["auto_plan"] if a["kind"] == "repost"], [])
 
 
+    def test_popular_feeds_choose_relevant_sources_not_first_or_duplicate(self):
+        c = self.collector()
+        calls = []
+        results = [
+            {"uri": "at://did:plc:off/app.bsky.feed.generator/a",
+             "displayName": "Fotos y tecnología", "likeCount": 99999},
+            {"uri": "at://did:plc:best/app.bsky.feed.generator/b",
+             "displayName": "Libros fantasía romantasy", "likeCount": 3},
+            {"uri": "at://did:plc:best/app.bsky.feed.generator/b",
+             "displayName": "Libros fantasía romantasy", "likeCount": 3},
+            {"uri": "at://did:plc:good/app.bsky.feed.generator/c",
+             "displayName": "Club de lectura", "likeCount": 10},
+            {"uri": "at://did:plc:weak/app.bsky.feed.generator/d",
+             "displayName": "Fantasía", "likeCount": 1},
+        ]
+
+        def fake_get(base, path, params, auth):
+            if path == "app.bsky.unspecced.getPopularFeedGenerators":
+                return {"feeds": results}
+            if path == "app.bsky.feed.getFeed":
+                calls.append(params["feed"])
+                idx = len(calls)
+                return {"feed": [{"post": post(
+                    f"lectora{idx}.bsky.social", f"r{idx}",
+                    "Estoy leyendo una novela de fantasía juvenil",
+                )}]}
+            raise AssertionError(path)
+
+        with patch.object(gs, "_feed_query_selection", return_value=["fantasía"]), (
+            patch.object(gs.b, "_get", side_effect=fake_get)
+        ):
+            gs._search_popular_feeds(c)
+
+        self.assertEqual(calls, [
+            "at://did:plc:best/app.bsky.feed.generator/b",
+            "at://did:plc:good/app.bsky.feed.generator/c",
+        ])
+        self.assertEqual(len(c.candidates), 2)
+        self.assertNotIn("off.bsky.social", c.candidates)
+
+
+
 if __name__ == "__main__":
     unittest.main()
