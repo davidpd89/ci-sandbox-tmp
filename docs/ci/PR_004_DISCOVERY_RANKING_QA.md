@@ -91,3 +91,9 @@ Límite mantenido: `source_policy_approved=True` y los demás flags siguen siend
 La validación definitiva de esta versión debe venir del workflow del mirror en Ubuntu y Windows sobre el HEAD final. El checkout local completo y un Windows vivo fuera de GitHub Actions no están disponibles en esta sesión.
 
 No se abre una PR adicional por estos hallazgos: ambos defectos pertenecen al alcance exacto de #4 y quedan corregidos aquí. La instrumentación de un importador de cohortes verificadas sigue siendo trabajo separado ya identificado en el repositorio oficial; no se duplica sin comprobar primero las PR abiertas.
+
+## Auditoría adicional — 10/10/2026 (validación de configuración)
+
+Se detectó un caso límite reproducible: `exploration_fraction=10**400` pasaba la comprobación de tipo pero lanzaba `OverflowError` en `math.isfinite`, en lugar de `ValueError` por parámetros inválidos. Se invierte el orden de las guardas para verificar primero el intervalo `[0, 1]` y evitar convertir enteros enormes a flotante. Regresiones para extremos positivos y negativos. No cambia la semántica de fracciones válidas ni la separación entre redes; no se toca ningún adaptador ni se realizan acciones sociales.
+
+La reserva positiva sin candidatos continúa siendo teórica, no acción ejecutable. El consumidor debe comprobar `exploration_candidates` y `exploration_cursor_required`; no debe tratar `exploration_slots_reserved` como cantidad de lecturas ejecutadas. El despliegue exige sincronizar este módulo con el repositorio oficial y certificar el importador que genera las atestaciones `*_verified`.
