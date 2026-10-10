@@ -1,0 +1,36 @@
+python
+# Archivo nuevo propuesto para davidpd89/ci-sandbox-tmp
+# Ruta: SISTEMA_DIARIO_BLUESKY/replies/bluesky_reply_client.py
+from dataclasses import dataclass
+
+from atproto import Client, models
+
+
+@dataclass
+class BlueskyThreadRefs:
+    root_uri: str
+    root_cid: str
+    parent_uri: str
+    parent_cid: str
+
+
+def send_reply(
+    client: Client,
+    text: str,
+    refs: BlueskyThreadRefs,
+    langs: list[str] | None = None,
+):
+    return client.send_post(
+        text=text,
+        reply_to=models.AppBskyFeedPost.ReplyRef(
+            root=models.ComAtprotoRepoStrongRef.Main(
+                uri=refs.root_uri,
+                cid=refs.root_cid,
+            ),
+            parent=models.ComAtprotoRepoStrongRef.Main(
+                uri=refs.parent_uri,
+                cid=refs.parent_cid,
+            ),
+        ),
+        langs=langs or ["es"],
+    )
