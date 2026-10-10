@@ -130,6 +130,50 @@ class PreviewTests(unittest.TestCase):
         self.assertNotIn("client.login", source)
         self.assertNotIn("publish_feed", source.split('def main(')[-1])
 
+    def test_invalid_uri_batch_does_not_create_false_eof(self):
+        self.add("valid", "post", time_us=NOW - 3_600_000_000)
+        for index in range(115):
+            did = f"invalid{index}"
+            self.add(did, "post", time_us=NOW - 60_000_000)
+            with sqlite3.connect(self.path) as db:
+                db.execute(
+                    "UPDATE posts SET uri = ? WHERE uri = ?",
+                    (uri(did, "post") + "!", uri(did, "post")),
+                )
+        page = self.page(limit=1)
+        self.assertEqual(page["feed"], [{"post": uri("valid", "post")}])
+        self.assertNotEqual(page["cursor"], "eof")
+        self.assertEqual(self.page(cursor=page["cursor"]), {"feed": [], "cursor": "eof"})
+
+    def test_post_inserted_behind_cursor_is_found(self):
+        self.add("first", "post", time_us=NOW - 60_000_000)
+        self.add("last", "post", time_us=NOW - 180_000_000)
+        first = self.page(limit=1)
+        self.add("late", "post", time_us=NOW - 120_000_000)
+        second = self.page(limit=2, cursor=first["cursor"])
+        self.assertEqual(
+            [row["post"] for row in second["feed"]],
+            [uri("late", "post"), uri("last", "post")],
+        )
+
+    def test_json_export_is_local_utf8_and_cli_opt_in(self):
+        from contextlib import redirect_stdout
+        from unittest.mock import patch
+        import io
+        page = {"feed": [{"post": uri("abc", "post")}], "cursor": "eof"}
+        target = pathlib.Path(self.temp.name) / "nueva" / "feed.json"
+        with patch.object(preview, "feed_page", return_value=page), redirect_stdout(io.StringIO()):
+            self.assertEqual(preview.main(["--export-json", str(target)]), 0)
+        self.assertEqual(json.loads(target.read_text("utf-8")), page)
+        self.assertTrue(target.read_bytes().endswith(bytes([10])))
+        utf8_target = target.parent / "utf8.json"
+        preview.export_skeleton({"nota": "fantasía española"}, utf8_target)
+        self.assertIn("fantasía".encode("utf-8"), utf8_target.read_bytes())
+        other = pathlib.Path(self.temp.name) / "no-export.json"
+        with patch.object(preview, "feed_page", return_value=page), redirect_stdout(io.StringIO()):
+            preview.main(["--db", str(self.path)])
+        self.assertFalse(other.exists())
+
 
 if __name__ == "__main__":
     unittest.main()

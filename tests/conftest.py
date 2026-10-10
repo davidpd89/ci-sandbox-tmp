@@ -46,3 +46,11 @@ os.environ["PYTHONPATH"] = (
 for _proxy_name in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY",
                     "http_proxy", "https_proxy", "all_proxy", "no_proxy"):
     os.environ.pop(_proxy_name, None)
+
+# Los cortacircuitos productivos son estado real. La barrera de escritura
+# de los publicadores independientes debe leer solo el árbol de pruebas.
+os.environ["RRSS_BREAKER_TEST_MODE"] = "1"
+os.environ["RRSS_BREAKER_ROOT"] = tempfile.mkdtemp(prefix="rrss_test_breaker_")
+
+# El descanso de seguridad de TikTok (tools/tiktok_safety.py) es estado real: los tests nunca lo leen ni lo escriben.
+os.environ.setdefault("RRSS_TIKTOK_COOLDOWN_PATH", os.path.join(tempfile.mkdtemp(prefix="rrss_test_tt_cd_"), "bulk_cooldown.json"))

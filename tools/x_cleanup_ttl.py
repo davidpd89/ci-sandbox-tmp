@@ -82,6 +82,13 @@ def run(dry_run=False, today=None):
         return rows
 
     for index, row in enumerate(pending):
+        # Los TTL retiran acciones públicas: también son escrituras remotas.
+        # Una cuarentena sobrevenida no debe permitir más borrados.
+        import circuit_breaker as cb
+        allowed, reason = cb.write_preflight("x")
+        if not allowed:
+            print(f"[x] cortacircuitos ABIERTO: {reason}; TTL pendientes conservados")
+            break
         target = row["url"] if row["kind"] == "repost" else row["own_uri"]
         print(f"=== borrar {row['kind']} {row['handle']} ({target}) ===")
         try:

@@ -22,7 +22,7 @@ class PinterestAPIAuditTests(unittest.TestCase):
                 {
                     "id": "1",
                     "title": "IG-02-08: lectura",
-                    "link": "https://autorademodiaz.com/?utm_source=pin",
+                    "link": "https://davidportodiaz.com/?utm_source=pin",
                     "board_id": "4",
                     "alt_text": "Lectura accesible",
                 }
@@ -34,7 +34,7 @@ class PinterestAPIAuditTests(unittest.TestCase):
             {
                 "id": "2",
                 "title": "Una novela",
-                "link": "http://autorademodiaz.com/cuaderno/",
+                "link": "http://davidportodiaz.com/cuaderno/",
                 "board_id": "4",
                 "alt_text": "Escena de lectura",
             }
@@ -46,7 +46,7 @@ class PinterestAPIAuditTests(unittest.TestCase):
                 {
                     "id": "3",
                     "title": "Una novela de fantasía",
-                    "link": "https://autorademodiaz.com/cuaderno/",
+                    "link": "https://davidportodiaz.com/cuaderno/",
                     "board_id": "4",
                     "alt_text": "Escena de una novela de fantasía",
                 }
@@ -73,7 +73,7 @@ class PinterestAPIAuditTests(unittest.TestCase):
             {
                 "id": "125",
                 "title": "Lectura",
-                "link": "https://autorademodiaz.com/cuaderno/",
+                "link": "https://davidportodiaz.com/cuaderno/",
                 "board_id": "abc",
                 "alt_text": "Texto alternativo",
             }
@@ -112,10 +112,10 @@ class PinterestAPIAuditTests(unittest.TestCase):
         with patch.object(
             audit,
             "_open_request",
-            return_value=response({"username": "AutoraDemoDiaz"}),
+            return_value=response({"username": "DavidPortoDiaz"}),
         ) as get:
             profile = audit.verify_account("token")
-        self.assertEqual(profile["username"], "AutoraDemoDiaz")
+        self.assertEqual(profile["username"], "DavidPortoDiaz")
         request = get.call_args.args[0]
         self.assertEqual(request.full_url, audit.USER_ACCOUNT_URL)
         self.assertEqual(request.get_header("Authorization"), "Bearer token")
@@ -128,7 +128,7 @@ class PinterestAPIAuditTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(
                 RuntimeError,
-                "se esperaba @autorademodiaz",
+                "se esperaba @davidportodiaz",
             ):
                 audit.verify_account("token")
 
@@ -142,7 +142,7 @@ class PinterestAPIAuditTests(unittest.TestCase):
                 audit.verify_account("token")
 
     def test_reads_two_pages_only_after_identity_check_and_deduplicates(self):
-        identity = {"username": "autorademodiaz"}
+        identity = {"username": "davidportodiaz"}
         one = {
             "items": [{"id": "1"}, {"id": "1"}],
             "bookmark": "page2",
@@ -188,7 +188,7 @@ class PinterestAPIAuditTests(unittest.TestCase):
 
     def test_metrics_are_explicit_opt_in(self):
         replies = [
-            response({"username": "autorademodiaz"}),
+            response({"username": "davidportodiaz"}),
             response(
                 {
                     "items": [
@@ -214,7 +214,7 @@ class PinterestAPIAuditTests(unittest.TestCase):
 
     def test_pin_missing_id_is_explicit_audit_error(self):
         replies = [
-            response({"username": "autorademodiaz"}),
+            response({"username": "davidportodiaz"}),
             response(
                 {
                     "items": [{"title": "Sin identificador"}],
@@ -232,7 +232,7 @@ class PinterestAPIAuditTests(unittest.TestCase):
 
     def test_bool_id_is_rejected(self):
         replies = [
-            response({"username": "autorademodiaz"}),
+            response({"username": "davidportodiaz"}),
             response({"items": [{"id": True}], "bookmark": None}),
         ]
         with patch.object(
@@ -246,7 +246,7 @@ class PinterestAPIAuditTests(unittest.TestCase):
     def test_repeated_bookmark_is_error(self):
         repeated = {"items": [], "bookmark": "duplicate"}
         replies = [
-            response({"username": "autorademodiaz"}),
+            response({"username": "davidportodiaz"}),
             response(repeated),
             response(repeated),
         ]
@@ -260,7 +260,7 @@ class PinterestAPIAuditTests(unittest.TestCase):
 
     def test_page_limit_reports_incomplete_audit(self):
         replies = [
-            response({"username": "autorademodiaz"}),
+            response({"username": "davidportodiaz"}),
             response({"items": [{"id": "1"}], "bookmark": "next"}),
         ]
         with patch.object(
@@ -273,7 +273,7 @@ class PinterestAPIAuditTests(unittest.TestCase):
 
     def test_page_size_documented_limit(self):
         replies = [
-            response({"username": "autorademodiaz"}),
+            response({"username": "davidportodiaz"}),
             response({"items": [], "bookmark": None}),
         ]
         with patch.object(

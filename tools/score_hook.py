@@ -248,7 +248,7 @@ def score(text: str, index_path: Path | None = None, explain: bool = False) -> d
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Score a Autora Demo social hook")
+    parser = argparse.ArgumentParser(description="Score a David Porto social hook")
     parser.add_argument("hook", nargs="+", help="hook text")
     parser.add_argument("--index", default="content_index.jsonl", help="content index JSONL")
     parser.add_argument("--json", action="store_true")

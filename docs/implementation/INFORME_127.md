@@ -67,3 +67,12 @@ Adaptadores existentes: Bluesky (AT URI, Jetstream, feeds; solo este módulo de 
 5. **No verificado aquí:** suite completa del repo privado, runtime real en Python 3.11/Windows/Edge/móvil, recuperación ante desconexiones reales, feeds ajenos en línea, instalación de dependencias del proyecto y exposición/publicación pública. **Claude debe ejecutar esos escenarios** con datos anonimizados.
 
 **Sin merge, sin secrets, sin acciones reales en redes, sin activar colectores.**
+
+
+## Ampliación tras auditoría del 10/10/2026 (revisión adicional)
+
+- Se comprobó contra el código upstream real `MarshalX/bluesky-feed-generator@be500ba5be2c2006f0649c8ce8862943ac7966c3` y su archivo `LICENSE`: MIT, copyright (c) 2023 Ilya Siamionau. Se adaptó el patrón de orden descendente y cursor compuesto, no su servicio ni un nuevo SDK.
+- **Defecto detectado y corregido:** si `LIMIT` se aplicaba antes de verificar la sintaxis de URI, una tanda de registros importados corruptos podía producir `eof` falso. Ahora se avanza internamente en lotes keyset, sin saltar registros válidos y manteniendo en la respuesta el cursor de la última URI válida. Una regresión inyecta 115 URI inválidas antes de una válida.
+- Exportador opcional `--export-json ./salida/feed.json`, siguiendo el patrón de skeleton estático citado en la revisión de Perplexity; sigue siendo **solo local**, no constituye publicación ni feed servido. No cambia la ruta por defecto ni abre red.
+- Regresiones adicionales: inserción tardía detrás del cursor; exportación UTF-8 y directorios nuevos, opt-in de CLI. Total esperado del módulo aislado: 9 casos `unittest` (más sus subtests existentes). La confirmación con suite privada y en Windows/Python 3.11 corresponde a Claude.
+- No se incorpora aquí un validador AppView: ya hay una PR específica, **#146**, que evita duplicar código. La posible indexación compuesta de la tabla Jetstream se separa por afectar al recolector compartido.

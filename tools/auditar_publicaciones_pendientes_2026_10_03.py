@@ -2,7 +2,7 @@
 from __future__ import annotations
 import csv,re
 from pathlib import Path
-R=Path(r"C:\GIT\RRSS_AutoraDemo")
+R=Path(r"C:\GIT\RRSS_DavidPorto")
 TODAY="2026-10-03"
 changes=[]
 def replace(rel,old,new,label):
@@ -81,14 +81,14 @@ replace("publicaciones LinkedIn GPT/2026-10-15/publicacion.md",
 
 Una lectura beta gana utilidad si conserva el punto donde apareció la sensación, qué esperaba la persona y qué efecto tuvo. Así pueden buscarse patrones sin convertir una opinión aislada en una orden.
 
-https://autorademodiaz.com/lectores-beta/
+https://davidportodiaz.com/lectores-beta/
 
 ¿Qué pregunta os ha dado el comentario beta más accionable?""",
 """Apuntarse como lector beta exige algo más que dejar un correo y esperar un manuscrito.
 
 En esta página explico qué implica participar y cómo funcionan la privacidad y la baja. Prefiero que esas condiciones estén claras antes de que llegue ningún texto.
 
-https://autorademodiaz.com/lectores-beta/
+https://davidportodiaz.com/lectores-beta/
 
 ¿Qué necesitáis saber antes de apuntaros a una lectura beta?""","alineada con la página real")
 replace("publicaciones LinkedIn GPT/2026-10-17/publicacion.md",

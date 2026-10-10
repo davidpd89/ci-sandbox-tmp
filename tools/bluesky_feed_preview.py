@@ -77,42 +77,64 @@ def feed_page(
     # Fecha del registro Y momento del evento. Descarta imports de posts viejos.
     floor_iso = dt.datetime.fromtimestamp(floor / 1_000_000, dt.timezone.utc).isoformat()
     future_iso = dt.datetime.fromtimestamp((now_us + 300_000_000) / 1_000_000, dt.timezone.utc).isoformat()
-    params: list[object] = [floor, now_us + 300_000_000, floor_iso, future_iso, min_matches]
-    cursor_clause = ""
-    if key is not None:
-        cursor_clause = "AND (time_us < ? OR (time_us = ? AND uri < ?))"
-        params.extend((key[0], key[0], key[1]))
-    params.append(limit)
-
-    # mode=ro evita crear/modificar archivos (incluidas ejecuciones en Windows).
+    # Filtrar URI tras LIMIT puede crear un falso EOF si un lote contiene
+    # registros corruptos. Avanzar por todas las filas leídas, pero emitir el
+    # cursor de la última URI VÁLIDA entregada para no saltar candidatos.
+    clean: list[tuple[str, int]] = []
+    scan_key = key
+    batch_size = max(100, limit * 2)
+    # mode=ro evita crear/modificar archivos (también en Windows).
     with closing(sqlite3.connect(db_file.as_uri() + "?mode=ro", uri=True, timeout=5)) as connection:
-        rows = connection.execute(
-            f"""
-            SELECT uri, time_us FROM posts
-            WHERE time_us BETWEEN ? AND ?
-              AND julianday(created_at) BETWEEN julianday(?) AND julianday(?)
-              AND match_count >= ?
-              AND reply_parent IS NULL
-              AND (langs_json = '[]' OR EXISTS (
-                    SELECT 1 FROM json_each(posts.langs_json)
-                    WHERE lower(value) = 'es' OR lower(value) LIKE 'es-%'
-              ))
-              AND uri LIKE 'at://did:%/app.bsky.feed.post/%'
-              {cursor_clause}
-            ORDER BY time_us DESC, uri DESC
-            LIMIT ?
-            """,
-            params,
-        ).fetchall()
+        while len(clean) < limit:
+            params: list[object] = [
+                floor, now_us + 300_000_000, floor_iso, future_iso, min_matches,
+            ]
+            cursor_clause = ""
+            if scan_key is not None:
+                cursor_clause = "AND (time_us < ? OR (time_us = ? AND uri < ?))"
+                params.extend((scan_key[0], scan_key[0], scan_key[1]))
+            params.append(batch_size)
+            rows = connection.execute(
+                f"""
+                SELECT uri, time_us FROM posts
+                WHERE time_us BETWEEN ? AND ?
+                  AND julianday(created_at) BETWEEN julianday(?) AND julianday(?)
+                  AND match_count >= ?
+                  AND reply_parent IS NULL
+                  AND (langs_json = '[]' OR EXISTS (
+                        SELECT 1 FROM json_each(posts.langs_json)
+                        WHERE lower(value) = 'es' OR lower(value) LIKE 'es-%'
+                  ))
+                  AND uri LIKE 'at://did:%/app.bsky.feed.post/%'
+                  {cursor_clause}
+                ORDER BY time_us DESC, uri DESC
+                LIMIT ?
+                """,
+                params,
+            ).fetchall()
+            if not rows:
+                break
+            for uri, stamp in rows:
+                if isinstance(uri, str) and _POST_URI.fullmatch(uri):
+                    clean.append((uri, stamp))
+                    if len(clean) == limit:
+                        break
+            if len(clean) == limit or len(rows) < batch_size:
+                break
+            scan_key = (rows[-1][1], rows[-1][0])
 
-    # El esquema del colector genera URIs válidas. Validación adicional ante
-    # bases importadas o corruptas: nunca exportar candidatos inconsistentes.
-    clean = [(uri, stamp) for uri, stamp in rows if _POST_URI.fullmatch(uri)]
     feed = [{"post": uri} for uri, _ in clean]
-    next_cursor = (
-        f"{clean[-1][1]}::{clean[-1][0]}" if clean else CURSOR_EOF
-    )
+    next_cursor = f"{clean[-1][1]}::{clean[-1][0]}" if clean else CURSOR_EOF
     return {"cursor": next_cursor, "feed": feed}
+
+
+def export_skeleton(page: dict, path: Path) -> None:
+    """Exporta JSON de QA local; NO publica ni registra feeds remotos."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(page, ensure_ascii=False, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -122,11 +144,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--limit", type=int, default=30)
     parser.add_argument("--max-age-hours", type=int, default=48)
     parser.add_argument("--min-matches", type=int, default=1)
+    parser.add_argument("--export-json", type=Path, help="Archivo local de QA; no publica el feed")
     args = parser.parse_args(argv)
     result = feed_page(
         args.db, cursor=args.cursor, limit=args.limit,
         max_age_hours=args.max_age_hours, min_matches=args.min_matches,
     )
+    if args.export_json is not None:
+        export_skeleton(result, args.export_json)
     print(json.dumps(result, ensure_ascii=False))
     return 0
 

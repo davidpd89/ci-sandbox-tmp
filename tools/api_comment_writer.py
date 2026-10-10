@@ -156,7 +156,11 @@ def main(argv=None):
             state = json.load(open(os.path.join(ROOT, cfg["state"]), encoding="utf-8"))
             items = pick_posts(state, limit, network=network)
             written = rq.get_or_enqueue(items, network, wait_min=4) if items else {}
-            replies = [{"kind": "reply", "post": i["id"], "post_uri": i["post_uri"], "text": written[i["id"]]} for i in items if i["id"] in written]
+            import reply_provenance as proof
+            replies = [a for i in items if i["id"] in written
+                       for a in [proof.attach({"kind": "reply", "post": i["id"],
+                                               "post_uri": i["post_uri"], "text": written[i["id"]]},
+                                              i, network)] if a is not None]
             print(f"[api_comment_writer] {network}: {len(replies)} comentarios escritos de {len(items)} posts propuestos")
     except Exception as exc:                       # nunca tumba la ronda
         print(f"[api_comment_writer] {network}: error ({type(exc).__name__}: {str(exc)[:100]}); la ronda sigue sin comentarios")
