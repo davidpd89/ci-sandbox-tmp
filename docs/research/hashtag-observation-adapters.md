@@ -132,3 +132,9 @@ No existe garantía de crecimiento; falta evidencia operacional de los colectore
 ### Bloqueo del gate general en la PR #99
 
 El validador diferencial/privacidad pasó tras ajustar el informe al esquema de encabezados/SPDX del repositorio. Sin embargo, la etapa `--live --child-number 99` de `.github/workflows/validate-public-reuse.yml` falla porque el manifiesto padre `docs/open-source-scouting/children.json` solo indexa #11–#86 (76 hijas): `FAIL: #99: child absent from parent manifest`. **No se alteró el índice compartido ni la PR padre desde esta rama**, para no rehacer de forma unilateral las PR #87–#98. Claude/coordinación deberá ampliar o corregir el manifiesto padre como tarea de integración. El workflow especializado de esta PR es independiente y sí valida el código en ambas plataformas. No interpretar el gate general rojo como fallo de unittest de este adaptador.
+
+### Ensayo de composición tras sincronizar la base (10/10/2026)
+
+La base `research/public-reuse-parent` (commit `737fc011`) ya contiene el motor real `tools/hashtag_expansion.py`, antes procedente de #63. La regresión `test_end_to_end_with_current_hashtag_expansion_engine` llama al `build_snapshot` real: dos autores y posts Bluesky, un duplicado entre colas, un MOBILE sin autor rechazado y feedback confirmado. Comprueba ranking, procedencia, cardinalidad, denominador e independencia de Reddit, sin acceso a redes. CI ejecuta también `test_hashtag_expansion.py` cuando cambia el contrato compartido.
+
+**Alcance:** sigue faltando conectar colectores reales, comprobar #143 antes de incorporarla y probar las otras redes con payloads nativos sanitizados. Los 27 caminos originales solo son compatibilidad sintética; no certifican 27 colectores operativos. La revisión anterior de #63 como pendiente está obsoleta: el motor está ahora en la base sincronizada y en el repositorio oficial.
