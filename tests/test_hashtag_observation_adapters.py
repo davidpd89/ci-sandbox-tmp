@@ -228,6 +228,26 @@ class ObservationTests(unittest.TestCase):
         self.assertEqual(c.counts["feedback_invalid"], 3)
         self.assertEqual(c.counts["feedback_conflicts"], 2)
 
+    def test_html_inline_fragments_do_not_break_language_or_seeds(self):
+        row = sample("mastodon")
+        row["content"] = "<p>La <b>fantas</b>ía <i>juvenil</i><br>y lectura</p>"
+        c = ObservationCollector(now=NOW)
+        c.add_posts("mastodon", "API", "html", [row])
+        self.assertEqual(c.to_engine_rows()[0]["text"],
+                         "La fantasía juvenil y lectura")
+
+    def test_global_capacity_retains_existing_idempotent_sources(self):
+        c = ObservationCollector(now=NOW, max_unique_posts=1)
+        c.add_posts("x", "WEB", "reader1", [sample("x", post="x1")])
+        c.add_posts("x", "API", "reader2", [sample("x", post="x2")])
+        c.add_posts("x", "MOBILE", "reader3", [sample("x", post="x1")])
+        self.assertEqual(c.aggregate_report()["unique_posts"], 1)
+        self.assertEqual(c.counts["capacity_skipped"], 1)
+        self.assertEqual(c.counts["duplicates"], 1)
+        self.assertEqual(len(c.to_engine_rows()), 2)
+        with self.assertRaises(ValueError):
+            ObservationCollector(now=NOW, max_unique_posts=0)
+
     def test_no_network_io_and_read_only_input(self):
         c = ObservationCollector(now=NOW)
         original = sample("instagram")
