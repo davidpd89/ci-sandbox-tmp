@@ -1,0 +1,43 @@
+python
+# Integración prevista en tools/reply_writer.py
+from tools.threads_comment_style import ThreadContext, pick_best
+from tools.comment_naturalness_evaluator import evaluate_comment
+
+
+def build_threads_reply(
+    post_text: str,
+    candidates: list[str],
+    *,
+    author_is_writer: bool = False,
+    has_image: bool = False,
+    seen_openers: set[str] | None = None,
+) -> dict:
+    ctx = ThreadContext(
+        text=post_text,
+        author_is_writer=author_is_writer,
+        has_image=has_image,
+        has_question="?" in post_text or "¿" in post_text,
+    )
+
+    best, style_score, decision = pick_best(
+        candidates=candidates,
+        ctx=ctx,
+        seen_openers=seen_openers,
+    )
+
+    report = evaluate_comment(
+        comment=best,
+        context_anchors=decision.detected,
+        max_words=decision.max_words,
+        allow_question=decision.allow_question,
+    )
+
+    return {
+        "text": best,
+        "intent": decision.intent,
+        "style_score": style_score,
+        "naturalness": report.score,
+        "passes": report.passes,
+        "reasons": report.reasons,
+        "detected": decision.detected,
+    }
