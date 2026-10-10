@@ -145,6 +145,8 @@ tras integración en oficial; no se realizan aquí acciones sociales.
 
 **Rollback:** revertir commits de `config_capability_audit.py`, su test y
 la ampliación de la matriz, sin migración de estado ni dependencias.
-**Coordinación:** `#47`/original es el inventario existente; `#30`
-contratos/tests, `#73` tests operativos y `#26` colas. No duplicar esos alcances.
+**Coordinación:** el inventario base procede de la PR #47 del **repo oficial privado**,
+no necesariamente de la #47 del mirror; los tests operativos aludidos en su docstring
+son del **repo oficial**, no de la PR #73 del mirror. En el mirror, #30 cubre
+contratos/tests y #26 colas. No duplicar esos alcances.
 **Integración:** pendiente del controlador; **no merge**.
