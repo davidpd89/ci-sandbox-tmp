@@ -210,9 +210,10 @@ class WorkPushTests(unittest.TestCase):
         self.put("docs/new.md"); self.commit("new")
         def broken(*args, **kwargs):
             return subprocess.CompletedProcess(args, 128, b"", b"mock git error")
+        before, after = self.base, self.head()
         with patch.object(work.subprocess, "run", side_effect=broken):
             with self.assertRaisesRegex(work.WorkPushError, "query"):
-                work._ancestor(self.root, self.base, self.head())
+                work._ancestor(self.root, before, after)
 
     def test_failed_merge_base_is_not_classified_as_orphan(self):
         self.put("docs/new.md"); self.commit("new")
