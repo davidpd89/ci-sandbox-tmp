@@ -133,6 +133,27 @@ class BenchmarkTests(unittest.TestCase):
                     self.assertNotIn("x", {winner["network"] for winner in winners})
                     self.assertEqual(len(winners), 8)
 
+    def test_four_posts_without_four_editorial_kinds_cannot_win(self):
+        # Un cuarto post de literatura no sustituye la categoría conversación.
+        cases = [dict(case) for case in self.cases]
+        for case in cases:
+            if case["id"] == "x_conversacion":
+                case["kind"] = "literatura"
+        blind, key = b.prepare_blind(cases, self.candidates, "category-coverage")
+        strategies = {row["token"]: row["strategy"] for row in key}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "ratings.csv"
+            with path.open("w", encoding="utf-8", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=b.COLUMNS)
+                writer.writeheader()
+                for row in blind:
+                    grade = 4 if strategies[row["token"]] == "contextual" else 1
+                    for judge in ("r1", "r2"):
+                        writer.writerow({**row, "judge": judge, **{axis: grade for axis in b.AXES}})
+            winners = b.evaluate(cases, self.candidates, str(path), salt="category-coverage")["human"]["winners"]
+        self.assertEqual(len(winners), 8)
+        self.assertNotIn("x", {row["network"] for row in winners})
+
     def test_validation_rejects_stale_future_naive_and_duplicates(self):
         alterations = [
             lambda d: d["cases"][0].update(published_at="2026-09-01T00:00:00+02:00"),
