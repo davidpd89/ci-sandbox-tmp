@@ -44,6 +44,8 @@ class ContextPacket:
     evidence: tuple[Evidence, ...]
     eligible: bool
     warnings: tuple[str, ...]
+    # Full original source, before bounded render text is truncated.
+    source_digest: str = ""
 
 
 @dataclass(frozen=True)
@@ -79,6 +81,47 @@ def _normal(text: str) -> str:
 
 def _units(text: str) -> list[str]:
     return [u.strip(" \t\n\r¡¿") for u in _SPLIT.split(text) if u.strip(" \t\n\r¡¿")]
+
+
+def _raw_source_digest(record: Mapping[str, object]) -> str:
+    """Digest source identity before shortening evidence for the prompt.
+
+    Two posts with the same first N characters must not share a snapshot merely
+    because the displayed/evaluable evidence has a length budget. Only the
+    relevant source fields are hashed; unrelated adapter metadata is ignored.
+    """
+    def string(value: object) -> str | None:
+        return value if isinstance(value, str) else None
+
+    payload = {
+        "schema": "raw-context-v1",
+        "metadata": {
+            key: string(record.get(key)) for key in (
+                "network", "queue", "target_id", "author", "published_at",
+                "context_status", "text", "post_body",
+            )
+        },
+        "flags": {
+            key: record.get(key) is True for key in
+            ("has_media", "requires_visual", "reply_to_us")
+        },
+        "parents": [
+            {"stable_id": string(item.get("stable_id")),
+             "text": string(item.get("text")),
+             "verified": item.get("verified") is True}
+            for item in record.get("parents", ())
+        ],
+        "visual": [
+            {"asset_id": string(item.get("asset_id")),
+             "description": string(item.get("description")),
+             "provenance": string(item.get("provenance")),
+             "verified": item.get("verified") is True}
+            for item in record.get("visual", ())
+        ],
+    }
+    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True,
+                         separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def build_packet(
@@ -170,6 +213,7 @@ def build_packet(
         network, queue, target, _clean(record.get("author"), 120),
         published.isoformat() if published else None,
         state, tuple(evidence), not bool(set(warnings) & blocking), tuple(warnings),
+        _raw_source_digest(record),
     )
 
 
@@ -336,6 +380,7 @@ def packet_fingerprint(packet: ContextPacket) -> str:
         "context_status": packet.context_status,
         "eligible": packet.eligible, "warnings": list(packet.warnings),
         "evidence": [e.__dict__ for e in packet.evidence],
+        "source_digest": packet.source_digest,
     }
     serialized = json.dumps(values, ensure_ascii=False, sort_keys=True,
                             separators=(",", ":"))
