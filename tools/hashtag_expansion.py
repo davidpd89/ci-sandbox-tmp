@@ -60,7 +60,7 @@ def extract(text, declared=None):
         if not isinstance(declared, list):
             raise ValueError("tags debe ser una lista")
         found.update(tag(value) for value in declared)
-    return {x for x in found if x and not any(noise in x for noise in NOISE)}
+    return {x for x in found if x and not any(noise in fold(x) for noise in NOISE)}
 
 
 def _has_seed(text, seed):
