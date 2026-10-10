@@ -98,17 +98,24 @@ def _identity(network, row):
     return network + ":" + value
 
 
+def _is_spanish_code(value):
+    """Recognize ISO/BCP-47 Spanish, not unrelated prefixes (e.g. 'est')."""
+    if not isinstance(value, str):
+        return False
+    code = value.strip().casefold().replace("_", "-")
+    return re.fullmatch(r"es(?:-[a-z0-9]{2,8})*", code) is not None
+
+
 def _language(row, *, post=False):
     explicit = row.get("es")
     if type(explicit) is bool:
         return 1.0 if explicit else 0.0
     raw = row.get("language") or row.get("lang")
     if isinstance(raw, str) and raw:
-        return 1.0 if raw.casefold().startswith("es") else 0.0
+        return 1.0 if _is_spanish_code(raw) else 0.0
     langs = row.get("langs")
     if isinstance(langs, (tuple, list)) and langs:
-        return 1.0 if any(isinstance(x, str) and x.casefold().startswith("es")
-                          for x in langs) else 0.0
+        return 1.0 if any(_is_spanish_code(x) for x in langs) else 0.0
     # No pretending text heuristics establish a language.
     return None
 
@@ -123,18 +130,35 @@ def _wilson(successes, trials):
 
 
 def _outcome_signal(row):
+    """Require audited exposure counts for each distinct outcome population.
+
+    A legacy shared denominator is usable only when its common exposure
+    population is explicitly verified. Otherwise different action types
+    silently inherit the follow denominator, biasing candidate comparisons.
+    """
     if not isinstance(row, Mapping) or row.get("verified") is not True or row.get("mature") is not True:
         return None
-    trials = row.get("trials")
-    if type(trials) is not int or not 10 <= trials <= 10_000_000:
+    names = ("followbacks", "responses", "conversations", "traffic")
+    by_metric = row.get("by_metric")
+    observations = []
+    if isinstance(by_metric, Mapping):
+        for name in names:
+            entry = by_metric.get(name)
+            if (not isinstance(entry, Mapping) or
+                entry.get("verified") is not True or entry.get("mature") is not True):
+                return None
+            observations.append((entry.get("successes"), entry.get("trials")))
+    elif row.get("shared_exposure_verified") is True:
+        observations = [(row.get(name), row.get("trials")) for name in names]
+    else:
         return None
-    values = [row.get(key) for key in ("followbacks", "responses", "conversations", "traffic")]
-    if any(type(n) is not int or not 0 <= n <= trials for n in values):
-        return None
-    return min(1.0, (0.4 * _wilson(values[0], trials) +
-                     0.35 * _wilson(values[1], trials) +
-                     0.15 * _wilson(values[2], trials) +
-                     0.1 * _wilson(values[3], trials)) * 2.5)
+    for successes, trials in observations:
+        if (type(trials) is not int or not 10 <= trials <= 10_000_000 or
+            type(successes) is not int or not 0 <= successes <= trials):
+            return None
+    weights = (0.4, 0.35, 0.15, 0.1)
+    return min(1.0, sum(weight * _wilson(successes, trials)
+                        for weight, (successes, trials) in zip(weights, observations)) * 2.5)
 
 
 def _components(signals, weights):
