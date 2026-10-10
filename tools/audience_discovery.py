@@ -214,6 +214,17 @@ class AudienceStore:
                         "SELECT handle, stable, first_seen, last_seen, profile "
                         "FROM audience_accounts WHERE network=? AND account_key=?",
                         (network, previous[3])).fetchone()
+                    if (not row.stable_identity and old and old[1] and
+                            old[0].casefold() == row.handle.casefold()):
+                        # Replay handle-only del mismo evento después de promoción.
+                        # No puede degradar ni borrar la identidad estable.
+                        self.db.execute(
+                            "INSERT INTO audience_sightings VALUES(?,?,?,?,?) "
+                            "ON CONFLICT(network,event_key,surface,seed) "
+                            "DO UPDATE SET observed_at=max(observed_at, excluded.observed_at)",
+                            (network, row.event_key, surface, seed, row.observed_at))
+                        counts["replays"] += 1
+                        continue
                     if not (row.stable_identity and old and not old[1] and
                             old[0].casefold() == row.handle.casefold()):
                         raise ObservationError("evento_actor_conflictivo")
