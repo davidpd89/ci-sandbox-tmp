@@ -1,0 +1,18 @@
+python
+# Adaptación propia del patrón de:
+# https://github.com/lakpriya1s/hushreply/blob/main/README.md
+
+import hashlib
+
+def elegir_variante(comment_id: str, candidatos: list[str]) -> str:
+    if not candidatos:
+        raise ValueError("No hay candidatos de comentario")
+    digest = hashlib.sha256(comment_id.encode("utf-8")).hexdigest()
+    indice = int(digest, 16) % len(candidatos)
+    return candidatos[indice]
+
+def puede_responder(comment_id: str, store, ahora) -> bool:
+    if store.exists(f"respondido:{comment_id}"):
+        return False
+    store.set(f"respondido:{comment_id}", ahora, ttl=7 * 24 * 3600)
+    return True
