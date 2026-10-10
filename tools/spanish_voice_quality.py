@@ -17,11 +17,13 @@ NETWORKS = frozenset({"x", "threads", "facebook", "pinterest", "reddit",
                        "bluesky", "mastodon", "tiktok", "instagram"})
 QUEUES = frozenset({"WEB", "API", "MOBILE"})
 PROTECTED = re.compile(
-    r"\[[^\]\n]+\]\([^\)\n]+\)|https?://[^\s<>«»]+|www\.[^\s<>«»]+|"
+    r"!?\[[^\]\n]+\]\([^\)\n]+\)|https?://[^\s<>«»]+|www\.[^\s<>«»]+|"
     r"(?<![\w.])[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}|"
     r"(?<!\w)@[\w.]+|(?<!\w)#[\wáéíóúüñÁÉÍÓÚÜÑ]+|"
     + re.escape(chr(96)) + r"[^" + re.escape(chr(96)) + r"\n]*" + re.escape(chr(96))
     + r'|«[^»\n]*»|“[^”\n]*”|"[^"\n]*"', re.UNICODE)
+FENCED_CODE = re.compile(r"(?ms)^[ \\t]*(\\`{3,}|~{3,})[^\\n]*\\n.*?^[ \\t]*\\1[ \\t]*$")
+
 VARIANT_ES_ES = {
     "platicar": "conversar", "chambear": "trabajar", "checar": "comprobar",
     "computadora": "ordenador", "celular": "móvil", "carro": "coche",
@@ -47,7 +49,7 @@ class Finding:
 def _mask(text: str) -> str:
     """Protege formato nativo, enlaces, menciones, títulos/citas; preserva offsets."""
     chars = list(text)
-    for match in PROTECTED.finditer(text):
+    for match in list(FENCED_CODE.finditer(text)) + list(PROTECTED.finditer(text)):
         chars[match.start():match.end()] = [" "] * (match.end() - match.start())
     return "".join(chars)
 
