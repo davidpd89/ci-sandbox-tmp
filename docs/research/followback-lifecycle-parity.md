@@ -43,7 +43,7 @@ inventario general por pertenecer al trabajo específico de paridad #43.
 | X | WEB | listado + indicador individual | Sí / sí | Sí |
 | Threads | WEB | listado + profile_info individual | Sí / sí | Sí |
 | Facebook | WEB | sin fuente de followback verificada aquí | No / no | Sí |
-| Instagram | MOBILE | sin fuente verificada aquí | No / no | Sí |
+| Instagram | WEB | sin fuente verificada aquí | No / no | Sí |
 | Pinterest | WEB | sin fuente verificada aquí | No / no | Sí |
 | Reddit | WEB | sin fuente verificada aquí | No / no | Sí |
 | TikTok | MOBILE | auditoría independiente, admite parciales | No / no | Sí |
