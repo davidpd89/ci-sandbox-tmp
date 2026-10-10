@@ -101,6 +101,10 @@ def feed_page(
                   AND julianday(created_at) BETWEEN julianday(?) AND julianday(?)
                   AND match_count >= ?
                   AND reply_parent IS NULL
+                  -- El colector guarda una lista JSON; un escalar u objeto
+                  -- corrupto no puede convertirse en etiqueta de idioma.
+                  AND json_type(CASE WHEN json_valid(posts.langs_json)
+                      THEN posts.langs_json ELSE 'null' END) = 'array'
                   AND (langs_json = '[]' OR EXISTS (
                         SELECT 1 FROM json_each(CASE WHEN json_valid(posts.langs_json)
                             THEN posts.langs_json ELSE 'null' END)
