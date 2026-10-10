@@ -1,0 +1,55 @@
+python
+# Origen/patrón: https://github.com/ihuzaifashoukat/x-use
+# Archivo destino: tools/x_agent_tools.py
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Literal
+
+
+@dataclass
+class AgentToolResult:
+    ok: bool
+    action: str
+    data: dict | None = None
+    error: str | None = None
+
+
+class XAgentTools:
+    """Herramientas seguras para un agente: lee, propone y encola; nunca publica."""
+
+    def __init__(self, scanner, reply_writer, action_ledger):
+        self.scanner = scanner
+        self.reply_writer = reply_writer
+        self.ledger = action_ledger
+
+    def search_candidates(self, query: str, limit: int = 20) -> AgentToolResult:
+        try:
+            candidates = self.scanner.search(query=query, limit=limit)
+            return AgentToolResult(True, "search_candidates", {"candidates": candidates})
+        except Exception as error:
+            return AgentToolResult(False, "search_candidates", error=str(error))
+
+    def draft_reply(self, tweet_id: str, voice: str = "david_porto") -> AgentToolResult:
+        try:
+            draft = self.reply_writer.draft(tweet_id=tweet_id, voice=voice)
+            return AgentToolResult(True, "draft_reply", {"draft": draft})
+        except Exception as error:
+            return AgentToolResult(False, "draft_reply", error=str(error))
+
+    def queue_action(
+        self,
+        tweet_id: str,
+        draft: str,
+        kind: Literal["reply", "like"] = "reply",
+    ) -> AgentToolResult:
+        try:
+            action_id = self.ledger.enqueue(
+                network="x",
+                tweet_id=tweet_id,
+                kind=kind,
+                payload={"draft": draft},
+            )
+            return AgentToolResult(True, "queue_action", {"action_id": action_id})
+        except Exception as error:
+            return AgentToolResult(False, "queue_action", error=str(error))
