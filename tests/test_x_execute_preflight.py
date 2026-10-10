@@ -1,9 +1,5 @@
 """Preflight X debe bloquear el lote completo ante errores locales."""
 import ast
-<<<<<<< HEAD
-=======
-import datetime as dt
->>>>>>> origin/research/public-reuse-parent
 import pathlib
 import re
 import types
@@ -113,11 +109,7 @@ class XExecutePreflightTests(unittest.TestCase):
     def test_two_alias_urls_to_same_post_are_rejected_before_write(self):
         env, writes = load_executor()
         result = env["run_plan"]([
-<<<<<<< HEAD
             {"kind": "like", "url": "https://twitter.com/lectora/status/123"},
-=======
-            {"kind": "repost", "curated": True, "url": "https://twitter.com/lectora/status/123"},
->>>>>>> origin/research/public-reuse-parent
             {"kind": "repost", "curated": True, "url": "https://x.com/lectora/status/123?ref=home"},
         ])
         self.assertEqual(writes, [])
@@ -131,10 +123,6 @@ class XExecutePreflightTests(unittest.TestCase):
                 "kind": "reply",
                 "url": "https://x.com/lectora/status/123",
                 "text": "Respuesta concreta sobre este libro.",
-<<<<<<< HEAD
-=======
-                "post_created_at": (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=2)).isoformat(),
->>>>>>> origin/research/public-reuse-parent
             },
         ])
         self.assertEqual(len(writes), 1)

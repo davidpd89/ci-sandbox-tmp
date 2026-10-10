@@ -1,9 +1,5 @@
 """Estados de escritura: un no-op o una acción incierta nunca cuentan como éxito."""
 import ast
-<<<<<<< HEAD
-=======
-import datetime as dt
->>>>>>> origin/research/public-reuse-parent
 import pathlib
 import re
 import types
@@ -20,30 +16,7 @@ def load_function(filename, name, namespace):
         if isinstance(n, ast.FunctionDef) and n.name == name
     )
     exec(compile(ast.Module(body=[node], type_ignores=[]), str(source), "exec"), namespace)
-<<<<<<< HEAD
     return namespace[name]
-=======
-    fn = namespace[name]
-    if name != "run_plan":
-        return fn
-
-    def with_recent_fixture_targets(plan, *args, **kwargs):
-        # Estos casos prueban ACK/resultado, no extracción de fechas. Un
-        # comentario no está autorizado sin antigüedad comprobable; el fixture
-        # aporta la fecha sintética que un productor válido debe entregar.
-        when = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=1)).isoformat()
-        prepared = [
-            ({**item, "post_created_at": when}
-             if isinstance(item, dict) and item.get("kind") in
-             {"reply", "comment", "comment_external", "quote"}
-             and not item.get("post_created_at") and not item.get("created_at")
-             else item)
-            for item in plan
-        ]
-        return fn(prepared, *args, **kwargs)
-
-    return with_recent_fixture_targets
->>>>>>> origin/research/public-reuse-parent
 
 
 class Dup:
@@ -77,13 +50,8 @@ class ConfirmedOutcomeTests(unittest.TestCase):
         result = run(plan, prevalidated=True)
         self.assertEqual(
             [r["resultado"] for r in result],
-<<<<<<< HEAD
             ["saltado_ya_seguido", "confirmado", "pendiente_verificacion",
              "saltado_ya_reposteado"],
-=======
-            ["saltado_ya_seguido", "saltado_politica_auto_like", "pendiente_verificacion",
-             "no_intentado"],
->>>>>>> origin/research/public-reuse-parent
         )
 
     def test_threads_executor_never_confirms_unverified_reply(self):

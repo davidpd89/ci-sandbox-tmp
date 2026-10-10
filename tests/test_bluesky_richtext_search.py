@@ -29,21 +29,13 @@ def load_functions(names):
 class RichTextTests(unittest.TestCase):
     def test_hashtag_and_url_get_utf8_facets(self):
         env = load_functions({"_utf8_slice", "_richtext_facets"})
-<<<<<<< HEAD
         text = "Fantasía #BookSky https://autorademodiaz.com/libro/."
-=======
-        text = "Fantasía #BookSky https://davidportodiaz.com/libro/."
->>>>>>> origin/research/public-reuse-parent
         facets = env["_richtext_facets"](text)
         self.assertEqual(len(facets), 2)
         tag = next(f for f in facets if f["features"][0]["$type"].endswith("#tag"))
         link = next(f for f in facets if f["features"][0]["$type"].endswith("#link"))
         self.assertEqual(tag["features"][0]["tag"], "BookSky")
-<<<<<<< HEAD
         self.assertEqual(link["features"][0]["uri"], "https://autorademodiaz.com/libro/")
-=======
-        self.assertEqual(link["features"][0]["uri"], "https://davidportodiaz.com/libro/")
->>>>>>> origin/research/public-reuse-parent
         start = tag["index"]["byteStart"]
         end = tag["index"]["byteEnd"]
         self.assertEqual(text.encode("utf-8")[start:end].decode("utf-8"), "#BookSky")
@@ -142,21 +134,13 @@ class SearchTests(unittest.TestCase):
         env["requests"] = types.SimpleNamespace(get=fake_get)
         out = env["_search_posts"](
             "fantasía", "es", 20, tag=["BookSky"], sort="top",
-<<<<<<< HEAD
             domain="autorademodiaz.com", author="autor.bsky.social",
-=======
-            domain="davidportodiaz.com", author="autor.bsky.social",
->>>>>>> origin/research/public-reuse-parent
             since="2026-09-01",
         )
         self.assertEqual(out, [{"uri": "at://x"}])
         self.assertEqual(captured["params"]["tag"], ["BookSky"])
         self.assertEqual(captured["params"]["sort"], "top")
-<<<<<<< HEAD
         self.assertEqual(captured["params"]["domain"], "autorademodiaz.com")
-=======
-        self.assertEqual(captured["params"]["domain"], "davidportodiaz.com")
->>>>>>> origin/research/public-reuse-parent
         self.assertEqual(captured["params"]["author"], "autor.bsky.social")
         self.assertEqual(captured["params"]["since"], "2026-09-01")
 

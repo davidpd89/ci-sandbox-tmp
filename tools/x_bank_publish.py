@@ -168,14 +168,6 @@ def main(argv=None):
         if item is None:
             print(f"[x] no se publica tras esperar el Edge: {why}")
             return 0
-<<<<<<< HEAD
-=======
-        import circuit_breaker as cb
-        allowed, reason = cb.write_preflight("x")
-        if not allowed:
-            print(f"[x] NO se publica: cortacircuitos ABIERTO ({reason})")
-            return 0
->>>>>>> origin/research/public-reuse-parent
         url = x.post(item["text"])
         record(item, url)
     print(f"[x] PUBLICADO: «{item['text']}» -> {url}")

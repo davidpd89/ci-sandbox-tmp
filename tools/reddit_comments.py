@@ -10,11 +10,6 @@ una frase de 1-8 palabras elegida del banco SIN repetir en los ultimos 40 coment
 
     python tools/reddit_comments.py [--apply] [--max 3] [--per-sub 2] [--join]
         sin --apply: escanea y muestra el plan, no comenta ni se une a nada
-<<<<<<< HEAD
-=======
-    python tools/reddit_comments.py --replies-only [--apply] [--max-replies 4]
-        solo revisa nuestras publicaciones; no sigue a usuarios ni participa en hilos ajenos
->>>>>>> origin/research/public-reuse-parent
 """
 from __future__ import annotations
 
@@ -105,7 +100,6 @@ def _norm(text):
     return " ".join((text or "").casefold().split()).strip(" .,!;")
 
 
-<<<<<<< HEAD
 def recent_texts(registro=REGISTRO, window=REUSE_WINDOW):
     used = []
     try:
@@ -115,53 +109,10 @@ def recent_texts(registro=REGISTRO, window=REUSE_WINDOW):
                     used.append(_norm(row["texto_usado"]))
     except OSError:
         pass
-=======
-_REDDIT_REG_COLUMNS = ("fecha", "subreddit", "hilo_url", "tipo",
-                       "texto_usado", "resultado", "notas")
-
-
-def _registro_rows(path):
-    """Leer los dos formatos REALES: 7 columnas sin cabecera o con cabecera.
-
-    Ante filas incompletas, formato incierto o errores de IO, no se debe
-    fingir historial vacío y volver a intentar una respuesta remota.
-    """
-    import itertools
-    try:
-        with open(path, encoding="utf-8-sig", newline="") as stream:
-            reader = csv.reader(stream)
-            first = next(reader, None)
-            if first is None:
-                return
-            if tuple(first) == _REDDIT_REG_COLUMNS:
-                records = reader
-            elif len(first) == 7 and re.fullmatch(r"\d{4}-\d{2}-\d{2}", first[0]):
-                records = itertools.chain([first], reader)
-            else:
-                raise ValueError("CSV Reddit: esquema no reconocido, no procesar acciones")
-            for row in records:
-                if not row:
-                    continue
-                if len(row) != 7:
-                    raise ValueError("CSV Reddit: fila incompleta, no procesar acciones")
-                yield dict(zip(_REDDIT_REG_COLUMNS, row))
-    except FileNotFoundError:
-        return  # nunca hubo registro: no hay hilos propios demostrables
-
-
-def recent_texts(registro=REGISTRO, window=REUSE_WINDOW):
-    used = []
-    for row in _registro_rows(registro):
-        if (row["tipo"] in ("comentario", "comment", "respuesta")
-                and row["resultado"] in ("confirmado", "publicado")
-                and row["texto_usado"].strip()):
-            used.append(_norm(row["texto_usado"]))
->>>>>>> origin/research/public-reuse-parent
     return set(used[-window:])
 
 
 def commented_today(registro=REGISTRO, today=None):
-<<<<<<< HEAD
     """{subreddit: comentarios confirmados hoy} y total de hoy."""
     today = (today or datetime.date.today()).isoformat()
     per_sub, total = {}, 0
@@ -177,19 +128,6 @@ def commented_today(registro=REGISTRO, today=None):
     return per_sub, total
 
 
-=======
-    """{subreddit: comentarios confirmados hoy}, sin contar respuestas."""
-    today = (today or datetime.date.today()).isoformat()
-    per_sub, total = {}, 0
-    for row in _registro_rows(registro):
-        if (row["fecha"] == today and row["tipo"] in ("comentario", "comment")
-                and row["resultado"] in ("confirmado", "publicado")):
-            sub = row["subreddit"].strip()
-            per_sub[sub] = per_sub.get(sub, 0) + 1
-            total += 1
-    return per_sub, total
-
->>>>>>> origin/research/public-reuse-parent
 def _age_hours(stamp, now=None):
     if not stamp:
         return None
@@ -201,11 +139,7 @@ def _age_hours(stamp, now=None):
     return (now - when).total_seconds() / 3600
 
 
-<<<<<<< HEAD
 def build_plan(threads, *, max_comments, per_sub=2, used=frozenset(), done_keys=frozenset(), rng=None, now=None, my_user="AutoraDemoEscritor", checker=None):
-=======
-def build_plan(threads, *, max_comments, per_sub=2, used=frozenset(), done_keys=frozenset(), rng=None, now=None, my_user="DavidPortoEscritor", checker=None):
->>>>>>> origin/research/public-reuse-parent
     """threads: dicts con subreddit, title, url, author, comment_count, post_type, created. Devuelve acciones `comment` de frase corta del banco."""
     rng = rng or random
     used = set(used)
@@ -226,12 +160,7 @@ def build_plan(threads, *, max_comments, per_sub=2, used=frozenset(), done_keys=
         if not intent:
             continue
         per[sub] = per.get(sub, 0) + 1
-<<<<<<< HEAD
         plan.append({"kind": "comment", "subreddit": sub, "url": t["url"], "text": PENDING_TEXT, "motivo": f"karma:{intent}:{t.get('title', '')[:60]}"})      # el texto lo escribe ChatGPT despues (write_comment_texts)
-=======
-        plan.append({"kind": "comment", "subreddit": sub, "url": t["url"], "text": PENDING_TEXT, "motivo": f"karma:{intent}:{t.get('title', '')[:60]}",
-                     "post_created_at": t.get("created") or ""})      # el texto lo escribe ChatGPT despues (write_comment_texts)
->>>>>>> origin/research/public-reuse-parent
     return plan
 
 
@@ -259,25 +188,12 @@ def write_comment_texts(plan, threads, log=print):
             thread = by_url.get(a["url"], {})
             text, context = post_text_for_gpt(a.get("subreddit", ""), thread.get("title", ""), thread.get("body", ""))
             if text:
-<<<<<<< HEAD
                 items.append({"id": a["url"], "network": "reddit_micro", "author": thread.get("author", ""), "text": text, "context": context})
-=======
-                items.append({"id": a["url"], "network": "reddit_micro", "author": thread.get("author", ""),
-                              "url": a["url"], "text": text, "context": context})
->>>>>>> origin/research/public-reuse-parent
         got = reply_queue.get_or_enqueue(items, "reddit_micro", log)
     except Exception as exc:
         log(f"[reddit] comentarios sin escribir ({type(exc).__name__}: {str(exc)[:80]}): no se comenta esta ronda")
         got = {}
-<<<<<<< HEAD
     return [{**a, "text": got[a["url"]]} for a in plan if got.get(a["url"])]
-=======
-    import reply_provenance as proof
-    sources = {i["id"]: i for i in items} if "items" in locals() else {}
-    return [att for a in plan if got.get(a["url"]) and a["url"] in sources
-            for att in [proof.attach({**a, "text": got[a["url"]]}, sources[a["url"]], "reddit_micro")]
-            if att is not None]
->>>>>>> origin/research/public-reuse-parent
 
 
 def load_states():
@@ -384,7 +300,6 @@ def reply_kind(text):
     return "title" if len(raw.split()) <= 7 else "explained"
 
 
-<<<<<<< HEAD
 _JS_COMMENTS = """() => [...document.querySelectorAll('shreddit-comment')].map(e => ({id: e.getAttribute('thingid'), author: e.getAttribute('author'), depth: parseInt(e.getAttribute('depth') || '0', 10),
     text: ((e.querySelector('[slot=comment]') || {}).innerText || '').trim()}))"""
 
@@ -412,88 +327,23 @@ def plan_replies(comments, *, done_ids=frozenset(), used=frozenset(), max_replie
         if str(c.get("author", "")).casefold() == me.casefold() and i > 0:
             mine_after.add(comments[i - 1].get("id"))
     plan = []
-=======
-_JS_COMMENTS = """() => [...document.querySelectorAll('shreddit-comment')].map(e => ({id: e.getAttribute('thingid'), author: e.getAttribute('author'), depth: e.hasAttribute('depth') ? parseInt(e.getAttribute('depth'), 10) : null,
-    // No inferir parentId por orden visual; atributos DOM no son API estable.
-    parent: e.getAttribute('parentid') || e.getAttribute('parent-id') || '',
-    text: ((e.querySelector('[slot=comment]') || {}).innerText || '').trim(),
-    created: e.getAttribute('created-timestamp') || ''}))"""
-
-
-def replied_comment_ids(registro=None):
-    """IDs de comentarios a los que ya se respondió, sin depender de header."""
-    registro = registro or REGISTRO      # leer el valor vigente (tests y rutas alternativas)
-    done = set()
-    for row in _registro_rows(registro):
-        if row["tipo"] == "respuesta" and "#" in row["hilo_url"]:
-            done.add(row["hilo_url"].split("#", 1)[1])
-    return done
-
-def plan_replies(comments, *, done_ids=frozenset(), used=frozenset(), max_replies=4, rng=None, me="DavidPortoEscritor", verified_post_id=None):
-    """Plan de respuestas. Con post_id explícito, jamás inferir padres por orden visual."""
-    import conversation_turn_policy as ctp
-    rng = rng or random
-    used = set(used)
-    if not isinstance(comments, list) or not all(isinstance(c, dict) for c in comments):
-        return []
-    mine_after = set()
-    if verified_post_id is not None:
-        if not re.fullmatch(r"[a-z0-9]+", str(verified_post_id), re.I):
-            return []
-        for c in comments:
-            if str(c.get("author", "")).casefold() == me.casefold():
-                parent = c.get("parent")
-                if isinstance(parent, str) and re.fullmatch(r"t1_[a-z0-9]+", parent, re.I):
-                    mine_after.add(parent.casefold())
-                # Un reply propio sin parent no debe invalidar TODOS los hilos:
-                # seguir evaluando candidatos raíz sin inferir por adyacencia.
-    else:
-        # Compatibilidad legacy: NO se usa por el modo verificado de PR #44.
-        for i, c in enumerate(comments):
-            if str(c.get("author", "")).casefold() == me.casefold() and i > 0:
-                mine_after.add(comments[i - 1].get("id"))
-    plan, seen_targets = [], set()
->>>>>>> origin/research/public-reuse-parent
     for c in comments:
         if len(plan) >= max_replies:
             break
         author = str(c.get("author") or "")
-<<<<<<< HEAD
         if c.get("depth", 0) != 0 or not c.get("id") or author.casefold() in (me.casefold(), "automoderator", "[deleted]", ""):
             continue
         cid = str(c["id"])
         if cid in done_ids or cid in mine_after:
-=======
-        if c.get("depth") != 0 or not c.get("id") or author.casefold() in (me.casefold(), "automoderator", "[deleted]", ""):
-            continue
-        cid = str(c["id"])
-        if verified_post_id is not None:
-            parent = c.get("parent")
-            if (not re.fullmatch(r"t1_[a-z0-9]+", cid, re.I)
-                    or (parent not in (None, "")
-                        and str(parent).casefold() != "t3_" + str(verified_post_id).casefold())):
-                continue  # nested/parent contradictorio: saltar ESTE comentario
-            # parent vacío es admisible únicamente con depth=0 explícito,
-            # URL del hilo verificada y autor del post autenticado por run_replies.
-        if cid in done_ids or cid.casefold() in mine_after or cid.casefold() in seen_targets:
->>>>>>> origin/research/public-reuse-parent
             continue
         kind = reply_kind(c.get("text"))
         if not kind or ctp.is_closed_turn(c.get("text")):
             continue                     # 08/10: «gracias», «jaja», «genial»... cierran la conversación: no se contesta por contestar
-<<<<<<< HEAD
         plan.append({"id": cid, "author": author, "text": PENDING_TEXT, "kind": kind, "snippet": (c.get("text") or "")[:60], "full": (c.get("text") or "")[:500]})
-=======
-        plan.append({"id": cid, "author": author, "text": PENDING_TEXT, "kind": kind, "snippet": (c.get("text") or "")[:60], "full": (c.get("text") or "")[:500],
-                     "post_text": (c.get("text") or "")[:500], "reply_to_us": True,
-                     "post_created_at": c.get("created") or ""})
-        seen_targets.add(cid.casefold())
->>>>>>> origin/research/public-reuse-parent
     return plan
 
 
 def _own_thread_urls(registro=REGISTRO, days=14, today=None):
-<<<<<<< HEAD
     today = today or datetime.date.today()
     urls = []
     try:
@@ -512,29 +362,6 @@ def _own_thread_urls(registro=REGISTRO, days=14, today=None):
     return urls
 
 
-=======
-    """Hilos propios registrados, nunca destinos deducidos de URLs externas."""
-    today = today or datetime.date.today()
-    urls = []
-    import reddit_interact as r
-    for row in _registro_rows(registro):
-        if row["tipo"] != "post" or row["resultado"] not in ("confirmado", "publicado"):
-            continue
-        try:
-            when = datetime.date.fromisoformat(row["fecha"])
-        except ValueError:
-            continue
-        if not 0 <= (today - when).days <= days:
-            continue
-        try:
-            url = r._validated_thread_url(row["hilo_url"])
-        except ValueError:
-            continue
-        if url not in urls:
-            urls.append(url)
-    return urls
-
->>>>>>> origin/research/public-reuse-parent
 def upvote_comment(node):
     """Voto positivo al comentario si aun no lo tiene (da movimiento y es de buena educacion con quien participa). No falla si el boton no aparece."""
     try:
@@ -547,121 +374,10 @@ def upvote_comment(node):
     return False
 
 
-<<<<<<< HEAD
 def reply_in_thread(pg, thread_url, item, log=print):
     """Vota a favor y responde al comentario `item['id']` del hilo abierto. Limpia el borrador (Reddit lo guarda y el texto se concatenaba: «Qué buen libro.Qué buen libro.», 07/10),
     comprueba que lo escrito es EXACTAMENTE la frase y verifica tras recargar que aparece como respuesta nuestra. Devuelve True/False."""
     import reddit_interact as r
-=======
-def _reply_permalink(thread_url, comment_id):
-    """Referenciar un comentario exacto sin concatenar '?' a URLs con parámetros."""
-    from urllib.parse import urlsplit, urlunsplit, urlencode
-    parsed = urlsplit(thread_url)
-    cid = str(comment_id).removeprefix("t1_")
-    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path,
-                       urlencode({"comment_id": cid}), ""))
-
-
-def _certified_dom_target(thread_url, item):
-    """El nodo DOM seleccionado debe coincidir con el comentario firmado."""
-    from urllib.parse import urlsplit, parse_qs
-    if not item.get("gpt_proof"):
-        return True  # tests heredados; require_gpt deniega ausencia en producción
-    try:
-        certified = urlsplit(item["url"])
-        current = urlsplit(thread_url)
-        comment_id = str(item["id"]).removeprefix("t1_")
-        ids = parse_qs(certified.query).get("comment_id", [])
-        return (certified.scheme == current.scheme
-                and certified.netloc.casefold() == current.netloc.casefold()
-                and certified.path.rstrip("/") == current.path.rstrip("/")
-                and ids == [comment_id])
-    except (TypeError, ValueError, KeyError):
-        return False
-
-
-class ReplyWriteUnverified(RuntimeError):
-    """Hubo o pudo haber una pulsación: no volver a enviar sin conciliación."""
-
-
-def _reserve_reply_attempt(thread_url, item):
-    """Persistir intención ANTES del tap; una caída nunca habilita doble reply.
-
-    El registro actual deduplica toda fila de tipo respuesta por comment_id,
-    incluido el estado pendiente_verificacion. No borrar estas filas.
-    """
-    import csv as _csv
-    import os as _os
-    import datetime as _datetime
-    from urllib.parse import urlsplit
-    from pathlib import Path
-    target = str(item["id"])
-    if not re.fullmatch(r"t1_[a-z0-9]+", target, re.I):
-        raise ValueError("ID de comentario sin certificar")
-    thread_path = urlsplit(thread_url).path.split("/")
-    if len(thread_path) < 5 or thread_path[1] != "r":
-        raise ValueError("destino de hilo propio no acreditado")
-    subreddit = "r/" + thread_path[2]
-    # Reservar bajo candado interproceso: dos rondas que cargaron el mismo
-    # plan no pueden enviar la misma respuesta tras dos comprobaciones viejas.
-    import hashlib
-    from action_ledger import exclusive
-    path = Path(REGISTRO)
-    lock_key = "reddit_reply_" + hashlib.sha256(
-        (str(path.resolve()) + "\\x00" + target.casefold()).encode("utf-8")
-    ).hexdigest()[:20]
-    with exclusive(lock_key):
-        if target.casefold() in {cid.casefold() for cid in replied_comment_ids(str(path))}:
-            raise ReplyWriteUnverified("reply reservado o confirmado: no repetir")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("a", newline="", encoding="utf-8") as stream:
-            _csv.writer(stream).writerow([
-                _datetime.date.today().isoformat(),
-                subreddit, thread_url + "#" + target,
-                "respuesta", "", "pendiente_verificacion", "intent:reply:parent_exact"
-            ])
-            stream.flush()
-            _os.fsync(stream.fileno())
-
-
-def reply_in_thread(pg, thread_url, item, log=print):
-    """Responde solo al comentario raíz acreditado, sin dar upvote automático.
-    Persiste el intento antes del tap; exige ACK de autor, texto y padre.
-    Devuelve True solo con ACK. En envío incierto, lanza ReplyWriteUnverified.
-    """
-    import reddit_interact as r
-    import reply_writer as rw
-    if not rw.require_gpt([{**item, "kind": "reply"}], "reddit", log=log):
-        return False
-    import conversation_turn_policy as ctp
-    allowed, reason = ctp.check_execution("reddit", {**item, "kind": "reply"})
-    if not allowed:
-        log(f"[reddit] RESPUESTA_OMITIDA_POLITICA: {reason}")
-        return False
-    # Check independiente en la acción, incluso si el planner recibió filas
-    # legítimas: no permitir un segundo acceso directo a comentario anidado.
-    try:
-        r._assert_thread_destination(pg, thread_url)
-        post_id = r._thread_post_id(thread_url)
-        author = pg.evaluate("() => (document.querySelector('shreddit-post') || {getAttribute: () => ''}).getAttribute('author') || ''")
-        rows = pg.evaluate(_JS_COMMENTS)
-        if (not isinstance(author, str)
-                or author.casefold() != r.MY_USERNAME.casefold()
-                or not isinstance(rows, list)):
-            return False
-        matching = [row for row in rows if isinstance(row, dict)
-                    and row.get("id") == item.get("id")]
-        if len(matching) != 1 or matching[0].get("depth") != 0:
-            return False
-        parent = matching[0].get("parent")
-        if parent not in (None, "") and str(parent).casefold() != "t3_" + post_id.casefold():
-            return False
-    except (ValueError, RuntimeError, TypeError):
-        return False
-    if not _certified_dom_target(thread_url, item):
-        log("[reddit] PROCEDENCIA_COMENTARIO_DISTINTO; no se pulsa Enviar")
-        return False
->>>>>>> origin/research/public-reuse-parent
     check_reply(item["text"])
     r._check_spanish_orthography(item["text"].replace("¿", "").replace("?", ""))
     node = pg.locator(f'shreddit-comment[thingid="{item["id"]}"]').first
@@ -687,7 +403,6 @@ def reply_in_thread(pg, thread_url, item, log=print):
         node.locator("shreddit-composer button").filter(has_text="Cancelar").first.click(timeout=5000)
         log(f"   borrador distinto de la frase ({typed[:50]!r}): no se envia")
         return False
-<<<<<<< HEAD
     send = node.locator("shreddit-composer button[type='submit']").last          # el texto del boton lleva espacios/saltos: no se filtra por texto (probado en vivo 07/10)
     send.click(timeout=10000)
     pg.wait_for_timeout(2500)
@@ -707,40 +422,6 @@ def _gpt_comment(sub, title, author, log=print, context=None):
     try:
         import reply_queue
         got = reply_queue.get_or_enqueue([{"id": "e", "network": "reddit_micro", "author": author, "text": title,
-=======
-    send = node.locator("shreddit-composer button[type='submit']").last
-    # No llamar al tap si el journal no está escrito y sincronizado.
-    _reserve_reply_attempt(thread_url, item)
-    try:
-        send.click(timeout=10000)
-        pg.wait_for_timeout(2500)
-        r._check_bot_warning(pg)
-        pg.reload(wait_until="domcontentloaded", timeout=25000)
-        pg.wait_for_timeout(3000)
-        r._check_bot_warning(pg)
-        snippet = _norm(item["text"])
-        rows = pg.evaluate(_JS_COMMENTS)
-        if isinstance(rows, list):
-            for c in rows:
-                if (isinstance(c, dict)
-                        and str(c.get("author", "")).casefold() == r.MY_USERNAME.casefold()
-                        and str(c.get("parent") or "").casefold() == str(item["id"]).casefold()
-                        and c.get("depth") is not None and c.get("depth") >= 1
-                        and _norm(c.get("text")) == snippet):
-                    return True
-    except r.BotWarningDetected:
-        raise
-    except Exception as exc:
-        raise ReplyWriteUnverified("tap o ACK Reddit incierto; requiere conciliación") from exc
-    raise ReplyWriteUnverified("sin ACK de padre/autor/texto tras enviar; no reintentar")
-
-
-def _gpt_comment(sub, title, author, log=print, context=None, url=None):
-    """Comentario suelto de ChatGPT (cola de respuestas, sin esperar el navegador) para un hilo concreto; None si todavia no esta escrito o ChatGPT no ve nada que decir."""
-    try:
-        import reply_queue
-        got = reply_queue.get_or_enqueue([{"id": "e", "network": "reddit_micro", "author": author, "url": url, "text": title,
->>>>>>> origin/research/public-reuse-parent
                                            "context": context or f"post de r/{sub} (solo hay título); comentario suelto muy breve"}], "reddit_micro", log)
         return got.get("e")
     except Exception as exc:
@@ -749,11 +430,7 @@ def _gpt_comment(sub, title, author, log=print, context=None, url=None):
 
 
 def engage_user(pg, username, log=print):
-<<<<<<< HEAD
     """Tras responder a quien comenta en nuestro hilo: seguirle (si no le seguimos) y, si tiene una publicacion reciente (<= 5 dias) en una de nuestras comunidades que encaje con una intencion
-=======
-    """Tras responder a quien comenta en nuestro hilo: seguirle (si no le seguimos) y, si tiene una publicacion reciente (<= 3 dias) en una de nuestras comunidades que encaje con una intencion
->>>>>>> origin/research/public-reuse-parent
     sencilla (estanteria, compra, libro terminado...), dejarle un comentario breve. Devuelve ('seguido'|'ya'|'no', url_comentada|None)."""
     import reddit_interact as r
     followed = "no"
@@ -774,19 +451,10 @@ def engage_user(pg, username, log=print):
         created: e.getAttribute('created-timestamp') || '', permalink: e.getAttribute('permalink') || '', type: e.getAttribute('post-type') || '',
         body: ((e.querySelector('[slot="text-body"]') || {}).innerText || '').trim().slice(0, 600)}))""")
     allowed = {n.casefold() for n in active_subs()}
-<<<<<<< HEAD
     used = recent_texts()
     for post in posts:
         age = _age_hours(post.get("created"))
         if age is None or age > 120 or post["sub"].casefold() not in allowed or not post["permalink"]:
-=======
-    import post_age_policy as age_policy
-    max_age_h = age_policy.MAX_AGE_DAYS["comment"] * 24
-    used = recent_texts()
-    for post in posts:
-        age = _age_hours(post.get("created"))
-        if age is None or age > max_age_h or post["sub"].casefold() not in allowed or not post["permalink"]:
->>>>>>> origin/research/public-reuse-parent
             continue
         intent = classify(post["title"], post.get("type"))
         if not intent:
@@ -796,7 +464,6 @@ def engage_user(pg, username, log=print):
         text, context = post_text_for_gpt(post["sub"], post["title"], post.get("body", ""))
         if not text:
             continue                      # titulo vago («Audiolibros») y sin texto: no hay nada concreto a lo que responder
-<<<<<<< HEAD
         written = _gpt_comment(post["sub"], text, username, log, context=context)
         if not written:
             continue                      # sin texto de ChatGPT no se comenta (el follow ya esta hecho)
@@ -806,46 +473,6 @@ def engage_user(pg, username, log=print):
 
 def run_replies(pg, max_replies=4, apply=False, rng=None, log=print):
     """Respuestas breves a quienes comentan en nuestros hilos de los ultimos 14 dias. Devuelve el numero confirmado."""
-=======
-        written = _gpt_comment(post["sub"], text, username, log, context=context,
-                               url=f"https://www.reddit.com{post['permalink']}")
-        if not written:
-            continue                      # sin texto de ChatGPT no se comenta (el follow ya esta hecho)
-        import reply_provenance as proof
-        source = {"url": f"https://www.reddit.com{post['permalink']}", "text": text,
-                  "author": username, "context": context}
-        action = proof.attach({"kind": "comment", "url": source["url"], "text": written},
-                              source, "reddit_micro")
-        if action is None:
-            continue
-        return followed, {**action, "post_created_at": post["created"],
-                          "intent": intent, "title": post["title"]}
-    return followed, None
-
-
-def _publish_profile_comment(extra, *, log=print, publish=None):
-    """Barrera de contenido: una respuesta al hilo no autoriza texto libre."""
-    import conversation_turn_policy as ctp
-    import reply_writer as rw
-    permitted, reason = ctp.check_execution("reddit", extra)
-    if not permitted:
-        log(f"[reddit] comentario secundario descartado: {reason}")
-        return False
-    if not rw.require_gpt([extra], "reddit", log=log):
-        return False
-    if publish is None:
-        import reddit_interact as ri
-        publish = ri.comment
-    publish(extra["url"], extra["text"])
-    return True
-
-
-def run_replies(pg, max_replies=4, apply=False, rng=None, log=print, *, verified_only=True, redact=False):
-    """Responde solo a comentarios raíz de hilos propios verificados; omite anidados."""
-    # La ronda no se apaga: la seguridad se decide por comentario y por hilo.
-    # Solo destinos de primer nivel en un post propio verificado.
-    verified_only = True
->>>>>>> origin/research/public-reuse-parent
     import reddit_interact as r
     import scan_common as sc
     done = replied_comment_ids()
@@ -857,33 +484,14 @@ def run_replies(pg, max_replies=4, apply=False, rng=None, log=print, *, verified
         pg.goto(thread, wait_until="domcontentloaded", timeout=30000)
         pg.wait_for_timeout(3500)
         r._check_bot_warning(pg)
-<<<<<<< HEAD
         comments = pg.evaluate(_JS_COMMENTS)
         plan = plan_replies(comments, done_ids=done, used=recent_texts(), max_replies=max_replies - confirmed, rng=rng)
-=======
-        if verified_only:
-            try:
-                r._assert_thread_destination(pg, thread)
-            except (ValueError, RuntimeError):
-                log("[reddit] redirección o destino no acreditado: se omite")
-                continue
-            author = pg.evaluate("() => (document.querySelector('shreddit-post') || {getAttribute: () => ''}).getAttribute('author') || ''")
-            if not isinstance(author, str) or author.casefold() != r.MY_USERNAME.casefold():
-                log("[reddit] hilo sin autor propio acreditado: se omite")
-                continue
-        comments = pg.evaluate(_JS_COMMENTS)
-        post_id = r._thread_post_id(thread) if verified_only else None
-        plan = plan_replies(comments, done_ids=done, used=recent_texts(),
-                            max_replies=max_replies - confirmed, rng=rng,
-                            verified_post_id=post_id)
->>>>>>> origin/research/public-reuse-parent
         if plan and apply:
             try:
                 title = pg.evaluate("() => (document.querySelector('shreddit-post') || {getAttribute: () => ''}).getAttribute('post-title') || ''")
                 # 08/10: ChatGPT NO se invoca desde aqui (dentro de este navegador Playwright fallaba con «Sync API inside the asyncio loop» y con el banco quitado no se
                 # respondia nunca): se encola en la cola de respuestas, que escribe el trabajador aparte, y la respuesta se publica en la siguiente ejecucion.
                 import reply_queue
-<<<<<<< HEAD
                 written = reply_queue.get_or_enqueue([{"id": f"c{n}", "network": "reddit", "author": item["author"], "reply_to_us": True, "text": item["full"],
                                                        "context": f"comentario de esta persona en NUESTRO hilo de Reddit «{title}»; respóndele a lo que dice ella (si es un cierre o no aporta nada nuevo, null)"}
                                                       for n, item in enumerate(plan)], "reddit", log)
@@ -891,53 +499,19 @@ def run_replies(pg, max_replies=4, apply=False, rng=None, log=print, *, verified
                     if f"c{n}" in written:
                         item["text"] = written[f"c{n}"]
                         item["gpt"] = True
-=======
-                sources = [{"id": f"c{n}", "network": "reddit", "author": item["author"],
-                            "reply_to_us": True, "text": item["full"],
-                            "url": _reply_permalink(thread, item["id"]),
-                            "context": f"comentario de esta persona en NUESTRO hilo de Reddit «{title}»; respóndele a lo que dice ella (si es un cierre o no aporta nada nuevo, null)"}
-                           for n, item in enumerate(plan)]
-                written = reply_queue.get_or_enqueue(sources, "reddit", log)
-                import reply_provenance as proof
-                for n, item in enumerate(plan):
-                    if f"c{n}" in written:
-                        att = proof.attach({"kind": "reply", "url": sources[n]["url"],
-                                            "text": written[f"c{n}"]}, sources[n], "reddit")
-                        if att:
-                            item.update(att)
-                            item["gpt"] = True
->>>>>>> origin/research/public-reuse-parent
             except Exception as exc:
                 log(f"[reddit] escritor no disponible ({type(exc).__name__}); no se responde")
             # 08/10 (David vio en directo respuestas sin sentido, p. ej. «¿lo recomiendas sin spoilers?» a quien puso «Audiolibros»): NUNCA se publica una frase de banco; solo lo escrito por ChatGPT con el contexto del comentario
             plan = [item for item in plan if item.get("gpt")]
-<<<<<<< HEAD
         log(f"[reddit] {thread}: {len(comments)} comentarios, {len(plan)} respuestas planeadas")
         for item in plan:
             log(f"   -> {item['author']}: «{item['snippet']}» => {item['text']}")
             if not apply:
                 continue
-=======
-        if redact:
-            log(f"[reddit] hilo propio: {len(comments)} comentarios visibles; {len(plan)} candidatos verificados")
-        else:
-            log(f"[reddit] {thread}: {len(comments)} comentarios, {len(plan)} respuestas planeadas")
-            for item in plan:
-                log(f"   -> {item['author']}: «{item['snippet']}» => {item['text']}")
-        if not apply:
-            continue
-        import circuit_breaker as cb
-        for item in plan:
-            allowed, reason = cb.write_preflight("reddit")
-            if not allowed:
-                log(f"[reddit] cortacircuitos ABIERTO: {reason}; dejar respuestas pendientes")
-                return confirmed
->>>>>>> origin/research/public-reuse-parent
             try:
                 ok = reply_in_thread(pg, thread, item, log)
             except r.BotWarningDetected:
                 raise
-<<<<<<< HEAD
             except Exception as exc:
                 log(f"   FALLO: {type(exc).__name__}: {str(exc)[:120]}")
                 ok = False
@@ -954,42 +528,12 @@ def run_replies(pg, max_replies=4, apply=False, rng=None, log=print, *, verified
                                 csv.writer(stream).writerow([datetime.date.today().isoformat(), f"u/{item['author']}", "", "seguir_usuario", "", "confirmado", "karma:autor_de_comentario"])
                         if extra:
                             r.comment(extra["url"], extra["text"])
-=======
-            except ReplyWriteUnverified:
-                log("[reddit] respuesta pendiente_verificacion; detener envíos de replies hasta conciliar")
-                return confirmed
-            except Exception as exc:
-                log(f"[reddit] fallo en respuesta: {type(exc).__name__}; no repetir tap")
-                return confirmed
-            if ok:
-                confirmed += 1
-                done.add(item["id"])
-                new = not os.path.exists(REGISTRO)
-                with open(REGISTRO, "a", newline="", encoding="utf-8") as stream:
-                    csv.writer(stream).writerow([datetime.date.today().isoformat(), thread.split("/comments/")[0].split("reddit.com/")[-1], f"{thread}#{item['id']}", "respuesta", item["text"],
-                                                 "confirmado", f"karma:respuesta:{item['kind']}"])
-                # Engagement secundario: nunca antes de tener la respuesta
-                # confirmada. Mantener barreras de integración y cuota.
-                if engaged < 4:
-                    allowed, reason = cb.write_preflight("reddit")
-                    if not allowed:
-                        log(f"[reddit] cortacircuitos ABIERTO: {reason}; parar engagement")
-                        return confirmed
-                    engaged += 1
-                    try:
-                        followed, extra = engage_user(pg, item["author"], log)
-                        if followed == "seguido":
-                            with open(REGISTRO, "a", newline="", encoding="utf-8") as stream:
-                                csv.writer(stream).writerow([datetime.date.today().isoformat(), f"u/{item['author']}", "", "seguir_usuario", "", "confirmado", "karma:autor_de_comentario"])
-                        if extra and _publish_profile_comment(extra, log=log, publish=r.comment):
->>>>>>> origin/research/public-reuse-parent
                             with open(REGISTRO, "a", newline="", encoding="utf-8") as stream:
                                 csv.writer(stream).writerow([datetime.date.today().isoformat(), "r/" + extra["url"].split("/r/")[1].split("/")[0], extra["url"], "comentario", extra["text"], "confirmado",
                                                              f"karma:perfil:{extra['intent']}"])
                     except r.BotWarningDetected:
                         raise
                     except Exception as exc:
-<<<<<<< HEAD
                         log(f"   (seguir/comentar a {item['author']} fallo: {type(exc).__name__})")
                     pg.goto(thread, wait_until="domcontentloaded", timeout=30000)
                     pg.wait_for_timeout(3000)
@@ -997,43 +541,18 @@ def run_replies(pg, max_replies=4, apply=False, rng=None, log=print, *, verified
                 with open(REGISTRO, "a", newline="", encoding="utf-8") as stream:
                     csv.writer(stream).writerow([datetime.date.today().isoformat(), thread.split("/comments/")[0].split("reddit.com/")[-1], f"{thread}#{item['id']}", "respuesta", item["text"],
                                                  "confirmado", f"karma:respuesta:{item['kind']}"])
-=======
-                        log(f"[reddit] engagement secundario falló: {type(exc).__name__}")
-                    # El perfil ha movido la navegación; restaurar el hilo.
-                    pg.goto(thread, wait_until="domcontentloaded", timeout=30000)
-                    pg.wait_for_timeout(3000)
->>>>>>> origin/research/public-reuse-parent
             sc.pause(45, 90)
     return confirmed
 
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
-<<<<<<< HEAD
     sys.stdout.reconfigure(encoding="utf-8")
-=======
-    if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(encoding="utf-8")
->>>>>>> origin/research/public-reuse-parent
     apply = "--apply" in argv
     max_comments = int(argv[argv.index("--max") + 1]) if "--max" in argv else 3
     per_sub = int(argv[argv.index("--per-sub") + 1]) if "--per-sub" in argv else 2
     daily_cap = int(argv[argv.index("--daily-cap") + 1]) if "--daily-cap" in argv else 12
     do_join = "--join" in argv
-<<<<<<< HEAD
-=======
-    replies_only = "--replies-only" in argv
-    # Validar cifras y banderas ANTES de tocar el navegador.
-    if replies_only:
-        try:
-            n = int(argv[argv.index("--max-replies") + 1]) if "--max-replies" in argv else 4
-        except (ValueError, IndexError):
-            print("[reddit] --max-replies requiere un entero de 0 a 12")
-            return 2
-        if not 0 <= n <= 12:
-            print("[reddit] --max-replies fuera de 0 a 12")
-            return 2
->>>>>>> origin/research/public-reuse-parent
     import reply_hold
     if reply_hold.held():
         print("[reddit] respuestas EN REVISION (respuestas_en_revision.flag): hoy no se comenta ni se responde")
@@ -1041,32 +560,6 @@ def main(argv=None):
     import action_ledger
     import reddit_interact as r
     import reddit_execute as ex
-<<<<<<< HEAD
-=======
-    if replies_only:
-        # Camino separado: solo hilos ya publicados por esta cuenta y
-        # recogidos por _own_thread_urls(); nunca escáner de comunidades,
-        # --join, follows ni comentarios de primer contacto.
-        with action_ledger.browser_session(wait_minutes=60):
-            if apply:
-                import circuit_breaker as cb
-                allowed, reason = cb.write_preflight("reddit")
-                if not allowed:
-                    print(f"[reddit] cortacircuitos ABIERTO: {reason}; sin respuestas")
-                    return 0
-            r.ensure_browser()
-            p, pg = r._connect()
-            try:
-                ok, msg = r._health_check(pg)
-                print(msg)
-                if not ok:
-                    return 1
-                count = run_replies(pg, max_replies=n, apply=apply, verified_only=True, redact=True)
-                print(f"[reddit] respuestas en hilos propios: {count} confirmadas")
-            finally:
-                p.stop()
-        return 0
->>>>>>> origin/research/public-reuse-parent
     names = active_subs()
     rng = random.Random()
     rng.shuffle(names)
@@ -1077,15 +570,6 @@ def main(argv=None):
         names = []
     max_comments = max(0, min(max_comments, daily_cap - total_today))
     with action_ledger.browser_session(wait_minutes=60):
-<<<<<<< HEAD
-=======
-        if apply:
-            import circuit_breaker as cb
-            allowed, reason = cb.write_preflight("reddit")
-            if not allowed:
-                print(f"[reddit] cortacircuitos ABIERTO: {reason}; sin escrituras")
-                return 0
->>>>>>> origin/research/public-reuse-parent
         r.ensure_browser()
         p, pg = r._connect()
         try:
@@ -1095,22 +579,10 @@ def main(argv=None):
                 return 1
             if do_join and apply:
                 for name in names:
-<<<<<<< HEAD
                     print(f"[reddit] r/{name}: {join_subreddit(pg, name)}")
             threads = scan_threads(pg, names)
             if "--no-replies" not in argv:
                 replies_done = run_replies(pg, max_replies=int(argv[argv.index("--max-replies") + 1]) if "--max-replies" in argv else 12, apply=apply)
-=======
-                    import circuit_breaker as cb
-                    allowed, reason = cb.write_preflight("reddit")
-                    if not allowed:
-                        print(f"[reddit] cortacircuitos ABIERTO: {reason}; sin nuevas suscripciones")
-                        return 0
-                    print(f"[reddit] r/{name}: {join_subreddit(pg, name)}")
-            threads = scan_threads(pg, names)
-            if "--no-replies" not in argv:
-                replies_done = run_replies(pg, max_replies=int(argv[argv.index("--max-replies") + 1]) if "--max-replies" in argv else 12, apply=apply, verified_only=True)
->>>>>>> origin/research/public-reuse-parent
                 print(f"[reddit] respuestas a comentarios de nuestros hilos: {replies_done}")
         finally:
             p.stop()

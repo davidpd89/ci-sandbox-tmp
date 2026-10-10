@@ -53,11 +53,7 @@ class AppendRepostTtlTests(unittest.TestCase):
                 {
                     "kind": "quote", "handle": "@otra",
                     "url": "https://x.com/otra/status/2",
-<<<<<<< HEAD
                     "own_uri": "https://x.com/autorademodiaz/status/999",
-=======
-                    "own_uri": "https://x.com/davidportodiaz/status/999",
->>>>>>> origin/research/public-reuse-parent
                     "text": "comentario", "resultado": "confirmado",
                 },
                 # like: nunca deja rastro de post propio, nunca se programa.
@@ -86,11 +82,7 @@ class AppendRepostTtlTests(unittest.TestCase):
         self.assertEqual(rows[0]["own_uri"], "")
         self.assertEqual(rows[0]["estado"], "pendiente")
         self.assertEqual(rows[1]["kind"], "quote")
-<<<<<<< HEAD
         self.assertEqual(rows[1]["own_uri"], "https://x.com/autorademodiaz/status/999")
-=======
-        self.assertEqual(rows[1]["own_uri"], "https://x.com/davidportodiaz/status/999")
->>>>>>> origin/research/public-reuse-parent
         expected_due = (datetime.date.today() + datetime.timedelta(days=21)).isoformat()
         self.assertEqual(rows[0]["borrar_el"], expected_due)
 
@@ -121,11 +113,7 @@ class CleanupTtlTests(unittest.TestCase):
                 ["2026-09-08", "repost", "@autora", "https://x.com/autora/status/1",
                  "", "2026-09-29", "pendiente"],
                 ["2026-09-08", "quote", "@otra", "https://x.com/otra/status/2",
-<<<<<<< HEAD
                  "https://x.com/autorademodiaz/status/999", "2026-09-29", "pendiente"],
-=======
-                 "https://x.com/davidportodiaz/status/999", "2026-09-29", "pendiente"],
->>>>>>> origin/research/public-reuse-parent
             ])
             unreposted, deleted = [], []
             fake_x = types.SimpleNamespace(
@@ -137,11 +125,7 @@ class CleanupTtlTests(unittest.TestCase):
                  unittest.mock.patch.object(cleanup.sc, "pause", lambda *a, **k: None):
                 rows = cleanup.run(today=datetime.date(2026, 9, 29))
             self.assertEqual(unreposted, ["https://x.com/autora/status/1"])
-<<<<<<< HEAD
             self.assertEqual(deleted, ["https://x.com/autorademodiaz/status/999"])
-=======
-            self.assertEqual(deleted, ["https://x.com/davidportodiaz/status/999"])
->>>>>>> origin/research/public-reuse-parent
             self.assertTrue(all(r["estado"] == "borrado" for r in rows))
 
     def test_dry_run_deletes_nothing(self):

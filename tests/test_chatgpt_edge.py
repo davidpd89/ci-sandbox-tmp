@@ -25,17 +25,10 @@ class BrowserTargetTests(unittest.TestCase):
 
 class EdgeLaunchTests(unittest.TestCase):
     def test_arguments_use_own_profile_and_port(self):
-<<<<<<< HEAD
         args = ce.edge_args(9224, r"C:\Temp\rrss-autorademo-chatgpt")
         self.assertIn("--remote-debugging-port=9224", args)
         self.assertIn(r"--user-data-dir=C:\Temp\rrss-autorademo-chatgpt", args)
         self.assertFalse(any("rrss-autorademo-edge" in a for a in args))      # nunca el perfil de las redes
-=======
-        args = ce.edge_args(9224, r"C:\Temp\rrss-davidporto-chatgpt")
-        self.assertIn("--remote-debugging-port=9224", args)
-        self.assertIn(r"--user-data-dir=C:\Temp\rrss-davidporto-chatgpt", args)
-        self.assertFalse(any("rrss-davidporto-edge" in a for a in args))      # nunca el perfil de las redes
->>>>>>> origin/research/public-reuse-parent
         self.assertEqual(args[-1], "https://chatgpt.com/")
 
     def test_start_does_nothing_if_already_up(self):

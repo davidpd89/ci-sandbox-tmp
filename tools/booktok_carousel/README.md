@@ -12,13 +12,8 @@ El objetivo es crear carruseles 1080x1350 sobre libros verificables: portadas re
 
 - fondo fotografico suave, visible y variado; nunca negro plano;
 - portadas oficiales completas, sin deformar ni recortar titulo/autor;
-<<<<<<< HEAD
 - marca superior izquierda: `AUTORA DEMO`;
 - esquina superior derecha: contador `01/06`, `02/06`, etc. y debajo `autorademodiaz.com`;
-=======
-- marca superior izquierda: `DAVID PORTO DIAZ`;
-- esquina superior derecha: contador `01/06`, `02/06`, etc. y debajo `davidportodiaz.com`;
->>>>>>> origin/research/public-reuse-parent
 - abajo izquierda: `DESLIZA ->` salvo la ultima, donde puede cambiar a `GUARDA`;
 - abajo derecha: iconos/acciones de like, comenta, guarda y envia;
 - textos breves, legibles en movil, sin bloques tipo PowerPoint;
@@ -108,11 +103,7 @@ Antes de dar un post por cerrado:
 
 - revisar `contact_sheet.jpg` completo;
 - confirmar que no se repite la misma foto en todas las slides;
-<<<<<<< HEAD
 - confirmar `autorademodiaz.com` bajo el contador;
-=======
-- confirmar `davidportodiaz.com` bajo el contador;
->>>>>>> origin/research/public-reuse-parent
 - confirmar botones inferiores e indicador `DESLIZA ->`;
 - comprobar que cada portada corresponde exactamente al libro citado;
 - leer caption y hashtags;

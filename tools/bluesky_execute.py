@@ -92,13 +92,6 @@ def _drop_stacked_actions(plan, *, key="url"):
     )
 
 
-<<<<<<< HEAD
-=======
-class ProvenanceTargetMismatch(ValueError):
-    """Prueba válida en plan, pero destino real distinto: omitir solo esta acción."""
-
-
->>>>>>> origin/research/public-reuse-parent
 _CONTENT_KINDS = {"like", "repost", "reply", "quote"}
 _TEXT_KINDS = {"reply", "quote"}
 _RELATION_KINDS = {"follow", "unfollow"}
@@ -124,14 +117,6 @@ def _validated_plan_item(item, index):
         out["url"] = url.strip()
         # Solo lectura/resolución: normaliza el objetivo antes de cualquier escritura.
         out["_target_uri"] = b._url_to_uri(out["url"])
-<<<<<<< HEAD
-=======
-        # La URL es el objetivo REAL del ejecutor. La prueba no puede
-        # certificar una AT-URI distinta de la que resolverá la escritura.
-        if kind in _TEXT_KINDS and out.get("gpt_proof") and out.get("post_uri"):
-            if out["post_uri"] != out["_target_uri"]:
-                raise ProvenanceTargetMismatch("PROCEDENCIA_DESTINO_DISTINTO")
->>>>>>> origin/research/public-reuse-parent
 
     if kind in _TEXT_KINDS:
         text = out.get("text")
@@ -167,12 +152,6 @@ def _preflight_plan(plan):
     for i, item in enumerate(plan):
         try:
             validated.append(_validated_plan_item(item, i + 1))
-<<<<<<< HEAD
-=======
-        except ProvenanceTargetMismatch:
-            print(f"OMITIDO: elemento {i + 1}: PROCEDENCIA_DESTINO_DISTINTO; resto del lote conservado")
-            continue
->>>>>>> origin/research/public-reuse-parent
         except RuntimeError as exc:
             # 05/10: UN handle que ya no resuelve (cuenta borrada o renombrada) tumbaba el lote ENTERO ("Unable to resolve handle") y la ronda
             # principal de la franja de las 12:45 no ejecuto nada. Un objetivo inexistente se omite y el resto sigue; los errores de plan
@@ -210,15 +189,6 @@ def _preflight_plan(plan):
             content_seen[key] = kind
 
     for item in validated:
-<<<<<<< HEAD
-=======
-        # La identidad del post ya se verificó ANTES de escribir. En las
-        # replies conservamos un destino privado, sin cambiar las claves
-        # URL históricas del ledger: nunca volver a resolver un handle al
-        # publicar, porque podría haberse reasignado tras el preflight.
-        if item["kind"] == "reply":
-            item["_resolved_reply_uri"] = item["_target_uri"]
->>>>>>> origin/research/public-reuse-parent
         item.pop("_target_uri", None)
     return validated
 
@@ -274,19 +244,7 @@ def run_plan(plan, ledger=None, on_result=None):
             on_result(result)
 
     results = ec.ResultList(_persist)
-<<<<<<< HEAD
     for i, item in enumerate(plan):
-=======
-    consecutive_5xx = 0
-    for i, item in enumerate(plan):
-        # Una ronda puede durar horas: revalidar la cuarentena antes de CADA
-        # acción, incluso si el lanzador aprobó el lote al comienzo.
-        import circuit_breaker as _cb
-        _write_ok, _hold_reason = _cb.write_preflight("bluesky")
-        if not _write_ok:
-            print(f"[bluesky] cortacircuitos ABIERTO: {_hold_reason}; detener el lote")
-            break
->>>>>>> origin/research/public-reuse-parent
         if i % PREFETCH_WINDOW == 0:
             _prefetch_window(plan[i:i + PREFETCH_WINDOW])
         kind = item["kind"]
@@ -356,18 +314,10 @@ def run_plan(plan, ledger=None, on_result=None):
                     raise RuntimeError(f"{kind} devolvió estado inesperado: {outcome!r}")
                 item = {**item, "own_uri": own_uri}
             elif kind == "reply":
-<<<<<<< HEAD
                 b.reply_to(item["url"], item["text"])
             else:
                 raise ValueError(f"kind desconocido: {kind}")
             results.append({**item, "resultado": "confirmado"})
-=======
-                b.reply_to(item.get("_resolved_reply_uri") or item["url"], item["text"])
-            else:
-                raise ValueError(f"kind desconocido: {kind}")
-            results.append({**item, "resultado": "confirmado"})
-            consecutive_5xx = 0
->>>>>>> origin/research/public-reuse-parent
             done_times.append(__import__("time").time())
         except RateLimitExceeded as e:
             print(f"PARADA RATE LIMIT: {e}")
@@ -385,30 +335,8 @@ def run_plan(plan, ledger=None, on_result=None):
             print(f"SALTADO: {e}")
             results.append({**item, "resultado": "saltado_ya_comentado"})
         except Exception as e:
-<<<<<<< HEAD
             print(f"FALLO: {type(e).__name__}: {e}")
             results.append({**item, "resultado": f"fallo:{e}"})
-=======
-            if kind == "reply" and isinstance(e, ec.WriteOutcomeUnknown):
-                print("RESULTADO INCIERTO: respuesta sin ACK; verificar remotamente antes de repetir")
-                if ec.status_code_of(e) in ec.TRANSIENT_HTTP:
-                    consecutive_5xx += 1
-                    if consecutive_5xx >= 3:
-                        # No convertir una respuesta enviada sin ACK en
-                        # fallo reintentable; tampoco continuar enviando
-                        # decenas de replies si el PDS devuelve 5xx.
-                        results.append({**item, "resultado": "parada:incierto_5xx_servidor"})
-                        for pending in plan[i + 1:]:
-                            results.append({**pending, "resultado": "no_intentado"})
-                        break
-                    results.append({**item, "resultado": "incierto:transporte_sin_ack"})
-                    _pause(6 * consecutive_5xx, 20 * consecutive_5xx)
-                    continue
-                results.append({**item, "resultado": "incierto:transporte_sin_ack"})
-            else:
-                print(f"FALLO: {type(e).__name__}: {e}")
-                results.append({**item, "resultado": f"fallo:{e}"})
->>>>>>> origin/research/public-reuse-parent
 
         if i < len(plan) - 1:
             _pause()

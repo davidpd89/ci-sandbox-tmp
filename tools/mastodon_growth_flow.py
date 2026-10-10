@@ -55,11 +55,6 @@ def _report(result):
     opportunities["follow_pool"] = len(result.get("follow_pool") or [])
     return {
         "run_id": result.get("run_id"),
-<<<<<<< HEAD
-=======
-        "discovery_attribution": __import__("discovery_attribution").safe_state_summary(
-            "mastodon", result, hmac_key=os.environ.get("RRSS_DISCOVERY_HMAC_KEY", "").encode("utf-8")),
->>>>>>> origin/research/public-reuse-parent
         "coverage_complete": not bool(coverage.get("missing")),
         "coverage_missing": coverage.get("missing") or [],
         "budget": result.get("budget") or {},

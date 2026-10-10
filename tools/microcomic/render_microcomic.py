@@ -29,13 +29,8 @@ EDGE_EXE = Path("C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe")
 CHROME_EXE = Path("C:/Program Files/Google/Chrome/Application/chrome.exe")
 FONT_FAMILY = "IG08_Inter"
 INTER_FONT = ROOT / "fonts" / "Inter-4.1" / "InterVariable.ttf"
-<<<<<<< HEAD
 BRAND = "AUTORA DEMO DÍAZ"
 WEB = "autorademodiaz.com"
-=======
-BRAND = "DAVID PORTO DÍAZ"
-WEB = "davidportodiaz.com"
->>>>>>> origin/research/public-reuse-parent
 
 
 def font_face_css() -> str:

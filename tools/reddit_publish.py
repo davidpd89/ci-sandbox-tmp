@@ -27,11 +27,7 @@ BANK = os.path.join(ROOT, "00_OPERATIVO", "reddit_preguntas.json")
 LOG = os.path.join(ROOT, "SISTEMA_DIARIO_REDDIT", "preguntas_publicadas.csv")
 BLOCKED = os.path.join(ROOT, "SISTEMA_DIARIO_REDDIT", "cache", "comunidades_en_observacion.json")      # {sub: motivo}: una pregunta filtrada/retirada pone la comunidad en observacion
 STATES = os.path.join(ROOT, "00_OPERATIVO", "reddit_comunidades.json")      # estado por comunidad (DISCOVERED/COMMENTING/POST_ELIGIBLE...); solo se publica en POST_ELIGIBLE
-<<<<<<< HEAD
 MY_USER = "AutoraDemoEscritor"
-=======
-MY_USER = "DavidPortoEscritor"
->>>>>>> origin/research/public-reuse-parent
 REGISTRO = os.path.join(ROOT, "SISTEMA_DIARIO_REDDIT", "registro_interacciones.csv")
 CDP_URL = "http://127.0.0.1:9223"
 MAX_PER_DAY, MAX_PER_WEEK, SUB_COOLDOWN_DAYS = 2, 8, 7      # 07/10: David pide ir publicando tambien para subir karma (antes 1/dia y 4/semana)
@@ -232,11 +228,7 @@ def _validate(item):
     title = item["title"].strip()
     if not title or len(title) > TITLE_MAX:
         raise RedditPublishError("titulo vacio o demasiado largo")
-<<<<<<< HEAD
     if re.search(r"https?://|www\.|autorademo", f"{title} {item.get('body', '')}", re.I):
-=======
-    if re.search(r"https?://|www\.|davidporto", f"{title} {item.get('body', '')}", re.I):
->>>>>>> origin/research/public-reuse-parent
         raise RedditPublishError("las preguntas no llevan enlaces ni mencionan a David")
     x._check_spanish_orthography(title)
     if item.get("body"):
@@ -404,14 +396,6 @@ def main(argv=None):
             # Una caída después de pulsar Publicar es ambigua. El callback
             # se invoca justo antes del clic (ya validado el formulario).
             if apply:
-<<<<<<< HEAD
-=======
-                import circuit_breaker as cb
-                allowed, reason = cb.write_preflight("reddit")
-                if not allowed:
-                    print(f"[reddit] NO se publica: cortacircuitos ABIERTO ({reason})")
-                    return 0
->>>>>>> origin/research/public-reuse-parent
                 url, removed = publish_post(
                     item, apply=True,
                     before_submit=lambda: _mark_intent(item["id"], "uncertain"))

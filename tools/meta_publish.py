@@ -106,11 +106,7 @@ def _wait_container(token, container_id, tries=30, sleep=time.sleep):
     raise RuntimeError("el contenedor de Instagram no termino de procesarse a tiempo")
 
 
-<<<<<<< HEAD
 def publish_instagram(ig_token, user_id, caption, image_urls, alts=()):
-=======
-def publish_instagram(ig_token, user_id, caption, image_urls, alts=(), *, before_publish=None):
->>>>>>> origin/research/public-reuse-parent
     """Publica una imagen o un carrusel (URLs publicas JPEG). Devuelve el id del medio."""
     caption = mc.check_text(caption, IG_CAPTION_MAX)
     if not image_urls:
@@ -131,11 +127,6 @@ def publish_instagram(ig_token, user_id, caption, image_urls, alts=(), *, before
             children.append(child)
         container = mc.graph_post(IG_BASE, f"{user_id}/media", ig_token, media_type="CAROUSEL", children=",".join(children), caption=caption)["id"]
     _wait_container(ig_token, container)
-<<<<<<< HEAD
-=======
-    if before_publish is not None:
-        before_publish(container)
->>>>>>> origin/research/public-reuse-parent
     return mc.graph_post(IG_BASE, f"{user_id}/media_publish", ig_token, creation_id=container)["id"]
 
 

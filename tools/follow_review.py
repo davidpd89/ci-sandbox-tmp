@@ -20,32 +20,18 @@ import growth_attribution as ga
 ROOT = ga.ROOT
 
 
-<<<<<<< HEAD
 def review(rows, followers, today, days=30):
-=======
-def review(rows, followers, today, days=30, *, network=None):
->>>>>>> origin/research/public-reuse-parent
     """Devuelve lista de dicts {account, since, age_days, actions} de follows
     confirmados con >= `days` dias que NO estan en `followers`."""
     followed = {}
     actions = defaultdict(set)
     for row in rows:
-<<<<<<< HEAD
         if row.get("resultado") not in ("confirmado", "publicado"):
-=======
-        kind = row.get("tipo", "")
-        outcome = row.get("resultado")
-        if outcome not in ("confirmado", "publicado") and not (
-                kind == "unfollow" and outcome == "saltado_ya_no_seguido"):
->>>>>>> origin/research/public-reuse-parent
             continue
         account = ga.norm(row.get("cuenta"))
         if not account or account.startswith("https"):
             continue
-<<<<<<< HEAD
         kind = row.get("tipo", "")
-=======
->>>>>>> origin/research/public-reuse-parent
         parts = set(kind.split("+"))
         if parts & ga.FOLLOW_KINDS:
             try:
@@ -54,27 +40,14 @@ def review(rows, followers, today, days=30, *, network=None):
                 continue
             if account not in followed or when < followed[account]:
                 followed[account] = when
-<<<<<<< HEAD
         actions[account] |= {part for part in parts if part not in ga.FOLLOW_KINDS and part}
         if kind == "unfollow":
             followed.pop(account, None)
-=======
-        if kind == "unfollow":
-            followed.pop(account, None)
-            actions.pop(account, None)  # una nueva relacion no hereda conversaciones antiguas
-            continue
-        if account in followed:
-            actions[account] |= {part for part in parts if part not in ga.FOLLOW_KINDS and part}
->>>>>>> origin/research/public-reuse-parent
     followers = {ga.norm(f) for f in followers}
     out = []
     for account, since in followed.items():
         age = (today - since).days
-<<<<<<< HEAD
         if age < days or any(ga._same(account, f) for f in followers):
-=======
-        if age < days or any((account == f if network == "mastodon" else ga._same(account, f)) for f in followers):
->>>>>>> origin/research/public-reuse-parent
             continue
         out.append({"account": account, "since": since.isoformat(), "age_days": age,
                     "actions": ga.combo(actions[account])})
@@ -91,11 +64,7 @@ def main(argv=None):
     net = argv[0]
     rows = ga.load_registro(os.path.join(ROOT, f"SISTEMA_DIARIO_{net.upper()}", "registro_interacciones.csv"))
     followers = ga.bluesky_followers() if net == "bluesky" else ga.mastodon_followers()
-<<<<<<< HEAD
     result = review(rows, followers, datetime.date.today(), days)
-=======
-    result = review(rows, followers, datetime.date.today(), days, network=net)
->>>>>>> origin/research/public-reuse-parent
     print(f"{net}: {len(result)} follows de >= {days} dias sin devolver ({len(followers)} seguidores reales)")
     for item in result[:40]:
         print(f"  {item['since']} ({item['age_days']}d) {item['account']:<40} {item['actions']}")

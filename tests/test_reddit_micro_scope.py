@@ -25,11 +25,7 @@ class MicroCommentTests(unittest.TestCase):
     def test_rejects_long_justified_questions_links_and_multiline(self):
         code = ("import reddit_interact as r\n"
                 "bad = ['Escribir porque me ayuda a entender mejor el mundo que me rodea', 'Escribir, ¿y tú?',\n"
-<<<<<<< HEAD
                 "       'Mira autorademodiaz.com', 'Uno' + chr(10) + 'dos', '', 'x' * 70, 'a b c d e f g h i']\n"
-=======
-                "       'Mira davidportodiaz.com', 'Uno' + chr(10) + 'dos', '', 'x' * 70, 'a b c d e f g h i']\n"
->>>>>>> origin/research/public-reuse-parent
                 "for t in bad:\n"
                 "    try:\n        r._check_micro_comment(t)\n        print('PASO', repr(t))\n"
                 "    except ValueError:\n        pass\nprint('FIN')\n")

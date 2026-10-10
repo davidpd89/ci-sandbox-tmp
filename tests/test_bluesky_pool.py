@@ -1,8 +1,4 @@
 import os
-<<<<<<< HEAD
-=======
-import sqlite3
->>>>>>> origin/research/public-reuse-parent
 import sys
 import tempfile
 import unittest
@@ -169,57 +165,11 @@ class MiningTests(unittest.TestCase):
                 (profile("sinbio.bsky.social", None), "timeline")]
         rows[1][0]["description"] = None
         added = pool.record_scan_candidates(self.db, rows, TODAY)
-<<<<<<< HEAD
         self.assertEqual(added, 1)                                      # sin descripcion hidratada no se guarda
         row = self.db.execute("SELECT seeds_count, first_source FROM accounts WHERE handle='busq.bsky.social'").fetchone()
         self.assertEqual(row, (0, "scan:post_search"))
         self.assertIn("busq.bsky.social", {r["handle"] for r in pool.top_candidates(self.db, 10, today=TODAY, mark=False)})   # bio del nicho en espanol: aprovechable
 
-=======
-        self.assertEqual(added, 2)  # DID+handle bastan: bio ausente se podrá enriquecer
-        row = self.db.execute("SELECT seeds_count, first_source FROM accounts WHERE handle='busq.bsky.social'").fetchone()
-        self.assertEqual(row, (0, "scan:post_search"))
-        missing = self.db.execute(
-            "SELECT did, enriched, bio FROM accounts WHERE handle='sinbio.bsky.social'"
-        ).fetchone()
-        self.assertEqual(missing, ("did:plc:sinbio", 0, ""))
-        self.assertIn("busq.bsky.social", {r["handle"] for r in pool.top_candidates(self.db, 10, today=TODAY, mark=False)})   # bio del nicho en espanol: aprovechable
-
-    def test_malformed_partial_profiles_are_safe_and_never_count_as_zero(self):
-        invalid = [
-            {"did": 123, "handle": "bad.bsky.social"},
-            {"did": "did:plc:bad", "handle": ["bad.bsky.social"]},
-            {"did": "not-did", "handle": "bad.bsky.social"},
-            {"did": "did:plc:bad", "handle": "bad/unsafe"},
-            {"did": "did:plc:", "handle": "valid.bsky.social"},
-            {"did": "did:plc:bad", "handle": "bad with spaces.com"},
-            {"did": "did:plc:bad", "handle": "bad_name.bsky.social"},
-        ]
-        self.assertEqual(pool.record_scan_candidates(
-            self.db, [(profile, "scan") for profile in invalid], TODAY), 0)
-        candidate = profile("partial.bsky.social", None,
-                            followersCount=True, followsCount="invalid",
-                            postsCount=-1, labels="bad",
-                            displayName={"unexpected": "value"})
-        candidate["description"] = {"invalid": "shape"}
-        self.assertEqual(pool.record_scan_candidates(self.db,
-                         [(candidate, "post_search")], TODAY), 1)
-        self.assertEqual(self.db.execute(
-            "SELECT followers, follows, posts, bio, enriched FROM accounts "
-            "WHERE did='did:plc:partial'"
-        ).fetchone(), (None, None, None, "", 0))
-
-    def test_valid_did_web_and_ascii_handle_are_accepted(self):
-        value = {"did": "did:web:reader.example.org",
-                 "handle": "reader.example.org",
-                 "description": "Lectora de fantasía"}
-        self.assertEqual(pool.record_scan_candidates(self.db,
-                         [(value, "post_search")], TODAY), 1)
-        self.assertEqual(self.db.execute(
-            "SELECT handle FROM accounts WHERE did='did:web:reader.example.org'"
-        ).fetchone(), ("reader.example.org",))
-
->>>>>>> origin/research/public-reuse-parent
     def test_first_source_is_immutable_and_touch_records_first_scan_source(self):
         fan = profile("x.bsky.social", "Lectora de fantasía y novela")
         pool.upsert(self.db, fan, "ed1.bsky.social", "followers", TODAY)
@@ -268,92 +218,6 @@ class OfferTests(unittest.TestCase):
         rows = pool.top_candidates(self.db, 10, today=TODAY, mark=False, exclude={"u0.bsky.social"})
         self.assertNotIn("u0.bsky.social", {row["handle"] for row in rows})
 
-<<<<<<< HEAD
-=======
-
-    def test_mark_offered_by_did_is_idempotent_even_if_handle_changes(self):
-        before = profile("lector.bsky.social", "Lectora de fantasía y novela")
-        pool.upsert(self.db, before, "semilla.bsky.social", "followers", TODAY)
-        self.db.commit()
-        did = before["did"]
-        self.assertEqual(pool.mark_offered(self.db, [did, did], today=TODAY), 1)
-        self.assertEqual(pool.mark_offered(self.db, [did], today=TODAY), 0)
-        pool.upsert(self.db, dict(before, handle="lectora.example"), "otra.bsky.social",
-                    "followers", TODAY)
-        self.db.commit()
-        counts = self.db.execute(
-            "SELECT COUNT(*), MAX(offered_count) FROM accounts WHERE did=?", (did,)
-        ).fetchone()
-        self.assertEqual(counts, (1, 1))
-        self.assertEqual(pool.mark_offered(self.db, [did], today="2026-10-08"), 1)
-        self.assertEqual(self.db.execute(
-            "SELECT offered_count FROM accounts WHERE did=?", (did,)
-        ).fetchone()[0], 2)
-
-    def test_mark_offered_write_failure_rolls_back_entire_batch(self):
-        # Si SQLite aborta a mitad de una tanda, el primer DID no debe
-        # quedar marcado sin que el resto pueda conservar su estado.
-        self.db.execute("""
-            CREATE TRIGGER reject_second_offer BEFORE UPDATE OF offered_at ON accounts
-            WHEN NEW.did = 'did:plc:u1'
-            BEGIN SELECT RAISE(ABORT, 'synthetic disk rejection'); END
-        """)
-        self.db.commit()
-        with self.assertRaises(sqlite3.IntegrityError):
-            pool.mark_offered(self.db, ["did:plc:u0", "did:plc:u1"], today=TODAY)
-        counts = self.db.execute(
-            "SELECT offered_at, offered_count FROM accounts WHERE did='did:plc:u0'"
-        ).fetchone()
-        self.assertEqual(counts, (None, 0))
-
-    def test_mark_offered_inside_caller_transaction_can_roll_back(self):
-        did = "did:plc:u0"
-        self.db.execute("BEGIN IMMEDIATE")
-        self.assertEqual(pool.mark_offered(self.db, [did], today=TODAY, commit=False), 1)
-        self.assertTrue(self.db.in_transaction)
-        self.db.rollback()
-        self.assertEqual(self.db.execute(
-            "SELECT offered_at, offered_count FROM accounts WHERE did=?", (did,)
-        ).fetchone(), (None, 0))
-
-    def test_mark_offered_commit_false_rejects_unprotected_connection(self):
-        self.assertFalse(self.db.in_transaction)
-        with self.assertRaisesRegex(RuntimeError, "transacción activa"):
-            pool.mark_offered(self.db, ["did:plc:u0"], today=TODAY, commit=False)
-        self.assertEqual(self.db.execute(
-            "SELECT offered_at FROM accounts WHERE did='did:plc:u0'"
-        ).fetchone(), (None,))
-
-    def test_mark_true_cannot_select_stale_rows_during_other_claim(self):
-        # Consumidor legacy (mark=True) no debe devolver filas ya reclamadas
-        # por otro escáner con BEGIN IMMEDIATE, aunque pueda leer su snapshot.
-        other = sqlite3.connect(os.path.join(self.tmp.name, "pool.sqlite3"),
-                                timeout=0.01)
-        try:
-            self.db.execute("BEGIN IMMEDIATE")
-            with self.assertRaises(sqlite3.OperationalError):
-                pool.top_candidates(other, 10, today=TODAY, mark=True)
-            selected = pool.top_candidates(self.db, 10, today=TODAY, mark=False)
-            pool.mark_offered(self.db, (row["did"] for row in selected),
-                              today=TODAY, commit=False)
-            self.db.commit()
-            self.assertEqual(pool.top_candidates(other, 10, today=TODAY,
-                                                  mark=True), [])
-        finally:
-            if self.db.in_transaction:
-                self.db.rollback()
-            other.close()
-
-    def test_selection_without_mark_does_not_consume_reserve(self):
-        first = pool.top_candidates(self.db, 10, today=TODAY, mark=False)
-        second = pool.top_candidates(self.db, 10, today=TODAY, mark=False)
-        self.assertEqual([r["did"] for r in first], [r["did"] for r in second])
-        self.assertGreater(len(first), 0)
-        self.assertEqual(pool.mark_offered(self.db, [r["did"] for r in first], today=TODAY),
-                         len(first))
-        self.assertFalse(pool.top_candidates(self.db, 10, today=TODAY, mark=False))
-
->>>>>>> origin/research/public-reuse-parent
     def test_stats_report_available_accounts(self):
         info = pool.stats(self.db, today=TODAY)
         self.assertEqual(info["accounts"], 4)

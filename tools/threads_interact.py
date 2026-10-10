@@ -73,17 +73,10 @@ CDP_URL = "http://127.0.0.1:9223"
 EDGE_EXE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 # Cambiado el 17/09: mismo motivo que x_interact.py - el perfil real por
 # defecto dejo de aceptar --remote-debugging-port (visto en vivo). Perfil
-<<<<<<< HEAD
 # dedicado solo para esta automatizacion; David loguea @autorademodiaz en
 # Threads ahi UNA vez y la sesion se queda guardada.
 EDGE_USER_DATA = r"C:\Temp\rrss-autorademo-edge"
 MY_HANDLE = "autorademodiaz"
-=======
-# dedicado solo para esta automatizacion; David loguea @davidportodiaz en
-# Threads ahi UNA vez y la sesion se queda guardada.
-EDGE_USER_DATA = r"C:\Temp\rrss-davidporto-edge"
-MY_HANDLE = "davidportodiaz"
->>>>>>> origin/research/public-reuse-parent
 
 # Mismo seguro que x_interact.py (añadido alli el 17/09 a peticion de
 # David) - si Threads muestra cualquier aviso real de bot/actividad
@@ -125,11 +118,7 @@ class WrongAccountActive(RuntimeError):
 def _assert_active_account(pg):
     """Seguro real anadido el 21/09 tras un aviso de David: la cuenta
     ACTIVA de la sesion (la que ejecuta follow/like/post) puede no ser
-<<<<<<< HEAD
     autorademodiaz aunque la sesion este logueada - Threads/Instagram
-=======
-    davidportodiaz aunque la sesion este logueada - Threads/Instagram
->>>>>>> origin/research/public-reuse-parent
     permiten varias cuentas a la vez con un selector de cuenta activa.
     Se llama antes de CUALQUIER accion de escritura (follow/like/post),
     reutilizando la pagina ya cargada - no anade una navegacion extra."""
@@ -138,18 +127,13 @@ def _assert_active_account(pg):
         raise WrongAccountActive(
             f"CUENTA ACTIVA INCORRECTA: esta sesion tiene activa @{active}, "
             f"no @{MY_HANDLE}. Accion cancelada antes de ejecutarse. "
-<<<<<<< HEAD
             "Cambiar de cuenta en Threads (perfil Autora Demo Escritor) "
-=======
-            "Cambiar de cuenta en Threads (perfil David Porto Diaz Escritor) "
->>>>>>> origin/research/public-reuse-parent
             "y volver a intentar."
         )
 
 
 # 06/10: un `evaluate` de Playwright sobre un Edge colgado no tiene tiempo limite y dejo una prueba parada 19 minutos (y el bloqueo del navegador con ella). Vigilante: si no
 # hay actividad (`beat()`) en `limit` segundos, el proceso termina; el registro es accion a accion y el bloqueo de archivo caduca con el proceso, asi que no se pierde nada.
-<<<<<<< HEAD
 _WATCH = {"last": time.time(), "started": False}
 
 
@@ -174,20 +158,6 @@ def start_watchdog(limit=300, interval=15):
 
     beat()
     threading.Thread(target=loop, daemon=True, name="threads-watchdog").start()
-=======
-import browser_common as bc
-
-_WATCHDOG = bc.Watchdog("threads")
-
-
-def beat():
-    _WATCHDOG.beat()
-
-
-def start_watchdog(limit=300, interval=15):
-    _WATCHDOG.start(limit=limit, interval=interval)
-
->>>>>>> origin/research/public-reuse-parent
 
 
 def _check_bot_warning(pg):
@@ -283,19 +253,11 @@ def session():
     @contextlib.contextmanager
     def manager():
         p = sync_playwright().start()
-<<<<<<< HEAD
         try:
             browser = p.chromium.connect_over_cdp(CDP_URL)
             ctx = browser.contexts[0]
             pages = [pg for pg in ctx.pages if urlsplit(pg.url).hostname in {"threads.com", "www.threads.com", "threads.net", "www.threads.net"}]
             pg = pages[-1] if pages else ctx.new_page()
-=======
-        pg = None
-        try:
-            import browser_common as bc
-            browser = bc.connect_cdp(p.chromium, CDP_URL)
-            pg = bc.new_owned_page(browser)
->>>>>>> origin/research/public-reuse-parent
             pg.set_default_timeout(15000)             # 06/10: ninguna llamada espera los 30 s por defecto (un perfil que no responde tardaba minutos entre botones)
             pg.set_default_navigation_timeout(30000)
             _SHARED["pg"] = pg
@@ -303,20 +265,7 @@ def session():
             yield pg
         finally:
             _SHARED["pg"] = None
-<<<<<<< HEAD
             p.stop()
-=======
-            try:
-                if pg is not None:
-                    pg.close()
-            except Exception:
-                pass
-            finally:
-                try:
-                    _WATCHDOG.stop()
-                finally:
-                    p.stop()
->>>>>>> origin/research/public-reuse-parent
 
     return manager()
 
@@ -325,7 +274,6 @@ def _connect():
     if _SHARED["pg"] is not None:
         return _KeepOpen(), _SHARED["pg"]
     p = sync_playwright().start()
-<<<<<<< HEAD
     browser = p.chromium.connect_over_cdp(CDP_URL)
     ctx = browser.contexts[0]
     try:
@@ -338,16 +286,6 @@ def _connect():
     }]
     pg = pages[-1] if pages else ctx.new_page()
     return p, pg
-=======
-    try:
-        import browser_common as bc
-        browser = bc.connect_cdp(p.chromium, CDP_URL)
-        pg = bc.new_owned_page(browser)
-        return bc.OwnedPlaywright(p, pg), pg
-    except Exception:
-        p.stop()
-        raise
->>>>>>> origin/research/public-reuse-parent
 
 
 def _active_profile_handle(pg):
@@ -397,11 +335,7 @@ def _health_check(pg):
 
 def health():
     """Comprueba que la sesion sigue logueada Y que la cuenta ACTIVA es
-<<<<<<< HEAD
     autorademodiaz - no solo que exista una sesion cualquiera. Mismo
-=======
-    davidportodiaz - no solo que exista una sesion cualquiera. Mismo
->>>>>>> origin/research/public-reuse-parent
     reintento que x_interact.py (evita el falso negativo por hidratacion
     lenta visto en vivo en X el 17/09)."""
     p, pg = _connect()

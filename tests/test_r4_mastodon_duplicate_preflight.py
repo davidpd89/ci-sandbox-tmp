@@ -4,10 +4,6 @@ Fixtures sintéticos y comprobadores falsos: ni API ni datos de ejecución.
 El preflight sigue rechazando destino inseguro, identidad ausente y tipos inválidos.
 """
 import contextlib
-<<<<<<< HEAD
-=======
-import datetime as dt
->>>>>>> origin/research/public-reuse-parent
 import io
 import pathlib
 import sys
@@ -65,16 +61,9 @@ class MastodonPreflightIsolationTests(unittest.TestCase):
             ex._preflight_plan([{"kind": "follow", "handle": None}])
 
     def test_distinct_replies_without_history_duplicate_are_preserved(self):
-<<<<<<< HEAD
         actions = [
             {"kind": "reply", "status_id": "1001", "text": "Una respuesta que sí aporta algo"},
             {"kind": "reply", "status_id": "1002", "text": "Otra respuesta sobre el segundo tomo"},
-=======
-        fresh = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=2)).isoformat()
-        actions = [
-            {"kind": "reply", "status_id": "1001", "post_created_at": fresh, "text": "Una respuesta que sí aporta algo"},
-            {"kind": "reply", "status_id": "1002", "post_created_at": fresh, "text": "Otra respuesta sobre el segundo tomo"},
->>>>>>> origin/research/public-reuse-parent
         ]
         with mock.patch.object(ex.dup, "check", return_value=[]):
             with mock.patch.object(ex.m, "_check_length"):

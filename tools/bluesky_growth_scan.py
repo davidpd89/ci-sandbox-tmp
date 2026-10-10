@@ -255,12 +255,7 @@ def _post_url(post):
 
 def _created_at(post):
     record = (post or {}).get("record") or {}
-<<<<<<< HEAD
     return record.get("createdAt") or (post or {}).get("indexedAt") or ""
-=======
-    # indexedAt mide cuándo se indexó, no certifica la creación del destino.
-    return record.get("createdAt") or ""
->>>>>>> origin/research/public-reuse-parent
 
 
 SPANISH_FUNCTION_WORDS = frozenset(
@@ -449,32 +444,11 @@ class Collector:
         if not isinstance(actor, dict):
             return False
         handle = actor.get("handle")
-<<<<<<< HEAD
         item = self._candidate(handle)
         if item is None:
             return False
         description = actor.get("description") or ""
         if sc.is_political(description) or _spammy(description):
-=======
-        description = actor.get("description")
-        if (not isinstance(handle, str)
-                or (description is not None and not isinstance(description, str))
-                or (actor.get("did") is not None and not isinstance(actor.get("did"), str))):
-            return False
-        description = description or ""
-        if sc.is_political(description) or _spammy(description):
-            return False
-        item = self._candidate(handle)
-        if item is None:
-            return False
-        # Dos DIDs diferentes pueden usar el mismo handle en instantes
-        # distintos. Nunca mezclar su perfil, fuentes o posts por ese alias.
-        existing_did = (item.get("profile") or {}).get("did")
-        incoming_did = actor.get("did")
-        if (isinstance(existing_did, str) and isinstance(incoming_did, str)
-                and existing_did and incoming_did and existing_did != incoming_did):
-            self.issues.append("BLUESKY_CONFLICTO_IDENTIDAD_DID")
->>>>>>> origin/research/public-reuse-parent
             return False
         item["sources"].add(source)
         _note_source(item, source)
@@ -497,25 +471,10 @@ class Collector:
     def add_post(self, post, source, *, key=""):
         if not isinstance(post, dict):
             return False
-<<<<<<< HEAD
         author = post.get("author") or {}
         text = ((post.get("record") or {}).get("text") or "").strip()
         handle = author.get("handle")
         uri = post.get("uri")
-=======
-        author = post.get("author")
-        record = post.get("record")
-        if not isinstance(author, dict) or not isinstance(record, dict):
-            return False
-        text = record.get("text")
-        if not isinstance(text, str):
-            return False
-        text = text.strip()
-        handle = author.get("handle")
-        uri = post.get("uri")
-        if not isinstance(handle, str) or not isinstance(uri, str):
-            return False
->>>>>>> origin/research/public-reuse-parent
         url = _post_url(post)
         if not handle or not uri or not url or not text:
             return False
@@ -523,18 +482,10 @@ class Collector:
             return False
         if sc.is_political(text) or _spammy(text):
             return False
-<<<<<<< HEAD
         item = self._candidate(handle)
         if item is None:
             return False
         self.add_actor(author, source, key=key)
-=======
-        if not self.add_actor(author, source, key=key):
-            return False
-        item = self._candidate(handle)
-        if item is None:
-            return False
->>>>>>> origin/research/public-reuse-parent
         item["sources"].add(source)
         _note_source(item, source)
         if key:
@@ -1808,50 +1759,13 @@ def _consume_pool(c):
     except Exception as exc:
         c.issues.append(f"pool: {type(exc).__name__}: {exc}")
         return
-<<<<<<< HEAD
     try:
         rows = pool.top_candidates(db, limit, today=c.today.isoformat(), exclude=set(c.known) | set(c.discarded) | {c.own_handle})
     except Exception as exc:
-=======
-    accepted, new, examined = 0, [], []
-    try:
-        # BEGIN IMMEDIATE serializa lectores que también quieren seleccionar
-        # y marcar ofertas. WAL permite lectores ordinarios en paralelo; no
-        # se sostiene el lock durante peticiones externas (add_actor es local).
-        db.execute("BEGIN IMMEDIATE")
-        rows = pool.top_candidates(
-            db, limit, today=c.today.isoformat(), mark=False,
-            exclude=set(c.known) | set(c.discarded) | {c.own_handle},
-        )
-        for row in rows:
-            # La capacidad es un límite de memoria de la ronda, NO significa
-            # que la cuenta haya sido examinada. Guardarla para otra ronda.
-            if (len(c.candidates) >= int(c.config["budgets"]["max_candidates"])
-                    and row["handle"] not in c.candidates):
-                break
-            actor = {
-                "did": row["did"], "handle": row["handle"], "displayName": row["display"], "description": row["bio"],
-                "followersCount": row["followers"], "followsCount": row["follows"], "postsCount": row["posts"],
-            }
-            if c.add_actor(actor, "pool", key=f"semillas={min(row['seeds_count'], 5)}"):
-                accepted += 1
-                new.append(row["handle"])
-                item = c.candidates.get(row["handle"])
-                if item is not None and row["seeds_count"] >= 2:
-                    item["signals"].append(f"en el grafo de {row['seeds_count']} semillas del nicho")
-            # También registrar descartes evaluados para evitar reconsultarlos
-            # indefinidamente y bloquear candidatos de menor puntuación.
-            examined.append(row["did"])
-        pool.mark_offered(db, examined, today=c.today.isoformat(), commit=False)
-        db.commit()
-    except Exception as exc:
-        db.rollback()
->>>>>>> origin/research/public-reuse-parent
         c.issues.append(f"pool: {type(exc).__name__}: {exc}")
         return
     finally:
         db.close()
-<<<<<<< HEAD
     accepted, new = 0, []
     for row in rows:
         actor = {
@@ -1864,8 +1778,6 @@ def _consume_pool(c):
             item = c.candidates.get(row["handle"])
             if item is not None and row["seeds_count"] >= 2:
                 item["signals"].append(f"en el grafo de {row['seeds_count']} semillas del nicho")
-=======
->>>>>>> origin/research/public-reuse-parent
     c.metric("pool", "offer", len(rows), accepted, new)
 
 
@@ -1902,15 +1814,9 @@ def _initial_discovery(c):
     _discover_personalized_recommendations(c)
     _discover_suggested_accounts(c)
 
-<<<<<<< HEAD
     # 06/10: la superficie «domain» solo buscaba enlaces a autorademodiaz.com (casi nadie los comparte: 0 handles nuevos en >=5 ejecuciones). Ahora rota por una lista de dominios
     # donde los lectores comparten reseñas y compras de libros (config `domain_queries`): quien enlaza a Goodreads o a Casa del Libro es lector por definicion.
     domains = list(c.config.get("domain_queries") or ["autorademodiaz.com"])
-=======
-    # 06/10: la superficie «domain» solo buscaba enlaces a davidportodiaz.com (casi nadie los comparte: 0 handles nuevos en >=5 ejecuciones). Ahora rota por una lista de dominios
-    # donde los lectores comparten reseñas y compras de libros (config `domain_queries`): quien enlaza a Goodreads o a Casa del Libro es lector por definicion.
-    domains = list(c.config.get("domain_queries") or ["davidportodiaz.com"])
->>>>>>> origin/research/public-reuse-parent
     per_round = int(c.config.get("domains_per_round", 4))
     start = (c.today.toordinal() * per_round) % len(domains)
     for domain in [domains[(start + i) % len(domains)] for i in range(min(per_round, len(domains)))]:
@@ -3398,41 +3304,12 @@ def _community_priority(c, item):
     return score
 
 
-<<<<<<< HEAD
 def _select_shortlist_candidates(c, profile_limit):
     """Garantizar captación fresca sin abandonar relaciones que ya responden."""
     items = [
         item for item in c.candidates.values()
         if not item.get("excluded_reason")
     ]
-=======
-def _unique_account_items(candidates):
-    """Una cuenta ATProto (DID) ocupa como máximo una plaza en la shortlist.
-
-    Las fuentes siguen siendo multifuente; un alias de handle no representa
-    otra identidad. Elegimos la vista con más evidencia, sin inventar unión
-    de URLs, posts o flags de moderación entre handles diferentes.
-    """
-    chosen = {}
-    for item in candidates:
-        did = (item.get("profile") or {}).get("did")
-        ident = ("did", did) if isinstance(did, str) and did.startswith("did:") else (
-            "handle", item["handle"],
-        )
-        rank = (float(item.get("score") or 0), len(item.get("posts") or ()),
-                item["handle"])
-        prev = chosen.get(ident)
-        if prev is None or rank > prev[0]:
-            chosen[ident] = (rank, item)
-    return [value[1] for value in chosen.values()]
-
-
-def _select_shortlist_candidates(c, profile_limit):
-    """Garantizar captación fresca sin abandonar relaciones que ya responden."""
-    items = _unique_account_items(
-        item for item in c.candidates.values() if not item.get("excluded_reason")
-    )
->>>>>>> origin/research/public-reuse-parent
     acquisition = [
         item for item in items if _relationship_lane(item) == "acquisition"
     ]

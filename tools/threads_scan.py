@@ -226,19 +226,9 @@ def scan():
                 if account_rows:       # las semillas nacidas de la pestana Perfiles de esta misma ronda se pueden leer ya
                     pool.record_accounts(db, account_rows)
                     account_rows = []
-<<<<<<< HEAD
                 for seed in pool.due_seeds(db, n_seeds):
                     if not time_left():
                         break
-=======
-                import threads_discovery_quality as _discovery_quality
-                historically_blocked = _discovery_quality.quarantined_pool_handles(db)
-                for seed in pool.due_seeds(db, n_seeds):
-                    if not time_left():
-                        break
-                    if str(seed).lstrip("@").casefold() in historically_blocked:
-                        continue
->>>>>>> origin/research/public-reuse-parent
                     print(f"\n=== SEGUIDORES de @{seed} ===")
                     try:
                         info, rows = t.collect_followers(pg, seed, passes=10, limit=150)
@@ -256,33 +246,10 @@ def scan():
         except Exception as exc:
             print(f"(semillas no disponibles: {type(exc).__name__}: {exc})")
 
-<<<<<<< HEAD
-=======
-        # Detectar campañas de texto duplicado entre cuentas ANTES de escribir
-        # en la reserva y antes de entregar candidatos al builder. Es una
-        # barrera adicional; los filtros de seguridad del ejecutor permanecen.
-        import threads_pool as _tp
-        import threads_discovery_quality as _dq
-        suspect = _dq.blocked_handles(
-            [{"handle": h, "text": _tp.body_of(body)}
-             for h, _url, body, _source in pool_rows]
-        )
-        if suspect:
-            pool_rows = [r for r in pool_rows if r[0].lstrip("@").casefold() not in suspect]
-            candidates = [r for r in candidates if r[1].lstrip("@").casefold() not in suspect]
-            account_rows = [r for r in account_rows if r[0].lstrip("@").casefold() not in suspect]
-            print(f"[threads] cuentas omitidas por señuelo/campaña repetida: {len(suspect)}")
-
->>>>>>> origin/research/public-reuse-parent
         try:       # reserva persistente de posts (threads_pool.py): lo visto hoy sigue disponible para las proximas rondas
             import threads_pool as pool
             db = pool.connect()
             try:
-<<<<<<< HEAD
-=======
-                if suspect:
-                    pool.quarantine_handles(db, suspect)
->>>>>>> origin/research/public-reuse-parent
                 added = pool.record_posts(db, pool_rows)
                 new_accounts = pool.record_accounts(db, account_rows) if account_rows else 0
                 print(f"\n=== RESERVA: {added} posts nuevos de {len(pool_rows)} vistos; {new_accounts} cuentas nuevas de {len(account_rows)}; {pool.stats(db)} ===")

@@ -174,36 +174,6 @@ class ObservationIntegrityTests(unittest.TestCase):
             self.assertEqual(audit.load_audit_state(str(path))["first_back_date"]["ana"], "2026-10-09")
 
 
-<<<<<<< HEAD
-=======
-
-class SharedCohortIntegrationTests(unittest.TestCase):
-    def test_partial_snapshot_preserves_complete_checkpoints_and_kpis(self):
-        historic = {
-            "observed_since": "2026-10-08",
-            "first_back_date": {"original": "2026-10-09"},
-            "complete_dates": ["2026-10-09"],
-            "cohorts_v2": {"schema_version": 2, "windows": {"D+1": {"q": {"unknown": 1}}}},
-            "deadlines": {"D+1": {"q": {"followed": 1, "back": 0, "rate": 0.0}}},
-        }
-        updated = audit.partial_snapshot_state([], {"partial"}, historic,
-                                               datetime.date(2026, 10, 12))
-        self.assertEqual(updated["complete_dates"], ["2026-10-09"])
-        self.assertEqual(updated["cohorts_v2"], historic["cohorts_v2"])
-        self.assertEqual(updated["deadlines"], historic["deadlines"])
-        self.assertFalse(updated["coverage_complete"])
-
-    def test_load_rejects_invalid_complete_dates_without_repairing_file(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            path = pathlib.Path(tmp) / "audit.json"
-            content = '{"observed_since":"2026-10-08","complete_dates":["nunca"]}'
-            path.write_text(content, encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "complete_dates"):
-                audit.load_audit_state(str(path))
-            self.assertEqual(path.read_text(encoding="utf-8"), content)
-
-
->>>>>>> origin/research/public-reuse-parent
 class SeedPersistenceTests(unittest.TestCase):
     def test_corrupt_seed_file_is_preserved(self):
         with tempfile.TemporaryDirectory() as tmp:
