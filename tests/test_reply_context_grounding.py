@@ -10,7 +10,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from reply_context_grounding import (
     NETWORKS, QUEUES, build_packet, render_packet, audit_reply, tally,
-    summarize_outcomes,
+    summarize_outcomes, packet_fingerprint, audit_draft,
 )
 
 NOW = datetime(2026, 10, 10, 2, 0, tzinfo=timezone.utc)
@@ -188,6 +188,44 @@ class GroundedDraftTests(unittest.TestCase):
 
     def claim(self, sentence, quote, eid="post"):
         return {"text": sentence, "citations": [{"id": eid, "quote": quote}]}
+
+    def draft(self, **updates):
+        data = {
+            "network": self.packet.network,
+            "target_id": self.packet.target_id,
+            "context_fingerprint": packet_fingerprint(self.packet),
+            "reply": "Tres libros en un mes",
+            "claims": [self.claim("Tres libros en un mes", "tres libros")],
+        }
+        data.update(updates)
+        return data
+
+    def test_draft_matches_exact_target_and_snapshot(self):
+        self.assertEqual(audit_draft(self.packet, self.draft()).disposition,
+                         "needs_semantic_review")
+        self.assertEqual(audit_draft(self.packet, self.draft(target_id="other")).issues,
+                         ("wrong_destination",))
+        self.assertEqual(audit_draft(self.packet, self.draft(network="x")).issues,
+                         ("wrong_destination",))
+
+    def test_draft_cannot_reuse_evidence_after_post_update(self):
+        changed = build_packet(sample(text="Acabé cuatro novelas este mes."), now=NOW)
+        self.assertEqual(audit_draft(changed, self.draft()).issues, ("context_changed",))
+        self.assertNotEqual(packet_fingerprint(self.packet), packet_fingerprint(changed))
+
+    def test_draft_fingerprint_includes_queue_timestamp_and_author(self):
+        for kw in ({"queue": "WEB"}, {"author": "Otro autor"},
+                   {"published_at": "2026-10-09T13:00:00Z"}):
+            changed = build_packet(sample(**kw), now=NOW)
+            self.assertNotEqual(packet_fingerprint(changed),
+                                packet_fingerprint(self.packet))
+
+    def test_null_draft_claims_are_not_accepted(self):
+        self.assertEqual(audit_draft(self.packet, self.draft(reply=None, claims=[])).disposition,
+                         "abstain")
+        self.assertEqual(audit_draft(self.packet, self.draft(reply=None)).issues,
+                         ("abstention_with_claims",))
+        self.assertFalse(audit_draft(self.packet, None).ok)
 
     def test_same_post_quote_enters_semantic_review_not_autoapproval(self):
         audit = audit_reply(self.packet, "Tres libros en un mes tienen mérito",
