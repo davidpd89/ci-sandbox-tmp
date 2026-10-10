@@ -5,7 +5,7 @@
 - Nuevo `tools/bluesky_feed_preview.py`: vista **local, solo lectura** del feed de nicho desde la **misma** tabla `posts` creada por `tools/bluesky_jetstream_collect.py`, sin introducir otro crawler, credenciales, base de datos ni acciones sociales.
 - Formato `getFeedSkeleton`: `{"feed":[{"post":"at://..."}],"cursor":"..."}`, con cursor keyset `time_us::at_uri`; los empates se resuelven por URI (no `OFFSET`), fin de resultados `eof`.
 - Filtro conservador: publicaciones originales, fecha de creación y observación reciente, idioma `es`/`es-*` o vacío previamente aceptado por Jetstream, coincidencias de nicho y validación sintáctica de AT URI. Al consultar la caché se respetan borrados ya observados por el recolector.
-- `tests/test_bluesky_feed_preview.py`: seis pruebas unitarias y 14 subpruebas, sin servidor, API, sesiones ni datos reales.
+- `tests/test_bluesky_feed_preview.py`: doce métodos de prueba (diez preexistentes y dos añadidos en la última auditoría) y 14 subpruebas de validación de parámetros, sin servidor, API, sesiones ni datos reales.
 
 **No es un feed alojado/publicado.** Falta validar remotamente que cada post sigue existiendo y es visible en el AppView antes de exponerlo como servicio público; los borrados perdidos durante una desconexión de Jetstream no pueden inferirse de una caché local. No ejecutar `publish_feed.py` ni registrar un feed hasta completar ese requisito.
 
@@ -76,3 +76,15 @@ Adaptadores existentes: Bluesky (AT URI, Jetstream, feeds; solo este módulo de 
 - Exportador opcional `--export-json ./salida/feed.json`, siguiendo el patrón de skeleton estático citado en la revisión de Perplexity; sigue siendo **solo local**, no constituye publicación ni feed servido. No cambia la ruta por defecto ni abre red.
 - Regresiones adicionales: inserción tardía detrás del cursor; exportación UTF-8 y directorios nuevos, opt-in de CLI; JSON de idiomas corrupto en un registro que no debe impedir leer otros registros válidos. Se filtra con `json_valid` antes de interpretar JSON, sin aceptar silenciosamente el registro dañado. Total ejecutado del módulo aislado: **10/10 tests** y **14 subtests** correctos en Linux Python 3.13.5, SQLite 3.46.1, con `ResourceWarning` como error. `ast.parse(feature_version=(3,11))` correcto, sin equivaler a ejecución en Python 3.11/Windows. La confirmación de la suite privada corresponde a Claude.
 - No se incorpora aquí un validador AppView: ya hay una PR específica, **#146**, que evita duplicar código. La posible indexación compuesta de la tabla Jetstream se separa por afectar al recolector compartido.
+
+## Revisión de integridad de idiomas y contrato Jetstream (auditoría adicional 10/10/2026)
+
+**Defecto real hallado:** `json_each` itera tanto listas como objetos y escalares JSON válidos. Con la consulta anterior, `{"lang":"es"}` y `"es"` se interpretaban como idiomas admitidos aunque el recolector real (`store_event`) guarda siempre `langs_json` como **lista**. La vista ahora exige `json_type(...) = 'array'`, validado mediante `CASE WHEN json_valid(...)` para no lanzar excepciones con JSON corrupto. No afecta a registros bien formados ni cambia captación, permisos, dedupe, ledger o acciones reales.
+
+**Pruebas añadidas (en el árbol real, pendientes de ejecutar por CI/Claude):**
+- `test_non_array_language_values_fail_closed`: objetos, escalares y `null` JSON se descartan sin eclipsar registros válidos.
+- `test_contract_with_real_jetstream_writer_and_deletes`: escritura a SQLite mediante `bluesky_jetstream_collect.init_db` y `store_event`; relectura desde `feed_page`; update a idioma ajeno y eliminación explícita. Evita mantener únicamente una copia artificial del esquema en los fixtures.
+
+**Prueba aislada ejecutada en este turno:** Python 3.13.5 / SQLite 3.46.1 en Linux; reproducción de la cláusula SQL real con seis clases de `langs_json` (array ES, vacío, objeto, escalar, corrupto y EN): **2 registros correctos aceptados, los otros 4 descartados**. En la misma reproducción, la conexión `mode=ro` rechaza `DELETE`. Esto **no** equivale a ejecutar los doce tests contra los blobs completos de GitHub. Los resultados de diez tests de la sección anterior son históricos del HEAD previo; las dos regresiones nuevas y la suite completa quedan por ejecutar en Windows/Python 3.11 y en el repo privado.
+
+**Estado de cobertura transversal:** la norma global de idiomas/identidad debe mantenerse en los contratos comunes ya existentes y en las PR de paridad; este arreglo corrige exclusivamente la proyección SQL de la caché local Bluesky. No se abren PR duplicadas de validación AppView (#146), indexación (#175), descubrimiento (#115/#176), hashtags (#99/#101) o ranking (#116/#137).
