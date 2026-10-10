@@ -182,11 +182,17 @@ class AudienceStore:
                 else:
                     counts["unverified_age"] += 1
                 previous = self.db.execute(
-                    "SELECT observed_at, active, account_key FROM audience_events "
+                    "SELECT observed_at, occurred_at, active, account_key FROM audience_events "
                     "WHERE network=? AND event_key=?", (network, row.event_key)).fetchone()
-                if previous and previous[0] >= row.observed_at:
-                    counts["replays"] += 1
-                    continue
+                if previous:
+                    # En eventos de flujo con tiempo de suceso, ese tiempo ordena
+                    # create/delete aunque un replay antiguo se observe más tarde.
+                    # En listados sin tiempo de suceso manda la hora de lectura.
+                    previous_version = previous[1] or previous[0]
+                    incoming_version = row.occurred_at or row.observed_at
+                    if previous_version >= incoming_version:
+                        counts["replays"] += 1
+                        continue
                 # Una observación posterior puede retirar un like/repost. No lo resucita un replay.
                 account = self.db.execute(
                     "SELECT last_seen FROM audience_accounts WHERE network=? AND account_key=?",
@@ -224,9 +230,11 @@ class AudienceStore:
                 (network, surface, seed, next_cursor))
         return counts
 
-    def ranked(self, network: str, *, limit: int = 50, require_verified_age: bool = True) -> list[dict]:
-        if network not in LANES or not 1 <= limit <= 10000:
+    def ranked(self, network: str, *, limit: int = 50, require_verified_age: bool = True,
+               now: str | None = None, max_post_age_hours: float = 168) -> list[dict]:
+        if network not in LANES or not 1 <= limit <= 10000 or max_post_age_hours <= 0:
             raise ObservationError("consulta_invalida")
+        now = timestamp(now or datetime.now(timezone.utc))
         records = self.db.execute("""
             SELECT a.account_key, a.handle, a.stable, a.profile, e.kind, e.post_key,
                    e.surface, e.text, e.post_created_at
@@ -236,7 +244,7 @@ class AudienceStore:
         """, (network,)).fetchall()
         people: dict[str, dict] = {}
         for key, handle, stable, profile, kind, post, surface, text, age in records:
-            if require_verified_age and age is None:
+            if require_verified_age and (age is None or _age_hours(age, now) > max_post_age_hours):
                 continue
             data = people.setdefault(key, {"network": network, "lane": LANES[network],
                 "account_key": key, "handle": handle, "stable_identity": bool(stable),
