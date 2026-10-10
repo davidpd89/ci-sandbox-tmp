@@ -78,7 +78,7 @@ class AudienceTests(unittest.TestCase):
         raw = {"actor": actor("bluesky"), "text": ""}
         first = ad.normalize("bluesky", "like", raw, surface="liked_by",
                              post_key="p1", observed_at=NOW, post_created_at=POST)
-        self.assertIn("liked_by|p1|like|", first.event_key)
+        self.assertIn("p1|like|", first.event_key)
         self.assertEqual(self.store.ingest([first, first], network="bluesky",
             surface="liked_by", seed="seed", next_cursor=None, now=NOW)["new_events"], 1)
 
@@ -279,6 +279,82 @@ class AudienceTests(unittest.TestCase):
              seed="seed2", next_cursor=None, now=NOW)
         self.assertEqual(len(self.store.ranked("bluesky")), 1)
         self.assertEqual(self.store.ranked("bluesky")[0]["surfaces"], 2)
+
+    def test_one_event_two_surfaces_preserves_provenance_without_double_count(self):
+        first = event()
+        raw = {"actor": actor("bluesky"), "event_id": "event-7",
+               "text": "¿Qué libro de fantasía recomiendas?"}
+        second = ad.normalize("bluesky", "comment", raw, surface="external_post",
+             post_key="p1", observed_at=NOW, post_created_at=POST)
+        self.ingest([first])
+        stats = self.store.ingest([second], network="bluesky",
+             surface="external_post", seed="other-seed", next_cursor=None, now=NOW)
+        self.assertEqual(stats["new_events"], 0)
+        self.assertEqual(stats["replays"], 1)
+        self.assertEqual(self.store.ranked("bluesky")[0]["signals"], 1)
+        self.assertEqual(self.store.ranked("bluesky")[0]["surfaces"], 2)
+        self.assertEqual(self.store.db.execute(
+            "SELECT count(*) FROM audience_sightings").fetchone()[0], 2)
+
+    def test_provisional_id_promotion_requires_same_remote_event(self):
+        raw = {"actor": {"handle": "lectora"}, "event_id": "c1"}
+        first = ad.normalize("instagram", "comment", raw, surface="own_post",
+            post_key="p1", observed_at=NOW, post_created_at=POST)
+        self.ingest([first], network="instagram")
+        later = ad.normalize("instagram", "comment",
+            {"actor": {"id": "123", "handle": "lectora"}, "event_id": "c1"},
+            surface="external_post", post_key="p1",
+            observed_at="2026-10-10T12:01:00Z", post_created_at=POST)
+        self.store.ingest([later], network="instagram", surface="external_post",
+             seed="seed2", next_cursor=None, now=NOW)
+        people = self.store.ranked("instagram")
+        self.assertEqual(len(people), 1)
+        self.assertEqual(people[0]["account_key"], "id:123")
+        self.assertEqual(people[0]["signals"], 1)
+        self.assertEqual(people[0]["surfaces"], 2)
+        self.assertEqual(self.store.db.execute(
+            "SELECT count(*) FROM audience_accounts").fetchone()[0], 1)
+
+    def test_conflicting_actor_for_same_event_is_atomic(self):
+        first = event()
+        self.ingest([first])
+        conflict = ad.normalize("bluesky", "comment",
+            {"actor": actor("bluesky", "999"), "event_id": "event-7"},
+            surface="external_post", post_key="p1",
+            observed_at="2026-10-10T12:01:00Z", post_created_at=POST)
+        with self.assertRaisesRegex(ad.ObservationError, "evento_actor_conflictivo"):
+            self.store.ingest([conflict], network="bluesky",
+                surface="external_post", seed="other", next_cursor="cursor", now=NOW)
+        self.assertEqual(self.store.db.execute(
+            "SELECT count(*) FROM audience_sightings").fetchone()[0], 1)
+        self.assertIsNone(self.store.cursor("bluesky", "external_post", "other"))
+
+    def test_cursor_cycle_across_restarts_does_not_commit_page(self):
+        calls = []
+        def fetch(cur):
+            calls.append(cur)
+            return {"items": [], "kind": "like", "post_key": "p",
+                    "next_cursor": "A" if cur != "A" else "B"}
+        for _ in range(2):
+            ad.collect_pages(self.store, network="bluesky", surface="liked_by",
+                seed="s", fetch_page=fetch, observed_at=NOW, max_pages=1)
+        with self.assertRaisesRegex(ad.ObservationError, "cursor_ciclico"):
+            ad.collect_pages(self.store, network="bluesky", surface="liked_by",
+                seed="s", fetch_page=fetch, observed_at=NOW, max_pages=1)
+        self.assertEqual(calls, [None, "A", "B"])
+        self.assertEqual(self.store.cursor("bluesky", "liked_by", "s"), "B")
+
+    def test_cursor_history_clears_on_finished_snapshot(self):
+        def fetch(cur):
+            return {"items": [], "kind": "like", "post_key": "p",
+                    "next_cursor": "A" if cur is None else None}
+        ad.collect_pages(self.store, network="bluesky", surface="liked_by",
+            seed="s", fetch_page=fetch, observed_at=NOW)
+        self.assertIsNone(self.store.cursor("bluesky", "liked_by", "s"))
+        self.assertFalse(self.store.seen_cursor("bluesky", "liked_by", "s", "A"))
+        again = ad.collect_pages(self.store, network="bluesky", surface="liked_by",
+            seed="s", fetch_page=fetch, observed_at=NOW)
+        self.assertTrue(again["complete"])
 
     def test_sqlite_reopen_persists_cursor_and_rank(self):
         with tempfile.TemporaryDirectory() as directory:
