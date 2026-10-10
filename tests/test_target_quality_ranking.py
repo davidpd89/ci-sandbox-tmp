@@ -309,6 +309,13 @@ class RankingTests(unittest.TestCase):
         self.assertEqual(report["traffic"]["candidate"]["observed"], 2)
         self.assertEqual(report["followback"]["candidate"]["precision"], .5)
 
+    def test_precision_at_k_penalizes_unfilled_slots(self):
+        heldout = {"good1": {"followback": True}, "good2": {"followback": True}}
+        report = r.evaluate_orders(["good1", "good2"], ["good2"], heldout, k=4)
+        self.assertEqual(report["followback"]["candidate"]["precision"], .5)
+        self.assertEqual(report["followback"]["baseline"]["precision"], .25)
+        self.assertEqual(report["followback"]["candidate"]["exposed"], 2)
+
     def test_evaluation_unknown_labels_excluded(self):
         result = r.evaluate_orders(["unknown", "known"], [], {"known": {"traffic": 1}}, k=10)
         self.assertEqual(result["traffic"]["candidate"]["observed"], 1)
