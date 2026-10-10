@@ -1,0 +1,33 @@
+json
+// URL de integración:
+// https://github.com/davidpd89/ci-sandbox-tmp/blob/60aa837fcbe2933928ee69aa395806a3bd5a74d1/SISTEMA_DIARIO_MASTODON/growth_config.json
+{
+  "mastodon_scoring": {
+    "profile_weights": {
+      "actividad": 0.30,
+      "reciprocidad_potencial": 0.25,
+      "afinidad_tematica": 0.25,
+      "idioma_es": 0.20
+    },
+    "reply_weights": {
+      "capacidad_conversacion": 0.30,
+      "afinidad_tematica": 0.25,
+      "actividad_autor": 0.20,
+      "idioma_es": 0.15,
+      "frescura": 0.10
+    },
+    "limits": {
+      "max_follows_per_day": 10,
+      "max_replies_per_day": 8,
+      "min_profile_score": 0.62,
+      "min_reply_score": 0.60,
+      "max_post_age_hours": 72,
+      "max_account_inactivity_days": 90
+    },
+    "languages": ["es"],
+    "topics": [
+      "fantasia", "romantasy", "fantasia juvenil",
+      "libros", "lectura", "escritura", "autoras", "autores"
+    ]
+  }
+}
