@@ -1,21 +1,13 @@
-"""Prueba real opcional del contrato del ledger #84 (checkout inmutable)."""
-import importlib.util
-import os
+"""Contrato obligatorio con RelationshipLedger de la base sincronizada."""
 from pathlib import Path
 import tempfile
 import unittest
+from tools.relationship_event_ledger import RelationshipLedger
 from tools.native_relationship_evidence_bridge import Batch, bridge_results, bridge_snapshot
-
-LEDGER = Path(os.environ.get("LEDGER84_PY", "/nonexistent/ledger.py"))
-
-@unittest.skipUnless(LEDGER.is_file(), "falta checkout de #84")
 class LedgerContract(unittest.TestCase):
     def test_real_ledger(self):
-        spec = importlib.util.spec_from_file_location("ledger84", LEDGER)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
         with tempfile.TemporaryDirectory() as folder:
-            ledger = module.RelationshipLedger(Path(folder) / "demo.sqlite")
+            ledger = RelationshipLedger(Path(folder) / "demo.sqlite")
             b = Batch("x", "WEB", "x_execute.run_plan", "export-1")
             row = {"record_id": "a", "kind": "follow", "handle": "@lectora",
                    "resultado": "confirmado", "occurred_at": "2026-10-10T09:00:00Z",
@@ -28,11 +20,8 @@ class LedgerContract(unittest.TestCase):
                 as_of="2026-10-14T09:00:00Z")["unknown"], 1)
 
     def test_snapshot_conversion_partial_then_complete(self):
-        spec = importlib.util.spec_from_file_location("ledger84_snapshot", LEDGER)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
         with tempfile.TemporaryDirectory() as folder:
-            ledger = module.RelationshipLedger(Path(folder) / "demo.sqlite")
+            ledger = RelationshipLedger(Path(folder) / "demo.sqlite")
             batch = Batch("x", "WEB", "x_execute.run_plan", "export-1")
             follow = {"record_id": "f1", "kind": "follow", "handle": "@lectora",
                       "resultado": "confirmado", "occurred_at": "2026-10-10T09:00:00Z",
@@ -48,6 +37,16 @@ class LedgerContract(unittest.TestCase):
                              ["unknown"], 1)
             snap["snapshot_id"] = "s2"
             snap["coverage"]["all_pages"] = True
+            self.assertEqual(bridge_snapshot(ledger, batch, {
+                **snap, "snapshot_id": "solo-flags"})["unknown"], 1)
+            snap["account_id"] = "cuenta-propia"
+            snap["coverage"].update({
+                "account_id": "cuenta-propia", "snapshot_id": "s2",
+                "producer": batch.producer,
+                "pages": [{"account_id": "cuenta-propia", "snapshot_id": "s2",
+                           "identity_stable": True, "cursor_in": None,
+                           "cursor_out": None, "followers": []}],
+            })
             self.assertEqual(bridge_snapshot(ledger, batch, snap)["inserted"], 1)
             stats = ledger.conversion("x", as_of="2026-10-14T09:00:00Z")
             self.assertEqual((stats["negative"], stats["unknown"]), (1, 0))
