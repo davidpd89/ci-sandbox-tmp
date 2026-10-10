@@ -40,9 +40,11 @@ python -m unittest discover -s tests -p test_reply_candidate_diversity.py -v
 Ran 10 tests ... OK
 ```
 
-Además: `python -m compileall -q` OK; 1.500 casos sintéticos aleatorios de selección sin excepción y sin escoger respuestas no aprobadas (fuzz local, semilla fija).\n\nCubren las 9 redes + Reddit micro, casos sin aprobación (abstención), normalización con tildes, candidatos duplicados, selección de variante novedosa frente a histórico, preflight opcional que rechaza, rechazo de formato/URLs/hashtags/red desconocida, exactitud de Distinct-N para n-gramas cortos y vacíos, CLI portátil y no filtración de texto en el JSON. Sin claims de rendimiento real.
+Además: `python -m compileall -q` OK; 1.500 casos sintéticos aleatorios de selección sin excepción y sin escoger respuestas no aprobadas (fuzz local, semilla fija).
 
-Segunda pasada adversarial: falsar la hipótesis «Distict-N alto = comentario relevante»; queda prohibido seleccionar por distintividad antes de validar el contexto. Separar la futura conexión a un adaptador distinto evita colisiones con los ejecutores existentes y #106/#121.
+Cubren las 9 redes + Reddit micro, casos sin aprobación (abstención), normalización con tildes, candidatos duplicados, selección de variante novedosa frente a histórico, preflight opcional que rechaza, rechazo de formato/URLs/hashtags/red desconocida, exactitud de Distinct-N para n-gramas cortos y vacíos, CLI portátil y no filtración de texto en el JSON. Sin claims de rendimiento real.
+
+Segunda pasada adversarial: falsar la hipótesis «Distinct-N alto = comentario relevante»; queda prohibido seleccionar por distintividad antes de validar el contexto. Separar la futura conexión a un adaptador distinto evita colisiones con los ejecutores existentes y #106/#121.
 
 ## Pendiente para Claude tras integrar dependencias
 
