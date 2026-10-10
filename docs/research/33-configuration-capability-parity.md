@@ -7,6 +7,42 @@
 `integracion/crecimiento-2026-10` (árbol observado `5449513d9b545d0a6a72abf066ab6a779bfdad71`).
 No se modifica el oficial ni se traslada su configuración de TikTok al mirror.
 
+Fuente primaria: https://github.com/python-jsonschema/jsonschema/tree/331c38425519b69118d22ebe467ad230fb83a010
+Fecha de consulta: 2026-10-10
+Licencia SPDX: MIT
+Referencia inmutable: https://github.com/python-jsonschema/jsonschema/tree/331c38425519b69118d22ebe467ad230fb83a010
+
+## Problema
+
+El inventario de capacidad declarada del espejo omitía Instagram y no había
+una inspección trazable de configuraciones, flags y defaults efectivos.
+
+## Alternativas
+
+Se compararon jsonschema, Pydantic, Dynaconf y Cerberus frente a la
+reutilización de `growth_policy` con un inspector sin nuevas dependencias.
+
+## Licencias y procedencia
+
+Las opciones externas tienen licencias MIT o ISC (tabla y commits abajo).
+**No se incorpora código externo**, solo se utilizan las funciones ya existentes
+del propio proyecto.
+
+## Decisión
+
+Extender el inventario común, validar invariantes de JSON y emitir un informe
+offline con procedencia de defaults y estados de wiring. No mutar configuraciones.
+
+## Pruebas
+
+Las suites nuevas usan solo archivos sintéticos temporales; comandos y CI
+reproducibles detallados más abajo, incluida la distinción de simulación/canario.
+
+## Retirada
+
+Revertir el módulo de auditoría y sus regresiones, y la incorporación de
+Instagram a la matriz. No hay datos que migrar ni librerías que desinstalar.
+
 ## Problema real observado
 
 - `tools/network_capabilities.py` inventariaba solo ocho redes a pesar de que
