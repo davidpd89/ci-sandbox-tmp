@@ -1,0 +1,40 @@
+python
+# https://github.com/rodneykeilson/ScrapiReddit#python-api
+from pathlib import Path
+from scrapi_reddit import build_session
+from scrapi_reddit import ScrapeOptions
+from scrapi_reddit import ListingTarget, build_search_target, process_listing
+
+session = build_session("your-app-name/0.1", verify=True)
+
+options = ScrapeOptions(
+    output_root=Path("./scrapes"),
+    listing_limit=250,
+    comment_limit=0, # auto-expand to 500
+    delay=3.0,
+    time_filter="day",
+    output_formats={"json", "csv"},
+    fetch_comments=True,
+    resume=True, # reuse cached JSON/media on reruns
+    download_media=True,
+    media_filters={"video", ".mp4"},
+)
+
+target = ListingTarget(
+    label="r/python top (day)",
+    output_segments=("subreddits", "python", "top_day"),
+    url="https://www.reddit.com/r/python/top/.json",
+    params={"t": "day"},
+    context="python",
+)
+
+process_listing(target, session=session, options=options)
+
+search_target = build_search_target(
+    "python asyncio",
+    search_types=["comment"],
+    sort="new",
+    time_filter="day",
+)
+
+process_listing(search_target, session=session, options=options)
