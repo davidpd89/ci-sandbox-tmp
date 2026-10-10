@@ -457,6 +457,52 @@ class TestContracts(unittest.TestCase):
         self.assertIn("cross_account_post_collision",
                       [d["reason"] for d in out["diagnostics"]])
 
+    def test_x_threads_immutable_post_id_survives_handle_changes(self):
+        # A renamed profile does not turn one remote post into two posts.
+        for network, base_url, suffix in (
+            ("x", "https://x.com", "status/12345"),
+            ("threads", "https://www.threads.net", "post/ABC123"),
+        ):
+            with self.subTest(network=network):
+                def candidate(handle, account_id):
+                    prefix = "@" if network == "threads" else ""
+                    return {
+                        "account_id": account_id, "author_id": account_id,
+                        "handle": handle,
+                        "url": f"{base_url}/{prefix}{handle}/{suffix}",
+                        "created_at": FRESH, "language": "es",
+                        "text": "Leo fantasía", "verified_actions": ["reply"],
+                    }
+                older = candidate("lectora_old", "remote_1")
+                renamed = candidate("lectora_new", "remote_1")
+                for rows in ([older, renamed], [renamed, older]):
+                    out = n.normalize_candidates(network, rows, as_of=NOW)
+                    self.assertEqual(len(out["shortlist"]), 1)
+                    self.assertEqual(len(out["shortlist"][0]["posts"]), 1)
+                    self.assertNotIn("cross_account_post_collision",
+                                     [d["reason"] for d in out["diagnostics"]])
+                # Distinct account IDs claiming the same remote ID must
+                # not yield two ranked opportunities just by changing URLs.
+                conflicting = candidate("otra_cuenta", "remote_2")
+                out = n.normalize_candidates(network, [older, conflicting], as_of=NOW)
+                self.assertEqual(len(out["shortlist"]), 2)
+                self.assertTrue(all(not row["posts"] for row in out["shortlist"]))
+                self.assertIn("cross_account_post_collision",
+                              [d["reason"] for d in out["diagnostics"])
+
+    def test_x_handle_change_conflicting_post_dates_rejects_both(self):
+        first = dict(SAMPLES["x"], handle="lectora_old",
+                     url="https://x.com/lectora_old/status/12345",
+                     account_id="remote_1", author_id="remote_1",
+                     created_at=FRESH, language="es")
+        second = dict(first, handle="lectora_new",
+                      url="https://x.com/lectora_new/status/12345",
+                      created_at="2026-10-08T12:00:00Z")
+        out = n.normalize_candidates("x", [first, second], as_of=NOW)
+        self.assertEqual(out["shortlist"][0]["posts"], [])
+        self.assertIn("conflicting_post_timestamps",
+                      [d["reason"] for d in out["diagnostics"]])
+
     def test_pinterest_author_profile_language_not_pin_language(self):
         author = dict(SAMPLES["pinterest"], language="es")
         pin = {"author": "lectora_1",
