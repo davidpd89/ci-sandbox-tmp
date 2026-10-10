@@ -58,6 +58,16 @@ class AudienceTests(unittest.TestCase):
         self.assertIsNone(ad.CAPABILITIES["pinterest"]["like"])
         self.assertIsNone(ad.CAPABILITIES["tiktok"]["like"])
 
+    def test_core_rejects_unobservable_actors_for_all_networks(self):
+        for network, caps in ad.CAPABILITIES.items():
+            for kind, capability in caps.items():
+                if capability is None:
+                    with self.subTest(network=network, kind=kind):
+                        with self.assertRaisesRegex(ad.ObservationError, "fuente_no_observable"):
+                            ad.normalize(network, kind, {"actor": actor(network)},
+                                         surface="own_post", post_key="p",
+                                         observed_at=NOW, post_created_at=POST)
+
     def test_first_seen_and_exact_replay(self):
         item = event()
         self.assertEqual(self.ingest([item])["new_people"], 1)

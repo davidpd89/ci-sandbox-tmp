@@ -91,6 +91,9 @@ def adapt_page(network: str, kind: str, payload: Mapping, *, post_key: str,
         items.append(row)
     cursors = payload.get("paging", {}).get("cursors", {}) if isinstance(payload.get("paging"), Mapping) else {}
     cursor = payload.get("next_cursor")
+    # Respuesta nativa de app.bsky.feed.getLikes/getRepostedBy: `cursor`.
+    if cursor is None and network == "bluesky":
+        cursor = payload.get("cursor")
     if cursor is None and isinstance(cursors, Mapping):
         cursor = cursors.get("after")
     if cursor is None:

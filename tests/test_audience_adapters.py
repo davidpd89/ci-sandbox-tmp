@@ -24,6 +24,13 @@ class AdaptersTests(unittest.TestCase):
         self.assertTrue(obs.stable_identity)
         self.assertEqual(obs.kind, "like")
 
+    def test_bluesky_native_cursor_and_precedence(self):
+        native = self.wrap("bluesky", "like", {"likes": [], "cursor": "bsky-next"})
+        self.assertEqual(native["next_cursor"], "bsky-next")
+        explicit = self.wrap("bluesky", "like", {"likes": [], "cursor": "native",
+                                                  "next_cursor": "normalized"})
+        self.assertEqual(explicit["next_cursor"], "normalized")
+
     def test_mastodon_favourited_by_instance(self):
         p = self.wrap("mastodon", "like",
             {"items": [{"id": "21", "acct": "lectora@example.com"}],

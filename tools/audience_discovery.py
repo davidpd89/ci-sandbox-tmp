@@ -105,6 +105,8 @@ def normalize(network: str, kind: str, raw: Mapping, *,
               post_created_at: str | None = None) -> Observation:
     if network not in LANES or kind not in KINDS:
         raise ObservationError("red_o_senal_desconocida")
+    if CAPABILITIES[network].get(kind) is None:
+        raise ObservationError("fuente_no_observable")
     if not isinstance(raw, Mapping) or not surface or not post_key:
         raise ObservationError("origen_incompleto")
     account_key, handle, stable, profile = actor_fields(network, raw)
