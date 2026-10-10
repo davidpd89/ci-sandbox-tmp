@@ -1,0 +1,12 @@
+python
+# https://github.com/adamchainz/time-machine/blob/main/README.rst
+import datetime as dt
+from zoneinfo import ZoneInfo
+import time_machine
+
+hill_valley_tz = ZoneInfo("America/Los_Angeles")
+
+
+@time_machine.travel(dt.datetime(1985, 10, 26, 1, 24, tzinfo=hill_valley_tz))
+def test_delorean():
+    assert dt.date.today().isoformat() == "1985-10-26"
