@@ -128,6 +128,28 @@ class VersionedEvidenceTests(unittest.TestCase):
         self.assertEqual(run(changed, registry=proof)["proposals"][0]["state"],
                          "no_transferible")
 
+    def test_malformed_identity_cannot_veto_valid_audited_trial(self):
+        winner = trial()
+        registry = TrustedRegistry([audited(winner)])
+        malformed = copy.deepcopy(winner)
+        malformed["experiment"] = None
+        malformed["treatment"]["successes"] = 15
+        report = run(winner, malformed, registry=registry)
+        self.assertEqual(report["duplicate_evidence"], 0)
+        self.assertEqual(report["invalid_or_unproven"], 1)
+        self.assertEqual(report["proposals"][0]["state"], "proponer_ensayo_manual")
+        # Una réplica negativa VÁLIDA sí veta, aunque no sea favorable.
+        negative = trial("trial-B002")
+        negative["treatment"]["successes"] = 15
+        negative["control"]["successes"] = 25
+        veto = run(winner, negative, registry=registry)
+        self.assertEqual(veto["proposals"], [])
+        self.assertEqual(veto["duplicate_evidence"], 1)
+        # v1 sigue contando ensayos sin metadatos de identidad.
+        legacy = run(winner, malformed, registry=registry, schema=1)
+        self.assertEqual(legacy["proposals"], [])
+        self.assertEqual(legacy["duplicate_evidence"], 2)
+
     def test_duplicate_and_replayed_evidence_never_promotes(self):
         row = trial()
         report = run(row, copy.deepcopy(row), registry=TrustedRegistry([audited(row)]))
