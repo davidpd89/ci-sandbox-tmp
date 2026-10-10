@@ -70,12 +70,15 @@ NICHE_TREND_HINTS = (
 
 def _rotate_hashtags(n=5):
     day = datetime.date.today().timetuple().tm_yday
-    return [HASHTAG_POOL[(day + i) % len(HASHTAG_POOL)] for i in range(n)]
+    import hashtag_query_consumers as hqc
+    return [tag.removeprefix("#") for tag in hqc.select(
+        "mastodon", "hashtags", HASHTAG_POOL, budget=n, tick=day)]
 
 
 def _rotate_searches(n=2):
     day = datetime.date.today().timetuple().tm_yday
-    return [SEARCH_POOL[(day + i) % len(SEARCH_POOL)] for i in range(n)]
+    import hashtag_query_consumers as hqc
+    return hqc.select("mastodon", "busquedas", SEARCH_POOL, budget=n, tick=day)
 
 
 _suggest_kind = lambda *a, **k: sc.downgrade_for_opinion(_suggest_kind_raw(*a, **k), a[0], 'favourite')
