@@ -201,6 +201,28 @@ class ExperimentEngineTests(unittest.TestCase):
             self.store.report(draws=0)
         self.assertEqual(self.store.report(draws=256)["studies"], [])
 
+    def test_readonly_dashboard_refuses_mutations_even_of_existing_schema(self):
+        self.assign("safe_1")
+        before = self.path.stat().st_size
+        with ce.ExperimentStore(self.path, read_only=True) as reader:
+            self.assertEqual(reader.report(draws=256)["studies"][0]["coverage"]["assigned"], 1)
+            for action in (
+                lambda: reader.register("pregunta", seed="new"),
+                lambda: reader.assign("apertura", "x", "new_unit", "WEB"),
+                lambda: reader.expose("ev", "apertura", "x", "safe_1", "WEB", EARLY),
+            ):
+                with self.assertRaises(ValueError):
+                    action()
+        self.assertEqual(self.path.stat().st_size, before)
+
+    def test_readonly_open_non_database_does_not_initialize_schema(self):
+        random_file = pathlib.Path(self.temp.name) / "not-a-database.txt"
+        random_file.write_text("original content", encoding="utf-8")
+        with ce.ExperimentStore(random_file, read_only=True) as reader:
+            with self.assertRaises(sqlite3.DatabaseError):
+                reader.report(draws=256)
+        self.assertEqual(random_file.read_text(encoding="utf-8"), "original content")
+
     def test_schema_sqlite_and_cli_offline(self):
         self.assign()
         script = pathlib.Path(ce.__file__)
