@@ -148,6 +148,34 @@ class InventoryTests(unittest.TestCase):
             "DOLLAR_OPEN", "$" + "{{"))
         self.assertEqual(p.audit_workflows(f), p.OWNERS)
 
+    def test_reserved_job_rejects_matrix_and_dynamic_name(self):
+        for target, reserved in ((A, "trusted-pr-paths"),
+                                 (B, "trusted-check-provenance")):
+            with self.subTest(target=target, variation="matrix"):
+                workflows = baseline()
+                workflows[target] += (
+                    "    strategy:\n      matrix:\n"
+                    "        os: [ubuntu-latest, windows-latest]\n"
+                )
+                with self.assertRaisesRegex(p.AuditError, "matrix"):
+                    p.audit_workflows(workflows)
+            with self.subTest(target=target, variation="dynamic"):
+                workflows = baseline()
+                workflows[target] = workflows[target].replace(
+                    "name: " + reserved,
+                    'name: "DOLLAR_OPEN vars.GATE }}"'.replace("DOLLAR_OPEN", "$" + "{{")
+                )
+                with self.assertRaisesRegex(p.AuditError, "literal"):
+                    p.audit_workflows(workflows)
+            with self.subTest(target=target, variation="matrix-expression"):
+                workflows = baseline()
+                workflows[target] += (
+                    '    strategy: "DOLLAR_OPEN fromJSON(vars.CONFIG) }}"\n'.replace(
+                        "DOLLAR_OPEN", "$" + "{{")
+                )
+                with self.assertRaisesRegex(p.AuditError, "matrix"):
+                    p.audit_workflows(workflows)
+
     def test_yaml_duplicate_keys_invalid_nested_and_on_key(self):
         self.assertIn("on", p.parse_workflow(baseline()[A], A))
         for text in (

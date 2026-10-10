@@ -128,8 +128,18 @@ def audit_workflows(workflows, owners=OWNERS):
             for name in owners:
                 if could_be(display, name):
                     matches[name].append((path, job_id))
-                    if path == owners[name] and "if" in job:
-                        raise AuditError("required job can be skipped: " + repr(path))
+                    if path == owners[name]:
+                        # Reserved checks must materialize as one literal job
+                        # name. Matrices and expressions are not unambiguous.
+                        if display != name:
+                            raise AuditError("required job name is not literal: " + repr(path))
+                        if "if" in job:
+                            raise AuditError("required job can be skipped: " + repr(path))
+                        strategy = job.get("strategy")
+                        if strategy is not None and (
+                            not isinstance(strategy, dict) or "matrix" in strategy
+                        ):
+                            raise AuditError("required job has ambiguous matrix: " + repr(path))
         if path in owners.values() and not target_only(doc):
             raise AuditError("trusted workflow has non-target triggers: " + repr(path))
     for name, owner_path in owners.items():
