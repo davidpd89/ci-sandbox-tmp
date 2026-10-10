@@ -1,0 +1,6 @@
+bash
+# https://github.com/OSINTCabal/OSINTSky
+git clone https://github.com/OSINTCabal/OSINTSky.git
+cd OSINTSky
+pip install -r requirements.txt
+python3 blueskyosint.py
