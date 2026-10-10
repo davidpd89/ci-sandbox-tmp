@@ -15,7 +15,7 @@ NETWORKS = ("x", "threads", "facebook", "pinterest", "reddit", "bluesky",
             "mastodon", "tiktok", "instagram")
 LANES = {"x": "WEB", "threads": "WEB", "facebook": "WEB",
          "pinterest": "WEB", "bluesky": "API", "mastodon": "API",
-         "tiktok": "MOBILE"}
+         "tiktok": "MOBILE", "instagram": "WEB"}
 INBOUND_KINDS = {"comment", "like", "repost", "follow"}
 OUTBOUND_KINDS = {"reply", "comment", "comentario", "comment_external", "respuesta",
                   "like", "favourite", "repost", "boost", "follow"}
@@ -43,9 +43,11 @@ def _day(value: object, context: str) -> date:
         raise ValueError(f"Fecha inválida en {context}") from exc
 
 
-def _csv(path: Path, required: set[str]) -> list[dict[str, str]]:
+def _csv(path: Path, required: set[str], *, missing_ok: bool = False) -> list[dict[str, str]]:
     if not path.exists():
-        return []  # una red aún sin registro
+        if missing_ok:
+            return []  # una red aún sin registro
+        raise FileNotFoundError(f"CSV de entrada obligatorio inexistente: {path}")
     with path.open(encoding="utf-8-sig", newline="") as fh:
         reader = csv.DictReader(fh)
         if not required.issubset(set(reader.fieldnames or ())):
@@ -112,7 +114,7 @@ def build(inbound: Path, registries_root: Path, *, inbox: Path | None = None,
 
     for net in NETWORKS:
         path = registries_root / f"SISTEMA_DIARIO_{net.upper()}" / "registro_interacciones.csv"
-        for number, row in enumerate(_csv(path, {"fecha", "cuenta", "tipo", "resultado"}), 2):
+        for number, row in enumerate(_csv(path, {"fecha", "cuenta", "tipo", "resultado"}, missing_ok=True), 2):
             handle = _handle(row["cuenta"])
             kind = (row["tipo"] or "").strip().casefold()
             if not handle or kind not in OUTBOUND_KINDS or (row["resultado"] or "").strip().casefold() not in CONFIRMED:
@@ -154,22 +156,30 @@ def build(inbound: Path, registries_root: Path, *, inbox: Path | None = None,
             refs[identity] = {"network": net, "handle": handle, "ref": ref,
                               "thread": thread, "day": day, "answered": answered,
                               "context_quality": quality}
-    # Un hilo puede contener varios mensajes, pero solo la última señal
-    # genera una tarea. Una respuesta posterior resuelve el hilo anterior.
-    threads = {}
+    # El mismo ref repetido se resuelve arriba (answered gana el empate).
+    # Entre refs diferentes solo hay fechas por día: no se puede ordenar
+    # dos mensajes del mismo día ni suponer que uno contestado cerró el otro.
+    threads: dict[tuple[str, str, str], list[dict]] = {}
     for item in refs.values():
         key = (item["network"], item["handle"], item["thread"])
-        old = threads.get(key)
-        if old is None or (item["day"], item["answered"], item["ref"]) > (old["day"], old["answered"], old["ref"]):
-            threads[key] = item
-    for item in threads.values():
-        if item["answered"] or item["day"] < cutoff:
+        threads.setdefault(key, []).append(item)
+    for items in threads.values():
+        newest_day = max(item["day"] for item in items)
+        if newest_day < cutoff:
             continue
+        latest = [item for item in items if item["day"] == newest_day]
+        unanswered = [item for item in latest if not item["answered"]]
+        if not unanswered:
+            continue
+        # Selección determinista del ref; cualquier empate entre refs exige
+        # revisión de contexto, nunca cierre automático ni respuesta directa.
+        item = min(unanswered, key=lambda entry: entry["ref"])
+        ambiguous = len(latest) > 1
         c = _contact(people, item["network"], item["handle"])
         c["pending"].append({"ref": item["ref"], "thread": item["thread"],
                              "date": item["day"].isoformat(),
                              "context_quality": item["context_quality"],
-                             "status": "review_context" if item["context_quality"] != "complete" else "review_reply"})
+                             "status": "review_context" if ambiguous or item["context_quality"] != "complete" else "review_reply"})
 
     tagmap = _json(labels, {})
     if not isinstance(tagmap, dict):

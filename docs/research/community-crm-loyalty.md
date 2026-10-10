@@ -18,7 +18,7 @@ Chatwoot núcleo MIT (excepto enterprise), Monica y EspoCRM AGPL-3.0, Twenty mez
 Se reutiliza el patrón de fichas, tags y bandeja, pero se conserva la arquitectura existente. Proyección solo lectura sin nuevo servidor ni dependencia.
 
 ## Pruebas
-12 tests sintéticos offline, aprobados en CI Ubuntu/Windows Python 3.11 en el workflow específico. Los checks del protocolo de campaña requieren este encabezado verificable.
+12 tests sintéticos offline del HEAD original, aprobados en CI Ubuntu/Windows Python 3.11 en el workflow específico; el commit de revisión añade 3 regresiones (15 en total), cuyos checks deben comprobarse en su nuevo HEAD. Los checks del protocolo de campaña requieren este encabezado verificable.
 
 ## Retirada
 Eliminar módulo, tests y workflow: ningún esquema existente ni estado operativo se modifica.
@@ -54,10 +54,10 @@ No se han incorporado líneas de terceros; **procedencia conceptual**: inbox/hil
 ## Implementación
 
 - tools/community_crm.py: proyecta 9 redes; usa identidad canónica red+handle, agrega inbound coalescido, separa outbound confirmado, 90 días de historial y 14 de actividad/pendientes (configurables), deduplica por día/tipo/cuenta; mantiene la diferencia entre acciones realizadas y respuestas a un hilo.
-- Inbox opcional JSON (lista): [{"network":"bluesky","handle":"lectora.bsky.social","ref":"at://...","thread":"at://...","date":"2026-10-09","answered":false,"context_quality":"complete"}]. "answered" **booleano verificado por el productor**; un status falso de procedencia no verificada no se convierte en canario. Selecciona el mensaje más nuevo de cada hilo; desempate answered=True. Fecha futura excluida; ventana caducada nunca genera propuesta.
+- Inbox opcional JSON (lista): [{"network":"bluesky","handle":"lectora.bsky.social","ref":"at://...","thread":"at://...","date":"2026-10-09","answered":false,"context_quality":"complete"}]. "answered" **booleano verificado por el productor**; un status falso de procedencia no verificada no se convierte en canario. Selecciona por fecha el estado más reciente del hilo. Si hay refs distintas el mismo día (sin hora fiable), conserva una revisión de contexto cuando alguna sigue sin contestar; no supone que otra ref contestada sea posterior. El desempate answered=True solo se aplica al replay del **mismo ref**. Fecha futura excluida; ventana caducada nunca genera propuesta.
 - Etiquetas opcionales JSON: {"bluesky:lectora.bsky.social":["lectura","fantasía"]}. Solo se aplican a contactos ya presentes; no se escribe una tabla de personas nuevas ni notas libres.
 - Score de **ordenación explicable, no predictor entrenado**: comentarios 3 c/u (máx. 3), repost 2 (máx. 2), follow 2 (máx. 1), likes 1 (máx. 2), +2 por recurrencia en >=2 días, +1/2/3 por recencia de actividad, +5 si hay hilo pendiente. Se devuelven los componentes score_reasons. Se priorizan pendientes antes del score. No es el scoring multifuente experimental de la PR #69.
-- by_lane informa WEB, API, MOBILE y UNASSIGNED: las asignaciones conocidas son X/Threads/Facebook/Pinterest=WEB, Bluesky/Mastodon=API, TikTok=MOBILE; Reddit e Instagram se dejan UNASSIGNED hasta confirmar adaptador/cola en la integración del controlador. **Nunca** se mezclan colas para ejecutar acciones.
+- by_lane informa WEB, API, MOBILE y UNASSIGNED: las asignaciones conocidas son X/Threads/Facebook/Pinterest=WEB, Bluesky/Mastodon=API, TikTok=MOBILE; Instagram=WEB (confirmado en tools/mechanical_round.py del oficial); Reddit queda UNASSIGNED hasta confirmar su adaptador/cola. **Nunca** se mezclan colas para ejecutar acciones.
 - No se llama a relationship_policy.comment_allowed para autorizar respuesta: el informe prioriza **revisión**; la política, identidad de destino y preflight corresponden al ejecutor.
 
 Ejemplo reproducible (solo ficheros locales, salida JSON a stdout):
@@ -87,6 +87,11 @@ Fixture central: cinco filas inbox con dos registros para el mismo ref, dos refs
 - La normalización por handle no conserva identidad cuando cambia un nombre; **no** fusionar alias automáticamente. Una futura migración a identificadores estables requiere contrato por red y compatibilidad con CSV legados.
 - El CSV inbound agrupa por día; no sirve para contar volumen exacto de comentarios. Las refs y estado answered se deben obtener con colectores específicos existentes o verificados, no inferirse de texto ni de acciones nuestras. Sin productor para inbox, este módulo ofrece historial y score, **no** recuperación automática de pendientes.
 - La etiqueta es un dato manual local; no existe UI ni escritura de tareas. El JSON de salida contiene handles y referencias, por lo que se mantiene fuera de commits/logs de datos reales.
-- El modo UNASSIGNED no inventa capacidades de Reddit/Instagram. Claude debe verificar su cola al integrar, mantener el ledger de idempotencia y el cutoff de destino de los ejecutores.
+- El modo UNASSIGNED no inventa capacidades de Reddit. Claude debe verificar su cola al integrar, mantener el ledger de idempotencia y el cutoff de destino de los ejecutores.
 - PR #69 se ocupa de scoring engagement/colas de premios; PR #86 de funnel y atribución. No abrir una PR duplicada por esas funciones. El nuevo módulo es únicamente la capa de lectura y continuidad CRM.
 - No hay canario supervisado ni prueba en Edge, móvil, API real o Windows vivo al elaborar este informe. La integración debe comenzar con export **sintético** o canario supervisado separado; ninguna prueba offline demuestra resultados de seguimiento reales.
+
+
+## Revisión independiente del controlador (10/10/2026)
+
+En una segunda pasada se detectaron y corrigieron tres casos: (1) un CSV inbound explícito ausente devolvía un informe vacío válido; ahora produce error, mientras los registros de una red aún no inicializada siguen siendo opcionales; (2) dos refs distintas del mismo hilo en el mismo día podían ocultar un pendiente si una estaba marcada answered=True, pese a no existir marca horaria para ordenarlas: ahora generan **review_context**, nunca una acción automática; (3) Instagram figuraba UNASSIGNED pese a tener browser=True en tools/mechanical_round.py del oficial, y ahora se clasifica WEB. Se añaden tres tests sintéticos. No se crea un productor de inbox ni se vincula la proyección al ejecutor.

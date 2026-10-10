@@ -135,6 +135,37 @@ class CommunityCrmTests(unittest.TestCase):
             x = next(c for c in self.build()["contacts"] if c["network"] == "x")
             self.assertEqual(x["pending"][0]["status"], "review_reply")
 
+    def test_same_day_distinct_refs_do_not_hide_pending(self):
+        rows = [
+            {"network": "x", "handle": "ana", "ref": "a", "thread": "h1",
+             "date": "2026-10-09", "answered": False, "context_quality": "complete"},
+            {"network": "x", "handle": "ana", "ref": "z", "thread": "h1",
+             "date": "2026-10-09", "answered": True, "context_quality": "complete"},
+        ]
+        for order in (rows, rows[::-1]):
+            with self.subTest(order=[r["ref"] for r in order]):
+                self.inbox.write_text(json.dumps(order), encoding="utf-8")
+                data = self.build()
+                self.assertEqual(data["pending_threads"], 1)
+                contact = next(c for c in data["contacts"] if c["network"] == "x")
+                self.assertEqual(contact["pending"][0]["ref"], "a")
+                self.assertEqual(contact["pending"][0]["status"], "review_context")
+
+    def test_explicit_missing_inbound_is_not_an_empty_report(self):
+        self.inbound.unlink()
+        with self.assertRaises(FileNotFoundError):
+            self.build()
+
+    def test_instagram_uses_real_browser_lane(self):
+        self.inbox.write_text(json.dumps([
+            {"network": "instagram", "handle": "lectora", "ref": "ig1",
+             "date": "2026-10-09", "answered": False, "context_quality": "complete"}
+        ]), encoding="utf-8")
+        data = self.build()
+        self.assertEqual(data["by_lane"]["WEB"], 1)
+        contact = next(c for c in data["contacts"] if c["network"] == "instagram")
+        self.assertEqual(contact["lane"], "WEB")
+
     def test_no_synthetic_tags_phantom_contacts(self):
         self.tags.write_text(json.dumps({"x:nadie": ["venderle"], "bluesky:ana": ["lectora"]}), encoding="utf-8")
         self.assertNotIn("nadie", json.dumps(self.build()))
