@@ -267,7 +267,7 @@ class AudienceStore:
                     counts["new_people"] += 1
                 elif account and row.observed_at >= account[0] and not row.deleted:
                     self.db.execute(
-                        "UPDATE audience_accounts SET handle=?, profile=?, stable=?, last_seen=? "
+                        "UPDATE audience_accounts SET handle=COALESCE(NULLIF(?,''),handle), profile=COALESCE(NULLIF(?,''),profile), stable=?, last_seen=? "
                         "WHERE network=? AND account_key=?",
                         (row.handle, row.profile, int(row.stable_identity),
                          row.observed_at, network, row.account_key))
@@ -280,7 +280,8 @@ class AudienceStore:
                         account_key=excluded.account_key, kind=excluded.kind,
                         post_key=excluded.post_key, surface=excluded.surface,
                         occurred_at=excluded.occurred_at, observed_at=excluded.observed_at,
-                        post_created_at=excluded.post_created_at, text=excluded.text,
+                        post_created_at=COALESCE(excluded.post_created_at,audience_events.post_created_at),
+                        text=COALESCE(NULLIF(excluded.text,''),audience_events.text),
                         active=excluded.active
                 """, (network, row.event_key, row.account_key, row.kind, row.post_key,
                       row.surface, row.occurred_at, row.observed_at, row.post_created_at,
@@ -386,7 +387,9 @@ def collect_pages(store: AudienceStore, *, network: str, surface: str, seed: str
             totals[field] += stats[field]
         cursor = nxt
         if nxt is None:
-            done = True
+            # Una página con actores bloqueados/no encontrados no prueba un
+            # snapshot exhaustivo: el reconciliador NO puede inferir bajas.
+            done = page.get("coverage_complete", True) is True
             break
         visited.add(nxt)
     return {"network": network, "lane": LANES[network],
