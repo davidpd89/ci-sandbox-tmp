@@ -212,12 +212,23 @@ def evaluate(cases: list[dict], candidates: list[dict], ratings_path: str | None
         expected = {c["id"] for c in cases if c["network"] == network}
         eligible_cases = {cid for cid in by_case if indexed[cid]["network"] == network and
                           set(by_case[cid]) == strategies_by_case[cid]}
-        if len(expected) < 4 or eligible_cases != expected or len(strategies) < 2:
+        cohorts = {frozenset(strategies_by_case[cid]) for cid in expected}
+        if (len(expected) < 4 or eligible_cases != expected or len(cohorts) != 1
+                or len(next(iter(cohorts))) < 2
+                or any(len(scores) != len(expected) for scores in strategies.values())):
             continue
         averages = {s: round(sum(v) / len(v), 5) for s, v in strategies.items()}
         order = sorted(averages, key=lambda s: (-averages[s], s))
-        if averages[order[0]] - averages[order[1]] >= 0.05:
-            winners.append({"network": network, "strategy": order[0], "human_score": averages[order[0]],
+        best = order[0]
+        # Una preferencia humana no habilita texto inválido o abstenciones.
+        eligible_best = all(
+            _valid(candidate.get("reply"), network)[0]
+            for candidate in candidates
+            if indexed[candidate["case_id"]]["network"] == network
+            and candidate["strategy"] == best
+        )
+        if eligible_best and averages[best] - averages[order[1]] >= 0.05:
+            winners.append({"network": network, "strategy": best, "human_score": averages[best],
                             "margin": round(averages[order[0]] - averages[order[1]], 5),
                             "cases": len(expected), "reviewers_min": 2})
     result["human"] = {"status": "scored_not_production_approved", "rated_tokens": len(grades),
