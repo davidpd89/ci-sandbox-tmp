@@ -101,8 +101,8 @@ def rank_cohorts(cohorts, *, min_sample=40, min_age_days=3,
             type(min_sample) is not int or min_sample < 1 or
             type(min_age_days) is not int or min_age_days < 0 or
             type(exploration_fraction) not in (int, float) or
-            not math.isfinite(exploration_fraction) or
-            not 0 <= exploration_fraction <= 1):
+            not 0 <= exploration_fraction <= 1 or
+            not math.isfinite(exploration_fraction)):
         raise ValueError("invalid ranking parameters")
     if not isinstance(cohorts, (list, tuple)) or len(cohorts) > _MAX_ROWS:
         raise ValueError("cohorts must be a bounded sequence")
