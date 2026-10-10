@@ -17,6 +17,7 @@ TODAY = datetime.date(2026, 10, 6)
 
 def status(acct, text, *, created=3, followers=5, language="es", **extra):
     base = {"url": f"https://masto.es/@{acct}/1", "content": f"<p>{text}</p>", "language": language, "visibility": "public", "in_reply_to_id": None, "reblog": None,
+            "created_at": (TODAY - datetime.timedelta(days=1)).isoformat() + "T10:00:00Z",
             "account": {"acct": acct, "created_at": (TODAY - datetime.timedelta(days=created)).isoformat() + "T10:00:00Z", "followers_count": followers, "bot": False}}
     base.update(extra)
     return base
@@ -31,6 +32,15 @@ class DiscoverTests(unittest.TestCase):
 
     def test_new_spanish_reader_is_a_candidate(self):
         self.assertIn("ana@masto.es", self.discover([status("ana", GOOD)]))
+
+    def test_welcome_uses_post_date_not_account_creation_date(self):
+        candidates = self.discover([status("ana", GOOD, created=9)])
+        row = candidates["ana@masto.es"]
+        self.assertEqual(row["created"], 9)
+        self.assertEqual(row["post_created_at"], "2026-10-05T10:00:00Z")
+        plan = mw.build(candidates, set())
+        replies = [item for item in plan if item["kind"] == "reply"]
+        self.assertEqual(replies[0]["post_created_at"], row["post_created_at"])
 
     def test_everyone_else_is_not(self):
         cases = [status("vieja", GOOD, created=200), status("grande", GOOD, followers=5000), status("ingles", "Hi, I am new here and I love fantasy books and reading novels every day #introduction", language="en"),
@@ -50,7 +60,7 @@ class BuildTests(unittest.TestCase):
         self.assertTrue(all(p["text"] == mw.PENDING_TEXT for p in replies))      # el texto lo escribe ChatGPT despues; nunca una plantilla
         self.assertEqual({p["handle"] for p in plan if p["kind"] == "follow"}, set(self.found))
         for p in replies:
-            self.assertNotIn("autorademo", p["text"].casefold())                          # nunca habla de David ni de su web
+            self.assertNotIn("davidporto", p["text"].casefold())                          # nunca habla de David ni de su web
 
     def test_known_accounts_and_the_limit_are_respected(self):
         plan = mw.build(self.found, {"u1@masto.es", "u2"}, random.Random(1), 1)

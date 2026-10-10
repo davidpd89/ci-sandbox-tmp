@@ -26,12 +26,12 @@ def load_function(filename, name, namespace):
 
 class RowParserTests(unittest.TestCase):
     def parse(self, text, handles):
-        ns = {"MY_HANDLE": "autorademodiaz", "_ROW_STOP": {"seguir", "siguiendo", "mas perfiles", "más perfiles", "verificado", "te sigue", "solicitado"}}
+        ns = {"MY_HANDLE": "davidportodiaz", "_ROW_STOP": {"seguir", "siguiendo", "mas perfiles", "más perfiles", "verificado", "te sigue", "solicitado"}}
         return load_function("threads_interact.py", "parse_account_rows", ns)(text, handles)
 
     def test_profile_search_rows(self):
-        text = "Perfiles\nbiblioteca_olvidada\nAndrea Libros y Fantasía\nlaucen_entre_libros\nLaura\nFantasía romántica\nMás perfiles\ngodboks\nGabos / Libros\nSeguir\nautorademodiaz\nDavid"
-        rows = self.parse(text, ["biblioteca_olvidada", "laucen_entre_libros", "godboks", "autorademodiaz"])
+        text = "Perfiles\nbiblioteca_olvidada\nAndrea Libros y Fantasía\nlaucen_entre_libros\nLaura\nFantasía romántica\nMás perfiles\ngodboks\nGabos / Libros\nSeguir\ndavidportodiaz\nDavid"
+        rows = self.parse(text, ["biblioteca_olvidada", "laucen_entre_libros", "godboks", "davidportodiaz"])
         self.assertEqual([r[0] for r in rows], ["biblioteca_olvidada", "laucen_entre_libros", "godboks"])     # nuestra propia cuenta no entra
         self.assertEqual(rows[1][1:], ("Laura", "Fantasía romántica"))
 
@@ -189,10 +189,10 @@ class LikeButtonTests(unittest.TestCase):
 
 class BackfollowTests(unittest.TestCase):
     def test_new_followers_are_read_from_the_activity_text(self):
-        ns = {"MY_HANDLE": "autorademodiaz"}
+        ns = {"MY_HANDLE": "davidportodiaz"}
         parse = load_function("threads_interact.py", "parse_new_followers", ns)
         text = chr(10).join(['Actividad', 'Todo', 'bewithlau', ' y 1 más', '4 h', 'hace 4 horas', 'Ahora te sigue(n)', 'Tu respuesta obtuvo más de 50 visualizaciones.', 'giuvivanco_', '1 día', 'Escribir a veces...'])
-        self.assertEqual(parse(text, ["bewithlau", "giuvivanco_", "autorademodiaz"]), ["bewithlau"])
+        self.assertEqual(parse(text, ["bewithlau", "giuvivanco_", "davidportodiaz"]), ["bewithlau"])
 
     def test_backfollow_accounts_come_first_and_get_a_follow_even_if_already_known(self):
         tmp = tempfile.TemporaryDirectory()

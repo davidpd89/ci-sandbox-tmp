@@ -31,7 +31,7 @@ class FichaParsingTests(unittest.TestCase):
 **Estado:** lista.
 
 - **Tablero:** `Recursos para escritores`.
-- **Enlace:** https://autorademodiaz.com/x/
+- **Enlace:** https://davidportodiaz.com/x/
 - **Etiqueta del enlace de perfil:** `Premios`.
 
 ## Título
@@ -43,7 +43,7 @@ Cómo comprobar datos
 Método para investigar.
 """
         self.assertEqual(cq._parse_meta(text)["tablero"], "Recursos para escritores")
-        self.assertEqual(cq._parse_meta(text)["enlace"], "https://autorademodiaz.com/x/")
+        self.assertEqual(cq._parse_meta(text)["enlace"], "https://davidportodiaz.com/x/")
         self.assertEqual(cq._parse_meta(text)["etiqueta del enlace de perfil"], "Premios")
         self.assertEqual(cq._parse_titulo(text), "Cómo comprobar datos")
 

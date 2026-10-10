@@ -131,14 +131,40 @@ def _count(profile, key):
 
 def upsert(db, profile, seed, kind, today):
     """Anota la cuenta y la evidencia (seed, kind). `kind`: followers | follows | liked | reposted. Devuelve True si la cuenta es nueva en la reserva."""
-    did = profile.get("did")
-    handle = (profile.get("handle") or "").casefold()
-    if not did or not handle or handle.endswith(".invalid"):
+    if not isinstance(profile, dict):
         return False
+    did = profile.get("did")
+    raw_handle = profile.get("handle")
+    if (not isinstance(did, str) or not isinstance(raw_handle, str)
+            or len(did) > 2048
+            or not re.fullmatch(r"did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]", did)):
+        return False
+    handle = raw_handle.casefold()
+    # Handle ATProto: DNS ASCII (dos etiquetas o más), sin espacios,
+    # caracteres de control ni sufijos inválidos; no normalizar valores malos.
+    if (len(handle) > 253 or handle.endswith(".invalid")
+            or not re.fullmatch(
+                r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+"
+                r"[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?", handle
+            )):
+        return False
+    # Las vistas parciales de API pueden carecer de bio o traer null;
+    # los tipos inesperados tampoco deben romper el lote completo.
+    profile = dict(profile)
+    if not isinstance(profile.get("description"), str):
+        profile["description"] = ""
+    if not isinstance(profile.get("displayName"), str):
+        profile["displayName"] = ""
+    if not isinstance(profile.get("labels"), list):
+        profile["labels"] = []
+    for key in ("followersCount", "followsCount", "postsCount"):
+        value = profile.get(key)
+        if value is not None and (type(value) is not int or value < 0):
+            profile[key] = None
     reject, hits, spanish, followers = classify(profile)
     detailed = 1 if profile.get("followersCount") is not None else 0
     cur = db.execute("SELECT enriched FROM accounts WHERE did = ?", (did,)).fetchone()
-    bio = (profile.get("description") or "")[:300]
+    bio = profile["description"][:300]
     english = int(looks_english(bio))
     if cur is None:
         db.execute(
@@ -171,7 +197,7 @@ def record_scan_candidates(db, candidates, today=None):
     today = today or datetime.date.today().isoformat()
     new = 0
     for profile, source in candidates:
-        if profile.get("did") and profile.get("handle") and profile.get("description") is not None:
+        if isinstance(profile, dict) and profile.get("did") and profile.get("handle"):
             new += 1 if upsert(db, profile, f"scan:{source}", "scan", today) else 0
     db.commit()
     return new
@@ -417,28 +443,75 @@ def usable(row):
     return bool((row["spanish"] and row["bio_hits"] >= 1) or row["seeds_count"] >= 2 or (row.get("behav", 0) >= 1))
 
 
-def top_candidates(db, n=200, *, today=None, mark=True, again_days=OFFER_AGAIN_DAYS, exclude=()):
-    today = today or datetime.date.today().isoformat()
-    floor = (datetime.date.fromisoformat(today) - datetime.timedelta(days=again_days)).isoformat()
-    cols = ("did", "handle", "display", "bio", "followers", "follows", "posts", "seeds_count", "bio_hits", "spanish", "reject", "offered_at", "behav", "english",
-            "first_source")
-    rows = db.execute(
-        "SELECT " + ",".join(cols) + " FROM accounts WHERE reject IS NULL AND (offered_at IS NULL OR offered_at <= ?) "
-        "ORDER BY behav DESC, seeds_count DESC, bio_hits DESC LIMIT ?", (floor, max(n * 8, 4000))
-    ).fetchall()
-    ranked = []
-    for values in rows:
-        row = dict(zip(cols, values))
-        if usable(row) and row["handle"] not in exclude:
-            row["score"] = affinity(row)
-            ranked.append(row)
-    ranked.sort(key=lambda row: (-row["score"], row["handle"]))
-    chosen = ranked[:n]
-    if mark and chosen:
-        db.executemany("UPDATE accounts SET offered_at=?, offered_count=offered_count+1 WHERE did=?", [(today, row["did"]) for row in chosen])
-        db.commit()
-    return chosen
+def mark_offered(db, dids, *, today=None, again_days=OFFER_AGAIN_DAYS,
+                 commit=True):
+    """Marca DIDs inspeccionados exactamente una vez durante el cooldown.
 
+    commit=False solo para el consumidor que ya abrió BEGIN IMMEDIATE: no
+    confirmar una transacción externa antes de terminar su procesamiento.
+    """
+    today = today or datetime.date.today().isoformat()
+    floor = (datetime.date.fromisoformat(today) -
+             datetime.timedelta(days=again_days)).isoformat()
+    unique = tuple(dict.fromkeys(did for did in dids if isinstance(did, str) and did))
+
+    def apply():
+        changed = 0
+        for did in unique:
+            changed += db.execute(
+                "UPDATE accounts SET offered_at=?, offered_count=offered_count+1 "
+                "WHERE did=? AND (offered_at IS NULL OR offered_at <= ?)",
+                (today, did, floor),
+            ).rowcount
+        return changed
+
+    if not commit:
+        if not db.in_transaction:
+            raise RuntimeError("mark_offered(commit=False) requiere transacción activa")
+        return apply()
+    with db:
+        return apply()
+
+
+def top_candidates(db, n=200, *, today=None, mark=True, again_days=OFFER_AGAIN_DAYS, exclude=()):
+    """Selecciona por afinidad; con mark=True reclama antes de devolver filas.
+
+    BEGIN IMMEDIATE antes del SELECT impide que dos consumidores con mark=True
+    devuelvan simultáneamente la misma reserva. El escáner usa mark=False
+    dentro de su propia transacción explícita (selección + evaluación + marca).
+    """
+    today = today or datetime.date.today().isoformat()
+    floor = (datetime.date.fromisoformat(today) -
+             datetime.timedelta(days=again_days)).isoformat()
+    cols = ("did", "handle", "display", "bio", "followers", "follows", "posts",
+            "seeds_count", "bio_hits", "spanish", "reject", "offered_at", "behav",
+            "english", "first_source")
+    if mark and not db.in_transaction:
+        db.execute("BEGIN IMMEDIATE")
+    try:
+        rows = db.execute(
+            "SELECT " + ",".join(cols) +
+            " FROM accounts WHERE reject IS NULL AND (offered_at IS NULL OR offered_at <= ?) "
+            "ORDER BY behav DESC, seeds_count DESC, bio_hits DESC LIMIT ?",
+            (floor, max(n * 8, 4000)),
+        ).fetchall()
+        ranked = []
+        for values in rows:
+            row = dict(zip(cols, values))
+            if usable(row) and row["handle"] not in exclude:
+                row["score"] = affinity(row)
+                ranked.append(row)
+        ranked.sort(key=lambda row: (-row["score"], row["handle"]))
+        chosen = ranked[:n]
+        if mark:
+            mark_offered(db, (row["did"] for row in chosen),
+                         today=today, again_days=again_days, commit=False)
+            db.commit()
+        return chosen
+    except Exception:
+        if mark:
+            db.rollback()
+        raise
 
 first_touch = pc.first_touch
 record_touch = pc.record_touch

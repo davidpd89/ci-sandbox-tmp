@@ -1,0 +1,691 @@
+{
+"children": [
+{
+"ref": "@e39",
+"type": "android.widget.ImageView",
+"label": "Bluetooth activado.",
+"text": "",
+"rect": {
+"x": 715,
+"y": 32,
+"width": 40,
+"height": 56
+}
+},
+{
+"ref": "@e40",
+"type": "android.widget.ImageView",
+"label": "Modo Silencio",
+"text": "",
+"rect": {
+"x": 755,
+"y": 32,
+"width": 50,
+"height": 56
+}
+},
+{
+"ref": "@e41",
+"type": "android.widget.ImageView",
+"label": "Falta la tarjeta SIM",
+"text": "",
+"rect": {
+"x": 805,
+"y": 32,
+"width": 56,
+"height": 56
+}
+},
+{
+"ref": "@e51",
+"type": "android.widget.LinearLayout",
+"text": "",
+"identifier": "com.instagram.android:id/action_bar_root",
+"rect": {
+"x": 0,
+"y": 93,
+"width": 1080,
+"height": 2177
+}
+},
+{
+"ref": "@e53",
+"type": "android.view.ViewGroup",
+"text": "",
+"identifier": "com.instagram.android:id/layout_container_parent",
+"rect": {
+"x": 0,
+"y": 93,
+"width": 1080,
+"height": 2177
+}
+},
+{
+"ref": "@e54",
+"type": "android.widget.FrameLayout",
+"text": "",
+"identifier": "com.instagram.android:id/layout_container_main",
+"rect": {
+"x": 0,
+"y": 93,
+"width": 1080,
+"height": 2177
+}
+},
+{
+"ref": "@e55",
+"type": "android.widget.FrameLayout",
+"text": "",
+"identifier": "com.instagram.android:id/profile_action_bar",
+"rect": {
+"x": 0,
+"y": 93,
+"width": 1080,
+"height": 154
+}
+},
+{
+"ref": "@e56",
+"type": "android.widget.LinearLayout",
+"text": "",
+"identifier": "com.instagram.android:id/action_bar_layout",
+"rect": {
+"x": 0,
+"y": 93,
+"width": 1058,
+"height": 154
+}
+},
+{
+"ref": "@e57",
+"type": "android.widget.LinearLayout",
+"text": "",
+"identifier": "com.instagram.android:id/left_action_bar_buttons",
+"rect": {
+"x": 0,
+"y": 93,
+"width": 132,
+"height": 154
+}
+},
+{
+"ref": "@e58",
+"type": "android.widget.ImageView",
+"label": "Volver",
+"text": "",
+"rect": {
+"x": 0,
+"y": 93,
+"width": 132,
+"height": 154
+}
+},
+{
+"ref": "@e59",
+"type": "android.widget.LinearLayout",
+"text": "",
+"identifier": "com.instagram.android:id/action_bar_username_container",
+"rect": {
+"x": 176,
+"y": 93,
+"width": 750,
+"height": 154
+}
+},
+{
+"ref": "@e60",
+"type": "android.widget.TextView",
+"label": "cuenta_no_seguida",
+"text": "cuenta_no_seguida",
+"identifier": "com.instagram.android:id/action_bar_title",
+"rect": {
+"x": 176,
+"y": 93,
+"width": 498,
+"height": 154
+}
+},
+{
+"ref": "@e61",
+"type": "android.widget.LinearLayout",
+"text": "",
+"identifier": "com.instagram.android:id/right_action_bar_buttons",
+"rect": {
+"x": 926,
+"y": 93,
+"width": 132,
+"height": 154
+}
+},
+{
+"ref": "@e62",
+"type": "android.widget.ImageView",
+"label": "Opciones",
+"text": "",
+"rect": {
+"x": 926,
+"y": 93,
+"width": 132,
+"height": 154
+}
+},
+{
+"ref": "@e63",
+"type": "android.view.ViewGroup",
+"text": "",
+"identifier": "com.instagram.android:id/coordinator_root_layout",
+"rect": {
+"x": 0,
+"y": 247,
+"width": 1080,
+"height": 2023
+}
+},
+{
+"ref": "@e64",
+"type": "android.widget.LinearLayout",
+"text": "",
+"identifier": "com.instagram.android:id/tab_appbar",
+"rect": {
+"x": 0,
+"y": 247,
+"width": 1080,
+"height": 1251
+}
+},
+{
+"ref": "@e65",
+"type": "android.widget.LinearLayout",
+"text": "",
+"identifier": "com.instagram.android:id/profile_header_container",
+"rect": {
+"x": 0,
+"y": 247,
+"width": 1080,
+"height": 1251
+}
+},
+{
+"ref": "@e66",
+"type": "android.widget.LinearLayout",
+"text": "",
+"identifier": "com.instagram.android:id/profile_header_fixed_list",
+"rect": {
+"x": 0,
+"y": 247,
+"width": 1080,
+"height": 1118
+}
+},
+{
+"ref": "@e67",
+"type": "android.view.ViewGroup",
+"text": "",
+"identifier": "com.instagram.android:id/row_profile_header",
+"rect": {
+"x": 0,
+"y": 247,
+"width": 1080,
+"height": 681
+}
+},
+{
+"ref": "@e68",
+"type": "android.view.ViewGroup",
+"text": "",
+"identifier": "com.instagram.android:id/profile_header_avatar_container_top_left_stub",
+"rect": {
+"x": 44,
+"y": 247,
+"width": 242,
+"height": 242
+}
+},
+{
+"ref": "@e69",
+"type": "android.view.View",
+"text": "",
+"identifier": "com.instagram.android:id/reel_ring",
+"rect": {
+"x": 44,
+"y": 247,
+"width": 242,
+"height": 242
+}
+},
+{
+"ref": "@e70",
+"type": "android.widget.FrameLayout",
+"text": "",
+"identifier": "com.instagram.android:id/row_profile_header_imageview_frame_layout",
+"rect": {
+"x": 63,
+"y": 266,
+"width": 204,
+"height": 204
+}
+},
+{
+"ref": "@e71",
+"type": "android.widget.Button",
+"label": "historia no vista de cuenta_no_seguida",
+"text": "",
+"identifier": "com.instagram.android:id/row_profile_header_imageview",
+"rect": {
+"x": 63,
+"y": 266,
+"width": 204,
+"height": 204
+}
+},
+{
+"ref": "@e72",
+"type": "android.widget.TextView",
+"text": "Nombre Ejemplo",
+"identifier": "com.instagram.android:id/profile_header_full_name_above_vanity",
+"rect": {
+"x": 330,
+"y": 282,
+"width": 405,
+"height": 46
+}
+},
+{
+"ref": "@e73",
+"type": "android.widget.LinearLayout",
+"text": "",
+"identifier": "com.instagram.android:id/profile_header_metrics_full_width",
+"rect": {
+"x": 330,
+"y": 328,
+"width": 706,
+"height": 149
+}
+},
+{
+"ref": "@e74",
+"type": "text",
+"label": "1.475publicaciones",
+"text": "",
+"identifier": "com.instagram.android:id/profile_header_post_count_front_familiar",
+"rect": {
+"x": 330,
+"y": 328,
+"width": 274,
+"height": 149
+}
+},
+{
+"ref": "@e75",
+"type": "android.widget.TextView",
+"text": "1.475",
+"identifier": "com.instagram.android:id/profile_header_familiar_post_count_value",
+"rect": {
+"x": 330,
+"y": 350,
+"width": 107,
+"height": 56
+}
+},
+{
+"ref": "@e76",
+"type": "android.widget.TextView",
+"text": "publicaciones",
+"identifier": "com.instagram.android:id/profile_header_familiar_post_count_label",
+"rect": {
+"x": 330,
+"y": 406,
+"width": 249,
+"height": 49
+}
+},
+{
+"ref": "@e77",
+"type": "text",
+"label": "2.270seguidores",
+"text": "",
+"identifier": "com.instagram.android:id/profile_header_followers_stacked_familiar",
+"rect": {
+"x": 604,
+"y": 328,
+"width": 242,
+"height": 149
+}
+},
+{
+"ref": "@e78",
+"type": "android.widget.TextView",
+"text": "2.270",
+"identifier": "com.instagram.android:id/profile_header_familiar_followers_value",
+"rect": {
+"x": 621,
+"y": 350,
+"width": 113,
+"height": 56
+}
+},
+{
+"ref": "@e79",
+"type": "android.widget.TextView",
+"text": "seguidores",
+"identifier": "com.instagram.android:id/profile_header_familiar_followers_label",
+"rect": {
+"x": 621,
+"y": 406,
+"width": 200,
+"height": 49
+}
+},
+{
+"ref": "@e80",
+"type": "text",
+"label": "875seguidos",
+"text": "",
+"identifier": "com.instagram.android:id/profile_header_following_stacked_familiar",
+"rect": {
+"x": 846,
+"y": 328,
+"width": 190,
+"height": 149
+}
+},
+{
+"ref": "@e81",
+"type": "android.widget.TextView",
+"text": "875",
+"identifier": "com.instagram.android:id/profile_header_familiar_following_value",
+"rect": {
+"x": 863,
+"y": 350,
+"width": 77,
+"height": 56
+}
+},
+{
+"ref": "@e82",
+"type": "android.widget.TextView",
+"text": "seguidos",
+"identifier": "com.instagram.android:id/profile_header_familiar_following_label",
+"rect": {
+"x": 863,
+"y": 406,
+"width": 164,
+"height": 49
+}
+},
+{
+"ref": "@e83",
+"type": "androidx.compose.ui.platform.ComposeView",
+"text": "",
+"identifier": "com.instagram.android:id/profile_user_info_compose_view",
+"rect": {
+"x": 44,
+"y": 489,
+"width": 992,
+"height": 206
+}
+},
+{
+"ref": "@e84",
+"type": "android.view.View",
+"text": "",
+"rect": {
+"x": 44,
+"y": 489,
+"width": 992,
+"height": 149
+}
+},
+{
+"ref": "@e85",
+"type": "android.widget.TextView",
+"text": "",
+"rect": {
+"x": 44,
+"y": 489,
+"width": 992,
+"height": 149
+}
+},
+{
+"ref": "@e86",
+"type": "android.view.View",
+"text": "",
+"rect": {
+"x": 44,
+"y": 606,
+"width": 590,
+"height": 89
+}
+},
+{
+"ref": "@e87",
+"type": "android.widget.TextView",
+"text": "www.ejemplo.es/",
+"rect": {
+"x": 99,
+"y": 649,
+"width": 535,
+"height": 46
+}
+},
+{
+"ref": "@e88",
+"type": "android.widget.LinearLayout",
+"text": "",
+"identifier": "com.instagram.android:id/banner_row",
+"rect": {
+"x": 44,
+"y": 717,
+"width": 992,
+"height": 66
+}
+},
+{
+"ref": "@e89",
+"type": "android.widget.Button",
+"text": "",
+"rect": {
+"x": 44,
+"y": 717,
+"width": 365,
+"height": 66
+}
+},
+{
+"ref": "@e90",
+"type": "android.widget.ImageView",
+"text": "",
+"identifier": "com.instagram.android:id/igds_prism_chip_icon",
+"rect": {
+"x": 66,
+"y": 733,
+"width": 33,
+"height": 33
+}
+},
+{
+"ref": "@e91",
+"type": "android.widget.TextView",
+"text": "cuenta_no_seguida",
+"identifier": "com.instagram.android:id/igds_prism_chip_label",
+"rect": {
+"x": 110,
+"y": 728,
+"width": 266,
+"height": 44
+}
+},
+{
+"ref": "@e92",
+"type": "android.widget.LinearLayout",
+"text": "",
+"identifier": "com.instagram.android:id/profile_header_follow_context",
+"rect": {
+"x": 44,
+"y": 794,
+"width": 992,
+"height": 101
+}
+},
+{
+"ref": "@e93",
+"type": "android.widget.ImageView",
+"text": "",
+"identifier": "com.instagram.android:id/profile_header_follow_context_facepile",
+"rect": {
+"x": 44,
+"y": 804,
+"width": 214,
+"height": 88
+}
+},
+{
+"ref": "@e94",
+"type": "android.widget.TextView",
+"text": "",
+"identifier": "com.instagram.android:id/profile_header_follow_context_text",
+"rect": {
+"x": 280,
+"y": 802,
+"width": 756,
+"height": 93
+}
+},
+{
+"ref": "@e95",
+"type": "android.widget.LinearLayout",
+"text": "",
+"identifier": "com.instagram.android:id/profile_header_actions_top_row",
+"rect": {
+"x": 0,
+"y": 928,
+"width": 1080,
+"height": 88
+}
+},
+{
+"ref": "@e96",
+"type": "android.view.ViewGroup",
+"text": "",
+"identifier": "com.instagram.android:id/profile_header_user_action_follow_button",
+"rect": {
+"x": 33,
+"y": 928,
+"width": 292,
+"height": 88
+},
+"selected": true
+},
+{
+"ref": "@e97",
+"type": "android.widget.TextView",
+"label": "Seguir a Nombre Ejemplo",
+"text": "Seguir",
+"identifier": "com.instagram.android:id/profile_header_follow_button",
+"rect": {
+"x": 33,
+"y": 928,
+"width": 292,
+"height": 88
+}
+},
+{
+"ref": "@e98",
+"type": "android.widget.Button",
+"label": "Enviar mensaje",
+"text": "",
+"identifier": "com.instagram.android:id/button_container",
+"rect": {
+"x": 341,
+"y": 928,
+"width": 292,
+"height": 88
+}
+},
+{
+"ref": "@e99",
+"type": "android.widget.TextView",
+"text": "Enviar mensaje",
+"rect": {
+"x": 360,
+"y": 947,
+"width": 254,
+"height": 50
+}
+},
+{
+"ref": "@e100",
+"type": "android.widget.Button",
+"label": "Contactar",
+"text": "",
+"identifier": "com.instagram.android:id/button_container",
+"rect": {
+"x": 649,
+"y": 928,
+"width": 292,
+"height": 88
+}
+},
+{
+"ref": "@e101",
+"type": "android.widget.TextView",
+"text": "Contactar",
+"rect": {
+"x": 701,
+"y": 947,
+"width": 187,
+"height": 50
+}
+},
+{
+"ref": "@e102",
+"type": "android.widget.Button",
+"label": "@2131982311",
+"text": "",
+"identifier": "com.instagram.android:id/row_profile_header_button_chaining",
+"rect": {
+"x": 957,
+"y": 928,
+"width": 88,
+"height": 88
+}
+},
+{
+"ref": "@e103",
+"type": "android.widget.ImageView",
+"text": "",
+"identifier": "com.instagram.android:id/chaining_button_image",
+"rect": {
+"x": 957,
+"y": 928,
+"width": 88,
+"height": 88
+}
+},
+{
+"ref": "@e156",
+"type": "android.view.View",
+"text": "",
+"identifier": "com.instagram.android:id/swipe_refresh_animated_progressbar_container_background",
+"rect": {
+"x": 0,
+"y": 247,
+"width": 1080,
+"height": 1
+}
+},
+{
+"ref": "@e157",
+"type": "android.view.View",
+"text": "",
+"identifier": "com.instagram.android:id/swipe_refresh_animated_progressbar_container",
+"rect": {
+"x": 443,
+"y": 247,
+"width": 193,
+"height": 193
+}
+}
+]
+}

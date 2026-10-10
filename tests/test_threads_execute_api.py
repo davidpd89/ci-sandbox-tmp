@@ -1,4 +1,5 @@
 import os
+import datetime as dt
 import sys
 import unittest
 
@@ -11,6 +12,10 @@ class ApiReplyTests(unittest.TestCase):
     ITEM = {"handle": "ana", "kind": "reply", "text": "El segundo, sin duda.", "reply_to_id": "99",
             "post_text": "Cual recomiendas?"}
 
+    def setUp(self):
+        self.ITEM = {**type(self).ITEM,
+            "post_created_at": (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=2)).isoformat()}
+
     def test_preflight_accepts_api_reply_without_text_fragment(self):
         plan = te._preflight_plan([dict(self.ITEM)])
         self.assertEqual(plan[0]["reply_to_id"], "99")
@@ -19,7 +24,7 @@ class ApiReplyTests(unittest.TestCase):
     def test_run_plan_publishes_through_the_api_and_never_opens_the_browser(self):
         calls = []
         old = (api.publish_reply, api._env, te.t.reply_to)
-        api.publish_reply = lambda token, user, rid, text: calls.append((token, user, rid, text)) or "1"
+        api.publish_reply = lambda token, user, rid, text, **kw: calls.append((token, user, rid, text)) or "1"
         api._env = lambda: {"THREADS_ACCESS_TOKEN": "tok", "THREADS_USER_ID": "7"}
         te.t.reply_to = lambda *a, **k: self.fail("no debe usar el navegador")
         try:

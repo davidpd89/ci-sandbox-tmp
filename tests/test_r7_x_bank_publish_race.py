@@ -49,7 +49,7 @@ class XBankPublishRaceTests(unittest.TestCase):
              mock.patch.dict(sys.modules, {"x_interact": mock.Mock()}), \
              mock.patch.object(bank, "record", side_effect=lambda *args: records.append("record")):
             x = sys.modules["x_interact"]
-            x.post.return_value = "https://x.com/AutoraDemo/status/11"
+            x.post.return_value = "https://x.com/DavidPorto/status/11"
             result = bank.main(["--apply"] if apply else [])
             posted = x.post.call_count
         return result, posted, records
