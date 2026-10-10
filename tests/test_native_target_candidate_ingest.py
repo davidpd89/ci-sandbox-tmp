@@ -293,9 +293,15 @@ class TestContracts(unittest.TestCase):
         self.assertIn("conflicting_follower_snapshots",
                       [d["reason"] for d in out["diagnostics"]])
 
-    def test_timestamp_fallback_if_null(self):
+    def test_timestamp_requires_post_publication_provenance(self):
         row = dict(SAMPLES["x"], created_at=None, timestamp=FRESH, language="es")
+        result = run("x", row)
+        self.assertEqual(result["shortlist"][0]["posts"], [])
+        self.assertIn("missing_post_timestamp", [d["reason"] for d in result["diagnostics"]])
+        row["timestamp_provenance"] = "post_published"
         self.assertEqual(len(run("x", row)["shortlist"][0]["posts"]), 1)
+        row["timestamp_provenance"] = "scan_observed"
+        self.assertEqual(run("x", row)["shortlist"][0]["posts"], [])
 
     def test_reddit_huge_epoch_rejects_without_exception(self):
         row = dict(SAMPLES["reddit"], created_utc=10 ** 400)

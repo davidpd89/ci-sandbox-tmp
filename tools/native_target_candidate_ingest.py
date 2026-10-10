@@ -308,7 +308,8 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
                     diagnostics.append({"index": i, "reason": "post_author_mismatch"})
                     continue
             raw_date = post.get("created_at")
-            if raw_date is None:
+            # Bare "timestamp" is ambiguous: it can be scan time, not post time.
+            if raw_date is None and post.get("timestamp_provenance") == "post_published":
                 raw_date = post.get("timestamp")
             if network == "reddit" and raw_date is None:
                 raw_date = post.get("created_utc")
