@@ -1,7 +1,7 @@
 # CI 108 — Puentes nativos de evidencia relacional
 
 Investigación: 10/10/2026. Rama: `research/relationship-native-evidence-bridges`.
-Dependencia de integración estricta: **PR #84 abierta**, revisar e integrar antes.
+Dependencia: el código de #84 ya está en la base sincronizada; la PR #84 original está cerrada sin merge en el mirror. Ver la auditoría adicional final.
 No merge, no llamadas a cuentas, no datos de producción.
 
 ## Problema
@@ -27,7 +27,7 @@ Normalización mínima y conservadora, sin dependencias externas y sin modificar
 
 ## Pruebas
 
-Suite sintética y de integración contra #84; ejecuciones comprobadas por HEAD en GitHub Actions.
+Suite sintética y de integración contra RelationshipLedger del checkout vigente; ejecuciones CI deben comprobarse por HEAD.
 
 ## Retirada
 
@@ -134,7 +134,7 @@ con el almacén #84. Las licencias no sustituyen la evaluación de CI.
 - Pruebas: `python -m unittest discover -s tests -p test_native_relationship_evidence_bridge.py -v`.
 - Contrato SQLite real con checkout inmóvil de #84:
   `LEDGER84_PY=ledger84/tools/relationship_event_ledger.py python -m unittest discover -s tests -p test_native_ledger84_contract.py -v`.
-- CI: `.github/workflows/native-relationship-evidence.yml` sobre Ubuntu/Windows Python 3.11; no credenciales sociales. Ledger #84 fijado a `bfdafe1240336379cd634ada9e63bc2bf4719bce`.
+- CI: `.github/workflows/native-relationship-evidence.yml` sobre Ubuntu/Windows Python 3.11; sin credenciales sociales. Ledger tomado de `tools/relationship_event_ledger.py` de la base sincronizada, sin pin externo.
 - Revisión adversarial: se detectó el nombre de productor Pinterest
   `run` incorrecto y se corrigió a `cmd_run`; se retiró el falso alias
   `save -> repost`; se incorporó `like_external` y el ID de origen pasó
@@ -156,3 +156,23 @@ operativo, credenciales ni estados de ninguna red. Sin migración destructiva.
 - Estados `saltado_api_*` y `saltado_en_ledger` alineados con #84; fechas sin zona y filas malformadas cuentan `unknown` sin abortar el resto.
 - IDs de eventos y snapshots incluyen también la cola en su identidad, para que Instagram WEB y MOBILE no colisionen ante `export_id/record_id` iguales; regresiones de replay por cola, listas mixtas y reconciliación SQLite completa/parcial.
 - Sin acreditar todavía integración con productores privados: exportación estable de IDs, timestamps y ACK, canario supervisado y merge previo de #84 siguen pendientes.
+
+## Auditoría final posterior a la sincronización (10/10/2026)
+
+La base vigente ya contiene `tools/relationship_event_ledger.py`, `tools/intent_queue.py` y ejecutores de las nueve redes. El workflow y el test SQLite importan ahora el ledger real del checkout, sin depender de la rama cerrada #84 ni permitir un `skip` silencioso.
+
+**Followback negativo:** `complete`, `all_pages` e `identity_stable` por sí solos no justifican una ausencia. Ahora se exige cuenta propia consistente (`account_id`), productor y snapshot coincidentes, evidencia de páginas con `identity_stable=True`, cursores enlazados que terminan en `cursor_out=None`, y que la unión de sus identidades sin duplicados coincida exactamente con `followers`. Si falla, se conservan presencias y los ausentes quedan `unknown`. Los productores actuales todavía no exportan ese sobre completo.
+
+**Matriz 9×3:** la fuente identificada no supone adaptador operativo. Se añadieron nueve casos con formatos de resultados `run_plan` sin `record_id/occurred_at`; el puente debe registrarlos como `unknown`, sin atribuir éxitos. Pinterest requiere extracción específica del CSV; no se declara integración automática.
+
+**Todavía bloqueante:** un `ack` añadido por el llamador no prueba una respuesta nativa ni correlación con el registro duradero de #112. Faltan exportes contrastados por red, canarios supervisados y comprobación de la validación LIVE del manifiesto del padre. No realizar acciones sociales.
+
+**Verificación en cualquier sistema con Python 3.11 (desde raíz):**
+
+```bash
+python -m unittest discover -s tests -p test_native_relationship_evidence_bridge.py -v
+python -m unittest discover -s tests -p test_native_ledger84_contract.py -v
+python -m pytest tests -q -p no:cacheprovider
+python tools/validate_open_source_campaign.py
+python tools/validate_open_source_campaign.py --live
+```
