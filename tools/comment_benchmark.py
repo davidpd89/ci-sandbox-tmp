@@ -213,7 +213,9 @@ def evaluate(cases: list[dict], candidates: list[dict], ratings_path: str | None
         eligible_cases = {cid for cid in by_case if indexed[cid]["network"] == network and
                           set(by_case[cid]) == strategies_by_case[cid]}
         cohorts = {frozenset(strategies_by_case[cid]) for cid in expected}
-        if (len(expected) < 4 or eligible_cases != expected or len(cohorts) != 1
+        covered_kinds = {indexed[cid]["kind"] for cid in expected}
+        if (covered_kinds != set(KINDS) or len(expected) < 4
+                or eligible_cases != expected or len(cohorts) != 1
                 or len(next(iter(cohorts))) < 2
                 or any(len(scores) != len(expected) for scores in strategies.values())):
             continue
