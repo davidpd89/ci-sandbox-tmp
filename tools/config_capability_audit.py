@@ -48,8 +48,13 @@ def _pairs_unique(pairs):
     return out
 
 
+def _reject_nonfinite(value):
+    raise ValueError("número JSON no finito")
+
+
 def _read_config(path):
-    return json.loads(path.read_text(encoding="utf-8-sig"), object_pairs_hook=_pairs_unique)
+    return json.loads(path.read_text(encoding="utf-8-sig"), object_pairs_hook=_pairs_unique,
+                      parse_constant=_reject_nonfinite)
 
 
 def _number(value):
