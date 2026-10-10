@@ -1,0 +1,17 @@
+text
+Reddit
+  │
+  ├─ reddit_mention_monitor.py   → términos, menciones, novedades, SQLite
+  ├─ reddit_archive_cli.py       → subreddit, hilo, comentarios, autor, CSV/JSONL
+  ├─ reddit_client.py            → PRAW, OAuth, reintentos, user agent
+  │
+  ├─ reddit_scan.py              → candidatos en vivo
+  ├─ reddit_comments.py          → contexto conversacional
+  ├─ reddit_interact.py          → acciones supervisadas
+  ├─ reddit_publish.py           → publicación
+  │
+  ├─ candidate_identity.py       → deduplicación
+  ├─ score_hook.py               → ranking
+  ├─ round_queue.py              → cola de acciones
+  ├─ action_ledger.py            → evidencia y resultados
+  └─ growth_attribution.py       → aprendizaje por subreddit, hilo y plantilla
