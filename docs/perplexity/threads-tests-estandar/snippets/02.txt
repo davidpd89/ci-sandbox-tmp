@@ -1,0 +1,33 @@
+python
+# https://github.com/davidpd89/ci-sandbox-tmp/blob/main/tools/threads_api.py
+REPLY_MAX = 500
+
+
+def api_post(path, token, **params):
+    return mc.graph_post(BASE, path, token, **params)
+
+
+class ReplyNotCreated(RuntimeError):
+    """Fallo ANTES de publicar: no hay respuesta en Threads, se puede reintentar o usar el navegador."""
+
+
+def check_reply_text(text):
+    text = (text or "").strip()
+    if not text:
+        raise ValueError("respuesta vacia")
+    if len(text) > REPLY_MAX:
+        raise ValueError(f"{len(text)} caracteres (max {REPLY_MAX})")
+    return text
+
+
+def publish_reply(token, user_id, reply_to_id, text):
+    """Responde a `reply_to_id` (ID de la API). Crea el contenedor y lo publica; un fallo al crear
+    lanza ReplyNotCreated (nada publicado). Si falla el publicado se lanza RuntimeError normal:
+    puede haberse publicado, no reintentar a ciegas."""
+    text = check_reply_text(text)
+    try:
+        container = api_post(f"{user_id}/threads", token, media_type="TEXT", text=text, reply_to_id=reply_to_id)
+    except RuntimeError as exc:
+        raise ReplyNotCreated(str(exc)) from None
+    published = api_post(f"{user_id}/threads_publish", token, creation_id=container["id"])
+    return published["id"]
