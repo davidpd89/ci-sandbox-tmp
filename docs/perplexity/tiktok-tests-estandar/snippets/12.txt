@@ -1,0 +1,29 @@
+json
+// tests/fixtures/tiktok/post_legacy_stats.json
+{
+  "network": "tiktok",
+  "kind": "post",
+  "external_id": "7412345678901234568",
+  "author_handle": "AutorFantasia",
+  "author_id": null,
+  "sec_uid": null,
+  "canonical_url": "https://www.tiktok.com/@autorfantasia/video/7412345678901234568",
+  "created_at": "2026-10-10T13:16:00+00:00",
+  "text": null,
+  "metrics": {
+    "views": 100,
+    "likes": 10,
+    "comments": 1,
+    "shares": 0,
+    "saves": 0
+  },
+  "raw": {
+    "id": "7412345678901234568",
+    "createTime": 1760104560000,
+    "stats": {
+      "playCount": "100",
+      "diggCount": "10",
+      "commentCount": "1"
+    }
+  }
+}
