@@ -1,0 +1,4 @@
+python
+# Fuente exacta: https://github.com/RomySaputraSihananda/tiktok-comment-scrapper/blob/master/tiktokcomment/typing/comments.py
+class Comments:
+    def __init_(
