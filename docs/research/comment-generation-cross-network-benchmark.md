@@ -65,8 +65,9 @@ con múltiples modelos y juicio humano independiente.
 
 ## Decisión
 
-Se añade `tools/comment_benchmark.py` y
-`tests/fixtures/comment_benchmark_synthetic.json`.
+Se añade `tools/comment_benchmark.py` y dos fixtures de control:
+`tests/fixtures/comment_benchmark_synthetic.json` y
+`tests/fixtures/comment_benchmark_network_specific.json`.
 
 **Contrato de evaluación:**
 1. Dataset `cases` con `id,network,kind,post,anchors,published_at,as_of`
@@ -109,6 +110,7 @@ Ejecutar en Windows/Ubuntu con Python 3.11:
 
 ```sh
 python -m pytest tests/test_comment_benchmark.py -q
+python tools/comment_benchmark.py evaluate --input tests/fixtures/comment_benchmark_network_specific.json
 python tools/comment_benchmark.py evaluate --input tests/fixtures/comment_benchmark_synthetic.json
 python -c "from pathlib import Path; Path('revision').mkdir(exist_ok=True); Path('privado').mkdir(exist_ok=True)"
 python tools/comment_benchmark.py prepare --input tests/fixtures/comment_benchmark_synthetic.json --blind revision/blind.csv --key privado/key.csv
@@ -123,8 +125,8 @@ CSV de evaluación y clave. El CLI no crea archivos salvo con nombres
 de salida explícitos. Los tests usan directorios temporales.
 
 **Antes (HEAD original):** 0 pares comparables con anotación ciega en
-las nueve redes. **Después (fixtures):** 36 pares, 72 ejemplos, pero solo **4 publicaciones e hilos únicos** replicados en nueve redes; es una prueba de paridad del harness, no representatividad de contenido propio de cada plataforma;
-17 pruebas unitarias específicas tras la revisión adicional; las pruebas de revisión ficticia
+las nueve redes. **Después (fixtures):** 72 casos y 144 candidatos en dos conjuntos: control común de 36 casos/72 respuestas (solo **4 publicaciones e hilos únicos** replicados en nueve redes) y 36 casos/72 respuestas sintéticos específicos de red, con 36 publicaciones distintas; es una prueba de paridad del harness, no representatividad de contenido propio de cada plataforma;
+18 pruebas unitarias específicas tras la revisión adicional; las pruebas de revisión ficticia
 demuestran el funcionamiento del cálculo, **no una preferencia real**.
 Evidencia del HEAD de código `9830eddd79bca6336d5357f7c876cff1077d9cb3`:
 [Actions de pruebas 38016943031](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38016943031),
@@ -178,9 +180,10 @@ de repetición entre redes sin crear un linter paralelo; reutiliza
 retira: solo se afecta la utilidad de benchmark, nunca los publicadores.
 
 **Límite epistemológico sin resolver:** no se ha ejecutado una comparación
-entre generadores ni evaluación humana independiente. El dataset sintético
-de cuatro contextos repetidos por red es un control de paridad, **no una
-validación estadística de calidad**. No configurar un ganador de producción
+entre generadores ni evaluación humana independiente. El primer fixture
+comprueba paridad entre redes; el segundo añade ejemplos específicos para
+cada red, incluyendo conversaciones encadenadas. Ambos son inventados y
+**no constituyen una validación estadística de calidad**. No configurar un ganador de producción
 a partir del fixture. Coordinar el futuro protocolo ciego con #79 antes
 de integrar dos evaluadores diferentes.
 
@@ -188,8 +191,8 @@ de integrar dos evaluadores diferentes.
 
 Sin migración ni cambios de formato del sistema real. Reversión:
 retirar `tools/comment_benchmark.py`,
-`tests/test_comment_benchmark.py`,
-`tests/fixtures/comment_benchmark_synthetic.json` y este informe.
+`tests/test_comment_benchmark.py`, ambos archivos
+`tests/fixtures/comment_benchmark_*.json` y este informe.
 No existe estado persistido del benchmark dentro de producción.
 
 ## Siguientes pasos para Claude
