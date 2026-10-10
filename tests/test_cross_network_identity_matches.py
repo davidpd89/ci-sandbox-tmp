@@ -91,6 +91,23 @@ class MatchTests(unittest.TestCase):
         self.assertNotIn(c, g.cluster(a))
         self.assertEqual(len(g.conflicts()), 1)
 
+    def test_platform_www_aliases_match_without_aliasing_other_hosts(self):
+        for domain in ("x.com", "twitter.com", "threads.net", "threads.com",
+                       "facebook.com", "pinterest.com", "reddit.com",
+                       "bsky.app", "tiktok.com", "instagram.com"):
+            with self.subTest(domain=domain):
+                self.assertEqual(canonical_url("https://www." + domain + "/reader"),
+                                 canonical_url("https://" + domain + "/reader"))
+        self.assertNotEqual(canonical_url("https://www.example.org/reader"),
+                            canonical_url("https://example.org/reader"))
+        g = IdentityGraph()
+        x = g.observe(p("x", "reader", url="https://www.x.com/reader",
+                        links=("https://www.threads.net/@reader",)))
+        threads = g.observe(p("threads", "reader",
+                              url="https://threads.net/@reader",
+                              links=("https://x.com/reader",)))
+        self.assertEqual(g.match(x, threads).status, "verified")
+
     def test_url_canonicalization_is_conservative(self):
         self.assertEqual(canonical_url("https://EXAMPLE.com/a/"), "https://example.com/a")
         self.assertNotEqual(canonical_url("https://example.com/A"), canonical_url("https://example.com/a"))
