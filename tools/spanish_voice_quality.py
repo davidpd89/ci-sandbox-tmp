@@ -23,6 +23,7 @@ PROTECTED = re.compile(
     + re.escape(chr(96)) + r"[^" + re.escape(chr(96)) + r"\n]*" + re.escape(chr(96))
     + r'|«[^»\n]*»|“[^”\n]*”|"[^"\n]*"', re.UNICODE)
 FENCED_CODE = re.compile(r"(?ms)^[ \t]*(`{3,}|~{3,})[^\n]*\n.*?^[ \t]*\1[ \t]*$")
+HTML_TAG = re.compile(r"</?[A-Za-z][^<>\n]*>", re.UNICODE)
 
 VARIANT_ES_ES = {
     "platicar": "conversar", "chambear": "trabajar", "checar": "comprobar",
@@ -49,7 +50,8 @@ class Finding:
 def _mask(text: str) -> str:
     """Protege formato nativo, enlaces, menciones, títulos/citas; preserva offsets."""
     chars = list(text)
-    for match in list(FENCED_CODE.finditer(text)) + list(PROTECTED.finditer(text)):
+    for match in (list(FENCED_CODE.finditer(text)) +
+                  list(HTML_TAG.finditer(text)) + list(PROTECTED.finditer(text))):
         chars[match.start():match.end()] = [" "] * (match.end() - match.start())
     return "".join(chars)
 
