@@ -269,8 +269,11 @@ def run(net, *, apply=False, limit=40, days=gp.NONRECIPROCAL_DAYS, pause=(0.8, 2
             if not apply:
                 continue
             try:
-                if adapter.follows_me(item["account"]):            # comprobacion EN VIVO: la lista de seguidores puede estar incompleta
-                    out("    nos sigue (comprobado en vivo): no se toca")
+                follows_back = adapter.follows_me(item["account"])
+                # Solo un negativo booleano verificado autoriza retirar el follow.
+                # None, strings y objetos incompletos no son evidencia de ausencia.
+                if follows_back is not False:
+                    out("    nos sigue o reciprocidad no verificable: no se toca")
                     continue
                 outcome = adapter.unfollow(item["account"])
                 if outcome in ("unfollowed", "already"):

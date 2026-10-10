@@ -79,6 +79,42 @@ class CleanupCandidateRegressionTests(unittest.TestCase):
         self.assertEqual(adapter._id("ana"), "local")
         self.assertIsNone(adapter._id("ana@example.org"))
 
+    def test_unverified_live_followback_never_triggers_unfollow(self):
+        import contextlib
+        import tempfile
+        import os
+
+        class UnknownAdapter:
+            def __init__(self, result):
+                self.result = result
+                self.unfollowed = []
+
+            @contextlib.contextmanager
+            def session(self):
+                yield
+
+            def load(self):
+                return {"ana": "I love fantasy books and writing novels every day"}, []
+
+            def follows_me(self, account):
+                return self.result
+
+            def unfollow(self, account):
+                self.unfollowed.append(account)
+                return "unfollowed"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            os.makedirs(os.path.join(tmp, "SISTEMA_DIARIO_FAKE"))
+            with mock.patch.object(uc, "ROOT", tmp), mock.patch.object(
+                    uc, "protected_accounts", return_value=set()):
+                for unknown in (None, "", 0, {}):
+                    adapter = UnknownAdapter(unknown)
+                    candidate_count, done, failed = uc.run(
+                        "fake", apply=True, adapter=adapter,
+                        sleep=lambda _: None, out=lambda _: None)
+                    self.assertEqual((candidate_count, done, failed), (1, 0, 0))
+                    self.assertEqual(adapter.unfollowed, [])
+
 
 if __name__ == "__main__":
     unittest.main()
