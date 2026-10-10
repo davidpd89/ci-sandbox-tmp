@@ -90,6 +90,13 @@ class MobileOwnershipTests(unittest.TestCase):
         with mobile_runtime.mobile_session_lock(str(self.path)):
             self.assertTrue(self.path.exists())
 
+    def test_nested_edge_contention_preserves_exception_type(self):
+        # El wrapper móvil no debe hacer pasar errores de Edge por móvil ocupado.
+        with self.assertRaises(action_ledger.RoundBusy):
+            with mobile_runtime.mobile_session_lock(str(self.path)):
+                raise action_ledger.RoundBusy("edge_browser: ocupado")
+        self.assertFalse(self.path.exists())
+
     def test_cleanup_does_not_remove_replacement_lock(self):
         with mobile_runtime.mobile_session_lock(str(self.path)):
             self.path.unlink()
