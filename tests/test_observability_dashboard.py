@@ -64,8 +64,8 @@ def fixture(root):
     folder = root / "00_OPERATIVO" / "_cola_respuestas"
     folder.mkdir(parents=True)
     (folder / "pending.json").write_text(json.dumps({
-        "opaque1": {"network": "x", "text": "PRIVATE_FULL_POST"},
-        "opaque2": {"network": "tiktok", "text": "SECRET_EXAMPLE"},
+        "opaque1": {"network": "x", "text": "PRIVATE_FULL_POST", "ts": "2026-10-10T12:20:00"},
+        "opaque2": {"network": "tiktok", "text": "SECRET_EXAMPLE", "ts": "2026-10-10T12:20:00"},
     }), encoding="utf-8")
 
 
@@ -142,6 +142,16 @@ class DashboardTests(unittest.TestCase):
         self.assertIsNone(report["networks"]["x"]["pending_replies"])
         self.assertIn("cola_respuestas", report["networks"]["x"]["missing_sources"])
         self.assertFalse(report["coverage"]["reply_queue"])
+
+    def test_expired_pending_is_not_counted_and_source_remains_unchanged(self):
+        pending = self.root / "00_OPERATIVO" / "_cola_respuestas" / "pending.json"
+        data = json.loads(pending.read_text(encoding="utf-8"))
+        data["old"] = {"network": "x", "text": "PRIVATE_OLD", "ts": "2026-10-01T10:00:00"}
+        pending.write_text(json.dumps(data), encoding="utf-8")
+        before = pending.read_bytes()
+        report = dash.collect(self.root, as_of=NOW)
+        self.assertEqual(report["networks"]["x"]["pending_replies"], 1)
+        self.assertEqual(pending.read_bytes(), before)
 
     def test_breaker_expiry_is_not_open(self):
         breaker = self.root / "SISTEMA_DIARIO_X" / "cache" / "breaker.json"
