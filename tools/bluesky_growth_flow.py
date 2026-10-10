@@ -129,6 +129,8 @@ def _report(result):
 
     return {
         "run_id": result.get("run_id"),
+        "discovery_attribution": __import__("discovery_attribution").safe_state_summary(
+            "bluesky", result, hmac_key=os.environ.get("RRSS_DISCOVERY_HMAC_KEY", "").encode("utf-8")),
         "coverage_complete": not bool(coverage.get("missing")),
         "coverage_missing": coverage.get("missing") or [],
         "optional_missing": coverage.get("optional_missing") or [],

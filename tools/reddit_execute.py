@@ -33,6 +33,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 import reddit_interact as r
 import check_duplicate_phrase as dup
 import scan_common as sc
+import exec_common as ec
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "SISTEMA_DIARIO_REDDIT")
 REGISTRO_CSV = os.path.join(ROOT, "registro_interacciones.csv")
@@ -82,14 +83,15 @@ def _recent_micro_repeat(text, registro=None, window=_RECENT_MICRO_WINDOW):
     return target in used[-window:]
 
 
-def _preflight_plan(plan):
+def _preflight_plan(plan, *, skipped=None):
     """Valida el plan completo antes de la primera escritura real."""
     if not isinstance(plan, list):
         raise ValueError("el plan debe ser una lista JSON")
 
     normalized = []
+    omissions = ec.PreflightSkipBuffer("reddit", skipped)
     comment_targets = set()
-    vote_targets = set()
+    vote_targets = {}
     comment_texts = {}
     for index, raw_item in enumerate(plan, start=1):
         item = _validated_plan_item(raw_item)
@@ -117,47 +119,43 @@ def _preflight_plan(plan):
             # positivos (o bloquearia repetirla siempre). Aqui solo se evita repetir
             # EXACTAMENTE la misma en los ultimos comentarios de Reddit.
             if _recent_micro_repeat(text):
-                raise ValueError(
-                    f"elemento {index}: la misma microrespuesta ya se uso en uno de los "
-                    f"ultimos {_RECENT_MICRO_WINDOW} comentarios de Reddit - variar"
-                )
+                omissions.add(index, kind, "microtexto_publicado")
+                continue
             text = " ".join(text.split())
             text_key = text.casefold()
             if text_key in comment_texts:
-                raise ValueError(
-                    f"elemento {index}: comentario repetido en este plan "
-                    f"(ya aparece en elemento {comment_texts[text_key]})"
-                )
-            comment_texts[text_key] = index
-            item["text"] = text
-
+                omissions.add(index, kind, "texto_repetido_lote")
+                continue
             if target in comment_targets:
-                raise ValueError(
-                    f"elemento {index}: comentario duplicado para r/{target[0]} hilo {target[1]}"
-                )
+                omissions.add(index, kind, "objetivo_repetido_lote")
+                continue
+            comment_texts[text_key] = index
             comment_targets.add(target)
+            item["text"] = text
         else:
             direction = item.get("direction", "up")
             if direction not in {"up", "down"}:
                 raise ValueError(f"elemento {index}: direction debe ser 'up' o 'down'")
             if target in vote_targets:
-                raise ValueError(
-                    f"elemento {index}: voto duplicado/conflictivo para "
-                    f"r/{target[0]} hilo {target[1]}"
-                )
-            vote_targets.add(target)
+                if vote_targets[target] != direction:
+                    raise ValueError(f"elemento {index}: voto duplicado/conflictivo")
+                omissions.add(index, kind, "objetivo_repetido_lote")
+                continue
+            vote_targets[target] = direction
             item = {**item, "direction": direction}
 
         normalized.append(item)
+    omissions.commit()
     return normalized
 
 
 def run_plan(plan, *, prevalidated=False):
     import reply_writer as _rw
     plan = _rw.require_gpt(plan, "reddit")      # 08/10: nunca se publica texto que no venga de ChatGPT
+    skipped = []
     try:
         if not prevalidated:
-            plan = _preflight_plan(plan)
+            plan = _preflight_plan(plan, skipped=skipped)
     except Exception as e:
         print(f"FALLO DE PREFLIGHT: {type(e).__name__}: {e}")
         return [{
@@ -166,8 +164,15 @@ def run_plan(plan, *, prevalidated=False):
             "resultado": f"fallo_plan:{e}",
         }]
 
-    results = []
+    results = list(skipped)
     for i, item in enumerate(plan):
+        # Una ronda puede durar horas: revalidar la cuarentena antes de CADA
+        # acción, incluso si el lanzador aprobó el lote al comienzo.
+        import circuit_breaker as _cb
+        _write_ok, _hold_reason = _cb.write_preflight("reddit")
+        if not _write_ok:
+            print(f"[reddit] cortacircuitos ABIERTO: {_hold_reason}; detener el lote")
+            break
         kind = item["kind"]
         import conversation_turn_policy as ctp
         permitted, reason = ctp.check_execution("reddit", item)
@@ -269,14 +274,16 @@ if __name__ == "__main__":
     with open(sys.argv[1], encoding="utf-8") as f:
         plan = json.load(f)
 
+    preflight_skipped = []
     try:
-        plan = _preflight_plan(plan)
+        plan = _preflight_plan(plan, skipped=preflight_skipped)
     except Exception as e:
         print(f"FALLO DE PREFLIGHT: {type(e).__name__}: {e}")
         raise SystemExit(2)
 
-    r.ensure_browser()
-    results = run_plan(plan, prevalidated=True)
+    if plan:
+        r.ensure_browser()
+    results = preflight_skipped + (run_plan(plan, prevalidated=True) if plan else [])
 
     print("\n=== RESUMEN ===")
     for r_ in results:

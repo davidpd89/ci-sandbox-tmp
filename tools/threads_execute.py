@@ -123,9 +123,7 @@ def _preflight_plan(plan):
         # Misma accion sobre el mismo objetivo dos veces en un plan (follow repetido al mismo
         # handle, like/reply repetido sobre el mismo fragmento): bloquea el lote entero antes de
         # escribir, como ya hacen X, Bluesky y Mastodon (revision de ChatGPT, 03/10).
-        # Different API reply targets can legitimately share an excerpt.
-        target_key = (item.get("reply_to_id") if kind == "reply" else None) or item.get("text_fragment") or ""
-        duplicate_key = (kind, item["handle"].casefold(), target_key.casefold())
+        duplicate_key = (kind, item["handle"].casefold(), (item.get("text_fragment") or "").casefold())
         if duplicate_key in seen_actions:
             raise ValueError(f"elemento {index}: accion duplicada ({kind} sobre @{item['handle']})")
         seen_actions.add(duplicate_key)
@@ -184,6 +182,13 @@ def run_plan(plan, *, prevalidated=False, on_result=None):
             print(f"FALLO DE PREFLIGHT: {type(exc).__name__}: {exc}")
             return [{"kind": "plan", "handle": "", "resultado": f"fallo_plan:{exc}"}]
     for i, item in enumerate(plan):
+        # Una ronda puede durar horas: revalidar la cuarentena antes de CADA
+        # acción, incluso si el lanzador aprobó el lote al comienzo.
+        import circuit_breaker as _cb
+        _write_ok, _hold_reason = _cb.write_preflight("threads")
+        if not _write_ok:
+            print(f"[threads] cortacircuitos ABIERTO: {_hold_reason}; detener el lote")
+            break
         kind = item["kind"]
         import conversation_turn_policy as ctp
         permitted, reason = ctp.check_execution("threads", item)
@@ -233,12 +238,8 @@ def run_plan(plan, *, prevalidated=False, on_result=None):
             elif kind == "reply" and item.get("reply_to_id"):
                 import threads_api as api
                 env = api._env()
-                try:
-                    api.publish_reply(env["THREADS_ACCESS_TOKEN"], env["THREADS_USER_ID"], item["reply_to_id"], item["text"])
-                except api.ReplyPublishUncertain:
-                    # POST enviado: nunca marcar como fallo reintentable ni ir al navegador.
-                    results.append({**item, "resultado": "pendiente_verificacion"})
-                    continue
+                api.publish_reply(env["THREADS_ACCESS_TOKEN"], env["THREADS_USER_ID"],
+                                  item["reply_to_id"], item["text"], proof_action=item)
             elif kind == "reply":
                 if _already_replied_via_api(item["text"]):
                     # 03/10: una ronda cortada dejo la respuesta publicada sin registrar y el reintento la
@@ -268,6 +269,18 @@ def run_plan(plan, *, prevalidated=False, on_result=None):
         except t.AlreadyCommented as e:
             print(f"SALTADO: {e}")
             results.append({**item, "resultado": "saltado_ya_comentado"})
+        except ec.WriteOutcomeUnknown:
+            # No hay ACK tras el POST: se retiene UNCERTAIN en el ledger común.
+            # Ni fallo reintentable ni éxito inventado. Continuar otras acciones.
+            print("PENDIENTE_VERIFICACION: Threads sin ACK remoto; no reintentar")
+            results.append({**item, "resultado": "pendiente_verificacion"})
+        except PermissionError as e:
+            if kind == "reply" and item.get("reply_to_id"):
+                print(f"OMITIDO: contrato contextual de Threads: {type(e).__name__}")
+                results.append({**item, "resultado": "saltado_contexto_api_no_verificado"})
+            else:
+                print(f"FALLO: {type(e).__name__}")
+                results.append({**item, "resultado": "fallo:permiso_denegado"})
         except getattr(t, "ProfileRejected", ()) as e:
             print(f"SALTADO: perfil no apto: {e}")
             results.append({**item, "resultado": f"saltado_perfil:{e}"})
@@ -305,7 +318,7 @@ def _append_registro(results):
 def _fetch_metrics():
     p, pg = t._connect()
     try:
-        pg.goto("https://www.threads.com/@autorademodiaz", wait_until="domcontentloaded", timeout=20000)
+        pg.goto("https://www.threads.com/@davidportodiaz", wait_until="domcontentloaded", timeout=20000)
         pg.wait_for_timeout(2200)
         body = pg.inner_text("body")[:1500]
         followers = re.search(r"([\d.,mil]+)\s+seguidores", body, re.I)
@@ -322,68 +335,6 @@ def _update_estado(results, metrics):
     ec.update_estado(ESTADO_MD, results, metrics, fields=(("Seguidores", "followers"),))
 
 
-def _pool_post_status(result):
-    """Do not mislabel an unconfirmed API write as a failed attempt."""
-    outcome = str(result.get("resultado") or "")
-    if outcome in ("confirmado", "saltado_ya_like", "saltado_ya_comentado"):
-        return "done"
-    if outcome == "pendiente_verificacion":
-        return "pending_verification"
-    if outcome == "pendiente_aprobacion":
-        return "pending_approval"
-    if outcome == "no_intentado" or outcome.startswith("parada:"):
-        return None
-    return "failed"
-
-
-def _plan_needs_browser(plan):
-    """The API-only lane must not require a live Edge/CDP session."""
-    return any(item.get("kind") != "reply" or not item.get("reply_to_id")
-               for item in plan)
-
-
-def _run_by_transport(plan, *, on_result=None):
-    """Keep WEB and API execution independent without copying run_plan."""
-    if not _plan_needs_browser(plan):
-        return run_plan(plan, prevalidated=True, on_result=on_result)
-    t.ensure_browser()
-    with t.session():
-        return run_plan(plan, prevalidated=True, on_result=on_result)
-
-
-def _fetch_metrics_api():
-    """Read only the documented Threads follower count, never infer zero."""
-    import threads_api as api
-    try:
-        env = api._env()
-        response = api.api_get(
-            "me/threads_insights", env["THREADS_ACCESS_TOKEN"],
-            metric="followers_count",
-        )
-        data = response.get("data") if isinstance(response, dict) else None
-        if isinstance(data, list):
-            for metric in data:
-                if not isinstance(metric, dict) or metric.get("name") != "followers_count":
-                    continue
-                total = metric.get("total_value")
-                value = total.get("value") if isinstance(total, dict) else None
-                if type(value) is int and value >= 0:
-                    return {"followers": str(value)}
-    except Exception as exc:
-        # Metrics are optional, but account interactions are recorded.
-        print(f"METRICAS API no disponibles: {type(exc).__name__}")
-    return {"followers": "?"}
-
-
-def _persist_metrics_without_erasing_known_followers(results, metrics):
-    """Keep the last verified follower count when insights are unavailable."""
-    _append_metricas(results, metrics)
-    if metrics.get("followers") != "?":
-        _update_estado(results, metrics)
-    else:
-        print("METRICAS: el recuento no es verificable; ESTADO.md se conserva.")
-
-
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print(__doc__)
@@ -398,12 +349,7 @@ if __name__ == "__main__":
         print(f"FALLO DE PREFLIGHT: {type(exc).__name__}: {exc}")
         raise SystemExit(2)
 
-    # Keep this decision in the CLI block: offline AST regression harnesses
-    # execute the entrypoint without loading module-level helper functions.
-    browser_needed = any(item.get("kind") != "reply" or not item.get("reply_to_id")
-                         for item in plan)
-    if browser_needed:
-        t.ensure_browser()
+    t.ensure_browser()
     persisted = set()
 
     def _on_result(r):
@@ -414,9 +360,7 @@ if __name__ == "__main__":
             db = pool.connect()
             try:
                 if r.get("permalink"):
-                    post_status = _pool_post_status(r)
-                    if post_status:
-                        pool.mark(db, r["permalink"], post_status)
+                    pool.mark(db, r["permalink"], "done" if r["resultado"] in ("confirmado", "saltado_ya_like") else "failed")
                 if r.get("kind") in ("follow", "like", "like_latest") and r.get("handle"):
                     outcome = r["resultado"]
                     status = ("done" if outcome in ("confirmado", "saltado_ya_like", "saltado_ya_seguido", "pendiente_aprobacion")
@@ -428,10 +372,7 @@ if __name__ == "__main__":
         except Exception:
             pass
 
-    if browser_needed:
-        with t.session():
-            results = run_plan(plan, prevalidated=True, on_result=_on_result)
-    else:
+    with t.session():       # UNA conexion para todo el plan (antes: una por accion)
         results = run_plan(plan, prevalidated=True, on_result=_on_result)
 
     print("\n=== RESUMEN ===")
@@ -447,7 +388,8 @@ if __name__ == "__main__":
     if any(str(item.get("resultado", "")).startswith("parada:") for item in results):
         print("PARADA TOTAL: resultados guardados; no se abre de nuevo el navegador para métricas.")
         sys.exit(5)
-    metrics = _fetch_metrics() if browser_needed else _fetch_metrics_api()
-    _persist_metrics_without_erasing_known_followers(results, metrics)
-    print(f"\nregistro_interacciones.csv y metricas.csv actualizados; ESTADO.md solo con recuento verificado.")
+    metrics = _fetch_metrics()
+    _append_metricas(results, metrics)
+    _update_estado(results, metrics)
+    print(f"\nregistro_interacciones.csv, metricas.csv y ESTADO.md actualizados automaticamente.")
     print(f"Metricas finales: seguidores={metrics['followers']}")

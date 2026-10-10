@@ -9,6 +9,7 @@ import mastodon_welcome as mw
 import pinterest_growth as pg
 import reddit_comments as rc
 import reply_writer as rw
+import reply_provenance as proof
 import x_replies as xr
 
 
@@ -32,37 +33,54 @@ class NoBanksTests(unittest.TestCase):
 class ProvenanceGuardTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.path = os.path.join(self.tmp.name, "gpt_texts.json")
+        self.path = os.path.join(self.tmp.name, "gpt_provenance_v1.json")
         self.saved = os.environ.pop("RRSS_ALLOW_UNMARKED_TEXT", None)
+        self.old_proof = os.environ.get("RRSS_GPT_PROVENANCE_PATH")
+        os.environ["RRSS_GPT_PROVENANCE_PATH"] = self.path
 
     def tearDown(self):
         if self.saved is not None:
             os.environ["RRSS_ALLOW_UNMARKED_TEXT"] = self.saved
+        if self.old_proof is None:
+            os.environ.pop("RRSS_GPT_PROVENANCE_PATH", None)
+        else:
+            os.environ["RRSS_GPT_PROVENANCE_PATH"] = self.old_proof
         self.tmp.cleanup()
 
-    def test_unmarked_text_is_removed_and_gpt_or_manual_text_stays(self):
-        rw.mark_gpt("Enhorabuena, qué paso más grande", self.path)
+    def test_gpt_proof_is_scoped_and_manual_cannot_bypass(self):
+        source = {"post_uri": "at://did:plc:abc123/app.bsky.feed.post/3abcd",
+                  "text": "Una reseña de fantasía", "context": "lectura de saga"}
+        text = "Enhorabuena, qué paso más grande"
+        self.assertTrue(rw.mark_gpt(text, self.path, network="bluesky", source=source))
+        proved = proof.attach({"kind": "reply", "handle": "b", "post_uri": source["post_uri"],
+                               "text": "  Enhorabuena,  qué paso más grande "},
+                              source, "bluesky", path=self.path)
+        self.assertIsNotNone(proved)
         plan = [
-            {"kind": "reply", "handle": "a", "text": "Qué buen libro."},                                   # banco / sin procedencia: fuera
-            {"kind": "reply", "handle": "b", "text": "  Enhorabuena,  qué paso más grande "},               # de ChatGPT (normalizado): se queda
-            {"kind": "comment", "handle": "c", "text": "Escrito a mano", "authored": "manual"},            # explicitamente manual: se queda
-            {"kind": "like", "handle": "d"},                                                              # sin texto: no afecta
-            {"kind": "reply", "handle": "e", "text": rc.PENDING_TEXT},                                    # marcador pendiente: fuera
+            {"kind": "reply", "handle": "a", "text": "Qué buen libro."},
+            proved,
+            {"kind": "comment", "handle": "c", "text": "Escrito a mano", "authored": "manual"},
+            {"kind": "like", "handle": "d"},
+            {"kind": "reply", "handle": "e", "text": rc.PENDING_TEXT},
+            {**proved, "handle": "f", "post_uri": source["post_uri"] + "x"},
         ]
-        kept = rw.require_gpt(plan, "test", log=lambda *_: None, path=self.path)
-        self.assertEqual([i["handle"] for i in kept], ["b", "c", "d"])
+        kept = rw.require_gpt(plan, "bluesky", log=lambda *_: None, path=self.path)
+        self.assertEqual([i["handle"] for i in kept], ["b", "d"])
 
-    def test_text_written_by_write_replies_passes_the_guard(self):
-        saved = rw.GPT_TEXTS
-        rw.GPT_TEXTS = self.path
-        try:
-            fake = lambda question, attachments, wait: ('[{"id": "p1", "reply": "Cerrar una saga entera da mucha alegría, ya nos dirás cuál viene ahora."}]', "url")
-            out = rw.write_replies([{"id": "p1", "network": "bluesky", "author": "ana_test_xyz", "text": "Terminé de leer una saga de fantasía y me ha encantado mucho"}], "bluesky", consult=fake, recent=[], log=lambda *_: None)
-            self.assertEqual(len(out), 1)
-            kept = rw.require_gpt([{"kind": "reply", "handle": "ana", "text": out["p1"]}, {"kind": "reply", "handle": "otra", "text": "Texto de banco cualquiera."}], "bluesky", log=lambda *_: None, path=self.path)
-            self.assertEqual([i["handle"] for i in kept], ["ana"])
-        finally:
-            rw.GPT_TEXTS = saved
+    def test_text_written_by_write_replies_passes_only_its_target(self):
+        source = {"id": "p1", "network": "bluesky", "author": "ana_test_xyz",
+                  "post_uri": "at://did:plc:abc123/app.bsky.feed.post/3abcde",
+                  "text": "Terminé de leer una saga de fantasía y me ha encantado mucho"}
+        fake = lambda question, attachments, wait: ('[{"id": "p1", "reply": "Cerrar una saga entera da mucha alegría, ya nos dirás cuál viene ahora."}]', "url")
+        out = rw.write_replies([source], "bluesky", consult=fake, recent=[], log=lambda *_: None)
+        self.assertEqual(len(out), 1)
+        genuine = proof.attach({"kind": "reply", "handle": "ana", "post_uri": source["post_uri"],
+                                "text": out["p1"]}, source, "bluesky", path=self.path)
+        self.assertIsNotNone(genuine)
+        kept = rw.require_gpt([genuine, {**genuine, "handle": "otra",
+                                         "post_uri": source["post_uri"] + "x"}],
+                              "bluesky", log=lambda *_: None, path=self.path)
+        self.assertEqual([i["handle"] for i in kept], ["ana"])
 
     def test_every_executor_calls_the_guard(self):
         import glob
@@ -87,30 +105,43 @@ class PinterestWriteCommentsTests(unittest.TestCase):
     def test_comments_use_chatgpt_text_and_pending_ones_are_dropped(self):
         import sys
         import types
+        from unittest import mock
         asked = {}
+        pin1 = "https://www.pinterest.com/pin/12345/"
+        pin2 = "https://www.pinterest.com/pin/12346/"
 
         def fake_get(items, network, log):
             asked["items"] = items
-            return {"https://pin/1": "Esa paleta de colores da ganas de leer."}
+            for source in items:
+                self.assertTrue(proof.record(network, source,
+                                "Esa paleta de colores da ganas de leer."))
+            return {pin1: "Esa paleta de colores da ganas de leer."}
 
         saved = sys.modules.get("reply_queue")
-        sys.modules["reply_queue"] = types.SimpleNamespace(get_or_enqueue=fake_get)
-        try:
-            plan = [
-                {"kind": "react", "url": "https://pin/1", "title": "x"},
-                {"kind": "comment", "url": "https://pin/1", "text": pg.PENDING_TEXT, "title": "Estantería de fantasía con luces", "desc": "Mi rincón de lectura para este otoño"},
-                {"kind": "comment", "url": "https://pin/2", "text": pg.PENDING_TEXT, "title": "Libros", "desc": ""},
-            ]
-            out = pg.write_comments(plan, {}, log=lambda *_: None)
-        finally:
-            if saved is not None:
-                sys.modules["reply_queue"] = saved
-            else:
-                del sys.modules["reply_queue"]
-        self.assertEqual([a["kind"] for a in out], ["react", "comment"])
-        self.assertEqual(out[1]["text"], "Esa paleta de colores da ganas de leer.")
-        self.assertIn("rincón de lectura", asked["items"][0]["text"])
-        self.assertEqual(len(asked["items"]), 1)         # el pin de una palabra no se pide
+        with tempfile.TemporaryDirectory() as root:
+            with mock.patch.dict(os.environ, {"RRSS_GPT_PROVENANCE_PATH":
+                                               os.path.join(root, "provenance.json")}):
+                sys.modules["reply_queue"] = types.SimpleNamespace(get_or_enqueue=fake_get)
+                try:
+                    plan = [
+                        {"kind": "react", "url": pin1, "title": "x"},
+                        {"kind": "comment", "url": pin1, "text": pg.PENDING_TEXT,
+                         "title": "Estantería de fantasía con luces",
+                         "desc": "Mi rincón de lectura para este otoño"},
+                        {"kind": "comment", "url": pin2, "text": pg.PENDING_TEXT,
+                         "title": "Libros", "desc": ""},
+                    ]
+                    out = pg.write_comments(plan, {}, log=lambda *_: None)
+                    self.assertEqual([a["kind"] for a in out], ["react", "comment"])
+                    self.assertEqual(out[1]["text"], "Esa paleta de colores da ganas de leer.")
+                    self.assertTrue(proof.verify(out[1], "pinterest"))
+                    self.assertIn("rincón de lectura", asked["items"][0]["text"])
+                    self.assertEqual(len(asked["items"]), 1)
+                finally:
+                    if saved is not None:
+                        sys.modules["reply_queue"] = saved
+                    else:
+                        del sys.modules["reply_queue"]
 
 
 if __name__ == "__main__":

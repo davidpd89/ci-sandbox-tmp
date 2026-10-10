@@ -42,7 +42,7 @@ def status(ident, acct="lectora@mastodon.social", text="Estoy leyendo fantasía 
 class FunnelTests(unittest.TestCase):
     def collector(self):
         c = gs.Collector(gs._load_config(gs.CONFIG_PATH), today=TODAY, write_metrics=False, run_id="test")
-        c.own, c.own_id = "autorademodiaz", "david"
+        c.own, c.own_id = "davidportodiaz", "david"
         return c
 
     def item_and_post(self, c, st):
@@ -93,7 +93,7 @@ class FunnelTests(unittest.TestCase):
     def test_pool_offers_accounts_and_skips_known_and_self(self):
         with tempfile.TemporaryDirectory() as tmp:
             db = pool.connect(os.path.join(tmp, "p.sqlite3"))
-            for acct in ("nueva@masto.es", "conocida@masto.es", "autorademodiaz"):
+            for acct in ("nueva@masto.es", "conocida@masto.es", "davidportodiaz"):
                 pool.upsert(db, account(acct, "5", note="Lectora de fantasía y novela juvenil", last_status_at=dt.date.today().isoformat()), "ed", "followers", "2026-09-29")
             db.commit()
             db.close()
@@ -105,7 +105,7 @@ class FunnelTests(unittest.TestCase):
                 gs._consume_pool(c)
         self.assertIn("nueva@masto.es", c.candidates)
         self.assertIn("pool", c.candidates["nueva@masto.es"]["sources"])
-        self.assertNotIn("autorademodiaz", c.candidates)
+        self.assertNotIn("davidportodiaz", c.candidates)
         self.assertNotIn("conocida@masto.es", c.candidates)
 
     def test_first_touch_source_survives_a_later_discovery_order(self):

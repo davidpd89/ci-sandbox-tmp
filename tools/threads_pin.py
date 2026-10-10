@@ -13,10 +13,10 @@ sys.stdout.reconfigure(encoding="utf-8")
 import threads_interact as t
 
 PHOTO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "00_OPERATIVO", "RECURSOS", "assets", "perfil", "david-porto-retrato-bn.jpg"))
-TEXT = ("Hola, soy Autora Demo, escritor gallego en Madrid. Escribo fantasía juvenil y novelas que dejan poso: «Samuel entre mundos» y «Las manecillas del recuerdo».\n\n"
+TEXT = ("Hola, soy David Porto, escritor gallego en Madrid. Escribo fantasía juvenil y novelas que dejan poso: «Samuel entre mundos» y «Las manecillas del recuerdo».\n\n"
         "¿Hablamos de libros, webs, escritura o de lo que os apetezca? Contadme qué estáis leyendo 👇\n\n"
-        "🌐 autorademodiaz.com\n"
-        "📖 Samuel entre mundos: https://www.amazon.es/dp/B0GB6LGQFH?tag=autorademo-21\n"
+        "🌐 davidportodiaz.com\n"
+        "📖 Samuel entre mundos: https://www.amazon.es/dp/B0GB6LGQFH?tag=davidporto-21\n"
         "📖 Las manecillas del recuerdo: https://amzn.to/4zW6Yeu")
 
 
@@ -59,6 +59,11 @@ def main(argv=None):
         return 0
     import action_ledger
     with action_ledger.browser_session(wait_minutes=30):
+        import circuit_breaker as cb
+        allowed, reason = cb.write_preflight("threads")
+        if not allowed:
+            print(f"[threads] cortacircuitos ABIERTO: {reason}; no publicar/fijar")
+            return 0
         t.ensure_browser()
         with t.session() as pg:
             permalink = None
@@ -67,6 +72,10 @@ def main(argv=None):
             else:
                 permalink = t.post(TEXT, PHOTO)
             print("permalink:", permalink)
+            allowed, reason = cb.write_preflight("threads")
+            if not allowed:
+                print(f"[threads] post presente, fijado pendiente por cuarentena: {reason}")
+                return 2
             pin_post(pg, permalink)
             print("fijado (comprobar en el perfil)")
     return 0
