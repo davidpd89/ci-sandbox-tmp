@@ -1,0 +1,26 @@
+name: Spanish voice quality offline
+on:
+  pull_request:
+    paths:
+      - 'tools/spanish_voice_*.py'
+      - 'tests/test_spanish_voice_quality.py'
+      - 'tests/fixtures/spanish_voice_pairs.json'
+      - '.github/workflows/spanish-voice-quality.yml'
+  push:
+    branches: ['research/69-spanish-voice-locale-quality']
+jobs:
+  offline:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test offline
+        run: python -m unittest discover -s tests -p test_spanish_voice_quality.py -v
+      - name: Benchmark sintético
+        run: python tools/spanish_voice_eval.py tests/fixtures/spanish_voice_pairs.json
