@@ -1,0 +1,64 @@
+python
+# Referencia de integración: https://github.com/davidpd89/ci-sandbox-tmp/blob/main/tools/threads_reply_queue.py
+# Archivo nuevo propuesto: tools/threads_post_score.py
+from __future__ import annotations
+
+import re
+from datetime import datetime, timezone
+
+from tools.threads_signal_schema import ThreadsPostSignal
+
+QUESTION_RE = re.compile(
+    r"\?|¿|qué|cual|cuál|recomend|opin|pensáis|piensas|leéis|leen|consejo",
+    re.IGNORECASE,
+)
+
+FANTASY_RE = re.compile(
+    r"\b(fantasia|fantasía|romantasy|fantasia juvenil|libro|libros|leer|lectura|"
+    r"novela|autor|autora|personaje|personajes|dragon|dragones|magia|reino|reinos|"
+    r"booktok|bookstagram|goodreads)\b",
+    re.IGNORECASE,
+)
+
+
+def _age_score(created_at: datetime) -> float:
+    hours = max(0.0, (datetime.now(timezone.utc) - created_at).total_seconds() / 3600)
+    if hours <= 24:
+        return 1.0
+    if hours <= 72:
+        return 0.8
+    if hours <= 168:
+        return 0.5
+    if hours <= 336:
+        return 0.2
+    return 0.0
+
+
+def _conversation_score(text: str, reply_count: int) -> float:
+    score = 0.0
+    if QUESTION_RE.search(text or ""):
+        score += 0.6
+    if 1 <= reply_count <= 30:
+        score += 0.4
+    elif 31 <= reply_count <= 100:
+        score += 0.2
+    return score
+
+
+def _engagement_score(like_count: int, reply_count: int) -> float:
+    return min(1.0, reply_count / 20.0 * 0.7 + like_count / 100.0 * 0.3)
+
+
+def score_post(signal: ThreadsPostSignal) -> float:
+    topic = 1.0 if FANTASY_RE.search(signal.text or "") else max(
+        0.0, min(1.0, signal.topic_score)
+    )
+
+    return round(
+        0.30 * _conversation_score(signal.text, signal.reply_count)
+        + 0.25 * topic
+        + 0.20 * _engagement_score(signal.like_count, signal.reply_count)
+        + 0.15 * _age_score(signal.created_at)
+        + 0.10 * (1.0 if signal.lang == "es" and signal.lang_confidence >= 0.7 else 0.0),
+        4,
+    )
