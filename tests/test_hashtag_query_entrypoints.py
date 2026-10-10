@@ -227,6 +227,50 @@ class EntrypointTests(unittest.TestCase):
             runner(None, config, {}, {}, set(), [], [])
             self.assertFalse(any("ñ" in q or "fantasía" in q for _, q in seen_calls))
 
+    def test_bluesky_legacy_fresh_tags_search_their_own_topic(self):
+        pool = isolate("bluesky_scan.py", "_lexical_tag_pool")
+        original = [("ReaderSky", "lectura")]
+        with patch.dict(sys.modules, {"hashtag_query_consumers": hqc}):
+            actual = pool(
+                original,
+                reader=lambda network, kind: ["#año", "#ReaderSky", "#lectura"],
+            )
+        self.assertEqual(original, [("ReaderSky", "lectura")])
+        self.assertEqual(actual, [
+            ("ReaderSky", "lectura"), ("año", "año"), ("lectura", "lectura"),
+        ])
+        self.assertEqual(len(actual), len({row[0].casefold() for row in actual}))
+
+    def test_instagram_trial_rotates_four_times_per_day_for_short_ttl(self):
+        slot = {"hour": 0}
+        fake_datetime = types.SimpleNamespace(
+            date=types.SimpleNamespace(today=lambda: datetime.date(2026, 10, 10)),
+            datetime=types.SimpleNamespace(
+                now=lambda: types.SimpleNamespace(hour=slot["hour"])),
+        )
+        trial = isolate("instagram_scan.py", "_rotate_queries",
+                        datetime=fake_datetime,
+                        QUERY_POOL=["validadas A", "validadas B"],
+                        TRIAL_QUERY_POOL=["semilla"])
+        injected = types.SimpleNamespace(
+            terms=lambda network, kind: synthetic(network, kind))
+        seen = []
+        with patch.dict(sys.modules, {
+            "discovery_terms": injected,
+            "hashtag_query_consumers": hqc,
+        }):
+            for hour in (0, 6, 12, 18):
+                slot["hour"] = hour
+                selected = trial(2)
+                self.assertEqual([flag for _, flag in selected],
+                                 ["validada", "validada", "prueba_no_validada"])
+                seen.append(selected[-1][0])
+        self.assertEqual(seen[0], "semilla")
+        self.assertNotEqual(seen[1], "semilla")
+        self.assertEqual(seen[2], "semilla")
+        self.assertNotEqual(seen[3], "semilla")
+        self.assertNotEqual(seen[1], seen[3])
+
     def test_instagram_trial_not_auto_promoted(self):
         trial = isolate("instagram_scan.py", "_rotate_queries",
                         datetime=datetime,
