@@ -75,6 +75,23 @@ class MatrixContractTests(unittest.TestCase):
         self.assertIsNone(parity._wiring(spec, "unfollow_cleanup", "threads"))
         self.assertIsNone(parity._wiring(spec, "loyalty"))
 
+    def test_unfollow_report_only_is_not_wired(self):
+        # unfollow_cleanup sin --apply no deja de seguir; el argv no basta.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "tools").mkdir()
+            (root / "tools" / "unfollow_cleanup.py").write_text(
+                'ADAPTERS = {"bluesky": object}\n', encoding="utf-8"
+            )
+            report_only = {"bluesky": {"post": [
+                ["python", "tools/unfollow_cleanup.py", "bluesky"]
+            ]}}
+            matrix = parity.build_matrix(root=root, pipelines=report_only)
+            self.assertEqual(matrix["bluesky"]["unfollow"]["status"], "present_not_wired")
+            report_only["bluesky"]["post"][0].append("--apply")
+            matrix = parity.build_matrix(root=root, pipelines=report_only)
+            self.assertEqual(matrix["bluesky"]["unfollow"]["status"], "wired")
+
     def test_docstring_does_not_count_as_kind_branch(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
