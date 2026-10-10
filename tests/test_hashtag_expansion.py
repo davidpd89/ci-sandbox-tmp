@@ -2,6 +2,7 @@
 import json
 import pathlib
 import subprocess
+import unicodedata
 import sys
 import tempfile
 import unittest
@@ -29,8 +30,8 @@ class HashtagExpansionTest(unittest.TestCase):
 
     def test_two_networks_not_leaking_and_provenance(self):
         result = self.build(posts() + posts("mastodon", source="stream"))
-        self.assertEqual(result["networks"]["bluesky"]["hashtags"], ["fantasiaepica"])
-        self.assertEqual(result["networks"]["mastodon"]["hashtags"], ["fantasiaepica"])
+        self.assertEqual(result["networks"]["bluesky"]["hashtags"], ["fantasiaépica"])
+        self.assertEqual(result["networks"]["mastodon"]["hashtags"], ["fantasiaépica"])
         self.assertEqual(result["networks"]["reddit"]["hashtags"], [])
         self.assertEqual(result["networks"]["mastodon"]["candidates"][0]["sources"], ["stream"])
         self.assertEqual(result["diagnostics"]["selected"], 2)
@@ -67,9 +68,18 @@ class HashtagExpansionTest(unittest.TestCase):
 
     def test_unicode_casefold_and_multiple_tags(self):
         rows = posts(tag="NiñezLectóra", n=2)
-        rows += posts(tag="NIÑEZLECTORA", n=2)
+        rows += posts(tag="NIÑEZLECTÓRA", n=2)
+        rows += posts(tag=unicodedata.normalize("NFD", "NiñezLectóra"), n=2)
         result = self.build(rows)
-        self.assertEqual(result["networks"]["bluesky"]["hashtags"], ["ninezlectora"])
+        self.assertEqual(result["networks"]["bluesky"]["hashtags"], ["niñezlectóra"])
+        self.assertEqual(h.extract("Prueba #" + unicodedata.normalize("NFD", "NiñezLectóra")),
+                         {"niñezlectóra"})
+
+    def test_distinct_spanish_hashtags_do_not_collide(self):
+        rows = posts(tag="Año") + posts(tag="Ano")
+        rows += posts(tag="Niño") + posts(tag="Nino")
+        actual = self.build(rows)["networks"]["bluesky"]["hashtags"]
+        self.assertEqual(set(actual), {"año", "ano", "niño", "nino"})
 
     def test_feedback_changes_score(self):
         rows = posts(tag="Aventura", n=4) + posts(tag="Biblioteca", n=4)
@@ -98,7 +108,7 @@ class HashtagExpansionTest(unittest.TestCase):
             path = pathlib.Path(folder) / "out.json"
             h.save_snapshot(path, result)
             self.assertEqual(h.snapshot_terms("bluesky", path=path, now=NOW),
-                             ["fantasiaepica"])
+                             ["fantasiaépica"])
             self.assertEqual(h.snapshot_terms("bluesky", path=path,
                                               now="2026-10-13T12:00:00Z"), [])
             path.write_text('{"wrong": true}', encoding="utf-8")
@@ -109,7 +119,7 @@ class HashtagExpansionTest(unittest.TestCase):
         result = self.build(rows)
         self.assertEqual(set(result["networks"]), h.NETWORKS)
         for network in h.NETWORKS:
-            self.assertEqual(result["networks"][network]["busquedas"], ["fantasiaepica"])
+            self.assertEqual(result["networks"][network]["busquedas"], ["fantasiaépica"])
             self.assertEqual(bool(result["networks"][network]["hashtags"]),
                              network in h.TAG_NETWORKS)
 
@@ -117,7 +127,7 @@ class HashtagExpansionTest(unittest.TestCase):
         result = self.build(posts())
         with tempfile.TemporaryDirectory() as folder:
             static, overlay = (pathlib.Path(folder) / name for name in ("static.json", "overlay.json"))
-            static.write_text('{"bluesky":{"hashtags":["#FantasíaÉpica","BookSky"]}}',
+            static.write_text('{"bluesky":{"hashtags":["#FantasiaÉpica","BookSky"]}}',
                               encoding="utf-8")
             h.save_snapshot(overlay, result)
             original = h.snapshot_terms
@@ -125,10 +135,10 @@ class HashtagExpansionTest(unittest.TestCase):
                  patch.object(h, "DEFAULT_CACHE", overlay), \
                  patch.object(h, "snapshot_terms", side_effect=lambda network, kind: original(network, kind, now=NOW)):
                 self.assertEqual(discovery_terms.terms("bluesky", "hashtags",
-                                                      skip=["BookSky"]), ["FantasíaÉpica"])
+                                                      skip=["BookSky"]), ["FantasiaÉpica"])
                 static.unlink()
                 self.assertEqual(discovery_terms.terms("bluesky", "hashtags"),
-                                 ["fantasiaepica"])
+                                 ["fantasiaépica"])
 
     def test_package_style_import_from_repo_root(self):
         # Un proceso nuevo evita que el sys.path modificado por este test oculte
