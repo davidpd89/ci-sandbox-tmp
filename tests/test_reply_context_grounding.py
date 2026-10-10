@@ -110,10 +110,14 @@ class ContextPacketTests(unittest.TestCase):
                     self.assertIn("visual:0_not_verified", p.warnings)
 
     def test_thread_order_is_caller_supplied(self):
-        p = self.packet(reply_to_us=True, parents=[
+        p = self.packet(reply_to_us=True, reply_parent_id="parent2", parents=[
             {"stable_id": "parent1", "verified": True, "text": "¿Qué edición escogiste?"},
             {"stable_id": "parent2", "verified": True, "text": "La de tapa blanda."},
         ])
+        self.assertTrue(p.eligible)
+        self.assertTrue(p.reply_to_us)
+        self.assertEqual(p.reply_parent_id, "parent2")
+        self.assertIn('"reply_parent_id": "parent2"', render_packet(p))
         self.assertEqual([e.id for e in p.evidence], ["post", "parent:0", "parent:1"])
         self.assertLess(render_packet(p).index("¿Qué edición"), render_packet(p).index("tapa blanda"))
 
@@ -121,6 +125,33 @@ class ContextPacketTests(unittest.TestCase):
         p = self.packet(reply_to_us=True, parents=[])
         self.assertFalse(p.eligible)
         self.assertIn("conversation_parent_missing", p.warnings)
+
+    def test_immediate_parent_identity_required_not_any_ancestor(self):
+        ancestor = {"stable_id": "grandparent", "verified": True, "text": "Primera pregunta."}
+        immediate = {"stable_id": "immediate", "verified": True, "text": "¿Y después?"}
+        for kw in (
+            {"parents": [ancestor], "reply_parent_id": "immediate"},
+            {"parents": [ancestor, {**immediate, "verified": False}],
+             "reply_parent_id": "immediate"},
+            {"parents": [ancestor, immediate], "reply_parent_id": "grandparent"},
+            {"parents": [ancestor, immediate]},
+            {"parents": [ancestor, {**immediate, "text": ""}],
+             "reply_parent_id": "immediate"},
+        ):
+            with self.subTest(case=kw):
+                p = self.packet(reply_to_us=True, **kw)
+                self.assertFalse(p.eligible)
+                self.assertIn("conversation_parent_missing", p.warnings)
+        correct = self.packet(reply_to_us=True, parents=[ancestor, immediate],
+                              reply_parent_id="immediate")
+        self.assertTrue(correct.eligible)
+
+    def test_reply_parent_identity_changes_context_fingerprint(self):
+        parents = [{"stable_id": "p", "verified": True, "text": "Comentario previo."}]
+        a = self.packet(parents=parents, reply_parent_id="p")
+        b = self.packet(parents=parents, reply_parent_id="otro")
+        self.assertEqual(a.evidence, b.evidence)
+        self.assertNotEqual(packet_fingerprint(a), packet_fingerprint(b))
 
     def test_uncertain_parent_is_not_evidence(self):
         p = self.packet(parents=[{"verified": "true", "stable_id": "p1", "text": "La edición ilustrada."}])
@@ -396,6 +427,7 @@ class OutcomeTests(unittest.TestCase):
             {"published": False, "received_reply": True},
             {"published": False, "continuation_turns": 1},
             {"published": "true"},
+            {"received_reply": False, "continuation_turns": 2},
         ):
             with self.subTest(kw=kw), self.assertRaises(ValueError):
                 summarize_outcomes([self.result(**kw)])
