@@ -1,0 +1,3 @@
+python
+# https://github.com/davidpd89/ci-sandbox-tmp/blob/main/tools/reply_writer.py
+AUTHOR_COOLDOWN_DAYS = 30        # a quien ya le hemos comentado no se le vuelve a comentar de nuestra iniciativa (David, 07/10: «ahi no se comenta mas»)
