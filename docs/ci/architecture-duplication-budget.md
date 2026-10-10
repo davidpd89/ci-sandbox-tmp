@@ -23,7 +23,7 @@ existente en Ubuntu y Windows, Python 3.11.
 - Omite docstring inicial; mantiene el umbral heredado de tres sentencias
   directas y de tamaño AST para no inventar deuda que no estaba en el
   baseline. Omite agrupaciones que no involucren al menos dos redes.
-- Los siete grupos originales no cambian. Para cada huella, la identidad
+- Las seis huellas del snapshot anterior siguen intactas; la séptima está justificada más abajo. Para cada huella, la identidad
   permitida es (red, archivo, nombre de función) y su multiplicidad.
   Una entrada nueva no puede ocupar un hueco liberado por una eliminada.
 - Reducir o eliminar copias pasa sin actualizar baseline; desplazar líneas
@@ -98,7 +98,7 @@ consultó docs/open-source-scouting/PROTOCOL.md de la rama
 research/public-reuse-parent, que exige esta distinción.
 
 Rollback: revertir los commits de esta PR; runtime social, estados,
-colas WEB/API/MOBILE y baseline histórico permanecen intactos.
+colas WEB/API/MOBILE permanecen intactos; la baseline solo incorpora la huella histórica verificada.
 
 
 ## Revisión adicional: identidades léxicas y línea base
@@ -107,8 +107,8 @@ Tras reproducir un bypass nuevo, el informe utiliza `Clase.metodo` y
 `funcion_externa.funcion_interna` como nombres cualificados. Antes se podía
 eliminar `Primera.verificar` y añadir `Segunda.verificar` dentro del mismo
 archivo: al compartir el nombre corto `verificar` y el digest del cuerpo, el
-presupuesto no detectaba el reemplazo. Los nombres de las seis funciones
-históricas son de nivel superior, de modo que esta corrección no modifica los
+presupuesto no detectaba el reemplazo. Las funciones recogidas en las seis huellas
+iniciales son de nivel superior, de modo que esta corrección no modifica los
 fingerprints ni exige reescribir el snapshot.
 
 También se comprueba la estructura de la línea base: huellas hexadecimales
