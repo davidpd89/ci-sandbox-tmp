@@ -42,6 +42,8 @@ def main():
     parser.add_argument("--score-key", type=Path)
     args = parser.parse_args()
     pairs = json.loads(args.pairs.read_text(encoding="utf-8"))
+    if bool(args.score_review) != bool(args.score_key):
+        parser.error("--score-review y --score-key deben facilitarse juntos")
     if bool(args.blind_prefix) != bool(args.blind_key_dir):
         parser.error("--blind-prefix y --blind-key-dir son obligatorios juntos")
     if args.blind_prefix:
