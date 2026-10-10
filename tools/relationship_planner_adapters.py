@@ -62,7 +62,7 @@ def _number(value):
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
     import math
-    return float(value) if math.isfinite(value) and 0 <= value <= 1 else None
+    return float(value) if 0 <= value <= 1 and math.isfinite(value) else None
 
 
 def _items(data, network):
