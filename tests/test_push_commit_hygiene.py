@@ -164,6 +164,23 @@ class PushCommitTests(unittest.TestCase):
         self.assertEqual(self.git("diff", "--name-only", before, "HEAD"), "docs/new-tip.md")
         self.assertEqual(self.scan(before), [(merge, 1)])
 
+    def test_force_rewind_to_safe_ancestor_is_clean(self):
+        self.write("docs/new-safe.md")
+        self.commit("safe tip")
+        old = self.head()
+        self.git("reset", "--hard", self.base)
+        self.assertEqual(self.scan(old), [])
+
+    def test_force_rewind_restores_sensitive_path(self):
+        self.write("cache/metricas.csv")
+        self.commit("historical sensitive")
+        restored = self.head()
+        self.git("rm", "cache/metricas.csv")
+        self.commit("historical cleanup")
+        old = self.head()
+        self.git("reset", "--hard", restored)
+        self.assertEqual(self.scan(old), [(restored, 1)])
+
     def test_force_divergent_before(self):
         self.write("docs/previous.md")
         self.commit("old tip")

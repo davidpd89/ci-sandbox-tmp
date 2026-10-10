@@ -34,6 +34,24 @@ def scan_push(event: dict, *, root: Path, expected_sha: str):
     if len(before) != len(after):
         raise PushEventError("Incompatible before and after hash formats")
     first_push = set(before) == {"0"}
+    if not first_push:
+        # A force-push can rewind main to an ancestor of before, so
+        # after ^ before contains no commits even though the tree changed.
+        # Check restored A/M/T paths rather than misclassifying a clean
+        # rewind as an unverifiable event; missing Git history still errors.
+        if before.lower() == after.lower():
+            raise PushEventError("No commits changed in push")
+        history.commit_id(root, before)
+        if history.git(root, "rev-parse", "--is-shallow-repository").strip() != b"false":
+            raise PushEventError("Shallow checkout: full commit history required")
+        newly_reachable = history.git(
+            root, "rev-list", "--missing=error", "--max-count=1",
+            after.lower(), "^" + before.lower(),
+        )
+        if not newly_reachable:
+            paths = history.touched_paths(root, after.lower(), [before.lower()])
+            count = sum(bool(repo_hygiene.forbidden_path(path)) for path in paths)
+            return [(after.lower(), count)] if count else []
     return history.scan_history(root, None if first_push else before,
                                 after, repo_hygiene.forbidden_path)
 
