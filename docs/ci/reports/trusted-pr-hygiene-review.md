@@ -68,3 +68,12 @@ Commit: [`9b901c0bf738616c8317dbf78d60b8f6549fc7b5`](https://github.com/davidpd8
 - `docs/open-source-scouting/PROTOCOL.md` no existe ni en `ci/test-campaign-parent` ni en esta rama; se consultó `repo_hygiene.py` en el repositorio oficial y coincide byte a byte (SHA de blob `9987782b1a94a4fd152f0f0cb5e2b42a044d9ae4`) con el mirror base.
 
 **Dictamen independiente:** lista para *revisión de código* de Claude, no para afirmar enforcement. Activación `pull_request_target` + required workflow/check correcto sobre la rama protegida requiere configuración externa e inspección posterior. No se hizo merge.
+
+
+## Actualización del 10/10/2026 — sincronización y regresión temporal
+
+- La rama `ci/trusted-pr-hygiene` se sincronizó mediante merge conservador con `ci/test-campaign-parent@c48480c979fdfc06fb4169a53da0b92c36601766`. El diff propio de #92 sigue siendo el verificador, workflows y documentación originales, más regresiones; el nuevo `tools/repo_hygiene.py` procede de la base (PR #2, ya fusionada **en esta base**, no por ello en `main`).
+- Se añadió regresión ante cambio de `base.sha` durante la paginación y comprobación del endurecimiento de rutas `.env.example/...` heredado de la base. La garantía sigue limitada al checkout confiable: instalar #92 en `main` SIN incorporar la política actualizada de #2 conservaría las reglas antiguas.
+- La suite general tras sincronizar destapó un fixture TikTok caducado: `test_pending_approval_is_historical_no_retry_target` escribía `2026-10-09` y comparaba contra un contador diario que usa la fecha actual; el 10/10 falló tanto en Ubuntu como Windows (`0 != 1`). Se cambió **solo la fecha del fixture** a `date.today()`, sin modificar la lógica de TikTok ni hacer acciones reales.
+- La sincronización **no activa** `pull_request_target` en `main`; el check independiente no podrá darse por exigible hasta instalarse en default branch, configurar procedencia del required workflow/check (ver #96) y pasar canarios de bloqueo real.
+- Antes de integrar, verificar sobre el HEAD final `python -m unittest discover -s tests -p test_trusted_pr_hygiene.py -v`, `python -m pytest -q tests/test_tiktok_safety.py`, y ambos runners de la suite general en Actions. No extrapolar los resultados verdes de un SHA antiguo.
