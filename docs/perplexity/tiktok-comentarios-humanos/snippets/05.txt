@@ -1,0 +1,12 @@
+text
+tiktok_scan / tiktok_discovery
+        ↓
+tiktok_comment_writer.py
+        ↓
+tiktok_comment_intents.py  ← nuevo
+        ↓
+tiktok_human.py            ← ampliar
+        ↓
+tiktok_comment_specificity.py ← nuevo
+        ↓
+reply_queue / action_ledger / growth_attribution
