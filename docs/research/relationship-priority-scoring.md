@@ -1,5 +1,35 @@
 # Priorización diaria de relaciones: implementación y revisión
 
+## Problema
+
+No hay agenda diaria común, auditable, que ordene relaciones elegibles para las nueve redes, separadas por cola. Conservar la política existente y evitar necroposting.
+
+## Alternativas
+
+Comparados modelos SHAP de lead-scoring, scikit-learn, biblioteca ranx y score heurístico propio: la última opción evita dependencia pesada y entrenamiento sin etiquetas reales.
+
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/Olga-lab1/lead-scoring-engine
+Fecha de consulta: 2026-10-10
+Licencia SPDX: MIT
+Referencia inmutable: https://github.com/Olga-lab1/lead-scoring-engine/tree/096c174c7e35501ea0ff5ddd7474b0bc65ea7c66
+
+Las licencias verificadas restantes y sus revisiones inmutables figuran en la tabla comparativa; código de terceros copiado: ninguno.
+
+## Decisión
+
+Añadir una capa de ranking solo lectura en stdlib, sin modificar el contrato de ejecución y sin sustituir filtros y política relacional.
+
+## Pruebas
+
+Suite de pytest offline Linux/Windows Python 3.11, backtest ficticio etiquetado y comprobación temporal de estabilidad/diversidad. El detalle CI se incorporará con resultados finales.
+
+## Retirada
+
+Eliminar motor, suite, benchmark y workflow propios: no hay estado ni migraciones.
+
+
 **Estado:** código offline en la PR #71; no merge, no publicaciones, no llamadas a redes, no datos reales.
 **Fecha de investigación:** 10/10/2026. **Python:** >=3.11, biblioteca estándar (solo pytest en CI).
 **Rama/base:** `research/61-relationship-priority-scoring` / `research/public-reuse-parent`.
