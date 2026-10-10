@@ -150,6 +150,17 @@ class InspectorTests(unittest.TestCase):
         self.assertNotIn("secret", json.dumps(preview))
         self.assertNotIn("session", json.dumps(preview))
 
+    def test_real_mirror_pipeline_readonly_contract(self):
+        import mechanical_round as mr
+        self.assertGreaterEqual(len(mr.PIPELINES), 7)
+        for network in mr.PIPELINES:
+            with self.subTest(network=network):
+                preview = inspect_pipeline(network, mr.PIPELINES)
+                self.assertEqual(preview["network"], network)
+                self.assertTrue(preview["steps"]["execute"])
+                for scripts in preview["steps"].values():
+                    self.assertTrue(all("/" not in name and "\\" not in name for name in scripts))
+
     def test_api_mobile_and_windows_paths(self):
         b = {"bluesky": {"pre": [], "build": ["python", "tools\\bluesky_build_plan.py"],
                            "execute": ["python", "tools\\bluesky_execute.py"]},
