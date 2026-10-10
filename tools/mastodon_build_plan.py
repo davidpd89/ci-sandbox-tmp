@@ -15,7 +15,8 @@ from __future__ import annotations
 import sys
 
 import scan_common as _sc
-from candidate_identity import resolve_post_ref
+from candidate_identity import resolve_author, resolve_post_ref
+from reply_provenance import carry_decision_proof
 
 VALID = {"follow", "favourite", "boost", "reply"}
 TEXT_KINDS = {"reply"}
@@ -61,7 +62,7 @@ def build(scan, decisions):
                     f"decisión {index}: account fuera de follow_pool {decision['account']!r}"
                 )
             row = {
-                "handle": entry["acct"],
+                "handle": resolve_author("mastodon", entry),
                 "kind": kind,
                 "lane": "pool",
                 "account_id": entry.get("account_id"),
@@ -80,7 +81,7 @@ def build(scan, decisions):
             if kind not in (candidate.get("actions") or []):
                 raise ValueError(f"decisión {index}: follow no propuesto para {cid}")
             row = {
-                "handle": candidate["acct"],
+                "handle": resolve_author("mastodon", candidate),
                 "kind": kind,
                 "lane": candidate.get("lane", "unknown"),
                 "account_id": candidate.get("account_id"),
@@ -100,11 +101,13 @@ def build(scan, decisions):
             if kind not in (post.get("actions") or []):
                 raise ValueError(f"decisión {index}: {kind} no propuesto para {pid}")
             row = {
-                "handle": candidate["acct"],
+                "handle": resolve_author("mastodon", candidate),
                 "kind": kind,
                 "lane": candidate.get("lane", "unknown"),
                 "url": post["url"],
                 "status_id": str(post["status_id"]),
+                "created_at": post.get("created_at") or "",
+                "post_created_at": post.get("created_at") or "",
                 "motivo": f"growth:{pid}:" + ",".join(post.get("sources") or []) + (f":src={candidate['first_source']}" if candidate.get("first_source") else ""),
             }
             key = row["status_id"]
@@ -115,6 +118,9 @@ def build(scan, decisions):
                 row["text"] = text.strip()
                 _sc.opinion_guard(post.get("text", ""), row["text"])
                 row["post_text"] = post.get("text", "")  # contexto para el filtro de opinion del ejecutor
+                row = carry_decision_proof(row, decision, "mastodon", post.get("text", ""))
+                if row is None:
+                    continue
         if key in seen:
             raise ValueError(f"decisión {index}: acción duplicada {key}")
         seen.add(key)

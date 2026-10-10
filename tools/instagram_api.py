@@ -1,4 +1,4 @@
-"""API oficial de Instagram (Instagram Login, 03/10/2026) para @autorademodiaz.
+"""API oficial de Instagram (Instagram Login, 03/10/2026) para @davidportodiaz.
 
 Instagram sigue siendo SOLO PUBLICACION (David, 03/10): esta herramienta nunca interactua con cuentas
 ajenas (la API tampoco lo permite). Sirve para (1) contestar comentarios de nuestros propios posts
@@ -59,6 +59,10 @@ def comments_pending(token, user_id, me_username, media_limit=10):
 
 
 def reply_comment(token, comment_id, text, allow_question=False):
+    import circuit_breaker as cb
+    allowed, reason = cb.write_preflight("instagram")
+    if not allowed:
+        raise PermissionError(f"cortacircuitos Instagram ABIERTO: {reason}")
     text = mc.reject_returned_question(mc.check_text(text, COMMENT_MAX), allow_question)
     return mc.graph_post(BASE, f"{comment_id}/replies", token, message=text)["id"]
 
@@ -66,8 +70,15 @@ def reply_comment(token, comment_id, text, allow_question=False):
 def publish_image(token, user_id, image_url, caption, approved=False):
     if not approved:
         raise PermissionError("publicar en Instagram exige aprobacion explicita de David (--approved)")
+    import circuit_breaker as cb
+    allowed, reason = cb.write_preflight("instagram")
+    if not allowed:
+        raise PermissionError(f"cortacircuitos Instagram ABIERTO: {reason}")
     container = mc.graph_post(BASE, f"{user_id}/media", token, image_url=image_url,
                               caption=mc.check_text(caption, CAPTION_MAX))
+    allowed, reason = cb.write_preflight("instagram")
+    if not allowed:
+        raise PermissionError(f"cortacircuitos Instagram ABIERTO antes de publicar: {reason}")
     return mc.graph_post(BASE, f"{user_id}/media_publish", token, creation_id=container["id"])["id"]
 
 

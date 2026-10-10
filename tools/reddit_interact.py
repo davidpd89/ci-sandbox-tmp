@@ -510,8 +510,6 @@ def comment(url, text):
     _check_length(text)
     _check_micro_comment(text)
     _check_spanish_orthography(text)
-    import voice_output_finalization as voice
-    voice.inspect(text, network="reddit", queue="WEB")
     url = _validated_thread_url(url)
     history_state = _comment_history_state(url)
     if history_state == "confirmed":

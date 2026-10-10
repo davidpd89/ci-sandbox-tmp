@@ -1,4 +1,4 @@
-"""Consulta a ChatGPT (proyecto «MCP - RRSS Autora Demo») con ficheros adjuntos, por el Edge 9223 (05/10/2026).
+"""Consulta a ChatGPT (proyecto «MCP - RRSS David Porto») con ficheros adjuntos, por el Edge 9223 (05/10/2026).
 
 Abre un chat NUEVO dentro del proyecto (pestana propia, no toca otras), adjunta los ficheros, pega la pregunta, espera a que
 termine de responder (incluido el modo "pensando") y guarda la respuesta en un .md. Mejora a `ask_chatgpt_rrss.py`, que
@@ -13,10 +13,24 @@ import os
 import re
 import sys
 import time
+from urllib.parse import urlsplit
 
 sys.path.insert(0, os.path.dirname(__file__))
 
 PROJECT_URL = "https://chatgpt.com/g/g-p-6a3bc1e919148191a7b1f1faf854f6d1/project"
+PROJECT_ID = "g-p-6a3bc1e919148191a7b1f1faf854f6d1"
+
+
+def assert_expected_project(page_url):
+    """La URL no prueba identidad personal, pero evita escribir en login/otro proyecto."""
+    try:
+        parsed = urlsplit(page_url)
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError("proyecto ChatGPT no verificable; no enviar") from exc
+    if (parsed.scheme != "https" or parsed.hostname != "chatgpt.com"
+            or PROJECT_ID not in parsed.path.split("/")):
+        raise RuntimeError("proyecto ChatGPT no verificable; no enviar")
+
 SECRET_NAMES = re.compile(r"(^\.env|token|secret|credential|password|\.pem$|\.key$)", re.I)
 # 05/10: la interfaz de ChatGPT cambio y el atributo data-message-author-role desaparecio; el texto de la respuesta cuelga de MarkdownRoot.
 ASSISTANT = '[data-message-author-role="assistant"], [class*="MarkdownRoot"]'
@@ -52,33 +66,35 @@ def consult(question, attachments=(), wait_min=25):
     de 30+ min en modo 'pensando') se hace sin el turno, en su propia pestana, para no bloquear las rondas programadas."""
     from playwright.sync_api import sync_playwright
     import action_ledger as al
+    import browser_common as bc
     refuse_secret_files(attachments)
     p = sync_playwright().start()
-    port, turn = browser_target()
+    pg = None
     try:
+        port, turn = browser_target()
         with al.browser_session(name=turn):
-            browser = p.chromium.connect_over_cdp(f"http://127.0.0.1:{port}", timeout=20000)
-            ctx = browser.contexts[0]
-            ctx.grant_permissions(["clipboard-read", "clipboard-write"])
-            pg = ctx.new_page()
+            browser = bc.connect_cdp(p.chromium, f"http://127.0.0.1:{port}")
+            if not browser.contexts:
+                raise RuntimeError("CDP sin contexto ChatGPT; no cambiar de perfil")
+            pg = browser.contexts[0].new_page()
             pg.goto(PROJECT_URL, wait_until="domcontentloaded", timeout=40000)
             pg.wait_for_timeout(6000)
             if "auth" in pg.url or "login" in pg.url:
                 raise RuntimeError("ChatGPT pide iniciar sesion: lo hace David, no se teclean contrasenas")
+            assert_expected_project(pg.url)  # Antes de escribir datos, nunca por substring de host.
             if attachments:
                 pg.locator("input[type=file]").first.set_input_files([os.path.abspath(a) for a in attachments])
                 pg.wait_for_timeout(8000 + 3000 * len(attachments))
-            box = pg.locator('[contenteditable="true"]').first
-            box.click()
-            pg.evaluate("(t) => navigator.clipboard.writeText(t)", question)
-            pg.keyboard.press("Control+V")
+            # fill() admite contenteditable: evita alterar el portapapeles y los
+            # permisos de todo el contexto CDP compartido.
+            pg.locator('[contenteditable="true"]').first.fill(question)
             pg.wait_for_timeout(2500)
             pg.locator(SEND_BUTTON).first.click()
             pg.wait_for_timeout(8000)
         # --- fuera del turno: solo se lee esta pestana de ChatGPT ---
-        deadline = time.time() + wait_min * 60
+        deadline = time.monotonic() + max(0, wait_min) * 60
         last_len, stable = -1, 0
-        while time.time() < deadline:
+        while time.monotonic() < deadline:
             pg.wait_for_timeout(4000)
             generating = pg.locator(STOP_BUTTON).count() > 0
             count = pg.locator(ASSISTANT).count()
@@ -87,14 +103,18 @@ def consult(question, attachments=(), wait_min=25):
             last_len = length
             if stable >= 4 and length > 200:
                 break
-        if not pg.locator(ASSISTANT).count():
-            raise RuntimeError("no hubo respuesta de ChatGPT dentro del plazo")
+        if stable < 4:
+            raise RuntimeError("respuesta no confirmada de ChatGPT: fin de plazo")
         answer = pg.locator(ASSISTANT).last.inner_text()
-        url = pg.url
-        pg.close()
-        return answer, url
+        return answer, pg.url
     finally:
-        p.stop()
+        try:
+            if pg is not None:
+                pg.close()
+        except Exception:
+            pass
+        finally:
+            p.stop()
 
 
 def main(argv=None):

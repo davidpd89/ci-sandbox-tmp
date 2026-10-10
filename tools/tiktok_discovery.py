@@ -54,7 +54,11 @@ def term_hits(text: str, terms: list[str]) -> int:
     hits = 0
     for term in terms:
         wanted = _norm(term)
-        if (" " in wanted and wanted in value) or wanted in tokens:
+        # Flexión regular plural española: «novelas» debe contar como
+        # «novela», pero «novelazo»/subcadenas no acreditan nicho.
+        if ((" " in wanted and wanted in value) or wanted in tokens
+                or (" " not in wanted and len(wanted) >= 4
+                    and not wanted.endswith("s") and wanted + "s" in tokens)):
             hits += 1
     return hits
 
@@ -184,7 +188,10 @@ def make_row(
 
 def validate_row(row: dict[str, Any], config: dict, *, discarded=frozenset()) -> bool:
     """Filtro mecánico: handle propio, política/spam/adulto, relación ya existente."""
-    text = " ".join(filter(None, [row["name"], row["bio"], row["caption"], row.get("comment_text", "")]))
+    # La caption pertenece al creador del vídeo, no a quien escribió debajo.
+    # Tampoco debe excluirse un comentarista por spam ajeno.
+    own_caption = "" if row.get("source") in ("video_search:comment", "seed:comment") else row["caption"]
+    text = " ".join(filter(None, [row["name"], row["bio"], own_caption, row.get("comment_text", "")]))
     if not text.strip():
         text = row["handle"]
     if row.get("relation") in ("following", "friends", "requested"):
@@ -208,6 +215,68 @@ def looks_english(text: str) -> bool:
     return len(words & _EN_WORDS) >= 1 and not (words & _ES_WORDS)
 
 
+def assess_quality(row: dict[str, Any], config: dict, *, today: str | None = None) -> dict[str, str]:
+    """Calidad de evidencia, no diagnóstico de «cuenta humana».
+
+    Un handle/nombre con «libro» no demuestra afinidad ni actividad. Solo
+    acredita un candidato para auto-follow la evidencia textual atribuible
+    al propio perfil/vídeo/comentario. La fecha de publicación ausente es
+    DESCONOCIDA: no atribuir actividad reciente ficticia.
+    """
+    terms = config.get("niche_terms") or []
+    source = str(row.get("source") or "")
+    bio = str(row.get("bio") or "")
+    comment = str(row.get("comment_text") or "")
+    caption = str(row.get("caption") or "")
+    # En video_search:comment, caption corresponde al VÍDEO de otra cuenta,
+    # no al autor del comentario. No atribuirle ese texto como contenido propio.
+    owns_caption = source not in ("video_search:comment", "seed:comment")
+    own_content = caption if owns_caption else ""
+    own_text = " ".join(filter(None, [bio, comment, own_content]))
+    if not own_text.strip() or term_hits(own_text, terms) == 0:
+        return {"decision": "review", "reason": "sin_nicho_fuera_del_nombre",
+                "activity": "unknown"}
+    if looks_english(own_text):
+        return {"decision": "review", "reason": "idioma_no_confirmado",
+                "activity": "unknown"}
+    business = re.search(
+        r"editorial|ediciones|librer[ií]a|bookstore|publishing|tienda|shop|distribu",
+        f"{row.get('handle') or ''} {row.get('name') or ''}", re.I,
+    )
+    if business:
+        return {"decision": "review", "reason": "cuenta_organizacion",
+                "activity": "unknown"}
+    recent = str(row.get("last_post_date") or "").strip()
+    if recent:
+        try:
+            last = datetime.date.fromisoformat(recent[:10])
+            current = datetime.date.fromisoformat(today) if today else datetime.date.today()
+            if last > current:
+                return {"decision": "review", "reason": "fecha_actividad_inconsistente",
+                        "activity": "unknown"}
+            if (current - last).days > int((config.get("scoring") or {}).get("max_inactive_days", 45)):
+                return {"decision": "review", "reason": "ultima_publicacion_antigua",
+                        "activity": "stale"}
+        except ValueError:
+            return {"decision": "review", "reason": "fecha_actividad_invalida",
+                    "activity": "unknown"}
+    # El follow de entrada ya es una interacción observada y verificada:
+    # una persona que NOS sigue no necesita publicar un vídeo para que
+    # podamos corresponder, siempre que su bio sea del nicho.
+    if (row.get("relation") == "follows_me" and
+            term_hits(bio, terms) > 0):
+        return {"decision": "eligible", "reason": "follow_entrante_y_bio_nicho",
+                "activity": "inbound_follow"}
+    # Una bio de libros sola, sin follow entrante, puede estar obsoleta:
+    # exigir vídeo propio o comentario observado de esta cuenta.
+    if not (own_content.strip() and term_hits(own_content, terms) or
+            comment.strip() and term_hits(comment, terms)):
+        return {"decision": "review", "reason": "actividad_no_observada",
+                "activity": "unknown"}
+    return {"decision": "eligible", "reason": "nicho_y_actividad_observada",
+            "activity": "dated" if recent else "observed_undated"}
+
+
 def score_row(row: dict[str, Any], config: dict) -> float:
     """Puntuación de afinidad. Calibrada con cuentas pequeñas/medianas del nicho primero."""
     terms = config.get("niche_terms") or []
@@ -215,11 +284,14 @@ def score_row(row: dict[str, Any], config: dict) -> float:
     score = 0.0
     identity = " ".join(filter(None, [row["name"], row["handle"], row["bio"]]))
     score += min(3, term_hits(identity, terms)) * float(weights.get("identity_hit", 2.0))
-    activity = " ".join(filter(None, [row["caption"], row.get("comment_text", "")]))
+    # La caption de un vídeo ajeno no puntúa como actividad de la
+    # persona que escribió un comentario debajo del vídeo.
+    own_caption = "" if row.get("source") in ("video_search:comment", "seed:comment") else row["caption"]
+    activity = " ".join(filter(None, [own_caption, row.get("comment_text", "")]))
     score += min(3, term_hits(activity, terms)) * float(weights.get("activity_hit", 1.0))
     if row.get("proof") and term_hits(row["proof"], terms):
         score += float(weights.get("proof_hit", 1.0))
-    if looks_english(" ".join(filter(None, [row["name"], row["bio"], row["caption"], row.get("comment_text", "")]))):
+    if looks_english(" ".join(filter(None, [row["name"], row["bio"], own_caption, row.get("comment_text", "")]))):
         score -= float(weights.get("english_penalty", 3.0))
     # Reciprocidad solo cuenta si hay señal real de nicho (los bots de servicios también "siguen").
     if row.get("relation") == "follows_me" and score >= float(weights.get("follows_me_min_base", 2.0)):
@@ -376,6 +448,13 @@ def run_surface(nav, surface, query, config, ctx):
         if not validate_row(row, config, discarded=ctx["discarded"]):
             continue
         row["ctx"] = f"{surface}:{query}"   # contexto independiente (query/semilla) para recurrencia
+        # Procedencia explícita: source define el papel del candidato
+        # (autor, comentarista, seguidor); query conserva la semilla/búsqueda.
+        # Nunca atribuir la caption del vídeo al autor de un comentario.
+        row["provenance"] = {
+            "surface": surface, "query": query,
+            "source": row["source"], "phase": "direct",
+        }
         row["score"] = score_row(row, config)
         if touch_seen(ctx["seen"], row["handle"], row["source"], today):
             new += 1

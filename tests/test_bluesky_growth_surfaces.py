@@ -22,7 +22,7 @@ stub._search_actors = lambda *a, **k: []
 stub._get = lambda *a, **k: {}
 stub._post_engagers = lambda *a, **k: []
 stub._health_check = lambda: (
-    True, "OK", {"handle": "autorademodiaz.bsky.social", "did": "did:plc:david"}
+    True, "OK", {"handle": "davidportodiaz.bsky.social", "did": "did:plc:david"}
 )
 stub._own_reply_parent_uris = lambda: set()
 
@@ -73,7 +73,7 @@ class GrowthSurfaceTests(unittest.TestCase):
             today=datetime.date(2026, 9, 29),
             run_id="surface-test",
         )
-        c.own_handle = "autorademodiaz.bsky.social"
+        c.own_handle = "davidportodiaz.bsky.social"
         c.own_did = "did:plc:david"
         return c
 
@@ -142,7 +142,7 @@ class GrowthSurfaceTests(unittest.TestCase):
     def test_own_post_engagers_recover_likers_reposters_quotes_and_replies(self):
         c = self.collector()
         root = post(
-            "autorademodiaz.bsky.social", "own1",
+            "davidportodiaz.bsky.social", "own1",
             "¿Qué fantasía estáis leyendo?",
         )
         root["likeCount"] = 5

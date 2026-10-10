@@ -129,13 +129,13 @@ class InstagramTrialTests(unittest.TestCase):
         env = load_helpers()
         eligible = env["_eligible_candidate"]
         self.assertFalse(
-            eligible("lectora", "", my_handle="autorademodiaz", discarded=set())
+            eligible("lectora", "", my_handle="davidportodiaz", discarded=set())
         )
         self.assertFalse(
             eligible(
-                "autorademodiaz",
+                "davidportodiaz",
                 "bio",
-                my_handle="autorademodiaz",
+                my_handle="davidportodiaz",
                 discarded=set(),
             )
         )
@@ -143,7 +143,7 @@ class InstagramTrialTests(unittest.TestCase):
             eligible(
                 "descartada",
                 "Club de lectura",
-                my_handle="autorademodiaz",
+                my_handle="davidportodiaz",
                 discarded={"descartada"},
             )
         )
@@ -151,7 +151,7 @@ class InstagramTrialTests(unittest.TestCase):
             eligible(
                 "lectora",
                 "Perfil con contenido generado con IA",
-                my_handle="autorademodiaz",
+                my_handle="davidportodiaz",
                 discarded=set(),
             )
         )
@@ -159,7 +159,7 @@ class InstagramTrialTests(unittest.TestCase):
             eligible(
                 "lectora",
                 "Club de lectura de fantasía",
-                my_handle="autorademodiaz",
+                my_handle="davidportodiaz",
                 discarded=set(),
             )
         )
@@ -176,13 +176,13 @@ class InstagramTrialTests(unittest.TestCase):
             row
             for row in [
                 ("Lectora", "Club de lectura de fantasía"),
-                ("autorademodiaz", "Mi perfil"),
+                ("davidportodiaz", "Mi perfil"),
                 ("robot", "Perfil con contenido generado con IA"),
             ]
         )
         result = env["_process_query_results"](
             discovered,
-            my_handle="autorademodiaz",
+            my_handle="davidportodiaz",
             discarded=set(),
             operational=False,
             emit=forbidden_emit,
@@ -208,9 +208,9 @@ class InstagramTrialTests(unittest.TestCase):
                 ("Nueva", "Autora de fantasía"),
                 ("Repetida", "Club de lectura"),
                 ("robot", "Contenido de IA"),
-                ("autorademodiaz", "Mi cuenta"),
+                ("davidportodiaz", "Mi cuenta"),
             ],
-            my_handle="autorademodiaz",
+            my_handle="davidportodiaz",
             discarded=set(),
             operational=True,
             emit=emit,
@@ -230,7 +230,7 @@ class InstagramTrialTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             env["_process_query_results"](
                 [("lectora", "Fantasía")],
-                my_handle="autorademodiaz",
+                my_handle="davidportodiaz",
                 discarded=set(),
                 operational=True,
             )

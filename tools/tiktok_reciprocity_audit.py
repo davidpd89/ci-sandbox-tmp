@@ -26,6 +26,8 @@ import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 import tiktok_bulk_follow as bulk
+import tiktok_cohort_adapter as cohorts
+from cohort_metrics import TZ
 
 ROOT = bulk.ROOT
 AUDIT_PATH = os.path.join(ROOT, "reciprocity_audit.json")
@@ -215,6 +217,14 @@ def summarize(follows, reciprocal):
     return dict(sorted(stats.items(), key=lambda kv: (-kv[1]["rate"], -kv[1]["followed"], kv[0])))
 
 
+def _valid_snapshot_day(value):
+    try:
+        datetime.date.fromisoformat(value)
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
 def load_audit_state(path=AUDIT_PATH):
     """No reiniciar la historia si el fichero existente está dañado."""
     try:
@@ -233,6 +243,13 @@ def load_audit_state(path=AUDIT_PATH):
             raise ValueError("fecha observed_since inválida") from exc
     if not isinstance(data.get("first_back_date", {}), dict):
         raise ValueError("first_back_date no es un objeto")
+    complete_dates = data.get("complete_dates", [])
+    if not isinstance(complete_dates, list) or any(
+        not isinstance(value, str) or not _valid_snapshot_day(value)
+        for value in complete_dates
+    ):
+        raise ValueError("complete_dates inválido")
+
     return data
 
 
@@ -276,45 +293,22 @@ def partial_snapshot_state(follows, followers, state, today=None):
 
 
 def deadline_summary(follows, first_back_date, observed_since, today=None, deadlines=DEADLINE_DAYS):
-    """Conversion por deadline real observado.
+    """Compatibilidad de #33: delegar AL ÚNICO motor compartido (#77).
 
-    Solo entran follows hechos desde observed_since. Para D+N, la cuenta debe tener al
-    menos N dias de edad y el primer follow-back observado debe caer como maximo N dias
-    despues del follow.
+    Esta vista legacy incluye unknown implícitos como cero; el KPI certificado
+    es 'cohorts_v2' y no debe usar 'deadlines' para selección de fuentes.
     """
-    today = today or datetime.date.today()
-    observed_day = datetime.date.fromisoformat(observed_since)
-    out = {}
-    for days in deadlines:
-        grouped = {}
-        for handle, follow_iso, source in follows:
-            # Ya era seguidor antes de nuestro follow: no es captación nueva.
-            if source == "followback":
-                continue
-            follow_day = datetime.date.fromisoformat(follow_iso)
-            if follow_day < observed_day or (today - follow_day).days < days:
-                continue
-            entry = grouped.setdefault(source, {"followed": 0, "back": 0})
-            entry["followed"] += 1
-            back_iso = first_back_date.get(handle)
-            if back_iso:
-                try:
-                    back_day = datetime.date.fromisoformat(back_iso)
-                except ValueError:
-                    back_day = None
-                if back_day is not None and back_day <= follow_day + datetime.timedelta(days=days):
-                    entry["back"] += 1
-        for entry in grouped.values():
-            entry["rate"] = round(entry["back"] / entry["followed"], 3) if entry["followed"] else 0.0
-        out[f"D+{days}"] = dict(sorted(
-            grouped.items(),
-            key=lambda kv: (-kv[1]["rate"], -kv[1]["followed"], kv[0]),
-        ))
-    return out
-
+    today = today or datetime.datetime.now(TZ).date()
+    _v2, legacy = cohorts.project(follows, first_back_date, observed_since, today,
+                                  deadlines=deadlines)
+    return legacy
 
 def update_seeds(stats):
-    """Guarda el follow-back real de cada semilla para que pick_seeds priorice las mejores."""
+    """Compatibilidad: guarda conteos observados, NUNCA un nuevo score operativo.
+
+    El histórico no acredita identidad estable ni baseline de terceros y no
+    permite convertir su tasa suavizada en prioridad de seguimiento.
+    """
     try:
         with open(bulk.SEEDS_PATH, encoding="utf-8") as stream:
             seeds = json.load(stream)
@@ -333,8 +327,7 @@ def update_seeds(stats):
             record.update({
                 "followed": entry["followed"],
                 "back": entry["back"],
-                "rate": entry["rate"],
-                "yield": round((entry["back"] + 1) / (entry["followed"] + 10), 4),
+                "rate": entry["rate"],  # observacional, no certificado
             })
     save_audit_state(seeds, path=bulk.SEEDS_PATH)
     return True
@@ -403,7 +396,7 @@ def main(argv=None):
         print(f"FALLO audit: {type(exc).__name__}: {str(exc)[:120]}")
         return 0
 
-    today = datetime.date.today()
+    today = datetime.datetime.now(TZ).date()
     follows = all_follows(today)
     if not complete:
         # Una lista parcial sí confirma positivos, pero no demuestra ausencias.
@@ -429,7 +422,12 @@ def main(argv=None):
         print(f"[audit] {exc}; se conserva el archivo para revisión")
         return 0
     observed_since, first_back = update_back_observations(follows, reciprocal, previous, today)
-    deadlines = deadline_summary(follows, first_back, observed_since, today)
+    # Historial de snapshots COMPLETOS; los parciales nunca incorporan fechas.
+    previous_complete_dates = previous.get("complete_dates") or []
+    complete_dates = list(dict.fromkeys([*previous_complete_dates, today.isoformat()]))
+    cohorts_v2, deadlines = cohorts.project(
+        follows, first_back, observed_since, today, complete_dates=complete_dates,
+    )
 
     audit = {
         "date": today.isoformat(),
@@ -440,6 +438,10 @@ def main(argv=None):
         "sources": stats,
         "deadlines": deadlines,
         "first_back_date": first_back,
+        "complete_dates": complete_dates,
+        "cohorts_v2": {"schema_version": 2, "timezone": "Europe/Madrid",
+                       "definition": "first_observed_positive_by_local_D+N",
+                       "windows": cohorts_v2},
     }
     save_audit_state(audit)
     update_seeds(stats)

@@ -1,6 +1,6 @@
 """Regenera las laminas editoriales que no eran legibles en movil.
 
-Las piezas parten de texto publicado en autorademodiaz.com. No usan
+Las piezas parten de texto publicado en davidportodiaz.com. No usan
 generacion de imagenes ni material de terceros.
 """
 from pathlib import Path
@@ -53,7 +53,7 @@ def text_block(draw, xy, text, fnt, fill, width, spacing=18):
     return y
 
 
-def canvas(size=(1080, 1350), label="AUTORA DEMO DÍAZ"):
+def canvas(size=(1080, 1350), label="DAVID PORTO DÍAZ"):
     im = Image.new("RGB", size, WHITE)
     d = ImageDraw.Draw(im)
     w, h = size
@@ -116,7 +116,7 @@ def compare_card(path):
     im.save(path, quality=95)
 
 
-def pinterest_card(path, kicker, title, subtitle, count, body="Selección comentada: qué distingue cada libro y para qué lector puede encajar.", label="CUADERNO DE AUTORA DEMO DÍAZ"):
+def pinterest_card(path, kicker, title, subtitle, count, body="Selección comentada: qué distingue cada libro y para qué lector puede encajar.", label="CUADERNO DE DAVID PORTO DÍAZ"):
     size = (1000, 1500)
     im, d = canvas(size, label)
     d.rectangle((76, 176, 924, 480), fill=NAVY)
@@ -126,7 +126,7 @@ def pinterest_card(path, kicker, title, subtitle, count, body="Selección coment
     y = text_block(d, (76, 742), subtitle, font(42, bold=True, serif=True), INK, 840, 14)
     d.line((76, y + 45, 924, y + 45), fill=GOLD, width=8)
     text_block(d, (76, y + 92), body, font(31), MUTED, 840, 13)
-    d.text((76, 1380), "autorademodiaz.com", font=font(28, bold=True), fill=BLUE)
+    d.text((76, 1380), "davidportodiaz.com", font=font(28, bold=True), fill=BLUE)
     im.save(path, quality=95)
 
 

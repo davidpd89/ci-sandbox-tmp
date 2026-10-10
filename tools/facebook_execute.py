@@ -133,6 +133,13 @@ def run_plan(plan, *, prevalidated=False):
             print(f"FALLO DE PREFLIGHT: {type(exc).__name__}: {exc}")
             return [{"kind": "plan", "resultado": f"fallo_plan:{exc}"}]
     for i, item in enumerate(plan):
+        # Una ronda puede durar horas: revalidar la cuarentena antes de CADA
+        # acción, incluso si el lanzador aprobó el lote al comienzo.
+        import circuit_breaker as _cb
+        _write_ok, _hold_reason = _cb.write_preflight("facebook")
+        if not _write_ok:
+            print(f"[facebook] cortacircuitos ABIERTO: {_hold_reason}; detener el lote")
+            break
         kind = item["kind"]
         import conversation_turn_policy as ctp
         permitted, reason = ctp.check_execution("facebook", item)
@@ -157,8 +164,6 @@ def run_plan(plan, *, prevalidated=False):
                 if outcome != "created":
                     raise RuntimeError(f"like devolvió estado inesperado: {outcome!r}")
             elif kind == "comment":
-                import voice_output_finalization as voice
-                voice.inspect(item["text"], network="facebook", queue="WEB")
                 outcome = fb.comment(item["text"], item["index"])
                 if outcome == "unverified":
                     results.append({**item, "resultado": "pendiente_verificacion"})
@@ -170,8 +175,6 @@ def run_plan(plan, *, prevalidated=False):
                 if outcome != "created":
                     raise RuntimeError(f"like_external devolvió estado inesperado: {outcome!r}")
             elif kind == "comment_external":
-                import voice_output_finalization as voice
-                voice.inspect(item["text"], network="facebook", queue="WEB")
                 outcome = fb.comment_external(item["text"], item["permalink"])
                 if outcome == "unverified":
                     results.append({**item, "resultado": "pendiente_verificacion"})

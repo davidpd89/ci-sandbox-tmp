@@ -85,7 +85,7 @@ def _pace_for_rate_limit(safety_margin=5, max_wait_seconds=310):
     time.sleep(wait_seconds)
 
 
-def _preflight_plan(plan):
+def _preflight_plan(plan, *, skipped=None):
     """Valida y resuelve el lote completo antes de cualquier escritura API.
 
     Acepta un `status_id` ya resuelto en el item (lo que entrega
@@ -96,7 +96,8 @@ def _preflight_plan(plan):
         raise ValueError("plan.json debe contener una lista")
 
     validated = []
-    status_targets = set()
+    omissions = ec.PreflightSkipBuffer("mastodon", skipped)
+    status_targets = {}
     follow_targets = set()
     comment_texts = set()
     for index, raw in enumerate(plan, start=1):
@@ -121,7 +122,8 @@ def _preflight_plan(plan):
                 raise ValueError(f"elemento {index}: handle de Mastodon inválido")
             key = handle.casefold()
             if key in follow_targets:
-                raise ValueError(f"elemento {index}: follow duplicado para @{handle}")
+                omissions.add(index, kind, "relacion_repetida_lote")
+                continue
             follow_targets.add(key)
             item["handle"] = handle
         else:
@@ -135,10 +137,10 @@ def _preflight_plan(plan):
                 if not isinstance(url, str) or not url.strip():
                     raise ValueError(f"elemento {index}: {kind} exige url o ID de status")
                 status_id = m._status_id(url)
-            if status_id in status_targets:
-                raise ValueError(f"elemento {index}: varias acciones para el mismo status")
-            status_targets.add(status_id)
             item["status_id"] = status_id
+            if ec.post_too_old(kind, status_id, item.get("post_created_at") or item.get("created_at")):
+                omissions.add(index, kind, "post_antiguo")      # necroposting: nunca actuar sobre estados viejos
+                continue
 
             if kind == "reply":
                 text = item.get("text")
@@ -149,20 +151,28 @@ def _preflight_plan(plan):
                 sc.guard_plan_item(item, index)
                 m._check_spanish_orthography(text)
                 if ec.omit_previously_published_reply(
-                    text, dup.check, network="mastodon", index=index
+                    text, dup.check, network="mastodon", index=index,
+                    log=lambda _: None
                 ):
-                    # El status fue reservado para este item antes del chequeo.
-                    # Liberarlo para que una accion distinta sobre ese status
-                    # pueda seguir en el plan sin un conflicto falso.
-                    status_targets.discard(status_id)
+                    omissions.add(index, kind, "texto_publicado")
                     continue
                 text_key = " ".join(text.split()).casefold()
                 if text_key in comment_texts:
-                    raise ValueError(f"elemento {index}: reply repetida en este plan")
-                comment_texts.add(text_key)
+                    omissions.add(index, kind, "texto_repetido_lote")
+                    continue
                 item["text"] = text
 
+            if status_id in status_targets:
+                if status_targets[status_id] != kind:
+                    raise ValueError(f"elemento {index}: varias acciones para el mismo status")
+                omissions.add(index, kind, "objetivo_repetido_lote")
+                continue
+            status_targets[status_id] = kind
+            if kind == "reply":
+                comment_texts.add(text_key)
+
         validated.append(item)
+    omissions.commit()
     return validated
 
 
@@ -182,8 +192,6 @@ def _retry_sleep(seconds):
 def _do(kind, item):
     created = outcome = None
     if kind == "reply":
-        import voice_output_finalization as voice
-        voice.inspect(item["text"], network="mastodon", queue="API")
         created = m.reply_to(item["status_id"], item["text"])
     elif kind == "follow":
         outcome = m.follow(item["handle"].lstrip("@"), item.get("account_id"))
@@ -209,9 +217,10 @@ def run_plan(plan, *, prevalidated=False, ledger=None, on_result=None):
     plan = _rw.require_gpt(plan, "mastodon")      # 08/10: nunca se publica texto que no venga de ChatGPT
     import repost_policy
     plan = repost_policy.guard(plan, globals().get("REGISTRO_CSV", ""))      # 07/10: reposts solo curados y max 3/dia, en todos los caminos
+    skipped = []
     if not prevalidated:
         try:
-            plan = _preflight_plan(plan)
+            plan = _preflight_plan(plan, skipped=skipped)
             sc.report_plan_style(plan)
         except Exception as exc:
             print(f"FALLO DE PREFLIGHT: {type(exc).__name__}: {exc}")
@@ -221,7 +230,8 @@ def run_plan(plan, *, prevalidated=False, ledger=None, on_result=None):
     persisted = set()  # una clave propia solo admite el PRIMER resultado del lote
 
     def _persist(result):
-        if ledger is not None and result.get("kind") in ALLOWED_KINDS:
+        if (ledger is not None and result.get("kind") in ALLOWED_KINDS
+                and not ec.is_safe_preflight_omit(result.get("resultado"))):
             key = (result.get("kind"), ledger.target_for(result.get("kind"), result))
             if key in reserved and key not in persisted:
                 import action_ledger as _al
@@ -231,8 +241,17 @@ def run_plan(plan, *, prevalidated=False, ledger=None, on_result=None):
             on_result(result)
 
     results = _Results(_persist)
+    for omitted in skipped:
+        results.append(omitted)
     consecutive_5xx = 0
     for i, item in enumerate(plan):
+        # Una ronda puede durar horas: revalidar la cuarentena antes de CADA
+        # acción, incluso si el lanzador aprobó el lote al comienzo.
+        import circuit_breaker as _cb
+        _write_ok, _hold_reason = _cb.write_preflight("mastodon")
+        if not _write_ok:
+            print(f"[mastodon] cortacircuitos ABIERTO: {_hold_reason}; detener el lote")
+            break
         if i % PREFETCH_WINDOW == 0:
             _prefetch_window(plan[i:i + PREFETCH_WINDOW])
         kind = item["kind"]
@@ -334,14 +353,35 @@ def run_plan(plan, *, prevalidated=False, ledger=None, on_result=None):
             print(f"SALTADO: {e}")
             results.append({**item, "resultado": "saltado_ya_comentado"})
         except Exception as e:
-            print(f"FALLO: {type(e).__name__}: {e}")
-            results.append({**item, "resultado": f"fallo:{e}"})
+            if kind == "reply" and isinstance(e, ec.WriteOutcomeUnknown):
+                print("RESULTADO INCIERTO: respuesta sin ACK; verificar remotamente antes de repetir")
+                code = ec.status_code_of(e) or ec.status_code_of(e.__cause__)
+                if code in TRANSIENT_STATUS:
+                    consecutive_5xx += 1
+                    if consecutive_5xx >= MAX_CONSECUTIVE_5XX:
+                        # La parada se registra como incierta (no FAILED)
+                        # y el orquestador recibe 'parada:' para que no
+                        # anuncie una ronda sana tras tres 5xx seguidos.
+                        results.append({**item, "resultado": "parada:incierto_5xx_servidor"})
+                        for pending in plan[i + 1:]:
+                            results.append({**pending, "resultado": "no_intentado"})
+                        break
+                    results.append({**item, "resultado": "incierto:transporte_sin_ack"})
+                    _retry_sleep(20 * consecutive_5xx)
+                    if i < len(plan) - 1:
+                        _pause()
+                    continue
+                results.append({**item, "resultado": "incierto:transporte_sin_ack"})
+            else:
+                print(f"FALLO: {type(e).__name__}: {e}")
+                results.append({**item, "resultado": f"fallo:{e}"})
 
         if i < len(plan) - 1:
             _pause()
 
     if ledger is not None:
-        ledger.settle_results(reserved, results)
+        ledger.settle_results(reserved, [r for r in results
+                           if not ec.is_safe_preflight_omit(r.get("resultado"))])
     return results
 
 

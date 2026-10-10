@@ -23,10 +23,10 @@ import urllib.request
 API_ORIGIN = "https://api.pinterest.com"
 PINS_URL = API_ORIGIN + "/v5/pins"
 USER_ACCOUNT_URL = API_ORIGIN + "/v5/user_account"
-EXPECTED_USERNAME = "autorademodiaz"
+EXPECTED_USERNAME = "davidportodiaz"
 
 INTERNAL_ID = re.compile(r"\b(?:IG|TT|FB|DP)-[A-Z0-9-]+\b", re.I)
-HOME_HOSTS = {"autorademodiaz.com", "www.autorademodiaz.com"}
+HOME_HOSTS = {"davidportodiaz.com", "www.davidportodiaz.com"}
 
 
 class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -264,14 +264,14 @@ def main():
             {
                 "id": "123",
                 "title": "IG-02-08 — Un libro",
-                "link": "https://autorademodiaz.com/",
+                "link": "https://davidportodiaz.com/",
                 "board_id": "9",
                 "alt_text": "Portada y lectura del libro.",
             },
             {
                 "id": "456",
                 "title": "Una escena de lectura",
-                "link": "https://autorademodiaz.com/cuaderno/",
+                "link": "https://davidportodiaz.com/cuaderno/",
                 "board_id": "9",
                 "alt_text": "Escena de lectura vinculada al cuaderno.",
             },
