@@ -52,7 +52,9 @@ def _mask(text: str) -> str:
     chars = list(text)
     for match in (list(FENCED_CODE.finditer(text)) +
                   list(HTML_TAG.finditer(text)) + list(PROTECTED.finditer(text))):
-        chars[match.start():match.end()] = [" "] * (match.end() - match.start())
+        chars[match.start():match.end()] = [
+            ch if ch in "\r\n" else " " for ch in text[match.start():match.end()]
+        ]
     return "".join(chars)
 
 
