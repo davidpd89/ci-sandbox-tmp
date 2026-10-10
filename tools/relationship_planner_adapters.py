@@ -208,6 +208,10 @@ def build_snapshot(sources, outbound, inbound, *, today):
         if net not in NETWORKS or lane not in LANES:
             excluded.append({"source": source_index, "reason": "red o cola desconocida"})
             continue
+        if source.get("_read_error"):
+            excluded.append({**{"source": source_index, "network": net},
+                             "reason": source["_read_error"]})
+            continue
         try:
             rows = _items(source.get("data"), net)
         except (ValueError, TypeError) as exc:
@@ -303,13 +307,27 @@ def plan_dry_run(sources, outbound, inbound, *, today, scorer=None, limits=None)
 def read_manifest(path):
     """Solo lectura de rutas EXPLÍCITAS; SQLite 'mode=ro'; sin globs ni red."""
     manifest = json.loads(Path(path).read_text(encoding="utf-8"))
-    sources = [{"network": s["network"], "lane": s["lane"],
-                "data": json.loads(Path(s["path"]).read_text(encoding="utf-8"))}
-               for s in manifest["sources"]]
-    outbound = {}
+    sources = []
+    for entry in manifest["sources"]:
+        source = {"network": entry["network"], "lane": entry["lane"]}
+        try:
+            source["data"] = json.loads(Path(entry["path"]).read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            source["_read_error"] = "archivo de productor ausente, inválido o inaccesible"
+        sources.append(source)
+    outbound, unavailable = {}, set()
     for net, filename in manifest.get("outbound_csvs", {}).items():
-        with Path(filename).open(encoding="utf-8-sig", newline="") as stream:
-            outbound[net] = list(csv.DictReader(stream))
+        try:
+            with Path(filename).open(encoding="utf-8-sig", newline="") as stream:
+                reader = csv.DictReader(stream)
+                if not {"cuenta", "fecha", "tipo", "resultado"} <= set(reader.fieldnames or ()):
+                    raise ValueError("cabeceras incompletas")
+                outbound[net] = list(reader)
+        except (OSError, ValueError, TypeError, csv.Error):
+            unavailable.add(net)
+    for item in sources:
+        if item["network"] in unavailable:
+            item["_read_error"] = "registro confirmado ausente o inválido"
     inbound = []
     if manifest.get("verified_inbound_sqlite"):
         # Resolver la ruta local antes de URI: paths Windows y espacios.
