@@ -35,6 +35,8 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.11'
+      - name: Install timezone data used by existing X publisher (Windows)
+        run: python -m pip install --disable-pip-version-check "tzdata>=2026.1,<2027"
       - name: Compile affected modules
         run: python -m compileall -q tools/voice_output_finalization.py tools/x_bank_publish.py tools/reddit_publish.py tools/reddit_comments.py tools/reddit_interact.py tools/tiktok_mobile_interact.py tools/pinterest_publish.py tools/content_publisher.py tools/content_queue_alert.py
       - name: Unit tests (synthetic, no social network)
