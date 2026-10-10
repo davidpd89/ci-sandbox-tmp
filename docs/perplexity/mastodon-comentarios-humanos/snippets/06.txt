@@ -1,0 +1,41 @@
+json
+{
+  "reply_style": {
+    "language": "es",
+    "max_chars": 280,
+    "max_sentences": 2,
+    "max_emojis": 1,
+    "default_emojis": 0,
+    "max_questions": 1,
+    "question_probability": 0.25,
+    "allowed_archetypes": [
+      "emocion",
+      "personaje",
+      "escena",
+      "tema",
+      "recomendacion"
+    ],
+    "forbidden_patterns": [
+      "¡qué buen post!",
+      "me encanta tu contenido",
+      "sígueme para más",
+      "gracias por compartir"
+    ]
+  },
+  "thread_context": {
+    "max_ancestors": 3,
+    "max_descendants": 3,
+    "require_op": true,
+    "skip_if_already_replied": true
+  },
+  "ranking": {
+    "candidates_per_post": 4,
+    "weights": {
+      "specificity": 0.35,
+      "semantic_fit": 0.25,
+      "diversity": 0.20,
+      "fluency": 0.10,
+      "safety": 0.10
+    }
+  }
+}
