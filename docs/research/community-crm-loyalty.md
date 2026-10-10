@@ -1,3 +1,30 @@
+# Ficha de evidencia de reutilización (contrato CI)
+
+Fuente primaria: https://github.com/chatwoot/chatwoot/tree/9f920b549c14491a4e587687a3eed5d21c6ccc7d
+Fecha de consulta: 2026-10-10
+Licencia SPDX: MIT
+Referencia inmutable: N/A (sin codigo incorporado)
+
+## Problema
+Los registros de interacción existen, pero faltaba una proyección local de historial y pendientes de conversación que evite duplicados y confusiones entre redes.
+
+## Alternativas
+Se contrastaron Chatwoot, Monica, EspoCRM y Twenty frente a continuar con CSV/ledger y librería estándar Python.
+
+## Licencias y procedencia
+Chatwoot núcleo MIT (excepto enterprise), Monica y EspoCRM AGPL-3.0, Twenty mezcla AGPL-3.0/MIT/enterprise. La línea SPDX anterior corresponde a la primera fuente analizada, no atribuye MIT al código original de esta PR. No se copió código de terceros.
+
+## Decisión
+Se reutiliza el patrón de fichas, tags y bandeja, pero se conserva la arquitectura existente. Proyección solo lectura sin nuevo servidor ni dependencia.
+
+## Pruebas
+12 tests sintéticos offline, aprobados en CI Ubuntu/Windows Python 3.11 en el workflow específico. Los checks del protocolo de campaña requieren este encabezado verificable.
+
+## Retirada
+Eliminar módulo, tests y workflow: ningún esquema existente ni estado operativo se modifica.
+
+---
+
 # Comunidad, CRM y fidelización — PR #25
 
 **Fecha de contraste:** 10/10/2026. **Estado:** implementación de *proyección local de solo lectura*, no canario con cuentas; sin merge. Python >=3.11; bibliotecas externas añadidas: **cero**.
