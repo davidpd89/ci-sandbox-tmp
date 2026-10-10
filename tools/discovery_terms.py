@@ -15,7 +15,10 @@ def terms(network, kind="busquedas", suffix="", skip=()):
     """Mezcla catálogo estático y expansión local no vencida, sin escribir."""
     import unicodedata
     def norm(value):
-        folded = unicodedata.normalize("NFKD", str(value).strip().lstrip("#").casefold())
+        raw = unicodedata.normalize("NFC", str(value).strip().lstrip("#")).casefold()
+        if kind == "hashtags":
+            return raw  # #año y #ano son etiquetas diferentes
+        folded = unicodedata.normalize("NFKD", raw)
         return "".join(c for c in folded if not unicodedata.combining(c))
 
     try:
