@@ -1,5 +1,29 @@
 # PR #110 — identidad remota estable y alias temporales (10/10/2026)
 
+Fuente primaria: https://github.com/MarshalX/atproto/commit/4c17895c97f6d42ecb9c41dc5c2fb450ab9c6ac8
+Fecha de consulta: 2026-10-10
+Licencia SPDX: MIT
+Referencia inmutable: https://github.com/MarshalX/atproto/commit/4c17895c97f6d42ecb9c41dc5c2fb450ab9c6ac8
+
+## Problema
+El histórico carece de reconciliación temporal estable de renombres.
+
+## Alternativas
+AT Protocol Python, Mastodon.py, @atproto/identity y continuidad de #85; comparación detallada a continuación.
+
+## Licencias y procedencia
+Los SDK son MIT; el contrato @atproto/identity es MIT OR Apache-2.0. No se copia código de terceros.
+
+## Decisión
+Mantener módulo offline de evidencias verificadas sin dependencias externas.
+
+## Pruebas
+Regresiones sintéticas y matriz CI Ubuntu/Windows Python 3.11. Resultados abajo.
+
+## Retirada
+Cambios aditivos reversibles, sin reescribir ledgers ni cuentas operativas.
+
+
 **Alcance:** solo análisis offline, sin acciones sociales ni modificación de estados reales. Rama base `research/public-reuse-parent`. Dependencia: [#85](https://github.com/davidpd89/ci-sandbox-tmp/pull/85), HEAD revisado `053de9b3f5d4dc6483d4198b980794c2cfdfdb85`.
 
 ## Brecha real y contraste con el repositorio oficial
