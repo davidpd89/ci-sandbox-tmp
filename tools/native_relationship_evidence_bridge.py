@@ -187,6 +187,57 @@ def bridge_results(ledger: LedgerSink, batch: Batch, records: Iterable[dict]) ->
             "unknown_reasons": unknown, "downgraded_no_ack": downgraded}
 
 
+
+def _complete_pages_proven(batch: Batch, snapshot: dict, coverage: dict,
+                           followers: list | tuple) -> bool:
+    """Absent needs a native paginated capture bound to an account and snapshot.
+
+    Without verified page provenance, only observed positives may be stored.
+    """
+    if (coverage.get("complete") is not True
+            or coverage.get("all_pages") is not True
+            or coverage.get("identity_stable") is not True
+            or coverage.get("account_scope") != "self"
+            or coverage.get("producer") != batch.producer):
+        return False
+    account = snapshot.get("account_id")
+    snap_id = snapshot.get("snapshot_id")
+    if (not isinstance(account, str) or not account.strip()
+            or coverage.get("account_id") != account
+            or coverage.get("snapshot_id") != snap_id):
+        return False
+    pages = coverage.get("pages")
+    if not isinstance(pages, list) or not pages:
+        return False
+    cursor = None
+    observed = []
+    seen_cursors = set()
+    for position, page in enumerate(pages):
+        if (not isinstance(page, dict)
+                or page.get("account_id") != account
+                or page.get("snapshot_id") != snap_id
+                or page.get("identity_stable") is not True
+                or page.get("cursor_in") != cursor):
+            return False
+        members = page.get("followers")
+        if (not isinstance(members, list)
+                or any(not isinstance(value, str) or not value.strip()
+                       for value in members)):
+            return False
+        observed.extend(members)
+        nxt = page.get("cursor_out")
+        if position < len(pages) - 1:
+            if (not isinstance(nxt, str) or not nxt.strip()
+                    or nxt in seen_cursors):
+                return False
+            seen_cursors.add(nxt)
+        elif nxt is not None:
+            return False
+        cursor = nxt
+    return len(observed) == len(set(observed)) and set(observed) == set(followers)
+
+
+
 def bridge_snapshot(ledger: LedgerSink, batch: Batch, snapshot: dict) -> dict:
     """Solo snapshots con identidades estables pueden crear observaciones.
 
@@ -207,10 +258,7 @@ def bridge_snapshot(ledger: LedgerSink, batch: Batch, snapshot: dict) -> dict:
             not isinstance(followers, (list, tuple)) or
             any(not isinstance(x, str) or not x.strip() for x in (*tracked, *followers))):
         raise ValueError("lista de identidades inválida")
-    complete = (coverage.get("complete") is True and
-                coverage.get("all_pages") is True and
-                isinstance(coverage.get("account_scope"), str) and
-                bool(coverage["account_scope"].strip()))
+    complete = _complete_pages_proven(batch, snapshot, coverage, followers)
     snapshot_id = _id(snapshot.get("snapshot_id"), "snapshot_id")
     snapshot_key = json.dumps([batch.export_id, snapshot_id, batch.queue], ensure_ascii=False,
                               separators=(",", ":"))
