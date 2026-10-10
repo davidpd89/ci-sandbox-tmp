@@ -90,6 +90,29 @@ class PlannerBridge(unittest.TestCase):
                                        outbound_coverage=proof("bluesky"))
         self.assertTrue(got["candidates"][0]["reply_eligible"])
 
+    def test_conflicting_target_timestamps_fail_closed_on_all_networks(self):
+        # Dos metadatos del mismo destino no pueden cambiar la edad elegida.
+        for net in bridge.NETWORKS:
+            with self.subTest(network=net):
+                common = dict(kind="reply", preflight=pre(follow_eligible=False),
+                              target_created_at="2026-10-10")
+                examples = (
+                    {**common, "post": {"created_at": "2026-10-06"}},
+                    {**common, "post_created_at": "2030-01-01"},
+                    {**common, "reply_target_at": "fecha-invalida"},
+                )
+                for fields in examples:
+                    got, _ = bridge.build_snapshot(
+                        [source(net, **fields)], {net: []}, [], today=TODAY,
+                        outbound_coverage=proof(net))
+                    self.assertEqual(got["candidates"], [], fields)
+                # Redundancia coherente sí es válida: no romper productores
+                # que envían la fecha tanto en el post como en el candidato.
+                got, _ = bridge.build_snapshot(
+                    [source(net, **common, post={"created_at": "2026-10-10"})],
+                    {net: []}, [], today=TODAY, outbound_coverage=proof(net))
+                self.assertEqual(len(got["candidates"]), 1)
+
     def test_comment_policy_uses_confirmed_and_distinct_events(self):
         row = source("threads", "API", kind="reply", target_created_at="2026-10-10",
                      preflight=pre(follow_eligible=False))
