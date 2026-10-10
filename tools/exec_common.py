@@ -264,7 +264,7 @@ def update_estado(path, results, metrics, *, fields=(("Seguidores", "followers")
 
     resumen = ", ".join(f"{v} {k}" for k, v in _counts(results).items()) or "sin acciones confirmadas"
     content = re.sub(r"## Última sesión.*?(?=\n## |\Z)",
-                     f"## Última sesión\n\n{datetime.date.today().isoformat()}. {resumen}. Detalle: \`registro_interacciones.csv\`.\n\n",
+                     f"## Última sesión\n\n{datetime.date.today().isoformat()}. {resumen}. Detalle: `registro_interacciones.csv`.\n\n",
                      content, count=1, flags=re.S)
 
     shown = []
