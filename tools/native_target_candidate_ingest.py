@@ -57,7 +57,8 @@ def _id(value):
     if isinstance(value, bool) or not isinstance(value, (str, int)):
         return None
     value = str(value).strip()
-    if not value or len(value) > 128 or any(c.isspace() or ord(c) < 33 for c in value):
+    if (not value or value.casefold() in {"unknown", "none", "null", "undefined", "deleted", "n/a", "na"}
+        or len(value) > 128 or any(c.isspace() or ord(c) < 33 for c in value)):
         return None
     return value if re.fullmatch(r"[A-Za-z0-9_.:-]+", value) else None
 

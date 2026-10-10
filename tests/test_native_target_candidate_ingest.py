@@ -365,6 +365,16 @@ class TestContracts(unittest.TestCase):
                 self.assertIn("post_author_mismatch",
                               [d["reason"] for d in result["diagnostics"]])
 
+    def test_placeholder_ids_are_not_stable_remote_identity(self):
+        for placeholder in ("unknown", "None", "null", "undefined", "deleted", "N/A"):
+            with self.subTest(placeholder=placeholder):
+                row = dict(SAMPLES["facebook"], account_id=placeholder,
+                           created_at=FRESH, language="es")
+                result = run("facebook", row)
+                self.assertEqual(result["shortlist"], [])
+                self.assertEqual(result["diagnostics"][0]["reason"],
+                                 "missing_stable_account_identity")
+
     def test_nullable_language_and_account_id_fallbacks(self):
         row = dict(SAMPLES["x"], account_id=None, user_id="111",
                    created_at=FRESH, language=None, lang="es")
