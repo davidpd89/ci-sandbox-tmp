@@ -220,6 +220,9 @@ class PersistenceTests(unittest.TestCase):
             rm.Event("x", "anon", "x", "discovered", "UNKNOWN", BASE.isoformat()),
             rm.Event("x", "anon", "x", "unrecognized", "WEB", BASE.isoformat()),
             rm.Event("x", "anon", "x\n", "discovered", "WEB", BASE.isoformat()),
+            rm.Event("x", " anon", "id", "discovered", "WEB", BASE.isoformat()),
+            rm.Event("x", "anon", "id ", "discovered", "WEB", BASE.isoformat()),
+            rm.Event("x", None, "id", "discovered", "WEB", BASE.isoformat()),
         ):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 self.store.apply(bad)
@@ -230,6 +233,14 @@ class PersistenceTests(unittest.TestCase):
         with closing(sqlite3.connect(self.path)) as db:
             with db:
                 db.execute("UPDATE relation_events SET after_state='cerrado' "
+                           "WHERE network='bluesky' AND version=2")
+        self.assertFalse(self.store.verify_replay("bluesky", "anon"))
+
+    def test_corrupt_historical_timestamp_is_a_failed_verification(self):
+        self.apply_path()
+        with closing(sqlite3.connect(self.path)) as db:
+            with db:
+                db.execute("UPDATE relation_events SET occurred_at='not-a-time' "
                            "WHERE network='bluesky' AND version=2")
         self.assertFalse(self.store.verify_replay("bluesky", "anon"))
 
