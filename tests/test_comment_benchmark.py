@@ -280,6 +280,24 @@ class BenchmarkTests(unittest.TestCase):
                        if x["network"] == network and x["strategy"] == "baseline_generic")
             self.assertEqual(row["duplicate_texts"], 0)
 
+    def test_ratings_reject_extra_columns_and_truncated_rows(self):
+        blind, key = b.prepare_blind(self.cases, self.candidates)
+        base = {**blind[0], "judge": "lector1",
+                **{axis: 2 for axis in b.AXES}}
+        with tempfile.TemporaryDirectory() as directory:
+            key_path = self._temp_key(key)
+            extra = Path(directory) / "extra.csv"
+            with extra.open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.DictWriter(handle, fieldnames=(*b.COLUMNS, "strategy"))
+                writer.writeheader()
+                writer.writerow({**base, "strategy": "contextual"})
+            with self.assertRaisesRegex(ValueError, "exactamente"):
+                b.evaluate(self.cases, self.candidates, str(extra), key_path=key_path)
+            broken = Path(directory) / "broken.csv"
+            broken.write_text(",".join(b.COLUMNS) + "\\n" + "cut-off\\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "incompleta"):
+                b.evaluate(self.cases, self.candidates, str(broken), key_path=key_path)
+
     def test_network_specific_fixture_has_distinct_contexts_and_full_parity(self):
         dataset = ROOT / "tests" / "fixtures" / "comment_benchmark_network_specific.json"
         cases, candidates = b.load_dataset(dataset)
