@@ -1,0 +1,24 @@
+json
+{
+  "request": {
+    "method": "GET",
+    "url": "https://graph.facebook.com/v23.0/1234567890/feed",
+    "query": {"limit": "25", "fields": "id,message,created_time,from,permalink_url"}
+  },
+  "response": {
+    "status_code": 200,
+    "json": {
+      "data": [],
+      "paging": {
+        "cursors": {
+          "before": "CURSOR_BEFORE",
+          "after": "CURSOR_AFTER"
+        }
+      }
+    }
+  },
+  "expected": {
+    "candidate_count": 0,
+    "has_next_page": false
+  }
+}
