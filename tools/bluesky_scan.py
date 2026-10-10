@@ -357,16 +357,23 @@ def scan():
         _record_query_use("tag", item)
         add_posts(posts, f"tag:{tag}")
 
+    import hashtag_query_consumers as hqc
+    # Pool no persistente: solo lectura; el histórico decide frecuencia.
+    _, lexical = hqc.combine("bluesky", "busquedas", [q for q, _ in QUERY_POOL])
+    _, tags = hqc.combine("bluesky", "hashtags", [q for q, _ in TAG_QUERY_POOL])
+    query_pool = QUERY_POOL + [(q, "es") for q in lexical]
+    tag_pool = TAG_QUERY_POOL + [(tag[1:], "fantasía") for tag in tags]
+
     # No hacer tres búsquedas por rutina. Abrir superficies solo si las
     # anteriores no han producido suficiente material revisable.
     if discovery_count() < DISCOVERY_SCAN_TARGET:
-        for item in _pick_least_recent(QUERY_POOL, 1, "q"):
+        for item in _pick_least_recent(query_pool, 1, "q"):
             run_text_query(item)
     if discovery_count() < DISCOVERY_SCAN_TARGET:
-        for item in _pick_least_recent(TAG_QUERY_POOL, 1, "tag"):
+        for item in _pick_least_recent(tag_pool, 1, "tag"):
             run_tag_query(item)
     if discovery_count() < DISCOVERY_SCAN_TARGET:
-        for item in _pick_least_recent(QUERY_POOL, 1, "q"):
+        for item in _pick_least_recent(query_pool, 1, "q"):
             run_text_query(item)
 
     print("\n=== COMENTARISTAS (solo 1 semilla; ampliar solo si falta material) ===")
