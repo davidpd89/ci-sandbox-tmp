@@ -12,8 +12,7 @@ sin separación por cola de la PR #3. Por ello se reutilizaron directamente desd
 (`94c04d13b45e6a3936e889a78766a271039e74bd`), `tests/test_cross_network_learning.py`
 (`26512d32040ef3172e3c38a4ef5c5c7a6fad918b`) y `tools/discovery_attribution.py`
 (`43e8f307c2c12e307fbf43303ec4ce60a20d61c8`). No se reescriben y su origen queda explícito.
-Esto hace que #91 dependa de integrar primero #3; el controlador debe evitar
-duplicar estos archivos al integrar ambas PR. El protocolo opcional
+El gate de #3 está incorporado en estos archivos; antes de integrar en el oficial, contrastar su estado real y evitar duplicar el gate. El protocolo opcional
 `docs/open-source-scouting/PROTOCOL.md` no existe en esta rama.
 
 ## Contrato reproducible
@@ -101,8 +100,7 @@ de auditoría externa automática.
 - Límite causal: no verifica aleatorización material, integridad temporal,
   integridad del registro, ni que el lote contenga todos los ensayos reales.
   Tampoco sustituye #23, #80, #85 o revisión humana de una propuesta.
-- Integración: dado que #3 sigue abierta, resolver la dependencia al
-  fusionar ambas; comprobar workflows Ubuntu y Windows en HEAD final.
+- Integración: #3 está cerrada sin merge en el mirror. Verificar su incorporación real al oficial, conservar los arreglos del gate y comprobar ambos workflows en HEAD final.
 
 ## Pruebas reproducibles para el controlador
 
@@ -135,8 +133,7 @@ mapa del registro. En una tercera pasada se detectó eludir `approves()`
 mediante una subclase inyectada al controlador; ahora la API solo acepta el tipo
 exacto `TrustedRegistry` y hay una prueba con una subclase falsa.
 La validación definitiva debe referirse a los checks
-Windows/Ubuntu del **nuevo HEAD** tras estos commits. La integración con #3
-sigue requiriendo reconciliar sus archivos compartidos antes del merge.
+Windows/Ubuntu del **nuevo HEAD** tras estos commits. La integración exige contrastar con los últimos arreglos de #3, incluso después de su cierre sin merge.
 
 ## Segunda revisión adversarial, posterior a la primera CI
 
@@ -168,8 +165,7 @@ entre procesos: no asegura la autenticidad del archivo externo.
   pero adoptarlo sin manifests reales ni un productor auditado añade
   complejidad. `rfc8785.py` solo aportaría valor al normalizar contratos
   entre lenguajes. No se introducen dependencias nuevas.
-- Sigue pendiente conciliar #3 antes de integrar #91 y repetir
-  Windows/Ubuntu sobre el HEAD final. La capacidad demostrada
+- Sigue pendiente verificar el estado efectivo de #3 en el oficial, conservar sus correcciones y repetir Windows/Ubuntu sobre el HEAD final. La capacidad demostrada
   es del registro offline, no prueba aprendizaje causal ni acciones reales.
 
 ## Actualización independiente — 10/10/2026 (control de integración)
