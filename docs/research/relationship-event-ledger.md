@@ -2,6 +2,10 @@
 
 Fecha de investigación: **2026-10-10**. Rama exclusiva `research/74-relationship-event-ledger`; no merge.
 
+## Objetivo y necesidad
+
+Almacenar historial relacional verificable sin interferir en el ledger operativo.
+
 ## Inventario comprobado y necesidad
 
 Se consultó mediante conector GitHub el repositorio **privado** `davidpd89/rrss-davidporto-CODE`,
@@ -27,7 +31,9 @@ relacional común, con procedencia e idempotencia duradera, para consultas de
 secuencia, conversión madura y depuración. Esta PR añade un **segundo almacén**;
 no cambia el estado del ejecutor ni presume conocer outcomes ausentes.
 
-## Candidatos públicos (commits inmutables verificados el 10/10)
+## Candidatos y licencia (repositorios públicos, commits inmutables verificados el 10/10)
+
+**Repositorio fuente:** https://github.com/pyeventsourcing/eventsourcing (SPDX: BSD-3-Clause); https://github.com/simonw/sqlite-utils (SPDX: Apache-2.0); https://github.com/simonw/sqlite-chronicle (SPDX: Apache-2.0). **Código local nuevo:** sin fragmentos de terceros.
 
 | Alternativa | Revisión comprobada / actividad | Licencia | Windows/Python 3.11 | Decisión |
 | --- | --- | --- | --- | --- |
