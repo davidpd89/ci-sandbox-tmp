@@ -399,6 +399,35 @@ class TestContracts(unittest.TestCase):
             n.normalize_all({"unknown": []}, as_of=NOW)
 
 
+    def test_conflicting_explicit_account_ids_rejected_across_six_networks(self):
+        for network, original in SAMPLES.items():
+            with self.subTest(network=network):
+                row = dict(original, account_id="remote_A", user_id="remote_B",
+                           verified_actions=["follow"])
+                if network == "pinterest":
+                    snapshot = {"authors": [row], "pins": []}
+                else:
+                    snapshot = [row]
+                out = n.normalize_candidates(network, snapshot, as_of=NOW)
+                self.assertEqual(out["shortlist"], [])
+                self.assertIn("conflicting_account_ids",
+                              [d["reason"] for d in out["diagnostics"]])
+
+    def test_conflicting_ids_cannot_suppress_legitimate_handle_observation(self):
+        # Pre-scan of stable handles must also ignore contradictory rows.
+        valid_handle_only = dict(SAMPLES["threads"], permalink=None)
+        conflicting = dict(valid_handle_only, account_id="remote_A",
+                           user_id="remote_B")
+        for order in ((valid_handle_only, conflicting),
+                      (conflicting, valid_handle_only)):
+            out = n.normalize_candidates("threads", list(order), as_of=NOW)
+            self.assertEqual(len(out["shortlist"]), 1)
+            self.assertEqual(out["shortlist"][0]["handle"], "lectora.1")
+            self.assertIn("conflicting_account_ids",
+                          [d["reason"] for d in out["diagnostics"]])
+            self.assertNotIn("ambiguous_handle_with_stable_id",
+                             [d["reason"] for d in out["diagnostics"]])
+
     def test_mixed_handle_and_id_fail_closed_independent_of_row_order(self):
         for network in ("x", "threads", "reddit", "pinterest", "instagram"):
             sample = dict(SAMPLES[network], url=None, permalink=None)
