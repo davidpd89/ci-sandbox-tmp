@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools"))
 import content_comment_experiments as ce
@@ -135,6 +136,8 @@ class ExperimentEngineTests(unittest.TestCase):
                                            "mature": 0, "unexposed": 1,
                                            "pending_maturity": 1})
         self.assertEqual(row["status"], "insufficient_outcomes")
+        self.assertIsNone(row["p_second_better_exploratory"])
+        self.assertIn("sin datos", self.store.markdown())
 
     def test_context_is_comment_only_and_14_day_window(self):
         self.store.register("contexto", seed="context-seed")
@@ -158,6 +161,30 @@ class ExperimentEngineTests(unittest.TestCase):
                          if x["experiment"] == name)
             self.assertEqual(study["metric"], definition[2])
             self.assertEqual(set(study["variants"]), set(definition[1]))
+
+    def test_frozen_design_drives_reports_after_catalog_changes(self):
+        original = ce.INITIAL_EXPERIMENTS["apertura"]
+        self.assign()
+        # Un despliegue posterior puede cambiar la definición del catálogo:
+        # el informe histórico nunca debe reinterpretar los brazos/métrica.
+        with patch.dict(ce.INITIAL_EXPERIMENTS, {
+            "apertura": ("post", ("brazo_nuevo_a", "brazo_nuevo_b"),
+                         "new_metric", 90)
+        }):
+            study = self.store.report(draws=256)["studies"][0]
+        self.assertEqual(set(study["variants"]), set(original[1]))
+        self.assertEqual(study["metric"], original[2])
+        self.assertEqual(study["window_days"], original[3])
+
+    def test_future_exposure_and_outcome_cannot_be_confirmed(self):
+        self.assign()
+        with self.assertRaisesRegex(ValueError, "futuro"):
+            self.exposure(event="future_exp", timestamp="2999-01-01T00:00:00Z")
+        self.assertEqual(self.store.report(draws=256)["studies"][0]["coverage"]["exposed"], 0)
+        self.exposure()
+        with self.assertRaisesRegex(ValueError, "futuro"):
+            self.outcome(event="future_out", timestamp="2999-01-01T00:00:00Z")
+        self.assertTrue(self.outcome())
 
     def test_timestamps_reject_naive_non_utc_and_malformed(self):
         self.assign()
