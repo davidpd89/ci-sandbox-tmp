@@ -1,0 +1,8 @@
+python
+# Propuesta propia para davidpd89/rrss-davidporto-CODE
+@dataclass(frozen=True)
+class TikTokIdentity:
+    author_handle: str
+    author_id: str | None = None
+    sec_uid: str | None = None
+    canonical_profile_url: str | None = None
