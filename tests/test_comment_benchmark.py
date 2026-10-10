@@ -105,6 +105,32 @@ class BenchmarkTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         b.evaluate(self.cases, self.candidates, str(path), salt="review")
 
+    def test_adversarial_unbalanced_cohorts_and_invalid_winner_cannot_win(self):
+        for condition in ("missing_variant", "invalid_best"):
+            with self.subTest(condition=condition):
+                candidates = [dict(x) for x in self.candidates]
+                if condition == "missing_variant":
+                    candidates = [x for x in candidates if not
+                                  (x["case_id"] == "x_conversacion" and x["strategy"] == "contextual")]
+                else:
+                    for candidate in candidates:
+                        if candidate["case_id"] == "x_conversacion" and candidate["strategy"] == "contextual":
+                            candidate["reply"] = "¡Qué gran reflexión!"
+                blind, key = b.prepare_blind(self.cases, candidates, "adversarial")
+                lookup = {row["token"]: row["strategy"] for row in key}
+                with tempfile.TemporaryDirectory() as directory:
+                    path = Path(directory) / "ratings.csv"
+                    with path.open("w", encoding="utf-8", newline="") as handle:
+                        writer = csv.DictWriter(handle, fieldnames=b.COLUMNS)
+                        writer.writeheader()
+                        for row in blind:
+                            score = 4 if lookup[row["token"]] == "contextual" else 1
+                            for judge in ("r1", "r2"):
+                                writer.writerow({**row, "judge": judge, **{axis: score for axis in b.AXES}})
+                    winners = b.evaluate(self.cases, candidates, str(path), salt="adversarial")["human"]["winners"]
+                    self.assertNotIn("x", {winner["network"] for winner in winners})
+                    self.assertEqual(len(winners), 8)
+
     def test_validation_rejects_stale_future_naive_and_duplicates(self):
         alterations = [
             lambda d: d["cases"][0].update(published_at="2026-09-01T00:00:00+02:00"),
