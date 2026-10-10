@@ -336,6 +336,29 @@ class PushCommitTests(unittest.TestCase):
         for key in ("GIT_NO_LAZY_FETCH", "GIT_TERMINAL_PROMPT", "GIT_NO_REPLACE_OBJECTS"):
             self.assertEqual(observed[0].get(key), "1" if key != "GIT_TERMINAL_PROMPT" else "0")
 
+    def test_merge_attribution_differs_for_pr_and_push(self):
+        # A PR branch merely merging its advanced base is not the author
+        # of a forbidden path on that base. Pushes *do* introduce that path
+        # to the destination when merging, so the policy must be explicit.
+        self.git("switch", "-qc", "feature")
+        self.write("docs/feature.md")
+        self.commit("feature")
+        self.git("switch", "main")
+        self.write("secrets/legacy.json")
+        self.commit("base advanced")
+        self.git("switch", "feature")
+        self.git("merge", "--no-ff", "-qm", "merge advanced base", "main")
+        merge = self.head()
+        parents = self.git("rev-list", "--parents", "-n", "1", merge).split()[1:]
+        self.assertEqual(len(parents), 2)
+        self.assertIn("secrets/legacy.json", gh.touched_paths(self.repo, merge, parents))
+        self.assertNotIn(
+            "secrets/legacy.json",
+            gh.touched_paths(self.repo, merge, parents, merge_policy="all_parents"),
+        )
+        with self.assertRaisesRegex(gh.HistoryError, "Unknown"):
+            gh.touched_paths(self.repo, merge, parents, merge_policy="guess")
+
     def test_cli_does_not_leak_path_contents(self):
         self.write("secrets/synthetic-name.json")
         self.commit("bad")
