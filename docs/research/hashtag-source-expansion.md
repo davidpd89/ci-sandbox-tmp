@@ -108,3 +108,13 @@ las consultas reales de cada adaptador antes de activar el flujo operativo.
 La integración en el repositorio oficial debe conservar `tag_seeds` y sus
 constantes, ausentes en la base del espejo. Aún es necesaria la validación
 de canario en Edge, Windows de trabajo y móvil.
+
+## Revisión final adicional: feedback idempotente y búsqueda en español (10/10/2026)
+
+- `_feedback` acepta ahora `event_id` y `window` (ISO 8601 con zona) además de `network,tag,eligible,engaged,replies,followers`. Para un mismo `network,tag,window,event_id` solo cuenta una vez; dos ventanas diferentes sí suman. Cuando llegan valores contradictorios con la misma identidad, descarta íntegramente ese evento en lugar de dejar que el orden de recepción decida.
+- Se conserva el contrato antiguo sin identificadores de evento para permitir los agregados actuales del adaptador #99: dentro del mismo lote se eliminan duplicados exactos, pero **dos ventanas reales distintas que tengan cifras idénticas son indistinguibles** si el productor las ha agregado antes. El cierre definitivo exige conservar la procedencia de eventos/ventanas de #99 hasta la última frontera que reprocese historiales; no sumar snapshots previos como si fueran nuevas observaciones.
+- Se rechazan contadores `bool`, cifras negativas, engagement mayor que `eligible`, ventana parcial o marca temporal ingenua. Se mantienen pruebas de feedback legado y se añaden reingestas, ventanas distintas y conflictos de eventos.
+- `discovery_terms.terms` usa NFC y `casefold` también para `busquedas`: las consultas españolas `año`/`ano` y `niño`/`nino` no se pierden por deduplicación. Solo el reconocimiento temático en el motor utiliza plegado de acentos.
+- Integración obligatoria: preservar en la rama oficial `tag_seeds`, `EVIDENCE_ROLES` y `NETWORKS` procedentes de #48. Las PR #99 (entrada) y #101 (consumo) siguen siendo dependencias de integración operativa, no se consideran ya fusionadas por el hecho de que #63 pase CI.
+
+Límites de esta revisión: no hay corpus real ni suite completa del repositorio privado; comprobar en canario supervisado la atribución de feedback por ventana, los tags Unicode y el consumo de vocabulario de cada red antes de activar aprendizaje dinámico.
