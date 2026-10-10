@@ -132,6 +132,21 @@ class DurableIntentTests(unittest.TestCase):
                 guard.publish_guarded(self.item, "IG-SYNTH", submit, db_path=self.db)
         self.assertEqual(sent, [])
 
+    def test_second_checkpoint_in_same_submit_is_blocked(self):
+        # Un reintento interno de submit no puede reutilizar un UNCERTAIN previo.
+        posts = []
+        def submit(checkpoint):
+            checkpoint("C-ONE")
+            posts.append("primero")
+            checkpoint("C-TWO")
+            posts.append("segundo")
+            return "MEDIA-2"
+        with self.assertRaisesRegex(guard.InstagramPublicationHeld, "checkpoint duplicado"):
+            guard.publish_guarded(self.item, "IG-SYNTH", submit, db_path=self.db)
+        self.assertEqual(posts, ["primero"])
+        with self.assertRaises(guard.InstagramPublicationHeld):
+            guard.publish_guarded(self.item, "IG-SYNTH", submit, db_path=self.db)
+
     def test_same_fixture_baseline_two_posts_guard_one(self):
         # Reproduce el protocolo: status FINISHED y timeout DESPUÉS del POST.
         # Baseline (dos ejecuciones sin journal) = 2 envíos; guard = 1.

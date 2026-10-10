@@ -6,6 +6,7 @@ import contextlib
 import hashlib
 import os
 import sqlite3
+import threading
 
 from action_ledger import ActionLedger, FAILED, RESERVED, UNCERTAIN, RoundBusy, exclusive
 
@@ -57,17 +58,27 @@ def _publish_under_lock(db_path, target, submit):
             "verificar manualmente antes de reintentar"
         )
 
+    checkpoint_lock = threading.Lock()
+    checkpointed = False
+
     def before_publish(container_id):
-        if not container_id:
-            raise ValueError("contenedor sin ID")
-        ledger.settle(KIND, target, UNCERTAIN, "container=" + str(container_id)[:80])
-        # ActionLedger.settle actualiza solo si la fila sigue RESERVED.
-        # Puede afectar cero filas sin lanzar excepcion (fila ausente o estado
-        # alterado). En tal caso NUNCA devolver el control al POST externo.
-        if ledger.status(KIND, target) != UNCERTAIN:
-            raise InstagramPublicationHeld(
-                "Instagram: no se pudo confirmar el checkpoint persistente; POST cancelado"
-            )
+        nonlocal checkpointed
+        # Un submit con reintento interno no puede cruzar dos veces la frontera
+        # del POST, aunque el primer checkpoint ya figure como UNCERTAIN.
+        with checkpoint_lock:
+            if checkpointed:
+                raise InstagramPublicationHeld(
+                    "Instagram: checkpoint duplicado en el mismo envío; segundo POST cancelado"
+                )
+            if not container_id:
+                raise ValueError("contenedor sin ID")
+            ledger.settle(KIND, target, UNCERTAIN, "container=" + str(container_id)[:80])
+            # settle() puede actualizar cero filas sin lanzar una excepcion.
+            if ledger.status(KIND, target) != UNCERTAIN:
+                raise InstagramPublicationHeld(
+                    "Instagram: no se pudo confirmar el checkpoint persistente; POST cancelado"
+                )
+            checkpointed = True
 
     try:
         result = submit(before_publish)
