@@ -50,12 +50,17 @@ def main():
             parser.error("la clave debe guardarse en un directorio separado")
         if not review_path.parent.is_dir() or not key_dir.is_dir():
             parser.error("ambos directorios deben existir")
-        review, key = pack(pairs, seed=args.seed)
-        review_path.write_text(
-            json.dumps(review, ensure_ascii=False, indent=2), encoding="utf-8")
+        root = Path(__file__).resolve().parents[1]
+        if review_path.is_relative_to(root) or key_dir.is_relative_to(root):
+            parser.error("no guardar revisiones ni claves dentro del repositorio")
         key_path = key_dir / (args.blind_prefix.stem + ".key.json")
-        key_path.write_text(
-            json.dumps(key, ensure_ascii=False, indent=2), encoding="utf-8")
+        if review_path.exists() or key_path.exists():
+            parser.error("no sobrescribir revisiones o claves existentes")
+        review, key = pack(pairs, seed=args.seed)
+        with review_path.open("x", encoding="utf-8") as writer:
+            json.dump(review, writer, ensure_ascii=False, indent=2)
+        with key_path.open("x", encoding="utf-8") as writer:
+            json.dump(key, writer, ensure_ascii=False, indent=2)
     output = {"offline": compare(pairs)}
     if args.score_review and args.score_key:
         output["human"] = score(
