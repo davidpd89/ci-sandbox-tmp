@@ -1,0 +1,36 @@
+name: Bandit offline (MABWiser, nueve redes)
+
+on:
+  pull_request:
+    branches: [research/public-reuse-parent]
+    paths:
+      - 'tools/action_bandit*.py'
+      - 'tests/test_action_bandit*.py'
+      - 'docs/research/action-bandit-116.md'
+      - '.github/workflows/test-action-bandit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-bandit:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Instalar MABWiser y pytest (sin cuentas ni secretos)
+        run: python -m pip install --disable-pip-version-check "mabwiser==2.7.4" "pytest>=8,<10"
+      - name: Validar sintaxis
+        run: python -m compileall -q tools/action_bandit.py tools/action_bandit_adapters.py tests/test_action_bandit.py tests/test_action_bandit_adapters.py tests/test_action_bandit_mabwiser_integration.py
+      - name: Pruebas offline con motor real
+        run: python -m pytest -q tests/test_action_bandit.py tests/test_action_bandit_adapters.py tests/test_action_bandit_mabwiser_integration.py -p no:cacheprovider
