@@ -357,12 +357,12 @@ def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     sys.stdout.reconfigure(encoding="utf-8")
     env = _env()
-    token = env.get("THREADS_ACCESS_TOKEN")
-    if not token or not argv:
+    auth_value = env.get("THREADS_ACCESS_TOKEN")
+    if not auth_value or not argv:
         print(__doc__)
         return 2
     if argv[0] == "me":
-        me = api_get("me", token, fields="id,username")
+        me = api_get("me", auth_value, fields="id,username")
         print(f"token valido para @{me['username']}; dias restantes: {token_days_left(env)}")
         return 0
     if argv[0] == "refresh":
@@ -380,8 +380,8 @@ def main(argv=None):
         print(f"{argv[2]}: {len(plan)} respuestas (ejecutar con tools/threads_execute.py)")
         return 0
     if argv[0] == "followups":
-        me = api_get("me", token, fields="username")
-        pending = followups(token, me["username"])
+        me = api_get("me", auth_value, fields="username")
+        pending = followups(auth_value, me["username"])
         with open(os.path.join(ROOT, "threads_api_followups.json"), "w", encoding="utf-8") as stream:
             json.dump(pending, stream, ensure_ascii=False, indent=1)
         print(f"{len(pending)} respuestas con pregunta sin contestar")
