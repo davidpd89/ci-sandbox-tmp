@@ -9,8 +9,7 @@ on:
       - "tools/bluesky_growth_scan.py"
       - "tools/mastodon_growth_scan.py"
       - "tools/tiktok_growth_scan.py"
-      - "tests/test_hashtag_query_consumers.py"
-      - "tests/test_hashtag_query_entrypoints.py"
+      - "tests/test_hashtag_query_*.py"
       - ".github/workflows/hashtag-query-consumers-offline.yml"
   push:
     branches: ["research/hashtag-query-consumer-parity"]
