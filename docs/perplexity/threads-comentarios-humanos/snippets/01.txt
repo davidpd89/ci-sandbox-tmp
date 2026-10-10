@@ -1,0 +1,176 @@
+python
+# Fuente de inspiración / contrato:
+# https://github.com/josefr1/comment_generation_model/blob/834623f643c0fa275110169d5514d829d68d2e90/responsive_image_comment%20(1).py
+# https://github.com/dancolta/subscope/blob/cf45ffd8956d0d24bbaaf4eaa5d7f0ecc293cb27/engine/subscope/cli.py
+# Integración prevista: tools/threads_comment_style.py
+
+from __future__ import annotations
+
+import random
+import re
+from dataclasses import dataclass, field
+from typing import Literal
+
+
+Intent = Literal[
+    "opinion", "recomendacion", "portada", "lectura_actual",
+    "lanzamiento", "debate", "meme", "desconocido",
+]
+
+
+TROPOS = [
+    "enemigos a amantes", "amigos a amantes", "romance lento",
+    "enemies to lovers", "friends to lovers", "slow burn",
+    "dragones", "elfos", "magia", "vampiros", "fae",
+    "alta fantasía", "fantasía oscura", "grimdark", "romantasy",
+    "dark romance", "romance fantasy", "enemistad", "traición",
+    "elegido", "profecía", "academia", "rebeldes", "guerra",
+]
+
+GENERIC_OPENERS = {
+    "qué bueno", "qué bonito", "me encanta", "increíble",
+    "muy interesante", "buen post", "totalmente de acuerdo",
+}
+
+
+@dataclass(frozen=True)
+class ThreadContext:
+    text: str
+    author_is_writer: bool = False
+    has_image: bool = False
+    has_question: bool = False
+
+
+@dataclass(frozen=True)
+class StyleDecision:
+    intent: Intent
+    max_words: int
+    allow_emoji: bool
+    allow_question: bool
+    tone: Literal["calido", "analitico", "entusiasta", "prudente"]
+    detected: list[str] = field(default_factory=list)
+
+
+def classify_intent(ctx: ThreadContext) -> Intent:
+    text = ctx.text.lower()
+
+    if any(word in text for word in ("recomienda", "recomendación", "qué leo", "que leo")):
+        return "recomendacion"
+    if any(word in text for word in ("portada", "cubierta", "ilustración", "estética")):
+        return "portada"
+    if any(word in text for word in ("estoy leyendo", "lectura actual", "empecé", "empece")):
+        return "lectura_actual"
+    if any(word in text for word in ("lanzado", "publicado", "sale hoy", "ya disponible", "estreno")):
+        return "lanzamiento"
+    if any(word in text for word in ("opinión", "creo que", "no entiendo", "polémica", "debatir")):
+        return "debate"
+    if ctx.has_image and not ctx.has_question:
+        return "portada"
+    if ctx.has_question:
+        return "recomendacion"
+    return "opinion"
+
+
+def detect_context(text: str) -> list[str]:
+    lowered = text.lower()
+    return [trope for trope in TROPOS if trope in lowered]
+
+
+def decide_style(ctx: ThreadContext) -> StyleDecision:
+    intent = classify_intent(ctx)
+    detected = detect_context(ctx.text)
+
+    rules = {
+        "opinion": (18, True, ctx.has_question, "analitico"),
+        "recomendacion": (22, True, True, "calido"),
+        "portada": (14, True, False, "entusiasta"),
+        "lectura_actual": (24, True, False, "calido"),
+        "lanzamiento": (24, True, ctx.author_is_writer, "calido"),
+        "debate": (32, False, ctx.has_question, "prudente"),
+        "meme": (12, True, False, "entusiasta"),
+        "desconocido": (16, False, False, "prudente"),
+    }
+
+    max_words, allow_emoji, allow_question, tone = rules[intent]
+    return StyleDecision(
+        intent=intent,
+        max_words=max_words,
+        allow_emoji=allow_emoji,
+        allow_question=allow_question,
+        tone=tone,
+        detected=detected,
+    )
+
+
+def is_generic(text: str) -> bool:
+    lowered = re.sub(r"[¡!¿?.,]", "", text.lower()).strip()
+    return any(opener in lowered for opener in GENERIC_OPENERS)
+
+
+def has_contextual_anchor(text: str, detected: list[str]) -> bool:
+    lowered = text.lower()
+    return any(anchor in lowered for anchor in detected)
+
+
+def score_candidate(
+    candidate: str,
+    decision: StyleDecision,
+    seen_openers: set[str],
+) -> float:
+    words = len(candidate.split())
+    score = 0.0
+
+    if 8 <= words <= decision.max_words:
+        score += 3.0
+    elif words > decision.max_words:
+        score -= min(3.0, (words - decision.max_words) / 10)
+
+    if has_contextual_anchor(candidate, decision.detected):
+        score += 4.0
+    else:
+        score -= 2.0
+
+    if is_generic(candidate):
+        score -= 5.0
+
+    emoji_count = len(re.findall(r"[\U0001F300-\U0001FAFF\u2600-\u27BF]", candidate))
+    if emoji_count == 0:
+        score += 1.0
+    elif emoji_count == 1 and decision.allow_emoji:
+        score += 0.5
+    else:
+        score -= 2.0
+
+    questions = candidate.count("¿") + candidate.count("?")
+    if questions == 0:
+        score += 0.5
+    elif questions == 1 and decision.allow_question:
+        score += 1.5
+    else:
+        score -= 3.0
+
+    first_words = " ".join(candidate.lower().split()[:3])
+    if first_words in seen_openers:
+        score -= 4.0
+
+    return score
+
+
+def pick_best(
+    candidates: list[str],
+    ctx: ThreadContext,
+    seen_openers: set[str] | None = None,
+) -> tuple[str, float, StyleDecision]:
+    decision = decide_style(ctx)
+    seen_openers = seen_openers or set()
+
+    scored = [
+        (score_candidate(candidate, decision, seen_openers), candidate)
+        for candidate in candidates
+        if candidate.strip()
+    ]
+    if not scored:
+        raise ValueError("No hay candidatos válidos")
+
+    best_score, best = max(scored, key=lambda item: item[0])
+    return best, best_score, decision
