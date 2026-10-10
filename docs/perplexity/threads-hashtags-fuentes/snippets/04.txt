@@ -1,0 +1,39 @@
+python
+# Origen: diseño propio para davidpd89/ci-sandbox-tmp
+# Archivo propuesto: tools/discovery/threads_catalog.py
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+
+@dataclass(frozen=True)
+class ThreadsDiscoverySource:
+    kind: str
+    value: str
+    priority: int = 2
+    language: str = "es"
+
+    @property
+    def key(self) -> str:
+        return f"threads:{self.kind}:{self.value.lower()}"
+
+
+def load_threads_catalog(path: str | Path) -> list[ThreadsDiscoverySource]:
+    data: dict[str, Any] = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    sources: list[ThreadsDiscoverySource] = []
+
+    for value in data.get("topic_tags", []):
+        sources.append(ThreadsDiscoverySource("topic_tag", value, priority=1))
+
+    for group, priority in (("priority", 1), ("secondary", 2)):
+        for value in data.get("keyword_queries", {}).get(group, []):
+            sources.append(ThreadsDiscoverySource("keyword", value, priority=priority))
+
+    if len({source.key for source in sources}) != len(sources):
+        raise ValueError("Hay fuentes duplicadas en el catálogo de Threads")
+
+    return sources
