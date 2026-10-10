@@ -1,0 +1,33 @@
+name: research74-context-grounding
+on:
+  push:
+    branches:
+      - research/64-context-grounded-commenting
+  pull_request:
+    branches:
+      - research/public-reuse-parent
+    paths:
+      - tools/reply_context_grounding.py
+      - tests/test_reply_context_grounding.py
+      - .github/workflows/research74-context-grounding.yml
+
+permissions:
+  contents: read
+
+jobs:
+  offline-context-grounding:
+    name: context-grounding / Python 3.11 / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Offline synthetic-only tests
+        run: python -m unittest discover -s tests -p test_reply_context_grounding.py -v
+      - name: Compile contract and tests
+        run: python -m py_compile tools/reply_context_grounding.py tests/test_reply_context_grounding.py
