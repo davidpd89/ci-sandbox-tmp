@@ -15,11 +15,10 @@ def terms(network, kind="busquedas", suffix="", skip=()):
     """Mezcla catálogo estático y expansión local no vencida, sin escribir."""
     import unicodedata
     def norm(value):
-        raw = unicodedata.normalize("NFC", str(value).strip().lstrip("#")).casefold()
-        if kind == "hashtags":
-            return raw  # #año y #ano son etiquetas diferentes
-        folded = unicodedata.normalize("NFKD", raw)
-        return "".join(c for c in folded if not unicodedata.combining(c))
+        # También en consultas #año y #ano (o año/ano) son distintos.
+        # El plegado de acentos pertenece al *matching de semillas*, no
+        # a la identidad/deduplicación de búsquedas de cada plataforma.
+        return unicodedata.normalize("NFC", str(value).strip().lstrip("#")).casefold()
 
     try:
         with open(PATH, encoding="utf-8") as stream:
