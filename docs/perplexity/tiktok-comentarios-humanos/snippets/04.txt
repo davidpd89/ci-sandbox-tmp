@@ -1,0 +1,4 @@
+python
+# Fuente exacta: https://github.com/RomySaputraSihananda/tiktok-comment-scrapper/blob/master/tiktokcomment/tiktokcomment.py
+def get_all_comments(
+    self: 'TiktokComment',
