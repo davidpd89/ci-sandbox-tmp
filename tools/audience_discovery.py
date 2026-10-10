@@ -117,7 +117,7 @@ def normalize(network: str, kind: str, raw: Mapping, *,
         event_id = account_key
     if not event_id:
         raise ObservationError("evento_sin_id")
-    event_key = "|".join((surface, post_key, kind, event_id))
+    event_key = "|".join((post_key, kind, event_id))
     return Observation(
         network, event_key, account_key, handle, stable, kind, post_key,
         timestamp(raw.get("occurred_at")), timestamp(observed_at),
@@ -150,6 +150,15 @@ class AudienceStore:
                 surface TEXT NOT NULL, occurred_at TEXT, observed_at TEXT NOT NULL,
                 post_created_at TEXT, text TEXT NOT NULL, active INTEGER NOT NULL,
                 PRIMARY KEY(network, event_key));
+            CREATE TABLE IF NOT EXISTS audience_sightings (
+                network TEXT NOT NULL, event_key TEXT NOT NULL,
+                surface TEXT NOT NULL, seed TEXT NOT NULL,
+                observed_at TEXT NOT NULL,
+                PRIMARY KEY(network, event_key, surface, seed));
+            CREATE TABLE IF NOT EXISTS audience_cursor_history (
+                network TEXT NOT NULL, surface TEXT NOT NULL, seed TEXT NOT NULL,
+                cursor TEXT NOT NULL,
+                PRIMARY KEY(network, surface, seed, cursor));
             CREATE INDEX IF NOT EXISTS idx_audience_events_account
                 ON audience_events(network, account_key, active);
             CREATE TABLE IF NOT EXISTS audience_cursors (
@@ -165,6 +174,12 @@ class AudienceStore:
             "SELECT cursor FROM audience_cursors WHERE network=? AND surface=? AND seed=?",
             (network, surface, seed)).fetchone()
         return row[0] if row else None
+
+    def seen_cursor(self, network: str, surface: str, seed: str, cursor: str) -> bool:
+        return self.db.execute(
+            "SELECT 1 FROM audience_cursor_history "
+            "WHERE network=? AND surface=? AND seed=? AND cursor=?",
+            (network, surface, seed, cursor)).fetchone() is not None
 
     def ingest(self, rows: Sequence[Observation], *, network: str, surface: str,
                seed: str, next_cursor: str | None, now: str,
@@ -191,6 +206,39 @@ class AudienceStore:
                 previous = self.db.execute(
                     "SELECT observed_at, occurred_at, active, account_key FROM audience_events "
                     "WHERE network=? AND event_key=?", (network, row.event_key)).fetchone()
+                if previous and previous[3] != row.account_key:
+                    # Un evento remoto no cambia de autor por aparecer en otra superficie.
+                    # La promoción provisional->estable se acepta solo cuando el ID del
+                    # MISMO evento prueba la correspondencia; el handle solo no basta.
+                    old = self.db.execute(
+                        "SELECT handle, stable, first_seen, last_seen, profile "
+                        "FROM audience_accounts WHERE network=? AND account_key=?",
+                        (network, previous[3])).fetchone()
+                    if not (row.stable_identity and old and not old[1] and
+                            old[0].casefold() == row.handle.casefold()):
+                        raise ObservationError("evento_actor_conflictivo")
+                    current = self.db.execute(
+                        "SELECT first_seen, last_seen FROM audience_accounts "
+                        "WHERE network=? AND account_key=?",
+                        (network, row.account_key)).fetchone()
+                    if current:
+                        self.db.execute(
+                            "UPDATE audience_accounts SET first_seen=min(first_seen, ?), "
+                            "last_seen=max(last_seen, ?) "
+                            "WHERE network=? AND account_key=?",
+                            (old[2], old[3], network, row.account_key))
+                    else:
+                        self.db.execute(
+                            "INSERT INTO audience_accounts VALUES(?,?,?,?,?,?,?)",
+                            (network, row.account_key, row.handle, 1,
+                             row.profile or old[4], old[2], max(old[3], row.observed_at)))
+                    self.db.execute(
+                        "UPDATE audience_events SET account_key=? "
+                        "WHERE network=? AND account_key=?",
+                        (row.account_key, network, previous[3]))
+                    self.db.execute(
+                        "DELETE FROM audience_accounts WHERE network=? AND account_key=?",
+                        (network, previous[3]))
                 if previous:
                     # En eventos de flujo con tiempo de suceso, ese tiempo ordena
                     # create/delete aunque un replay antiguo se observe más tarde.
@@ -198,6 +246,13 @@ class AudienceStore:
                     previous_version = previous[1] or previous[0]
                     incoming_version = row.occurred_at or row.observed_at
                     if previous_version >= incoming_version:
+                        # Dos superficies pueden ver el mismo evento: registrar ambas
+                        # procedencias sin sumar señales de nuevo.
+                        self.db.execute(
+                            "INSERT INTO audience_sightings VALUES(?,?,?,?,?) "
+                            "ON CONFLICT(network,event_key,surface,seed) "
+                            "DO UPDATE SET observed_at=max(observed_at, excluded.observed_at)",
+                            (network, row.event_key, surface, seed, row.observed_at))
                         counts["replays"] += 1
                         continue
                 # Una observación posterior puede retirar un like/repost. No lo resucita un replay.
@@ -230,7 +285,21 @@ class AudienceStore:
                 """, (network, row.event_key, row.account_key, row.kind, row.post_key,
                       row.surface, row.occurred_at, row.observed_at, row.post_created_at,
                       row.text, int(not row.deleted)))
+                self.db.execute(
+                    "INSERT INTO audience_sightings VALUES(?,?,?,?,?) "
+                    "ON CONFLICT(network,event_key,surface,seed) "
+                    "DO UPDATE SET observed_at=max(observed_at, excluded.observed_at)",
+                    (network, row.event_key, surface, seed, row.observed_at))
                 counts["updated_events" if previous else "new_events"] += 1
+            if next_cursor is None:
+                self.db.execute(
+                    "DELETE FROM audience_cursor_history "
+                    "WHERE network=? AND surface=? AND seed=?",
+                    (network, surface, seed))
+            else:
+                self.db.execute(
+                    "INSERT OR IGNORE INTO audience_cursor_history VALUES(?,?,?,?)",
+                    (network, surface, seed, next_cursor))
             self.db.execute(
                 "INSERT INTO audience_cursors(network,surface,seed,cursor) VALUES(?,?,?,?) "
                 "ON CONFLICT(network,surface,seed) DO UPDATE SET cursor=excluded.cursor",
@@ -244,13 +313,18 @@ class AudienceStore:
         now = timestamp(now or datetime.now(timezone.utc))
         records = self.db.execute("""
             SELECT a.account_key, a.handle, a.stable, a.profile, e.kind, e.post_key,
-                   e.surface, e.text, e.post_created_at
+                   e.surface, e.text, e.post_created_at, e.event_key
             FROM audience_accounts a JOIN audience_events e
               ON e.network=a.network AND e.account_key=a.account_key
             WHERE a.network=? AND e.active=1
         """, (network,)).fetchall()
+        sights: dict[str, set[str]] = {}
+        for event_key, surface in self.db.execute(
+            "SELECT event_key,surface FROM audience_sightings WHERE network=?",
+            (network,)):
+            sights.setdefault(event_key, set()).add(surface)
         people: dict[str, dict] = {}
-        for key, handle, stable, profile, kind, post, surface, text, age in records:
+        for key, handle, stable, profile, kind, post, surface, text, age, event_key in records:
             if require_verified_age and (age is None or _age_hours(age, now) > max_post_age_hours):
                 continue
             data = people.setdefault(key, {"network": network, "lane": LANES[network],
@@ -259,7 +333,7 @@ class AudienceStore:
             data["signals"] += 1
             data["score"] += KINDS[kind]
             data["posts"].add(post)
-            data["surfaces"].add(surface)
+            data["surfaces"].update(sights.get(event_key, {surface}))
             if NICHE.search(profile + " " + text):
                 data["score"] += 2.0
         for rec in people.values():
@@ -296,7 +370,8 @@ def collect_pages(store: AudienceStore, *, network: str, surface: str, seed: str
             raise ObservationError("items_invalidos")
         nxt = page.get("next_cursor")
         if nxt is not None and (not isinstance(nxt, str) or not nxt.strip()
-                                or nxt == cursor or nxt in visited):
+                                or nxt == cursor or nxt in visited or
+                                store.seen_cursor(network, surface, seed, nxt)):
             raise ObservationError("cursor_ciclico")
         normalized = [
             normalize(network, str(page.get("kind") or ""), item, surface=surface,
