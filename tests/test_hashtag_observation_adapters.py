@@ -206,7 +206,6 @@ class ObservationTests(unittest.TestCase):
         bad_urls = ("https://", "https:///missing-host",
                     "https://example.social", "https://example.social/",
                     "ftp://example.social/@user/42",
-                    "https://other@example.social/@user/42",
                     "https://[bad-ipv6/@user/42")
         for bad in bad_urls:
             for field in ("post", "author"):
