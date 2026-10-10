@@ -5,7 +5,9 @@ acciones sobre redes ni estado productivo. Esta investigación produce
 `tools/content_comment_experiments.py` y
 `tests/test_content_comment_experiments.py`.
 
-## Hueco y sistema existente
+## Problema
+
+### Hueco y sistema existente
 
 El repositorio oficial privado `davidpd89/rrss-davidporto-CODE`,
 rama `integracion/crecimiento-2026-10`, dispone de:
@@ -37,7 +39,9 @@ no replica módulos privados ni toca sus datos. La comparación sobre
 `experiment_uplift` prueba que el nuevo resultado **NO** sustituye su
 análisis confirmatorio con mínimo 100/SRM y flags de diseño.
 
-## Investigación pública (SHA y licencias comprobadas)
+## Alternativas
+
+### Investigación pública (SHA y licencias comprobadas)
 
 | Candidato | Revisión pública verificada | Licencia | Actividad y compatibilidad | Decisión |
 |---|---|---|---|---|
@@ -55,7 +59,20 @@ mantenimiento futuro. Seguridad de dependencias: sin nueva dependencia,
 sin instaladores ni binarios nativos; subsiste el mantenimiento normal
 de Python/SQLite.
 
-## Contrato de implementación
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/spotify/confidence
+Fecha de consulta: 2026-10-10
+Licencia SPDX: Apache-2.0
+Referencia inmutable: https://github.com/spotify/confidence/commit/0f12dd39afd15c48baf24e9d28fcbe72a905bb53
+
+Ninguna fuente externa fue copiada. La tabla anterior desglosa la
+procedencia y licencia de las demás opciones; las herramientas privadas
+solo se consultaron como contexto, sin copiar sus fuentes.
+
+## Decisión
+
+### Contrato de implementación
 
 Las cuatro familias iniciales son hipótesis editoriales, nunca bancos
 de frases:
@@ -107,7 +124,9 @@ carga para esa ID, doble exposición, doble resultado o cola cruzada falla
 dentro de la transacción. El hash de unidad no anonimiza entradas
 predecibles: el llamador debe generar IDs de alta entropía.
 
-## Reproducibilidad, antes/después y límites
+## Pruebas
+
+### Reproducibilidad, antes/después y límites
 
 Comando aislado:
 
@@ -149,6 +168,8 @@ ausencia de exposición a `False`. Pendientes para Claude: validar
 el mecanismo de ACK por plataforma, Windows nativo, reloj real,
 colisiones semánticas de identidad y canario supervisado con
 resultados auténticos (no equipararlo a fixture sintético).
+
+## Retirada
 
 **Retirada / migración:** no hay migración de estados reales. Deshabilitar
 productores que usen el motor, conservar/copiar el SQLite aislado,
