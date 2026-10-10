@@ -1,9 +1,9 @@
 """Preflight de voz en el último punto propio anterior a enviar.
 
-Consume EXCLUSIVAMENTE spanish_voice_quality.audit de la PR #79. El módulo
-upstream se integrará antes de activar esta rama. No se corrige ni reescribe
-ninguna cadena; los hallazgos editoriales son informativos, y un fallo técnico
-inesperado cancela el preflight sin emitir acciones remotas.
+Consume EXCLUSIVAMENTE spanish_voice_quality.audit, ya incorporado a la
+base sincronizada. No se corrige ni reescribe ninguna cadena; los hallazgos
+editoriales son informativos, y un fallo técnico inesperado cancela el
+preflight sin emitir acciones remotas.
 """
 from __future__ import annotations
 
