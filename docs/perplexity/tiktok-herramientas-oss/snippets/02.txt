@@ -1,0 +1,48 @@
+python
+# Adaptación propia para davidpd89/ci-sandbox-tmp.
+# Patrón y endpoints basados en: https://github.com/Evil0ctal/Douyin_TikTok_Download_API/blob/main/documents/en/12-mcp.md
+import os
+from typing import Any
+import httpx
+
+from tools.http_retry import request_with_retry
+
+
+class TikTokArchiveClient:
+    def __init__(self, base_url: str | None = None, api_key: str | None = None):
+        self.base_url = (base_url or os.getenv("TIKTOK_ARCHIVE_URL", "")).rstrip("/")
+        self.api_key = api_key or os.getenv("TIKTOK_ARCHIVE_API_KEY", "")
+        if not self.base_url:
+            raise ValueError("TIKTOK_ARCHIVE_URL no está configurada")
+
+    def _headers(self) -> dict[str, str]:
+        headers = {"Accept": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        return headers
+
+    def get_post(self, video_id: str) -> dict[str, Any]:
+        return request_with_retry(
+            "GET",
+            f"{self.base_url}/api/tiktok/video/{video_id}",
+            headers=self._headers(),
+            timeout=30,
+        ).json()
+
+    def get_user_posts(self, sec_uid: str, cursor: str = "", count: int = 20) -> dict[str, Any]:
+        return request_with_retry(
+            "GET",
+            f"{self.base_url}/api/tiktok/user/posts",
+            headers=self._headers(),
+            params={"secUid": sec_uid, "cursor": cursor, "count": count},
+            timeout=30,
+        ).json()
+
+    def get_comments(self, video_id: str, cursor: str = "", count: int = 20) -> dict[str, Any]:
+        return request_with_retry(
+            "GET",
+            f"{self.base_url}/api/tiktok/video/comments",
+            headers=self._headers(),
+            params={"video_id": video_id, "cursor": cursor, "count": count},
+            timeout=30,
+        ).json()
