@@ -294,8 +294,6 @@ def test_module_manifest_accepts_new_modules_without_budget_inflation(tmp_path):
     assert audit.missing_modules(tmp_path, expected) == []
 
 
-@pytest.mark.parametrize("bad", (["x_scan.py", "x_scan.py"], ["../x_scan.py"],
-                                  ["unrelated.py"], "x_scan.py"))
 def test_manifest_rejects_windows_subdirectory_and_unhashable_entries(tmp_path):
     _source(tmp_path, "x_scan.py")
     for malformed in (["folder\\x_scan.py"], [{"not": "a filename"}]):
@@ -303,6 +301,8 @@ def test_manifest_rejects_windows_subdirectory_and_unhashable_entries(tmp_path):
             audit.missing_modules(tmp_path, malformed)
 
 
+@pytest.mark.parametrize("bad", (["x_scan.py", "x_scan.py"], ["../x_scan.py"],
+                                  ["unrelated.py"], "x_scan.py"))
 def test_malformed_module_manifest_fails_closed(tmp_path, bad):
     _source(tmp_path, "x_scan.py")
     with pytest.raises(ValueError, match="Malformed architecture module manifest"):
