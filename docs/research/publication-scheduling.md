@@ -57,11 +57,13 @@ DST problemáticos, en vez de elegir un offset al azar. Si una ficha marca `Auto
 possible_duplicate y slot_collision no borran contenidos ni reservan
 posts: son señales para revisión editorial dentro de la misma red. También se incluyen fichas históricas ya publicadas para detectar posibles reposts futuros.
 
-El mapa WEB X/Threads/Pinterest, API Facebook/Instagram/Bluesky/Mastodon/Reddit,
+El mapa WEB X/Threads/Pinterest/Reddit, API Facebook/Instagram/Bluesky/Mastodon,
 MOBILE TikTok describe el canal probable de publicación. No equivale
 al reparto WEB/API/MOBILE de las rondas de interacción: Facebook e Instagram,
 por ejemplo, disponen de adaptadores API de publicación. No afirma que esos
-adaptadores estén activos. auto_opt_in es información, nunca permiso.
+adaptadores estén activos. En particular, Reddit figura en `BROWSER` en el
+`content_publisher.py` oficial, pero no en `PUBLISHERS`: por eso se informa
+WEB sin afirmar publicación automática disponible. `auto_opt_in` es información, nunca permiso.
 
 ## Pruebas y segunda revisión adversarial
 

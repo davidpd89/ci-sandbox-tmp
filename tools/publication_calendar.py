@@ -12,7 +12,7 @@ import content_queue as cq
 # Transporte del contenido, NO carriles de engagement de round_queue.
 LANES = dict(x="WEB", threads="WEB", pinterest="WEB",
              facebook="API", instagram="API", bluesky="API",
-             mastodon="API", reddit="API", tiktok="MOBILE")
+             mastodon="API", reddit="WEB", tiktok="MOBILE")
 
 
 def resolve_wall_time(wall: datetime, zone: ZoneInfo) -> datetime:

@@ -32,6 +32,10 @@ class CalendarTests(unittest.TestCase):
         self.assertEqual(set(cal.LANES), set(cal.cq.RED_FOLDERS))
         self.assertEqual(set(cal.LANES.values()), {"WEB", "API", "MOBILE"})
 
+    def test_reddit_transport_matches_official_browser_registry(self):
+        row = plan({"reddit": [item("reddit")]})["items"][0]
+        self.assertEqual(row["lane"], "WEB")
+
     def test_madrid_utc_and_no_absolute_paths(self):
         p = plan({"bluesky": [item()]})["items"][0]
         self.assertEqual(p["time_utc"], "2026-10-10T08:00:00Z")
