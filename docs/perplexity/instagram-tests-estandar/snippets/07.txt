@@ -1,0 +1,4 @@
+bash
+# Adaptado de:
+# https://github.com/kiwicom/pytest-recording#blocking-network-access
+pytest tests/test_instagram_http_replay.py --record-mode=none --block-network
