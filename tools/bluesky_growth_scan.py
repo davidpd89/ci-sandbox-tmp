@@ -1644,16 +1644,29 @@ def _search_popular_feeds(c):
             continue
         feeds = list(data.get("feeds") or [])
         before = set(c.candidates)
-        for feed in feeds[:2]:
-            uri = feed.get("uri")
-            if not uri:
+        # El AppView no garantiza que los primeros resultados sean del nicho.
+        # Antes se aceptaba cualquiera si la CONSULTA era afín (casi siempre).
+        # Seleccionar por señales del propio feed, sin duplicar URIs.
+        relevant = []
+        for feed in feeds:
+            if not isinstance(feed, dict) or not feed.get("uri"):
                 continue
             label = " ".join([
                 str(feed.get("displayName") or ""),
                 str(feed.get("description") or ""),
             ])
-            if _hits(label) == 0 and _hits(query) == 0:
+            hits = _hits(label)
+            if not hits or sc.is_political(label):
                 continue
+            relevant.append((-hits, -(int(feed.get("likeCount") or 0)),
+                             str(feed["uri"]), feed))
+        seen_feeds = set()
+        for _, _, uri, feed in sorted(relevant):
+            if uri in seen_feeds:
+                continue
+            seen_feeds.add(uri)
+            if len(seen_feeds) > 2:
+                break
             _run_source(
                 c,
                 "popular_feed_search",
