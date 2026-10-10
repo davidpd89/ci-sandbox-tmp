@@ -163,6 +163,8 @@ class RelationshipStore:
         if not path:
             raise ValueError("explicit isolated database path required")
         self.path = str(path)
+        if self.path == ":memory:":
+            raise ValueError("SQLite :memory: does not survive per-call connections; use a temporary file")
         with closing(self._connect()) as db:
             db.executescript(_SCHEMA)
             db.commit()
@@ -233,11 +235,59 @@ class RelationshipStore:
         return [Event(network, account, *row) for row in rows]
 
     def verify_replay(self, network: str, account: str) -> bool:
-        history = self.history(network, account)
+        """Verifica historia y proyección desde una sola instantánea SQLite."""
+        if network not in NETWORKS or not account:
+            raise ValueError("invalid identity")
+        with closing(self._connect()) as db:
+            db.execute("BEGIN")
+            rows = db.execute(
+                "SELECT kind, occurred_at, before_state, after_state, version "
+                "FROM relation_events WHERE network=? AND account=? ORDER BY version",
+                (network, account)).fetchall()
+            saved = self._read(db, network, account)
+            db.commit()
         current = None
-        for event in history:
-            current = step(current, event.kind, event.occurred_at)
-        return current == self.snapshot(network, account)
+        try:
+            for kind, when, old, new, version in rows:
+                previous_state = current.state if current else None
+                current = step(current, kind, when)
+                if (old, new, version) != (previous_state, current.state, current.version):
+                    return False
+        except TransitionError:
+            return False
+        return current == saved
+
+
+def settled_action_event(*, network: str, account: str, event_id: str,
+                         action: str, outcome: str, lane: str,
+                         occurred_at: str, independently_verified: bool = False
+                         ) -> Event | None:
+    """Adaptador único para productores WEB/API/MOBILE (sin ejecutar acciones).
+
+    Fallo, salto o intención no son prueba de estado. Los estados observados
+    (followback/inactividad/fidelidad) requieren verificación independiente.
+    Nunca genera identificadores con timestamps; exige ID estable del origen.
+    """
+    action_map = {
+        "discovery": "discovered", "qualification": "qualified",
+        "follow": "follow_confirmed", "unfollow": "unfollow_confirmed",
+        "block": "closed_confirmed", "followback": "followback_confirmed",
+        "activity": "activity_confirmed", "loyalty": "loyalty_confirmed",
+        "inactive": "inactivity_confirmed", "reactivation": "reactivation_confirmed",
+        "followback_lost": "followback_lost", "retry": "retry_approved",
+        "close": "closed_confirmed",
+    }
+    if action not in action_map:
+        raise ValueError("unknown producer action")
+    if outcome.strip().casefold() not in ("confirmado", "publicado", "verified"):
+        return None
+    observational = {"followback", "activity", "loyalty", "inactive",
+                     "reactivation", "followback_lost", "retry"}
+    if action in observational and not independently_verified:
+        raise TransitionError("observational change requires independently verified evidence")
+    event = Event(network, account, event_id, action_map[action], lane, occurred_at)
+    _key(event)  # Validar en frontera, antes de incorporar a cualquier proyección.
+    return event
 
 
 def audit_legacy_rows(network: str, rows: Iterable[dict], *, lane="WEB") -> dict:
@@ -257,7 +307,9 @@ def audit_legacy_rows(network: str, rows: Iterable[dict], *, lane="WEB") -> dict
         outcome = str(row.get("resultado") or "").strip().casefold()
         if kind not in ("follow", "unfollow", "block") or outcome not in ("confirmado", "publicado"):
             continue
-        account = str(row.get("cuenta") or "").strip()
+        # Misma normalización de handles que la política ya existente.
+        from relationship_policy import norm
+        account = norm(row.get("cuenta"))
         if not account:
             anomalies.append({"row": index, "reason": "missing account"})
             continue
