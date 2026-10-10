@@ -242,7 +242,7 @@ def audit(root=ROOT, *, pipelines=None, cleanup_adapters=None, harvesters=None):
             "detail": "los registros de pipeline/adaptadores proceden del checkout que ejecuta el auditor, no de --root",
             "severity": "warning",
         })
-    for network in cap.NETWORKS:
+    for network in cap.INVENTORY_NETWORKS:
         pipeline = pipelines.get(network) or {}
         result["pipelines"][network] = _pipeline_view(pipeline)
         if network not in CONFIG_PATHS:
@@ -330,7 +330,7 @@ def main(argv=None):
     if args.json:
         print(json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2))
     else:
-        for network in cap.NETWORKS:
+        for network in cap.INVENTORY_NETWORKS:
             cfg = report["configurations"][network]
             pipe = report["pipelines"][network]
             print(f"{network:10} {pipe['primary_lane'] or '-':6} {cfg['status']:20} {report['wiring'][network]}")
