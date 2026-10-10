@@ -278,6 +278,20 @@ class PersistenceTests(unittest.TestCase):
                 with closing(sqlite3.connect(path)) as db:
                     self.assertEqual(before, db.execute(f"PRAGMA table_info({table})").fetchall())
 
+    def test_refuses_action_ledger_and_relationship_event_ledger_databases(self):
+        for n, table in enumerate(("actions", "relationship_events")):
+            with self.subTest(table=table):
+                path = str(pathlib.Path(self.temp.name) / f"foreign-{n}.sqlite")
+                with closing(sqlite3.connect(path)) as db:
+                    db.execute(f"CREATE TABLE {table} (id INTEGER PRIMARY KEY)")
+                    db.commit()
+                with self.assertRaisesRegex(ValueError, "separate SQLite database"):
+                    rm.RelationshipStore(path)
+                with closing(sqlite3.connect(path)) as db:
+                    names = {row[0] for row in db.execute(
+                        "SELECT name FROM sqlite_master WHERE type='table'")}
+                self.assertEqual(names, {table})
+
     def test_in_memory_database_requires_real_file_for_restart(self):
         with self.assertRaises(ValueError):
             rm.RelationshipStore(":memory:")
