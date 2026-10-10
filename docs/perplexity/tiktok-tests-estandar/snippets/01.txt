@@ -1,0 +1,15 @@
+python
+@dataclass(frozen=True)
+class TikTokNormalized:
+    network: Literal["tiktok"]
+    kind: Literal["post", "profile", "comment"]
+    external_id: str
+    author_handle: str
+    author_id: str | None
+    author_sec_uid: str | None
+    canonical_url: str
+    created_at: datetime
+    text: str | None
+    metrics: dict[str, int]
+    language: str | None
+    raw: dict
