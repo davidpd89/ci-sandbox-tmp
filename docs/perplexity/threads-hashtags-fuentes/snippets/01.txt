@@ -1,0 +1,18 @@
+text
+# Propuesta: config/discovery/threads.yaml
+topic_tags:
+  - "Lectura"
+  - "Libros"
+  - "Bookstagram"
+  - "BookTok en español"
+  - "Fantasía"
+  - "Fantasía juvenil"
+  - "Romantasy"
+  - "Romance fantástico"
+  - "Novela romántica"
+  - "Libros de fantasía"
+  - "Jóvenes adultos"
+  - "Autores independientes"
+  - "Escritores en español"
+  - "Reseña de libro"
+  - "Club de lectura"
