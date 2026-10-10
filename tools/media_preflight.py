@@ -124,6 +124,12 @@ def inspect_asset(
         return report
 
     suffix = file.suffix.lower()
+    # Un nombre valido en Linux puede romper la ruta al transferirla a Windows.
+    # Se avisa (no bloquea) antes de preparar el asset con un nombre portable.
+    if (any(c in file.name for c in '<>:"/\\|?*') or
+            file.name.rstrip(" .") != file.name or
+            file.stem.upper() in {"CON", "PRN", "AUX", "NUL", "COM1", "LPT1"}):
+        add("filename_windows", "Renombrar para compatibilidad Windows", warning=True)
     if suffix in IMAGE_EXTENSIONS:
         report["kind"] = "image"
         if not alt or not alt.strip():
@@ -204,8 +210,12 @@ def inspect_item(item: dict[str, Any]) -> list[str]:
         if not path:
             errors.append("asset declarado sin ruta verificable")
             continue
+        # El ALT global solo es equivalente al ALT de un asset si es unico.
+        # En un carrusel, cada imagen necesita su descripcion independiente.
+        media = item.get("media") or []
+        fallback_alt = item.get("alt") if len(media) == 1 else ""
         result = inspect_asset(
-            path, item["red"], alt=entry.get("alt") or item.get("alt") or "",
+            path, item["red"], alt=entry.get("alt") or fallback_alt or "",
             root=root,
         )
         errors.extend(f"{entry.get('filename')}: {e['code']}: {e['message']}"
