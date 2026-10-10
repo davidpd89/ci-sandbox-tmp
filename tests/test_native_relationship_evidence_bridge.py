@@ -90,6 +90,23 @@ class EvidenceTest(unittest.TestCase):
                          if json.loads(v["source_id"]) == ["exp", str(i), "result", None])
                          for i in range(len(labels))], expected)
 
+    def test_pinterest_react_and_already_done(self):
+        b = Batch("pinterest", "WEB", "pinterest_growth.cmd_run", "export")
+        s = Sink()
+        outcome = bridge_results(s, b, [row(kind="react", handle=None,
+            url="https://www.pinterest.com/pin/xyz/", resultado="ya_hecho")])
+        self.assertEqual(outcome["inserted"], 1)
+        event = next(iter(s.items.values()))
+        self.assertEqual((event["kind"], event["outcome"]), ("like", "observed"))
+
+    def test_delimiters_cannot_alias_provenance(self):
+        s = Sink()
+        left = Batch("x", "WEB", "x_execute.run_plan", "v1/part")
+        right = Batch("x", "WEB", "x_execute.run_plan", "v1")
+        self.assertEqual(bridge_results(s, left, [row(record_id="a")])["inserted"], 1)
+        self.assertEqual(bridge_results(s, right, [row(record_id="part/a")])["inserted"], 1)
+        self.assertEqual(len(s.items), 2)
+
     def test_missing_source_unknown(self):
         s = Sink()
         b = Batch("reddit", "WEB", "reddit_execute.run_plan", "exp")
