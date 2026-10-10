@@ -158,7 +158,8 @@ def publish_pinterest(item):
                                         ("imagen", item.get("imagen"))) if not value]
     if missing:
         raise RuntimeError("ficha de Pinterest incompleta: falta " + ", ".join(missing))
-    return pp.publish_pin(item["imagen"], item["titulo"], item["texto"], meta["enlace"], item.get("alt") or meta.get("alt", ""), meta["tablero"], apply=True)
+    return pp.publish_pin(item["imagen"], item["titulo"], item["texto"], meta["enlace"], item.get("alt") or meta.get("alt", ""), meta["tablero"], apply=True,
+                          voice_checked=True)
 
 
 PUBLISHERS = {"bluesky": publish_bluesky, "mastodon": publish_mastodon, "threads": publish_threads, "x": publish_x,

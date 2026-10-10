@@ -293,6 +293,9 @@ def publish_post(item, apply=False, log=print, before_submit=None):
             button = pg.get_by_role("button", name="Publicar", exact=True).last
             if not button.is_enabled():
                 raise RedditPublishError("el boton Publicar esta desactivado (falta un campo obligatorio o la comunidad exige algo mas); no se publica")
+            import voice_output_finalization as voice
+            voice.inspect_fields({"titulo": item["title"], "cuerpo": item.get("body") or ""},
+                                 network="reddit", queue="WEB", log=log)
             if before_submit is not None:
                 # Reservar DURABLEMENTE solo al terminar los controles de
                 # formulario y justo antes del clic. Si falla la validación

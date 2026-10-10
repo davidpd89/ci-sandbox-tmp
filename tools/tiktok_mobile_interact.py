@@ -842,6 +842,8 @@ class TikTokMobileAdapter:
         if not isinstance(text, str) or not text.strip():
             raise ValueError("comentario vacío")
         text = text.strip()
+        import voice_output_finalization as voice
+        voice.inspect(text, network="tiktok", queue="MOBILE")
         self._open_target(url)
         tree = self._tree()
         if _norm(text) in _norm(_visible_text(tree)):

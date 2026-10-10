@@ -168,6 +168,8 @@ def main(argv=None):
         if item is None:
             print(f"[x] no se publica tras esperar el Edge: {why}")
             return 0
+        import voice_output_finalization as voice
+        voice.inspect(item["text"], network="x", queue="WEB")
         url = x.post(item["text"])
         record(item, url)
     print(f"[x] PUBLICADO: «{item['text']}» -> {url}")

@@ -379,6 +379,8 @@ def reply_in_thread(pg, thread_url, item, log=print):
     comprueba que lo escrito es EXACTAMENTE la frase y verifica tras recargar que aparece como respuesta nuestra. Devuelve True/False."""
     import reddit_interact as r
     check_reply(item["text"])
+    import voice_output_finalization as voice
+    voice.inspect(item["text"], network="reddit", queue="WEB", log=log)
     r._check_spanish_orthography(item["text"].replace("¿", "").replace("?", ""))
     node = pg.locator(f'shreddit-comment[thingid="{item["id"]}"]').first
     if not node.count():
