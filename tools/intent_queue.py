@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import math
 import os
 import random
 import sqlite3
@@ -135,7 +136,7 @@ class IntentQueue:
             raise ValueError("red/canal desconocidos")
         for name, val in (("intent_key", intent_key), ("kind", kind), ("target", target)):
             self._required(val, name)
-        if not isinstance(max_attempts, int) or not 1 <= max_attempts <= 100:
+        if type(max_attempts) is not int or not 1 <= max_attempts <= 100:
             raise ValueError("max_attempts fuera de rango")
         if type(priority) is not int or abs(priority) > 10000:
             raise ValueError("priority fuera de rango")
@@ -149,6 +150,8 @@ class IntentQueue:
         now = self.clock()
         due = now if due is None else float(due)
         expires_at = None if expires_at is None else float(expires_at)
+        if not math.isfinite(due) or (expires_at is not None and not math.isfinite(expires_at)):
+            raise ValueError("fechas no finitas")
         identity = (network, channel, intent_key, kind, target, serialized,
                     max_attempts, priority, due, expires_at)
         with self._tx() as db:
@@ -176,7 +179,7 @@ class IntentQueue:
 
     def _recover_locked(self, db, channel, now):
         rows = db.execute(
-            """SELECT id,status,attempts,max_attempts,expires_at
+            """SELECT id,status,attempts,max_attempts,expires_at,owner
                FROM intents WHERE channel=? AND
                ((status IN ('claimed','in_flight') AND lease_until<=?)
                 OR (status IN ('queued','claimed') AND expires_at<=?))""",
@@ -192,9 +195,9 @@ class IntentQueue:
             else:
                 new, event = "queued", "lease_expired_before_dispatch"
             db.execute(
-                """UPDATE intents SET status=?,owner=NULL,lease_until=NULL,updated=?
+                """UPDATE intents SET status=?,owner=?,lease_until=NULL,updated=?
                    WHERE id=?""",
-                (new, now, row["id"]),
+                (new, row["owner"] if new == "uncertain" else None, now, row["id"]),
             )
             self._event(db, row["id"], event, now=now)
             stats[{"queued": "requeued", "uncertain": "uncertain", "dead": "dead"}[new]] += 1
@@ -278,7 +281,10 @@ class IntentQueue:
         else:
             # jitter acotado 0.8..1.2; nunca excede max_delay.
             raw = base_delay * (2 ** min(row["attempts"] - 1, 20))
-            noise = 0.8 + 0.4 * self.jitter()
+            sample = self.jitter()
+            if not 0 <= sample <= 1 or not math.isfinite(sample):
+                raise ValueError("jitter fuera de rango")
+            noise = 0.8 + 0.4 * sample
             status, due = "queued", now + min(max_delay, raw * noise)
         db.execute(
             """UPDATE intents SET status=?,due=?,owner=NULL,lease_until=NULL,

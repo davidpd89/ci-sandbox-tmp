@@ -27,8 +27,8 @@ def env(tmp_path):
 
 def put(q, network="bluesky", channel="API", intent_key="task-1", **kwargs):
     return q.enqueue(network=network, channel=channel, intent_key=intent_key,
-                     kind="reply", target="post/42", payload={"text": "Prueba sintética"},
-                     **kwargs)
+                     kind="reply", target=kwargs.pop("target", "post/42"),
+                     payload={"text": "Prueba sintética"}, **kwargs)
 
 def test_nine_networks_three_independent_channels(env):
     q, _ = env
@@ -213,3 +213,37 @@ def test_crash_in_new_python_process(tmp_path):
     assert q.status(ids[1])["status"] == "uncertain"
     assert q.status(ids[0])["status"] == "queued"
     assert q.reconcile(ids[1], "unknown", "not-enough-evidence") == "uncertain"
+
+def test_invalid_non_finite_schedules_and_bool_attempts(env):
+    q, _ = env
+    with pytest.raises(ValueError):
+        put(q, due=float("nan"))
+    with pytest.raises(ValueError):
+        put(q, expires_at=float("inf"))
+    with pytest.raises(ValueError):
+        put(q, max_attempts=True)
+    assert q.claim("API", "A") is None
+
+def test_restarted_queue_preserves_evidence_and_unique_intent(env):
+    q, clock = env
+    ident = put(q)
+    ticket = q.claim("API", "owner", lease_seconds=10)
+    q.mark_dispatched(ticket)
+    q2 = IntentQueue(q.path, clock=clock)
+    assert q2.status(ident)["status"] == "in_flight"
+    clock.now += 11
+    assert q2.claim("API", "other") is None
+    assert q2.reconcile(ident, "confirmed", "remote-reload") == "confirmed"
+    assert q2.enqueue(network="bluesky", channel="API", intent_key="task-1",
+                      kind="reply", target="post/42",
+                      payload={"text": "Prueba sintética"}) == ident
+
+def test_invalid_jitter_rolls_back_entire_transition(tmp_path):
+    q = IntentQueue(str(tmp_path / "jitter.sqlite"), clock=lambda: 1000.0,
+                    jitter=lambda: float("nan"))
+    ident = put(q)
+    t = q.claim("API", "owner")
+    with pytest.raises(ValueError):
+        q.no_effect(t, "proof")
+    assert q.status(ident)["status"] == "claimed"
+    assert q.events(ident)[-1][0] == "claimed"
