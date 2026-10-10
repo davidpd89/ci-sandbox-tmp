@@ -77,3 +77,25 @@ La sincronización con la base se realizó conservando como árbol de partida `7
 **Limitaciones:** el vocabulario de `discovery_terms.terms` reúne catálogo estático y snapshot vigente; la etiqueta `lexical_` designa novedades respecto al pool nativo, no garantiza que todas procedan de una observación reciente. La validez TTL exacta pertenece al productor #63 y requiere test combinado. Instagram únicamente genera observaciones de prueba, no candidatos operativos. La ruta móvil necesita canario supervisado real y confirmar que las superficies de búsqueda estén habilitadas. Los tests offline no demuestran aumento de seguidores o respuestas.
 
 **Pendiente de integración:** publicar el manifiesto del padre para el gate de campaña, verificar en Windows y Ubuntu CI sobre el SHA final, fusionar pruebas de #63/#99, suite completa del oficial y canario controlado de solo lectura. El merge y las acciones sociales quedan reservados a Claude.
+
+## Cuarta revisión independiente — 10/10/2026
+
+- **Bluesky legacy:** las nuevas parejas `(tag, query)` usaban el texto fijo
+  `fantasía` para todas las etiquetas. El backend exige simultáneamente
+  `q` y `tag`; `#año` o `#lectura` quedaban restringidas artificialmente
+  a posts que también contuviesen `fantasía`. La función
+  `_lexical_tag_pool` conserva sin cambios las parejas verificadas del
+  catálogo y, para etiquetas nuevas, busca `(tag, tag)`. Regresión:
+  `test_bluesky_legacy_fresh_tags_search_their_own_topic`.
+- **Instagram experimental:** una sola trial con alternancia diaria podía
+  perder un snapshot nuevo de TTL inferior a 24 horas al caer en el turno
+  de semilla. Se conserva la cuota de una prueba y las dos consultas
+  validadas; únicamente la trial alterna entre semilla y vocabulario
+  cada seis horas. Regresión con cuatro franjas:
+  `test_instagram_trial_rotates_four_times_per_day_for_short_ttl`.
+  Sigue **sin alimentar candidatos operativos**.
+
+Estas dos correcciones se prueban sin cuentas ni tráfico social. Validar
+la relevancia de `(q, tag)` y la cadencia de Instagram con lectura
+supervisada antes de aprobar la integración; el gate del manifiesto
+continúa siendo responsabilidad de la rama padre.
