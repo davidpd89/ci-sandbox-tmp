@@ -231,16 +231,55 @@ def append_metricas(path, results, metrics, *, keys=("followers", "following", "
 
 
 def update_estado(path, results, metrics, *, fields=(("Seguidores", "followers"), ("Siguiendo", "following"), ("Posts", "posts"))):
-    """Reescribe en `ESTADO.md` las secciones «Última sesión» y «Métricas actuales»; `fields` = [(etiqueta, clave)] de las metricas que muestra la red."""
+    """Actualiza siempre la sesión y conserva el último valor comprobado por métrica.
+
+    Un valor ausente, '?' o N/A NO es cero y no borra el dato anterior.
+    La norma es común a los ejecutores que utilizan exec_common.
+    """
     import re
     if not os.path.exists(path):
         return
     with open(path, encoding="utf-8") as stream:
         content = stream.read()
+
+    def known(value):
+        return (value is not None and not isinstance(value, bool)
+                and str(value).strip().casefold() not in
+                ("", "?", "n/a", "none", "null", "unknown", "desconocido"))
+
+    # Solo se inspecciona la sección de métricas, no los historiales de otras
+    # secciones; los nombres de los campos son parámetros del propio ejecutor.
+    old_values = {}
+    previous = re.search(r"## Métricas actuales[^\n]*\n(.*?)(?=\n## |\Z)",
+                         content, flags=re.S)
+    if previous and fields:
+        body = previous.group(1)
+        labels = "|".join(re.escape(label) for label, _ in fields)
+        markers = list(re.finditer(r"(?<!\S)(" + labels + r"):\s*", body))
+        for index, marker in enumerate(markers):
+            end = markers[index + 1].start() if index + 1 < len(markers) else len(body)
+            value = body[marker.end():end].strip().removesuffix(".").strip()
+            if known(value):
+                old_values[marker.group(1)] = value
+
     resumen = ", ".join(f"{v} {k}" for k, v in _counts(results).items()) or "sin acciones confirmadas"
-    shown = " ".join(f"{label}: {metrics[key]}." for label, key in fields if key in metrics)
     content = re.sub(r"## Última sesión.*?(?=\n## |\Z)",
-                     f"## Última sesión\n\n{datetime.date.today().isoformat()}. {resumen}. Detalle: `registro_interacciones.csv`.\n\n", content, count=1, flags=re.S)
-    content = re.sub(r"## Métricas actuales.*?(?=\n## |\Z)", f"## Métricas actuales (de `metricas.csv`, última fila)\n\n{shown}\n\n", content, count=1, flags=re.S)
+                     f"## Última sesión\n\n{datetime.date.today().isoformat()}. {resumen}. Detalle: \`registro_interacciones.csv\`.\n\n",
+                     content, count=1, flags=re.S)
+
+    shown = []
+    for label, key in fields:
+        value = metrics.get(key)
+        if not known(value):
+            value = old_values.get(label)
+        if known(value):
+            shown.append(f"{label}: {str(value).strip()}.")
+    if shown:
+        content = re.sub(
+            r"## Métricas actuales.*?(?=\n## |\Z)",
+            "## Métricas actuales (último dato verificado por indicador)\n\n"
+            + " ".join(shown) + "\n\n",
+            content, count=1, flags=re.S,
+        )
     with open(path, "w", encoding="utf-8") as stream:
         stream.write(content)
