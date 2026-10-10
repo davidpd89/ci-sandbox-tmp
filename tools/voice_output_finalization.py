@@ -43,7 +43,8 @@ def inspect(text: str, *, network: str, queue: str | None, log=print) -> list[di
         raise VoicePreflightUnavailable(
             "El auditor de voz no pudo ejecutarse: " + type(exc).__name__
         ) from exc
-    if (not isinstance(outcome, dict) or outcome.get("changed") is not False
+    if (not isinstance(outcome, dict) or outcome.get("schema_version") != 1 or outcome.get("network") != network
+            or outcome.get("queue") != queue or outcome.get("changed") is not False
             or not isinstance(outcome.get("findings"), list)
             or any(not isinstance(f, dict) or not isinstance(f.get("code"), str)
                    for f in outcome["findings"])):
