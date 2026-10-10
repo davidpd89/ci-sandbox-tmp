@@ -81,6 +81,10 @@ class HashtagExpansionTest(unittest.TestCase):
         actual = self.build(rows)["networks"]["bluesky"]["hashtags"]
         self.assertEqual(set(actual), {"año", "ano", "niño", "nino"})
 
+    def test_accented_noise_stays_excluded(self):
+        self.assertEqual(h.extract("Libro #Sórteo #Crýpto"), set())
+        self.assertEqual(h.extract("Libro #Año"), {"año"})
+
     def test_feedback_changes_score(self):
         rows = posts(tag="Aventura", n=4) + posts(tag="Biblioteca", n=4)
         feedback = [
