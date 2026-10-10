@@ -7,6 +7,7 @@ This module deliberately does not import network executors or read live state.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 from datetime import datetime, timedelta, timezone
 import json
 import re
@@ -322,3 +323,40 @@ def summarize_outcomes(rows: Sequence[Mapping[str, object]]) -> dict[str, dict]:
             group["value_sum"] / ratings if ratings else None
         )
     return groups
+
+
+
+def packet_fingerprint(packet: ContextPacket) -> str:
+    """Versioned identity for the exact offline context, not an auth signature."""
+    values = {
+        "schema": "context-packet-v1",
+        "network": packet.network, "queue": packet.queue,
+        "target_id": packet.target_id, "author": packet.author,
+        "published_at": packet.published_at,
+        "context_status": packet.context_status,
+        "eligible": packet.eligible, "warnings": list(packet.warnings),
+        "evidence": [e.__dict__ for e in packet.evidence],
+    }
+    serialized = json.dumps(values, ensure_ascii=False, sort_keys=True,
+                            separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def audit_draft(packet: ContextPacket, draft: Mapping[str, object]) -> Audit:
+    """Bind a proposed draft to this exact source, destination and network.
+
+    This does not replace the private execution-time provenance guard.
+    A local hash is not a signature against malicious modification.
+    """
+    if not isinstance(draft, Mapping):
+        return Audit(False, "reject", 0, 0, ("draft_invalid",))
+    if (draft.get("target_id") != packet.target_id
+            or draft.get("network") != packet.network):
+        return Audit(False, "reject", 0, 0, ("wrong_destination",))
+    if draft.get("context_fingerprint") != packet_fingerprint(packet):
+        return Audit(False, "reject", 0, 0, ("context_changed",))
+    reply = draft.get("reply")
+    claims = draft.get("claims", ())
+    if reply is None and claims:
+        return Audit(False, "reject", 0, 0, ("abstention_with_claims",))
+    return audit_reply(packet, reply, claims)
