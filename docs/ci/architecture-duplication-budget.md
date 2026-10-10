@@ -86,7 +86,7 @@ No se instalaron ni probaron los candidatos externos en Windows.
 Se consultó por el conector GitHub autorizado
 davidpd89/rrss-davidporto-CODE, rama integracion/crecimiento-2026-10,
 el 09/10/2026. Históricamente el original tenía 40 módulos elegibles y el espejo 39: faltaba `tools/instagram_mobile_interact.py`.
-**Revalidación 10/10/2026:** tras sincronizar `research/public-reuse-parent` con el original, ambos inventarios coinciden en **39 ficheros elegibles**. Ahora el espejo también contiene ese módulo. La diferencia histórica queda resuelta en el snapshot; no garantiza que futuras sincronizaciones mantengan paridad.
+**Revalidación 10/10/2026:** tras sincronizar `research/public-reuse-parent` con el original, ambos inventarios coinciden en **40 ficheros elegibles**. Ahora el espejo también contiene ese módulo. La diferencia histórica queda resuelta en el snapshot; no garantiza que futuras sincronizaciones mantengan paridad.
 
 **Límite de aceptación:** la baseline de seis grupos certifica solo el
 mirror. Claude debe ejecutar este detector sobre una copia local del
@@ -145,7 +145,7 @@ La comprobación antigua de nueve redes era insuficiente: al borrar un segundo
 módulo de una red, las otras funciones de esa red podían seguir cubriendo
 el test, y la desaparición de su duplicación se consideraba una reducción
 legítima. Se añade `tests/fixtures/architecture_scanned_modules.json`
-con los **39 nombres elegibles**, contrastados con los listados actuales
+con los **40 nombres elegibles**, contrastados con los listados actuales
 del mirror sincronizado y del repositorio oficial. No se copia código del
 original: únicamente se versionan nombres ya publicados en el mirror.
 
