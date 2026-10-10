@@ -100,6 +100,14 @@ class VoiceContractTests(unittest.TestCase):
                     voice.inspect(SAMPLE, network="reddit", queue="WEB")
                 self.assertEqual(len(calls), 1)
 
+    def test_imported_auditor_without_public_api_is_controlled_failure(self):
+        # A module can import successfully while its public audit symbol is absent.
+        # Manual reports catch VoicePreflightUnavailable, not raw AttributeError.
+        broken = types.ModuleType("spanish_voice_quality")
+        with mock.patch.dict(sys.modules, {"spanish_voice_quality": broken}):
+            with self.assertRaises(voice.VoicePreflightUnavailable):
+                voice.inspect(SAMPLE, network="reddit", queue=None)
+
     def test_malformed_contract_is_not_treated_as_success(self):
         module = types.ModuleType("spanish_voice_quality")
         for output in ({}, {"changed": True, "findings": []},
