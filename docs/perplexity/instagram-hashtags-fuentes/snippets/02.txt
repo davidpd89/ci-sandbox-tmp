@@ -1,0 +1,31 @@
+text
+# Archivo nuevo: data/instagram/hashtags_intent.yaml
+version: 1
+network: instagram
+language: mixed_es_en
+
+hashtags:
+  - tag: recomendacionesdelibros
+    intent: recommendation
+    priority: 9
+  - tag: librosrecomendados
+    intent: recommendation
+    priority: 8
+  - tag: librosderomance
+    intent: genre
+    priority: 8
+  - tag: romancebooks
+    intent: genre
+    priority: 6
+  - tag: fantasyromance
+    intent: genre
+    priority: 8
+  - tag: bookrecs
+    intent: recommendation
+    priority: 7
+  - tag: bookrec
+    intent: recommendation
+    priority: 7
+  - tag: bookstagrammer
+    intent: community
+    priority: 6
