@@ -1,6 +1,6 @@
 # Observabilidad RRSS: panel offline y exportación saneada (10/10/2026)
 
-## Contrato y hueco observado
+## Problema
 
 Se ha leído el encargo de la [PR #24](https://github.com/davidpd89/ci-sandbox-tmp/pull/24), el protocolo y el código existente tanto del mirror como de la rama oficial
 \`integracion/crecimiento-2026-10\`. El mirror **no es una copia fiel de la punta del oficial**:
@@ -22,7 +22,7 @@ Mastodon y mezcla un informe con consulta remota de seguidores. \`daily_review.p
 informe operativo limitado. **No había un panel homogéneo offline, sanitizado y
 reutilizable para las nueve redes.**
 
-## Evaluación de software público a fecha 10/10/2026
+## Alternativas
 
 Consulta de repositorios, licencias y actividad en GitHub; enlaces fijados a la revisión
 observada, no a \`main\` flotante. Compatibilidad es del producto, no una validación
@@ -35,6 +35,15 @@ del despliegue concreto en Edge, Windows o móvil.
 | [prometheus/client_python](https://github.com/prometheus/client_python/commit/9cd073cb4dc6ee617eadf02dcdec94e0225eff0a) | Commit 15/09/2026; release 0.26.0 (24/07/2026) | Proyecto Apache-2.0; distribución reciente declara Apache-2.0 AND BSD-2-Clause; Python >=3.9/Windows | No añadir exporter/servidor: aporta instrumentación en vivo, no resuelve ingestión de CSV legacy ni privacidad del mirror |
 | [Textual](https://github.com/Textualize/textual/commit/5e5b7ef58b8c5572c13a3ff9027d756623661495) / [Rich](https://github.com/Textualize/rich/commit/9d8f9a372cc5916fd4781fec207ced7ddac2f08f) | Commits 09/10/2026 y 23/06/2026; repos activos | MIT, Python 3.11/Windows | Buena terminal local; no genera automáticamente artefacto HTML estático reutilizable sin ejecutable |
 
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/prometheus/client_python/commit/9cd073cb4dc6ee617eadf02dcdec94e0225eff0a
+Fecha de consulta: 2026-10-10
+Licencia SPDX: Apache-2.0
+Referencia inmutable: https://github.com/prometheus/client_python/commit/9cd073cb4dc6ee617eadf02dcdec94e0225eff0a
+
+No se ha incorporado código externo. La referencia acredita la comparación con una alternativa mantenida; las fuentes y licencias de las otras alternativas están en la tabla precedente. La adaptación utiliza únicamente datos del proyecto y la biblioteca estándar.
+
 **Resultado aplicado:** continuidad con las fuentes ya existentes y los módulos de biblioteca
 estándar de Python (\`csv\`, \`json\`, \`datetime\`, \`statistics\`, \`html\`). Ninguna línea
 copiada de los candidatos externos; no se añade dependencia, servidor, licencia vendorizada,
@@ -43,7 +52,7 @@ ni mantenimiento de dependencias. En una fase posterior Prometheus puede ser út
 telemetría en proceso, con consentimiento y almacenamiento privado, pero no supera este
 alcance de exportación con evidencia actual.
 
-## Implementación entregada
+## Decisión
 
 \`tools/observability_dashboard.py\` admite siempre un origen y destino explícitos:
 
@@ -83,7 +92,7 @@ Los avisos de auth/rate/fallos no se deshabilitan: el panel solo los observa.
 Se usa la hora local del estado legacy (el consumidor puede fijar \`--as-of\`),
 ventana inclusiva de 1–31 días y muestras p95 por nearest-rank.
 
-## Validación, amenazas técnicas y reversibilidad
+## Pruebas
 
 \`python -m pytest tests/test_observability_dashboard.py -q -p no:cacheprovider\`
 crea fixtures sintéticos en directorios temporales, sin red. Cubre nueve redes,
@@ -130,6 +139,10 @@ nunca sobre datos de producción.
 7. **Snapshots no sincronizados**: JSON y HTML se reemplazan individualmente
    (no como transacción doble); publicar ambos juntos solo tras comprobar
    \`as_of\` y \`schema_version\`. No hay servidor para consultas atómicas.
+
+## Retirada
+
+No hay migración, dependencia ni servicio que revertir. Eliminar el exportador, el test, esta investigación y los artefactos estáticos si se decide retirar la funcionalidad; la fuente local queda intacta. El despliegue es opt-in y no instala tareas programadas.
 
 ## Casos aún por comprobar con el controlador
 
