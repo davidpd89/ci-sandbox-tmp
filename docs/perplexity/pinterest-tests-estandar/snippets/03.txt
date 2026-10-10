@@ -1,0 +1,22 @@
+python
+# https://github.com/getsentry/responses/blob/master/README.rst
+    import responses
+    import requests
+    from responses import matchers
+
+
+    @responses.activate
+    def test_calc_api():
+        responses.post(
+            url="http://example.com/",
+            body="one",
+            match=[
+                matchers.json_params_matcher({"page": {"name": "first", "type": "json"}})
+            ],
+        )
+        resp = requests.request(
+            "POST",
+            "http://example.com/",
+            headers={"Content-Type": "application/json"},
+            json={"page": {"name": "first", "type": "json"}},
+        )
