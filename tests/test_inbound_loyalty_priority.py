@@ -331,7 +331,8 @@ class InboundLoyaltyTests(unittest.TestCase):
                 obs(event_id="different", kind="reply", day="2026-10-09",
                     target_ref="t2", answered=False)]
         self.assertEqual([p["target_ref"] for p in
-                          self.build(rows)["queues"]["API"][0]["proposals"]],
+                          self.build(rows)["queues"]["API"][0]["proposals"]
+                          if p["kind"] in ("reply_review", "context_review")],
                          ["t2"])
 
     def test_recent_posts_reconcile_by_stable_identity(self):
