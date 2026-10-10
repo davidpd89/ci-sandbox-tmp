@@ -1,0 +1,30 @@
+python
+# tools/facebook/action_ranking.py
+# Ranking específico de Facebook; se integra con el ranking global existente.
+
+def facebook_features(candidate: dict, post: dict) -> dict:
+    return {
+        "destination_type": candidate.get("destination_type", "page_post"),
+        "post_age_days": candidate.get("post_age_days", 999),
+        "engagement": (
+            post.get("reactions", 0)
+            + post.get("comments", 0)
+            + post.get("shares", 0)
+        ),
+        "has_question": "?" in post.get("text", ""),
+        "is_spanish": any(
+            word in post.get("text", "").lower()
+            for word in ("libro", "lectura", "fantasía", "autor", "novela")
+        ),
+    }
+
+def rank_facebook_actions(items: list[dict]) -> list[dict]:
+    def score(item: dict) -> float:
+        features = facebook_features(item["candidate"], item["post"])
+        base = features["engagement"] / 100
+        recency = max(0, 7 - features["post_age_days"]) / 7
+        relevance = 2.0 if features["is_spanish"] else 0.0
+        question_bonus = 1.5 if features["has_question"] else 0.0
+        return base + recency + relevance + question_bonus
+
+    return sorted(items, key=score, reverse=True)
