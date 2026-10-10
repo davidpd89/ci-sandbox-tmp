@@ -1,0 +1,9 @@
+python
+# https://github.com/leog25/reddit-cli/blob/main/src/reddit_cli/client.py
+author=data.get("author", "[deleted]"),
+body=data.get("body", ""),
+score=data.get("score", 0),
+created_utc=data.get("created_utc", 0.0),
+permalink=data.get("permalink", ""),
+depth=data.get("depth", 0),
+is_submitter=data.get("is_submitter", False),
