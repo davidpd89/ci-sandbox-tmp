@@ -33,7 +33,7 @@ No se incorporan archivos de los candidatos; los hashes, licencias y descartes e
 
 ## Decisión
 
-**Elección:** ampliar mediante composición con SQLite estándar, sin reescribir el ledger existente ni incluir librería adicional. Inspiración de patrones documentados (transactional claim y fencing) no es copia de archivos. Atribución arriba. La fecha inicial solicitada se almacena en `source_due` separada del vencimiento `due` mutable para que un reintento del productor no cree falsos conflictos. Se reduce el coste operativo: **0 dependencias, 0 procesos extra obligatorios**, misma tecnología que `ActionLedger`.
+**Elección:** ampliar mediante composición con SQLite estándar, sin reescribir el ledger existente ni incluir librería adicional. Inspiración de patrones documentados (transactional claim y fencing) no es copia de archivos. Atribución arriba. La prohibición expresa del auto-like en X se aplica al encolado de `kind=like/favourite/favorite`. La fecha inicial solicitada se almacena en `source_due` separada del vencimiento `due` mutable para que un reintento del productor no cree falsos conflictos. Se reduce el coste operativo: **0 dependencias, 0 procesos extra obligatorios**, misma tecnología que `ActionLedger`.
 
 ## Contrato y límites
 
@@ -50,7 +50,7 @@ No se incorporan archivos de los candidatos; los hashes, licencias y descartes e
 
 ### Despliegue gradual y retirada
 
-1. **Pruebas sintéticas** en `tests/test_intent_queue.py`: `python -m pytest tests/test_intent_queue.py -q`. Se incluyen 9 redes, 3 canales, doble consumidor, reintento de productor, fence, ACK tardío, fault injection con `os._exit`, conciliación, TTL, DLQ, jitter y aislamiento.
+1. **Pruebas sintéticas** en `tests/test_intent_queue.py`: `python -m pytest tests/test_intent_queue.py -q`. Se incluyen 9 redes, 3 canales, carreras reales entre cinco subprocesos, doble consumidor, reintento de productor, fence, ACK tardío, fault injection con `os._exit`, conciliación, TTL, DLQ, jitter y aislamiento.
 2. El módulo **no se activa** automáticamente. Piloto: emitir `intent_key` desde una sola ruta offline, comparar número de candidatos/ACK con ledger; activar adaptador en un canario supervisado con verificación de estado remoto antes de cualquier reintento dudoso.
 3. Medir `unconfirmed / dispatched`, `claimed expiradas`, duplicados suprimidos, latencia `enqueue→claim`, recola segura y volumen confirmado por red/canal. Aún **no hay métrica de mejora productiva**: ninguna red real fue tocada.
 4. Retirada: desactivar la adaptación; conservar el fichero SQLite para auditoría/exportación; no borrar ni reescribir `ActionLedger` ni CSV. El esquema está aislado en una base nueva; no hay migración automática o irreversible.

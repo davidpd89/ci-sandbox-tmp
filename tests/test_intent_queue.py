@@ -265,3 +265,36 @@ def test_conflicting_explicit_schedule_is_rejected(env):
         put(q, due=1101.0)
     with pytest.raises(IdempotencyConflict):
         put(q)  # el primer emisor pidió una fecha explícita
+
+def test_no_auto_like_on_x(env):
+    q, _ = env
+    for kind in ("like", "favourite", "favorite"):
+        with pytest.raises(ValueError):
+            q.enqueue(network="x", channel="WEB", intent_key="like-1",
+                      kind=kind, target="post/123")
+
+def test_concurrent_subprocesses_only_one_claim(tmp_path):
+    path = str(tmp_path / "multiprocess.sqlite")
+    q = IntentQueue(path)
+    put(q)
+    source = str(pathlib.Path(__file__).resolve().parents[1] / "tools")
+    script = (
+        "import os,sys;"
+        "sys.path.insert(0,sys.argv[1]);"
+        "from intent_queue import IntentQueue;"
+        "q=IntentQueue(sys.argv[2]);"
+        "t=q.claim('API',str(os.getpid()),lease_seconds=60);"
+        "print('won' if t else 'none',flush=True)"
+    )
+    workers = [
+        subprocess.Popen([sys.executable, "-c", script, source, path],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        for _ in range(5)
+    ]
+    outcomes = []
+    for process in workers:
+        out, err = process.communicate(timeout=30)
+        assert process.returncode == 0, err
+        outcomes.append(out.strip())
+    assert outcomes.count("won") == 1, outcomes
+    assert outcomes.count("none") == 4, outcomes

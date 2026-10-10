@@ -103,6 +103,7 @@ class IntentQueue:
         db = sqlite3.connect(self.path, timeout=30, isolation_level=None)
         db.row_factory = sqlite3.Row
         db.execute("PRAGMA busy_timeout=30000")
+        db.execute("PRAGMA synchronous=FULL")
         return db
 
     @contextlib.contextmanager
@@ -137,6 +138,8 @@ class IntentQueue:
                 max_attempts: int = 5) -> int:
         if network not in NETWORKS or channel not in CHANNELS:
             raise ValueError("red/canal desconocidos")
+        if network == "x" and kind.casefold() in ("like", "favourite", "favorite"):
+            raise ValueError("X no permite auto-like")
         intent_key = self._required(intent_key, "intent_key")
         kind = self._required(kind, "kind")
         target = self._required(target, "target")
