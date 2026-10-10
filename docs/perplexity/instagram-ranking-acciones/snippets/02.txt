@@ -1,0 +1,10 @@
+python
+# https://subzeroid.github.io/instagrapi/usage-guide/hashtag.html
+hashtag_medias_top(name: str, amount: int = 9) -> List[Media]
+hashtag_medias_recent(name: str, amount: int = 27) -> List[Media]
+hashtag_medias_paginated(
+    name: str,
+    amount: int = 27,
+    tab_key: str = "recent",
+    end_cursor: str | None = None,
+) -> Tuple[List[Media], str]
