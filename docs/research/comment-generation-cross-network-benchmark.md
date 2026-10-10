@@ -119,7 +119,20 @@ salida explícitos. Los tests usan directorios temporales.
 las nueve redes. **Después (fixtures):** 36 pares, 72 ejemplos;
 12 pruebas unitarias específicas; las pruebas de revisión ficticia
 demuestran el funcionamiento del cálculo, **no una preferencia real**.
-Pendiente actualizar el informe con resultado de Actions del HEAD final.
+Evidencia del HEAD de código `9830eddd79bca6336d5357f7c876cff1077d9cb3`:
+[Actions de pruebas 38016943031](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38016943031),
+**Ubuntu 1700 passed, 8 skipped, 8 deselected; Windows 1703 passed,
+5 skipped, 8 deselected**, 681 subtests en cada runner; ninguna regresión
+fallida. [Control público 38016945765](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38016945765):
+**Ubuntu y Windows correctos**. Los resultados reflejan
+fixtures ficticios y pruebas offline, no sesiones ni comentarios reales.
+
+La auditoría encontró un falso positivo preexistente en
+`tools/spellcheck_es.py` al evaluar la forma verbal `borren`.
+Se corrigió solo la oración sintética del fixture de esta PR, y se
+abrió [#105](https://github.com/davidpd89/ci-sandbox-tmp/pull/105)
+para implementar una solución morfológica común sin cambiar
+los ejecutores dentro de #72.
 
 ## Segunda revisión adversarial
 
