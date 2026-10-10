@@ -27,18 +27,37 @@ Fuentes: [webhook push de GitHub](https://docs.github.com/en/webhooks/webhook-ev
 
 ## Validación y segunda revisión adversarial
 
-`python -m unittest discover -s tests -p 'test_push_hygiene.py' -v`: **16 pruebas correctas** en Linux/Python 3.13; 6 subcasos adicionales de entrada inválida. `pytest -q -p no:cacheprovider tests/test_push_hygiene.py`: **16 passed**. Repositorios Git efímeros, datos sintéticos. Cubren multicommits, deuda histórica intacta, SHA cero, fuerza, `before` ausente, `after` y HEAD discordantes, rama ajena, evento borrado, renombrado a ruta prohibida, cambio de tipo a gitlink, eliminación, CLI y contrato estático de workflow. `compileall`: correcto.
+`python -m unittest discover -s tests -p 'test_push_hygiene.py' -v`: **24 pruebas de regresión (estado 10/10)** en Linux/Python 3.13; 6 subcasos adicionales de entrada inválida. `pytest -q -p no:cacheprovider tests/test_push_hygiene.py`: **24 casos definidos, sujetos a los checks del HEAD actualizado**. Repositorios Git efímeros, datos sintéticos. Cubren multicommits, deuda histórica intacta, SHA cero, fuerza, `before` ausente, `after` y HEAD discordantes, rama ajena, evento borrado, renombrado a ruta prohibida, cambio de tipo a gitlink, eliminación, CLI y contrato estático de workflow. `compileall`: correcto.
 
 **Revisión adversarial (segunda pasada):**
 
 1. No interpolar SHA ni JSON del evento en el shell: el fichero del evento lo suministra el runner. Validar SHA, ref, Git HEAD y disponibilidad del objeto anterior.
 2. `fetch-depth: 0` cubre rangos largos, **no garantiza** objetos `before` inalcanzables tras reescribir historial. Error verificable, no falso verde; Claude puede estudiar recuperación o canario.
 3. Los cambios de tipo `T` y renombrados se tratan como modificación/nueva ruta (`--no-renames`); separador NUL. No se escanea ni se imprime el contenido de ficheros.
-4. La base actual contiene #2. La sincronización conserva su clasificador estricto (ancestros, UTF-8, escape de diagnósticos) y separa las condiciones por evento. Volver a ejecutar los checks del HEAD sincronizado. No hacer merge automático.
-5. **Pendiente de Claude:** CI GitHub real en Windows y Ubuntu con Python 3.11; comprobación con actionlint (#90); canario supervisado de push a main sobre espejo sin datos reales; revisión cruzada #2/#87/#89/#92. No se han generado acciones sociales ni pushes a main.
+4. La base actual contiene #2 y #87. La sincronización conserva íntegros el clasificador de #2 (ancestros, UTF-8, escape de diagnósticos), las comprobaciones de Gitleaks de #87 y separa las condiciones por evento. El conflicto del fixture TikTok se resuelve manteniendo exactamente la versión de la base (sin modificaciones operativas). No hacer merge automático.
+5. **Pendiente de Claude:** canario supervisado de evento push real en un repositorio temporal saneado; no se sustituye por checks de pull_request. Comprobación cruzada de integración con #89/#92/#93; actionlint (#90 cerrada, sin fusionar) es complemento de validación, no detector de diff. No se han generado acciones sociales ni pushes a main.
 
 **Rollback:** revertir los commits de #88; sin migraciones, cambios de cuentas ni estados operativos.
 
 ## Sincronización y pruebas adicionales (10/10/2026)
 
 La rama se ha incorporado a la base actual `ci/test-campaign-parent` mediante commit de reconciliación, usando la versión más estricta de `tools/repo_hygiene.py` de la base. Se añaden regresiones para UTF-8 inválido en el primer push, ancestros sensibles, `before == after` y ausencia de filtros `paths` en el evento `push`. El análisis de commits transitorios sigue separado en #93. La validación de esta revisión corresponde a los nuevos checks del HEAD, no a los checks históricos de 09/10.
+
+
+## Actualización tras comentarios de Claude y revisores — 10/10/2026
+
+Se leyeron **las nueve entradas de conversación**, **dos reviews** y los hilos inline (**cero**) de la PR. No se encontró comentario sin clasificar. Los comentarios REV 88 de 09/10 y 10/10 se atienden del siguiente modo:
+
+| Punto | Resolución verificable |
+| --- | --- |
+| Integrar sobre la base vigente, sin perder #2 | Commit de reconciliación con dos padres: `6d0ad82486c91eba9b4c6007fac5192a08708535`; base actualizada a `3d0304c0704e31c8a1ecbd62944d22c330bd7ea5`; clasificador `tools/repo_hygiene.py` heredado de la base, sin cambio en el diff final. |
+| Conflicto de #87 en `tests/test_tiktok_safety.py` | Se eligió **la versión de la base**: contiene el uso de fecha actual y conserva todos los tests y controles de TikTok. El fichero **no aparece en el diff final** de #88. |
+| Preservar escaneo de contenido de #87 | El YAML sincronizado conserva `install_gitleaks_ci.py` y `pr_secret_content_scan.py` bajo `pull_request`, tras el gate de rutas y antes de `pip`. Ningún detector se duplica. |
+| No filtrar pushes por `tools/**` o `tests/**` | Corregido: `on.push` solo contiene `branches: [main]`, **sin `paths`**. El test `test_push_trigger_is_not_filtered_by_paths` evita regresiones. Se descubrió este defecto al revisar la reconciliación, y se corrigió antes de la entrega. |
+| Mantener semántica de eventos | `HEAD^1` y Gitleaks solo en PR; `before..after` de evento y checkout completo solo en push; dispatch ejecuta únicamente la suite offline. Permisos de solo lectura y acciones fijadas. |
+| Logs, UTF-8 inválido, ancestros, SHA cero y renombres | Corregidos en rondas anteriores. Se conserva escape `!r` en logs; pruebas incluyen UTF-8 inválido, ancestros sensibles y tipo Gitlink. Se añaden prueba Git real de **rutas con espacios** y error 2 ante **JSON truncado**. Prueba de ruta con salto de línea se hace con inyección sintética para evitar crear nombres no válidos en Windows. |
+| PRs relacionadas y repo real | #89 cubre historial de PR, #93 historial intermedio push, #92 aislamiento del verificador y #87 contenido. No se abren PR redundantes. **Decisión actual de Claude:** esta higiene pertenece al mirror CI; **no se porta sin adaptación** el workflow ni sus tests al repositorio privado. Se descarta la sugerencia anterior de modificar inmediatamente el repo real. |
+| Canario real de push | **No ejecutado**: CI de esta PR usa `pull_request`, por lo que no acredita la rama `if: push`. Única validación de integración externa pendiente: Claude puede realizar push supervisado a `main` en **un repositorio canario saneado**, sin probar con cuentas ni mover `main` del espejo de trabajo. La suite Git sintética cubre `before..after` y fallos antes de ese ensayo. |
+| Ejecución y checks | Revisar el run del **último HEAD**, no runs históricos. Las pruebas sintéticas y de workflow son multiplataforma; el workflow completo se ejecuta en Windows/Ubuntu Python 3.11. El control del evento push real queda explícitamente aparte. |
+
+**Riesgo residual que no afecta al alcance de #88:** rutas añadidas y eliminadas en commits intermedios no se observan en diff final (implementación encargada en #93). El core compartido se reutilizará al integrar #89 y #93; no debe duplicarse en #88. No se crean PR nuevas. Merge a cargo de Claude.
