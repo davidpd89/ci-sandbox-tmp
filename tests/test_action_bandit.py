@@ -165,9 +165,9 @@ def test_invalid_model_factory_propagates_instead_of_silent_success():
 
 def test_multiple_windows_per_event_and_only_day7_trains():
     day1 = observed(key='shared', window_days=1,
-                    performed_on=TODAY-timedelta(days=1))
+                    observed_on=TODAY-timedelta(days=6))
     day3 = observed(key='shared', window_days=3,
-                    performed_on=TODAY-timedelta(days=3))
+                    observed_on=TODAY-timedelta(days=4))
     day7 = observed(key='shared')
     result = rank_candidates([candidate()], [day1, day3, day7], as_of=TODAY)
     assert result[0].mature_events == 1
