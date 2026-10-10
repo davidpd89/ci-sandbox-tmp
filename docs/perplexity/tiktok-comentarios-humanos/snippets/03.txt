@@ -1,0 +1,4 @@
+python
+# Fuente exacta: https://github.com/RomySaputraSihananda/tiktok-comment-scrapper/blob/master/main.py
+from tiktokcomment import TiktokComment
+from tiktokcomment.typing import Comments
