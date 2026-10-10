@@ -185,10 +185,18 @@ def _env_declarations(root):
         except (OSError, UnicodeError, SyntaxError):
             continue
         for node in ast.walk(tree):
+            # os.environ["NAME"] es lectura común y no pasa por .get().
+            if (isinstance(node, ast.Subscript)
+                    and isinstance(node.value, ast.Attribute)
+                    and isinstance(node.value.value, ast.Name)
+                    and node.value.value.id == "os" and node.value.attr == "environ"
+                    and isinstance(node.slice, ast.Constant)
+                    and isinstance(node.slice.value, str)):
+                found.setdefault(node.slice.value, set()).add(path.name)
             if not isinstance(node, ast.Call) or not node.args:
                 continue
             func = node.func
-            if not isinstance(func, ast.Attribute) or func.attr not in ("getenv", "get"):
+            if not isinstance(func, ast.Attribute) or func.attr not in ("getenv", "get", "setdefault"):
                 continue
             receiver = func.value
             is_getenv = (isinstance(receiver, ast.Name) and receiver.id == "os"
@@ -196,7 +204,7 @@ def _env_declarations(root):
             is_environ = (isinstance(receiver, ast.Attribute) and
                           isinstance(receiver.value, ast.Name) and
                           receiver.value.id == "os" and receiver.attr == "environ"
-                          and func.attr == "get")
+                          and func.attr in ("get", "setdefault"))
             if not (is_getenv or is_environ):
                 continue
             key = node.args[0]
@@ -207,6 +215,7 @@ def _env_declarations(root):
 
 def audit(root=ROOT, *, pipelines=None, cleanup_adapters=None, harvesters=None):
     root = Path(root)
+    local_registries = any(v is None for v in (pipelines, cleanup_adapters, harvesters))
     if pipelines is None:
         from mechanical_round import PIPELINES
         pipelines = PIPELINES
@@ -222,6 +231,12 @@ def audit(root=ROOT, *, pipelines=None, cleanup_adapters=None, harvesters=None):
     result = {"schema": 1, "capabilities": matrix, "pipelines": {},
               "configurations": {}, "environment_names": _env_declarations(root),
               "findings": [], "errors": 0}
+    if local_registries and root.resolve() != ROOT.resolve():
+        result["findings"].append({
+            "network": "*", "kind": "registry_from_local_checkout",
+            "detail": "los registros de pipeline/adaptadores proceden del checkout que ejecuta el auditor, no de --root",
+            "severity": "warning",
+        })
     for network in cap.NETWORKS:
         pipeline = pipelines.get(network) or {}
         result["pipelines"][network] = _pipeline_view(pipeline)
@@ -314,6 +329,9 @@ def main(argv=None):
             cfg = report["configurations"][network]
             pipe = report["pipelines"][network]
             print(f"{network:10} {pipe['primary_lane'] or '-':6} {cfg['status']:20} {report['wiring'][network]}")
+        for finding in report["findings"]:
+            if finding["kind"] == "registry_from_local_checkout":
+                print("AVISO:", finding["detail"])
         print(f"Hallazgos: {len(report['findings'])}; errores: {report['errors']}")
     return 2 if report["errors"] else 0
 

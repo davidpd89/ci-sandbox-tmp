@@ -200,3 +200,8 @@ contratos/tests y #26 colas. No duplicar esos alcances.
 - Pendiente fuera del alcance declarativo: derivar matrices efectivas de todas
   las rutas de ejecución y validar la consistencia del registro cuando `--root`
   apunta a otro checkout; coordinar con #81 y #82 antes de duplicar.
+
+- Tercera pasada: se reconocen referencias `os.environ["CLAVE"]` y
+  `os.environ.setdefault("CLAVE", ...)` sin evaluar valores; cuando `--root`
+  apunta a otro checkout sin inyección completa de registros, el informe avisa
+  de la procedencia local de los pipelines en vez de ocultar esa mezcla.

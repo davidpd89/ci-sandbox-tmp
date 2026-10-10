@@ -179,11 +179,16 @@ class ConfigCapabilityAuditTests(unittest.TestCase):
             "import os\n"
             "X = os.getenv('FAKE_TOKEN', 'private-test-value')\n"
             "Y = os.environ.get('PROFILE_MODE', 'unrelated')\n"
-            "Z = os.getenv('PROFILE_MODE', 'other')\n",
+            "Z = os.getenv('PROFILE_MODE', 'other')\n"
+            "W = os.environ['INDEX_ONLY_TOKEN']\n"
+            "Q = os.environ.setdefault('ENABLED_FLAG', 'private-second-value')\n",
             encoding="utf-8")
         names = self.report()["environment_names"]
         self.assertEqual(names["FAKE_TOKEN"], ["dummy.py"])
         self.assertEqual(names["PROFILE_MODE"], ["dummy.py"])
+        self.assertEqual(names["INDEX_ONLY_TOKEN"], ["dummy.py"])
+        self.assertEqual(names["ENABLED_FLAG"], ["dummy.py"])
+        self.assertNotIn("private-second-value", json.dumps(names))
         self.assertNotIn("private-test-value", json.dumps(names))
         self.assertNotIn("unrelated", json.dumps(names))
 
@@ -235,6 +240,14 @@ class ConfigCapabilityAuditTests(unittest.TestCase):
         result = self.report()
         self.assertEqual(result["configurations"]["mastodon"]["status"], "invalid")
         self.assertEqual(result["errors"], 1)
+
+    def test_foreign_checkout_registry_provenance_is_explicit(self):
+        report = audit.audit(self.root)
+        self.assertTrue(any(f["kind"] == "registry_from_local_checkout"
+                            for f in report["findings"]))
+        report_with_fixtures = self.report()
+        self.assertFalse(any(f["kind"] == "registry_from_local_checkout"
+                             for f in report_with_fixtures["findings"]))
 
 
 if __name__ == "__main__":
