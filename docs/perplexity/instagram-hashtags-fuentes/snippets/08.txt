@@ -1,0 +1,6 @@
+python
+# Fuente exacta:
+# https://github.com/instaloader/instaloader/blob/master/instaloader/__main__.py
+elif re.match(r"^#\w+$", target):
+    instaloader.download_hashtag(hashtag=target[1:], max_count=max_count, fast_update=fast_update,
+                                 post_filter=post_filter,
