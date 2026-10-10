@@ -22,7 +22,7 @@ PROTECTED = re.compile(
     r"(?<!\w)@[\w.]+|(?<!\w)#[\wáéíóúüñÁÉÍÓÚÜÑ]+|"
     + re.escape(chr(96)) + r"[^" + re.escape(chr(96)) + r"\n]*" + re.escape(chr(96))
     + r'|«[^»\n]*»|“[^”\n]*”|"[^"\n]*"', re.UNICODE)
-FENCED_CODE = re.compile(r"(?ms)^[ \t]*(`{3,}|~{3,})[^\n]*\n.*?^[ \t]*\1[ \t]*$")
+FENCED_CODE = re.compile(r"(?ms)^[ \t]*(`{3,}|~{3,})[^\n]*\n.*?^[ \t]*\1[ \t]*\r?$")
 HTML_TAG = re.compile(r"</?[A-Za-z][^<>\n]*>", re.UNICODE)
 
 VARIANT_ES_ES = {
@@ -89,20 +89,31 @@ def audit(text: str, *, network: str, locale: str = "es-ES", queue: str | None =
     for match in MISSING_SPACE.finditer(masked):
         add("space_before_punctuation", "warning", match.start(), match.end(),
             "Revisar espacio antes del signo")
-    segment_start = 0
+    # Llevar cada apertura por separado: ¡¿...? ! y ¿¡...!? son formas
+    # españolas válidas. Una pausa de puntos suspensivos no cierra la pregunta.
+    question_open = exclamation_open = False
     for i, ch in enumerate(masked):
-        if ch in ".;\n":
-            segment_start = i + 1
+        if ch == "¿":
+            question_open = True
+        elif ch == "¡":
+            exclamation_open = True
         elif ch == "?":
-            if "¿" not in masked[segment_start:i]:
+            if not question_open:
                 add("question_opening", "warning", i, i + 1,
                     "Comprobar apertura «¿» en pregunta en español")
-            segment_start = i + 1
+            question_open = False
         elif ch == "!":
-            if "¡" not in masked[segment_start:i]:
+            if not exclamation_open:
                 add("exclamation_opening", "warning", i, i + 1,
                     "Comprobar apertura «¡» en exclamación en español")
-            segment_start = i + 1
+            exclamation_open = False
+        elif ch in ";\n" or (
+            ch == "." and not (
+                (i > 0 and masked[i - 1] == ".") or
+                (i + 1 < len(masked) and masked[i + 1] == ".")
+            )
+        ):
+            question_open = exclamation_open = False
     if locale == "es-ES":
         for match in WORD_PATTERN.finditer(masked):
             replacement = VARIANT_ES_ES.get(match.group().casefold())
