@@ -1,0 +1,49 @@
+python
+# Nuevo archivo sugerido: tools/facebook_group_discovery.py
+# Basado en el contrato de salida de:
+# https://github.com/mohdtalal3/facebook_post_comment_scraper/blob/main/scraper/group_posts.py
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+GROUPS_JSON = ROOT / "00_OPERATIVO" / "facebook_groups.json"
+
+
+def load_groups():
+    if not GROUPS_JSON.exists():
+        return []
+
+    with GROUPS_JSON.open(encoding="utf-8") as stream:
+        data = json.load(stream)
+
+    groups = data.get("groups", [])
+    return [
+        {
+            "slug": item["slug"],
+            "url": item["url"],
+            "tema": item.get("tema", "lectura"),
+            "prioridad": int(item.get("prioridad", 3)),
+            "max_posts": int(item.get("max_posts", 10)),
+            "min_comments": int(item.get("min_comments", 0)),
+        }
+        for item in groups
+        if item.get("slug") and item.get("url")
+    ]
+
+
+def normalize_candidate(group, post):
+    return {
+        "origen": f"group:{group['slug']}",
+        "grupo": group["slug"],
+        "autor": post.get("autor"),
+        "permalink": post.get("permalink"),
+        "texto": post.get("texto", ""),
+        "creado_en": post.get("created_at"),
+        "comentarios": post.get("comment_count", 0),
+        "reacciones": post.get("reaction_count", 0),
+        "compartidos": post.get("share_count", 0),
+        "prioridad": group["prioridad"],
+    }
