@@ -145,6 +145,12 @@ def select_mixed(network: str, seeds, *, budget: int, tick: int,
         return []
     tags = select(network, "hashtags", [], budget=min(tag_slots, budget),
                   tick=tick, reader=reader)
+    # Con una única plaza, reservar siempre el tag excluía el texto para
+    # siempre. Alternar superficies y mantener el fallback si una está vacía.
+    if budget == 1 and tags:
+        text = select(network, "busquedas", seeds, budget=1,
+                      tick=tick // 2, reader=reader)
+        return (text or tags) if tick % 2 == 0 else (tags or text)
     text_limit = budget - len(tags)
     candidates = select(network, "busquedas", seeds, budget=text_limit,
                         tick=tick, reader=reader)
