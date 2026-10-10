@@ -105,17 +105,91 @@ class LiveEvidenceTests(unittest.TestCase):
         with self.assertRaises(p.AuditError):
             self.verify(r)
         r = SyntheticReader()
-        r.statuses.append({"context": "trusted-pr-paths", "state": "success"})
+        r.statuses.append({"id": 900, "context": "trusted-pr-paths", "state": "success"})
         with self.assertRaisesRegex(p.AuditError, "collides"):
             self.verify(r)
 
     def test_pr_association_required_and_head_movement(self):
         r = SyntheticReader()
         r.records["/repos/" + REPO + "/actions/runs/201"]["pull_requests"] = []
-        with self.assertRaisesRegex(p.AuditError, "linked"):
+        with self.assertRaisesRegex(e.EvidenceUnavailable, "empty"):
             self.verify(r)
         with self.assertRaisesRegex(p.AuditError, "stale"):
             self.verify(SyntheticReader(mutate=True))
+
+    def test_real_pull_request_target_empty_association_requires_operator(self):
+        # Public GitHub example: base/docs Actions run 37981995220.
+        # Real REST returns event=pull_request_target, pull_requests=[],
+        # head_sha of base branch, not necessarily the PR head.
+        r = SyntheticReader()
+        r.records["/repos/" + REPO + "/actions/runs/201"].update({
+            "event": "pull_request_target", "pull_requests": [],
+            "head_sha": BASE, "head_branch": "fix/demo-pr",
+        })
+        # Query the base commit SHA as required by pull_request_target.
+        r.checks[0]["head_sha"] = BASE
+        r.checks[1]["head_sha"] = BASE
+        with self.assertRaisesRegex(e.EvidenceUnavailable, "manually"):
+            self.verify(r, ref=BASE)
+        # The same run must NEVER be certified for an arbitrary unrelated PR.
+        r.records["/repos/" + REPO + "/actions/runs/201"]["pull_requests"] = [
+            {"number": 999, "head": {"sha": HEAD}}
+        ]
+        with self.assertRaisesRegex(p.AuditError, "not linked"):
+            self.verify(r, ref=BASE)
+
+    def test_merge_ref_changes_even_if_head_constant(self):
+        class Changed(SyntheticReader):
+            def get(self, path):
+                result = super().get(path)
+                if path == "/repos/" + REPO + "/pulls/96" and self.calls.count(path) == 2:
+                    result["merge_commit_sha"] = "e" * 40
+                return result
+        with self.assertRaisesRegex(p.AuditError, "moved"):
+            self.verify(Changed())
+
+    def test_pagination_201_items_and_duplicate_page_swap(self):
+        class Paged:
+            def __init__(self, duplicate=False):
+                self.calls = []
+                self.duplicate = duplicate
+            def get(self, path):
+                self.calls.append(path)
+                number = int(path.rsplit("page=", 1)[1])
+                records = [{"id": x} for x in range(201)]
+                block = records[(number - 1) * 100:number * 100]
+                if self.duplicate and number == 2:
+                    block[0] = {"id": 0}  # repeated ID, same total_count
+                return {"total_count": 201, "check_runs": block}
+        r = Paged()
+        self.assertEqual(len(e.pages(r, "/checks", "check_runs")), 201)
+        self.assertEqual(len(r.calls), 3)
+        with self.assertRaisesRegex(p.AuditError, "duplicate"):
+            e.pages(Paged(duplicate=True), "/checks", "check_runs")
+
+    def test_exact_full_last_page_and_rerun_job_incomplete(self):
+        class Paged:
+            def __init__(self):
+                self.calls = []
+            def get(self, path):
+                self.calls.append(path)
+                n = int(path.rsplit("page=", 1)[1])
+                return {"total_count": 200, "check_runs": [
+                    {"id": k} for k in range((n-1)*100, min(n*100, 200))
+                ]}
+        r = Paged()
+        self.assertEqual(len(e.pages(r, "/checks", "check_runs")), 200)
+        self.assertEqual(len(r.calls), 2)
+        s = SyntheticReader()
+        s.records["/repos/" + REPO + "/actions/jobs/301"]["status"] = "in_progress"
+        with self.assertRaises(p.AuditError):
+            self.verify(s)
+
+    def test_merge_group_remains_out_of_scope(self):
+        r = SyntheticReader()
+        r.records["/repos/" + REPO + "/actions/runs/201"]["event"] = "merge_group"
+        with self.assertRaises(p.AuditError):
+            self.verify(r)
 
     def test_malformed_and_bounded_pagination(self):
         class Short:
