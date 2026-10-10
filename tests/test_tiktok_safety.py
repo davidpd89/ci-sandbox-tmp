@@ -365,7 +365,13 @@ class TikTokSafetyTests(unittest.TestCase):
                 f"2026-10-09,@privada,follow,,,pendiente_aprobacion,x | intent_id={intent_id}",
             ]
             path.write_text("\n".join(lines) + "\n", encoding="utf-8-sig")
-            with mock.patch.object(bulk, "REGISTRO_CSV", str(path)):
+            # La fixture es del 09/10; no depender de la fecha del runner.
+            # Se conserva intacta la semántica operativa de recorded_actions().
+            original_recorded_actions = safety.recorded_actions
+            def at_fixture_date(csv_path):
+                return original_recorded_actions(csv_path, today=dt.date(2026, 10, 9))
+            with mock.patch.object(bulk, "REGISTRO_CSV", str(path)), \
+                    mock.patch.object(safety, "recorded_actions", side_effect=at_fixture_date):
                 already, total = bulk.followed_before()
             self.assertIn("privada", already)
             self.assertEqual(total, 1)
