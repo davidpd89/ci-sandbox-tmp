@@ -12,6 +12,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import threads_pool as tp
 import threads_build_plan as tb
+import scan_common as sc
 
 NOW = datetime.datetime(2026, 10, 5, 22, 0, 0)
 TODAY = NOW.date()
@@ -182,7 +183,8 @@ class ExecutorTests(unittest.TestCase):
 
     def test_preflight_keeps_only_canonical_permalinks_of_the_same_author(self):
         pre = load_function("threads_execute.py", "_preflight_plan", self.namespace(self.fake_t(), _VALID_KINDS={"follow", "like", "reply"},
-                                                                                     sc=types.SimpleNamespace(drop_stacked_actions=lambda p, **k: p, report_plan_style=lambda p: None)))
+                                                                                     sc=types.SimpleNamespace(drop_stacked_actions=lambda p, **k: p, report_plan_style=lambda p: None,
+                                                                                                               plan_action_duplicate_key=sc.plan_action_duplicate_key)))
         plan = pre([
             {"kind": "like", "handle": "ana", "text_fragment": "a", "permalink": "https://www.threads.com/@ana/post/AAA/"},
             {"kind": "like", "handle": "bea", "text_fragment": "b", "permalink": "https://www.threads.com/@otra/post/BBB"},
