@@ -1,0 +1,40 @@
+python
+# Propuesto: tests/fakes/threads_api_fake.py
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import httpx
+import respx
+
+FIXTURES = Path(__file__).parents[1] / "fixtures" / "threads"
+
+
+def load(name: str) -> dict:
+    return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+
+
+class ThreadsAPIFake:
+    def __init__(self) -> None:
+        self.create_calls = 0
+        self.publish_calls = 0
+        self.fail_create_container = False
+        self.fail_publish = False
+        self.router = respx.mock(base_url="https://graph.threads.net/v1.0")
+        self._register()
+
+    def _register(self) -> None:
+        @self.router.post("/me/threads")
+        def create_container(request: httpx.Request) -> httpx.Response:
+            self.create_calls += 1
+            if self.fail_create_container:
+                return httpx.Response(500, json={"error": {"message": "container creation failed"}})
+            return httpx.Response(200, json=load("container_created.json"))
+
+        @self.router.post("/me/threads_publish")
+        def publish_container(request: httpx.Request) -> httpx.Response:
+            self.publish_calls += 1
+            if self.fail_publish:
+                return httpx.Response(500, json={"error": {"message": "publish failed"}})
+            return httpx.Response(200, json=load("publish_success.json"))
