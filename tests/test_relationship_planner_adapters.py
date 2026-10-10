@@ -175,6 +175,23 @@ class PlannerBridge(unittest.TestCase):
             self.assertEqual(outbound, {"x": []})
             self.assertEqual(dbpath.stat().st_size, before)
 
+    def test_native_unix_seconds_and_milliseconds(self):
+        epoch = int(dt.datetime(2026, 10, 9, 12, tzinfo=dt.timezone.utc).timestamp())
+        for value in (epoch, str(epoch), epoch * 1000, str(epoch * 1000)):
+            self.assertEqual(bridge._day(value), "2026-10-09")
+            row = source("reddit", "WEB", kind="reply", post={"created_utc": value},
+                         preflight=pre(follow_eligible=False))
+            prepared, _ = bridge.build_snapshot([row], {}, [], today=TODAY)
+            self.assertEqual(prepared["candidates"][0]["reply_target_at"], "2026-10-09")
+
+    def test_huge_numeric_affinity_never_crashes_entire_batch(self):
+        prepared, _ = bridge.build_snapshot(
+            [source("reddit", affinity=10 ** 2000), source("x", affinity=0.5)],
+            {}, [], today=TODAY)
+        self.assertEqual(len(prepared["candidates"]), 2)
+        self.assertEqual(prepared["candidates"][0]["affinity"], 0.0)
+        self.assertEqual(prepared["candidates"][1]["affinity"], 0.5)
+
     def test_cost_read_microbenchmark_synthetic(self):
         samples = [source(net, lane, handle=f"reader_{net}_{lane}_{i}")
                    for i in range(50) for net in bridge.NETWORKS for lane in bridge.LANES]
