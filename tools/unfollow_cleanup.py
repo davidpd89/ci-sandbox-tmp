@@ -33,25 +33,48 @@ import text_common as tc
 ROOT = ga.ROOT
 
 
-def candidates(rows, followers, today, *, days=gp.NONRECIPROCAL_DAYS, following=None):
-    """[{account, reason}] a dejar de seguir. `following`: {handle_en_minuscula: biografia} de todo lo que seguimos (para la regla de idioma)."""
-    out, seen = [], set()
-    for item in fr.review(rows, followers, today, days):
-        if "reply" in item["actions"]:
-            continue                                        # hubo conversacion: mas paciencia
-        out.append({"account": item["account"], "reason": f"no devuelve el follow tras {item['age_days']} dias"})
-        seen.add(item["account"].casefold())
-    followers_cf = {ga.norm(f).casefold() for f in followers}
+def candidates(rows, followers, today, *, days=gp.NONRECIPROCAL_DAYS,
+               following=None, network=None):
+    """Candidatos offline, sin usar ausencias de una lista parcial como prueba.
+
+    Si se conoce la lista de seguidos, un follow historico solo puede producir
+    candidato cuando el mismo identificador sigue presente. Las biografias de
+    cuentas seguidas manualmente siguen siendo evaluables. Antes de cualquier
+    accion se exige la comprobacion individual en vivo de run().
+    """
+    import followback_lifecycle as fl
+
+    net = network or "bluesky"
+    key = lambda handle: fl.account_key(net, handle)
     protected = protected_accounts()
-    listed = {a.split("@")[0] for a in seen}
-    for handle, bio in (following or {}).items():
-        bare = handle.split("@")[0]
-        if handle in seen or bare in listed or handle in followers_cf or bare in followers_cf or handle in protected or bare in protected:
+
+    def is_protected(handle):
+        normalized = key(handle)
+        # Una entrada local en la lista de proteccion cubre tambien dominios
+        # federados; jamas se usa esa tolerancia para equiparar seguidores.
+        return normalized in protected or normalized.split("@")[0] in protected
+
+    out, seen = [], set()
+    followed_now = None if following is None else {key(h) for h in following}
+    follower_keys = {key(f) for f in followers}
+    for item in fr.review(rows, followers, today, days, network=net):
+        account = key(item["account"])
+        if (not account or is_protected(account) or
+                (followed_now is not None and account not in followed_now) or
+                account in seen or "reply" in item["actions"]):
             continue
-        listed.add(bare)
+        out.append({"account": account,
+                    "reason": f"no devuelve el follow tras {item['age_days']} dias"})
+        seen.add(account)
+    for handle, bio in (following or {}).items():
+        account = key(handle)
+        if (not account or account in seen or account in follower_keys
+                or is_protected(account)):
+            continue
         language = tc.foreign_language(bio or "")
         if language:
-            out.append({"account": handle, "reason": f"biografia en otro idioma ({language})"})
+            out.append({"account": account, "reason": f"biografia en otro idioma ({language})"})
+            seen.add(account)
     return out
 
 
@@ -237,7 +260,7 @@ def run(net, *, apply=False, limit=40, days=gp.NONRECIPROCAL_DAYS, pause=(0.8, 2
     done = failed = 0
     with adapter.session():
         following, followers = adapter.load()
-        todo = candidates(rows, followers, datetime.date.today(), days=days, following=following)
+        todo = candidates(rows, followers, datetime.date.today(), days=days, following=following, network=net)
         out(f"{net}: {len(todo)} cuentas a dejar de seguir ({len(followers)} seguidores leidos, {len(following)} seguidos); tope {limit}")
         for item in todo:
             if done >= limit:
