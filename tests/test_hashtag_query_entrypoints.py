@@ -56,11 +56,13 @@ class EntrypointTests(unittest.TestCase):
                 rd = isolate("reddit_scan.py", "_discovery_sources",
                              datetime=datetime,
                              SUBREDDITS=["libros", "lectura_es"])
-                samples = [rd(today=datetime.date(2026, 10, d), reader=synthetic)
-                           for d in (9, 10)]
+                samples = [rd(today=datetime.date(2026, 10, 10), reader=synthetic,
+                              round_index=i) for i in range(4)]
                 self.assertTrue(any("search" in [row[0] for row in round_]
                                     for round_ in samples))
                 self.assertTrue(all(len(round_) == 2 for round_ in samples))
+                self.assertEqual([any(row[0] == "search" for row in sample)
+                                  for sample in samples], [False, True, False, True])
 
     def test_native_config_loaders_preserve_budgets(self):
         config = {
