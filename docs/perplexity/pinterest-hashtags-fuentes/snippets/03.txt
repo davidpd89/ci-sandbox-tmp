@@ -1,0 +1,11 @@
+python
+# URL exacta del archivo de origen:
+# https://github.com/iamatulsingh/pinscrape/blob/main/pinscrape/pinscrape.py
+# Consultar el archivo original para el código literal; este esqueleto define la integración.
+
+def discover_by_query(query: str, limit: int = 25):
+    """
+    Entrada: consulta en español, por ejemplo 'romantasy libros español'.
+    Salida: lista de pines con URL, imagen y metadatos disponibles.
+    """
+    ...
