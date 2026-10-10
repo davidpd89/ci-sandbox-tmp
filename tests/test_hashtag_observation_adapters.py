@@ -240,6 +240,29 @@ class ObservationTests(unittest.TestCase):
         c.add_posts("instagram", "MOBILE", "profile", bad)
         self.assertEqual(c.counts["invalid"], 1)
 
+    def test_adversarial_reddit_author_and_malformed_facets(self):
+        reddit = sample("reddit")
+        reddit.pop("author_fullname")
+        reddit["author"] = "lectora_sintetica"
+        bluesky = sample("bluesky")
+        bluesky["record"]["facets"][0]["features"] = {"bad": "shape"}
+        c = ObservationCollector(now=NOW)
+        c.add_posts("reddit", "API", "praw", [reddit])
+        c.add_posts("bluesky", "API", "atproto", [bluesky])
+        self.assertEqual(len(c.to_engine_rows()), 2)
+        self.assertEqual(c.counts["invalid"], 0)
+        self.assertEqual(next(r for r in c.to_engine_rows()
+                              if r["network"] == "reddit")["author_id"],
+                         "lectora_sintetica")
+
+    def test_zero_denominator_cannot_claim_a_reply(self):
+        c = ObservationCollector(now=NOW)
+        c.add_feedback("x", "WEB", "reader", [
+            {"event_id": "fake", "window": STAMP, "tag": "lectura",
+             "eligible": 0, "engaged": 0, "replies": 1, "followers": 0}])
+        self.assertEqual(c.feedback_aggregates(), [])
+        self.assertEqual(c.counts["feedback_invalid"], 1)
+
     def test_strict_bad_scope_bounds_and_rollback(self):
         c = ObservationCollector(now=NOW)
         for args in (("fake", "WEB", "test", []),
