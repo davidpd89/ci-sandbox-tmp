@@ -1,0 +1,73 @@
+python
+# Archivo nuevo: tools/tiktok_opportunity_score.py
+# Integración: alimentar con candidatos normalizados por
+# tools/tiktok_niche_sources.py y enriquecidos por
+# tools/tiktok_enrich_qbukold.py.
+
+from __future__ import annotations
+
+import re
+from datetime import datetime, timezone
+
+CONVERSATION_PATTERNS = [
+    r"\bqué leo\b",
+    r"\bqué libro\b",
+    r"\brecomendad\w+",
+    r"\bdespués de\b",
+    r"\bcual\b",
+    r"\bopinión\b",
+    r"\bresen\w+",
+    r"\btropo\b",
+    r"\benemies to lovers\b",
+    r"\bslow burn\b",
+]
+
+GENRE_TERMS = {
+    "romantasy", "fantasia", "fantasía", "fantasiaepica",
+    "fantasía épica", "literaturajuvenil", "literatura juvenil",
+    "darkromance", "dark romance", "faeromance", "dragones", "vampiros",
+}
+
+
+def score_candidate(candidate: dict) -> float:
+    score = 0.0
+    caption = (candidate.get("caption") or "").lower()
+    hashtags = set(candidate.get("hashtags") or [])
+
+    if candidate.get("bucket") == "genre":
+        score += 2.0
+    if candidate.get("bucket") == "trope":
+        score += 2.5
+    if candidate.get("priority") == "high":
+        score += 1.0
+
+    score += sum(1.5 for pattern in CONVERSATION_PATTERNS if re.search(pattern, caption))
+    score += sum(0.75 for term in GENRE_TERMS if term in hashtags or term in caption)
+
+    comments = candidate.get("comments") or 0
+    likes = candidate.get("likes") or 0
+    if likes:
+        score += min(3.0, (comments / max(likes, 1)) * 30)
+
+    discovered_at = candidate.get("discovered_at")
+    if discovered_at:
+        age_hours = (
+            datetime.now(timezone.utc)
+            - datetime.fromisoformat(discovered_at)
+        ).total_seconds() / 3600
+        if age_hours <= 48:
+            score += 1.5
+        elif age_hours <= 168:
+            score += 0.75
+
+    return round(score, 3)
+
+
+def rank(candidates: list[dict]) -> list[dict]:
+    for candidate in candidates:
+        candidate["opportunity_score"] = score_candidate(candidate)
+    return sorted(
+        candidates,
+        key=lambda item: item["opportunity_score"],
+        reverse=True,
+    )
