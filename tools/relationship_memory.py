@@ -19,7 +19,7 @@ NETWORKS = frozenset({"x", "threads", "facebook", "pinterest", "reddit", "bluesk
 
 def norm(value):
     """Conservar el dominio del handle federado; nunca fusionar redes."""
-    value = str(value or "").strip().removeprefix("@").casefold()
+    value = str(value or "").strip().lstrip("@").strip().casefold()
     return "" if not value or value.startswith(("https:", "http:")) else value
 
 
