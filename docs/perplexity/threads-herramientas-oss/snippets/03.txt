@@ -1,0 +1,14 @@
+python
+# skills/threads_trend_brief/SKILL.md
+# Nuevo skill; patrón inspirado en https://github.com/mvanhorn/last30days-skill
+---
+name: threads_trend_brief
+description: Genera un informe diario de oportunidades de fantasía y romantasy en Threads, con temas, cuentas, formatos y acciones propuestas.
+---
+
+1. Lee los candidatos recientes generados por `tools/threads_scan.py`.
+2. Filtra por español, fantasía, romantasy, libros, lectura, escritura y comunidad lectora.
+3. Agrupa por tema, formato y tipo de cuenta.
+4. Para cada oportunidad, indica: tema, por qué encaja, ejemplo de comentario humano y riesgo de repetición.
+5. Devuelve Markdown en `00_OPERATIVO/threads/tendencias/YYYY-MM-DD.md`.
+6. No propongas acciones sin contexto ni repitas plantillas ya presentes en `tools/check_duplicate_phrase.py`.
