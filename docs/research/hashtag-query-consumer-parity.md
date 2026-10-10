@@ -8,7 +8,7 @@ La PR [#63](https://github.com/davidpd89/ci-sandbox-tmp/pull/63) introduce `hash
 
 Antes: cuatro escáneres añadían `discovery_terms.terms(..., "busquedas")` durante el *import* (X, Threads, Facebook, Pinterest), otros ocho puntos de consumo —incluidos hashtags de Facebook— seguían separados. Un proceso abierto no observaba un snapshot posterior. Ahora: función única de normalización + selección, invocada en los escáneres operativos o en sus loaders. Unicode NFC, deduplicación de consulta final, presupuesto intacto, rotación determinista con plaza para exploración y degradación a semillas cuando falta el proveedor. No hay ejecución social en el adaptador.
 
-## Matriz comprobable de rutas
+## Decisión y matriz comprobable de rutas
 
 | Red | Cola y fichero | Tipo / destino de lectura | Reserva, presupuesto y límite |
 |---|---|---|---|
@@ -24,13 +24,22 @@ Antes: cuatro escáneres añadían `discovery_terms.terms(..., "busquedas")` dur
 
 El contrato transversal declara `NETWORK_QUEUE` para las tres vías independientes. Solo transforma consultas de lectura: identidad del candidato, deduplicación de posts, política temporal de destino y ejecución quedan en los colectores y guards existentes. La consulta se conserva como Unicode; **su URL encoding se hace en la capa de transporte**, ver `reddit_interact._dump_search` y pruebas `urllib.parse.quote/unquote`. No construir URL con concatenación sin escapado.
 
-## Medición sintética antes/después
+## Pruebas y medición sintética antes/después
 
 Fixtures deterministas: por red 2 semillas (`lectores`, `escritores`) + 2 términos nuevos (`fantasía juvenil`, `lectura ñ`), 2 variantes de etiquetas (`#año`, `#ano`) y entradas duplicadas/inválidas. *Antes del adaptador nuevo*, solo cuatro redes consumían listas GPT de keywords en importación y ninguna aseguraba observar nuevos términos de #63 en cada ronda. *Después*, 9/9 contratos de red reciben **2/2** nuevos términos en `combine` con lector sintético; 8/8 redes con hashtags conservan **2/2** etiquetas distintas. Reddit rechaza la superficie hashtag pero consume texto (equivalente funcional). Con `select` y presupuesto >=2 se reserva al menos una semilla y una novedad si ambas existen; presupuesto=1 alterna cohortes. El número de búsquedas efectivamente lanzadas nunca supera el presupuesto original. No es medida de volumen de candidatos reales ni se afirma mejora de seguidores.
 
 Las pruebas simulan salida válida, caducada (lista vacía del loader #63), corrupta y ausente. El fallo/TTL *interno* de `hashtag_expansion.snapshot_terms` lo comprueba #63 y debe ejecutarse como prueba conjunta al integrar ramas. `unittest` ejecuta además funciones originales aisladas por AST (sin importar sesiones) para probar la conexión real de las entradas. Sintaxis de los once consumidores: `compileall`.
 
-## Comparación de componentes públicos, revisión del 10/10/2026
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/davidpd89/ci-sandbox-tmp/pull/63
+Fecha de consulta: 2026-10-10
+Licencia SPDX: NOASSERTION
+Referencia inmutable: N/A (sin codigo incorporado)
+
+La referencia SPDX indica que **no se incorpora código de terceros** a esta PR; los proyectos OSS comparados tienen licencias individuales verificadas en sus propias fuentes, y la implementación nueva utiliza biblioteca estándar. La procedencia pública concreta y el SHA de cada candidato figuran abajo.
+
+## Alternativas: componentes públicos, revisión del 10/10/2026
 
 | Candidato y procedencia inmutable | SPDX / mantenimiento comprobado | Compatibilidad y coste | Decisión |
 |---|---|---|---|
@@ -50,7 +59,7 @@ No se copiaron fragmentos de estos repositorios externos: comparación de API, m
 - **Separación**: `#63` produce léxico, `#99` introduce observaciones, `#21` descubre/rankea; #101 **solo** consume términos. No cambia la evaluación de antigüedad, la selección final, ni las colas de escritura.
 - **Huecos que siguen abiertos**: en Instagram el hashtag no se convierte en búsqueda de publicaciones con autores verificados; solo alimenta una trial de perfiles. La selección nativa de Bluesky/Mastodon/TikTok sigue su ranking/budgets y puede posponer un término; `combine` garantiza presencia en el pool, no ejecución en cada ronda. La comprobación conjunta de TTL real requiere fusionar primero #63, y la ruta móvil no se ha ensayado en Xiaomi/Edge/Windows interactivo.
 
-## Secuencia de integración, canario y rollback
+## Retirada, integración, canario y rollback
 
 1. Revisar #63 (motor) y #99 (entrada), integrar después el contrato #101 conservando la API legada `discovery_terms.terms` de la rama oficial. Revisar cherry-pick de archivos y posibles conflictos con cambios posteriores a `5449513d`.
 2. Ejecutar Python 3.11 en Ubuntu y Windows: `python -m unittest discover -s tests -p 'test_hashtag_query_*.py' -v`. Correr también pruebas de #63 sobre snapshot JSON real **sintético** y tests de scans/rotación ya existentes; confirmar diferencias de #21 y loaders de vocabulario.
