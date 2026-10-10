@@ -1,0 +1,41 @@
+python
+# Archivo nuevo: tests/test_tiktok_niche_sources.py
+
+from tools.tiktok_niche_sources import (
+    build_round_plan,
+    iter_sources,
+    load_catalog,
+    normalize_candidate,
+)
+
+
+def test_catalog_loads():
+    catalog = load_catalog()
+    assert catalog["network"] == "tiktok"
+    assert catalog["language"] == "es"
+
+
+def test_sources_are_unique():
+    terms = [(s.source_type, s.term) for s in iter_sources(load_catalog())]
+    assert len(terms) == len(set(terms))
+
+
+def test_round_plan_prioritizes_high():
+    plan = build_round_plan(limit_per_priority=3)
+    assert plan
+    assert any(item["priority"] == "high" for item in plan)
+
+
+def test_normalize_candidate():
+    source = next(iter_sources(load_catalog()))
+    candidate = normalize_candidate(
+        {
+            "video_id": "123",
+            "author": "lector_ejemplo",
+            "caption": "¿Qué romantasy leo después?",
+            "hashtags": ["Romantasy"],
+        },
+        source,
+    )
+    assert candidate["video_id"] == "123"
+    assert candidate["hashtags"] == ["romantasy"]
