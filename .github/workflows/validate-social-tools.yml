@@ -5,7 +5,12 @@ on:
   pull_request:
   push:
     branches: [main]
-  # En dispatch se ejecuta solo la suite offline, no existe base de diff.
+    paths:
+      - 'tools/**'
+      - 'tests/**'
+      - '.github/workflows/validate-social-tools.yml'
+      - 'requirements-ci.txt'
+  # Dispatch valida únicamente la suite offline; no inventa rangos Git.
   workflow_dispatch:
 
 permissions:
@@ -54,6 +59,12 @@ jobs:
       - name: No aceptar artefactos operativos ni rutas sensibles en push completo
         if: github.event_name == 'push'
         run: python tools/push_hygiene.py
+      - name: Instalar Gitleaks CLI desde release fijada y verificada
+        if: github.event_name == 'pull_request'
+        run: python tools/install_gitleaks_ci.py
+      - name: Escanear contenido añadido en diff de PR (Gitleaks)
+        if: github.event_name == 'pull_request'
+        run: python tools/pr_secret_content_scan.py
       - name: Instalar dependencias de pruebas
         run: python -m pip install --disable-pip-version-check -r requirements-ci.txt
       - name: Comprobar sintaxis sin conectar redes

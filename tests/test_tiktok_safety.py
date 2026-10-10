@@ -359,7 +359,7 @@ class TikTokSafetyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             path = pathlib.Path(folder) / "registro.csv"
             intent_id = "d" * 32
-            # followed_before usa el día actual para presupuestar, no una fecha histórica.
+            # followed_before() mide la cuota del día de ejecución.
             today = dt.date.today().isoformat()
             lines = [
                 "fecha,cuenta,tipo,post_resumen,texto_usado,resultado,notas",
