@@ -101,7 +101,7 @@ def _preflight_plan(plan):
             item["text_fragment"] = fragment.strip()
         permalink = item.get("permalink")
         if permalink is not None:
-            # solo un permalink canonico de Threads del MISMO autor sirve para actuar; cualquier otra cosa se descarta y se usa el fragmento (nunca se navega a una URL ajena)
+            # Conservar solo permalink del mismo autor; sin el enlace,\n            # un reply WEB se omite, no se sustituye por texto aproximado.
             ok = (isinstance(permalink, str) and permalink.startswith("https://www.threads.com/@") and "/post/" in permalink
                   and permalink[len("https://www.threads.com/@"):].split("/")[0].casefold() == item["handle"].casefold())
             if ok and kind in {"like", "reply"}:
@@ -250,7 +250,7 @@ def run_plan(plan, *, prevalidated=False, on_result=None):
                 if not permalink:
                     # La fecha aprobada pertenece a un post concreto, no al primer
                     # fragmento coincidente en el feed. No entrar al navegador.
-                    results.append({**item, "resultado": "saltado_destino_no_verificado"})
+                    results.append({**item, "resultado": "saltado_destino_web_no_verificable"})
                     continue
                 profile_url = f"https://www.threads.com/@{handle}"
                 outcome = t.reply_to(item.get("text_fragment", ""), item["text"],
