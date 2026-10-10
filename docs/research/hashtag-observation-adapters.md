@@ -23,7 +23,7 @@ Normalización read-only compartida con especializaciones por red, separada de l
 
 ## Pruebas
 
-Suite sintética unittest Python 3.11 en Ubuntu/Windows, no es un canario operativo; 19 tests tras la revisión externa, revalidar en el HEAD.
+Suite sintética unittest Python 3.11 en Ubuntu/Windows; 22 tests específicos tras las regresiones del controlador (revalidar CI en el HEAD). No es un canario operativo.
 
 ## Retirada
 
@@ -115,11 +115,11 @@ La revisión externa detectó dos desajustes reproducibles y los corrigió en es
 1. `post_id` y `author_id` estaban limitados a 512 caracteres; el consumidor #63 solo admite 256, por lo que podía descartar observaciones previamente contabilizadas como válidas. Se alinea el límite a 256 con regresiones en el borde 256/257.
 2. `to_engine_rows()` entregaba referencias mutables a las listas internas de `tags`, compartidas entre varias fuentes. Ahora devuelve copias independientes; una mutación externa no altera observaciones anteriores ni futuras.
 
-Quedan pendientes de resolución **antes del merge operativo**: conexión read-only real de productores (los 27 caminos solo representan contratos), prueba integrada con `build_snapshot()` en una rama que incluya #63, límite global también para `_feedback`, `_feedback_conflicts`, `_conflicts` y procedencias por publicación, y reconciliación del `event_id` de feedback cuando una misma identidad aparece con distintas ventanas. La suite de normalización, aunque verde, no sustituye estas comprobaciones.
+Quedan pendientes de resolución **antes del merge operativo**: conexión read-only real de productores (los 27 caminos solo representan contratos), límite global también para `_feedback`, `_feedback_conflicts`, `_conflicts` y procedencias por publicación, y reconciliación del `event_id` de feedback cuando una misma identidad aparece con distintas ventanas. **La prueba integrada con `build_snapshot()` real de #63 ya existe y pasa con fixtures; #63 está incorporada en la base.** La PR hija #143 aborda límites y ventanas, pero debe corregirse y revisarse antes de integrarla. La suite de normalización, aunque verde, no sustituye estas comprobaciones.
 
 ### Plan de integración, canario y retirada
 
-Tras aceptar #63, Claude puede insertar adaptaciones **solo de lectura** inmediatamente después de las lecturas de cada colector y antes del plan de acciones, comprobando que ID, autor, fecha y texto provengan del post y no del resultado de búsqueda. Usar instancias por ronda/ventana; si se necesita fusionar colas, alimentar una instancia común para evitar doble conteo. Ejecutar `snapshot = build_snapshot(bridge.to_engine_rows(), feedback=bridge.feedback_aggregates(), now=...)` **sin guardar observaciones**; persistir únicamente el snapshot agregado ya definido en #63. Backfill <=14 días y sin tocar métricas históricas. Si no hay datos fiables, lista vacía y comportamiento estático de #63.
+Con #63 ya incorporada en la base, Claude puede insertar adaptaciones **solo de lectura** inmediatamente después de las lecturas de cada colector y antes del plan de acciones, comprobando que ID, autor, fecha y texto provengan del post y no del resultado de búsqueda. Usar instancias por ronda/ventana; si se necesita fusionar colas, alimentar una instancia común para evitar doble conteo. Ejecutar `snapshot = build_snapshot(bridge.to_engine_rows(), feedback=bridge.feedback_aggregates(), now=...)` **sin guardar observaciones**; persistir únicamente el snapshot agregado ya definido en #63. Backfill <=14 días y sin tocar métricas históricas. Si no hay datos fiables, lista vacía y comportamiento estático de #63.
 
 Canario **supervisado pendiente para Claude**: Windows de trabajo (Unicode/paths), Edge (lector WEB), dispositivo Android (MOBILE), lecturas reales API autorizadas, normalización de Reddit/Pinterest/Instagram/X sin timestamp, colisiones federadas y benchmarking de aceptados/descartados por fuente; comparar ranking estático y nuevo sin publicar/seguir/comentar. No confundir este canario con la simulación de CI.
 
@@ -138,3 +138,7 @@ El validador diferencial/privacidad pasó tras ajustar el informe al esquema de 
 La base `research/public-reuse-parent` (commit `737fc011`) ya contiene el motor real `tools/hashtag_expansion.py`, antes procedente de #63. La regresión `test_end_to_end_with_current_hashtag_expansion_engine` llama al `build_snapshot` real: dos autores y posts Bluesky, un duplicado entre colas, un MOBILE sin autor rechazado y feedback confirmado. Comprueba ranking, procedencia, cardinalidad, denominador e independencia de Reddit, sin acceso a redes. CI ejecuta también `test_hashtag_expansion.py` cuando cambia el contrato compartido.
 
 **Alcance:** sigue faltando conectar colectores reales, comprobar #143 antes de incorporarla y probar las otras redes con payloads nativos sanitizados. Los 27 caminos originales solo son compatibilidad sintética; no certifican 27 colectores operativos. La revisión anterior de #63 como pendiente está obsoleta: el motor está ahora en la base sincronizada y en el repositorio oficial.
+
+## Auditoría de contratos y saneamiento — 10/10/2026
+
+Se rechazan identificadores estables y fuentes que contengan caracteres de control Unicode (`Cc`) antes de entregarlos al ranking o usarlos en procedencia. Una regresión nueva ejerce el control en las nueve redes y en las tres familias de entrada. No cambia las reglas de acciones, fechas, certificados, ledger ni persistencia. Es una corrección de validación, no un puente nativo de producción.
