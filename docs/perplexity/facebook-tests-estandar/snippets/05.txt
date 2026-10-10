@@ -1,0 +1,24 @@
+python
+# tests/contracts/facebook_adapter_contract.py
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Literal, Optional
+
+
+FacebookSurface = Literal["page", "group"]
+
+
+@dataclass(frozen=True)
+class FacebookTarget:
+    network: Literal["facebook"]
+    surface: FacebookSurface
+    external_id: str
+    kind: Literal["post", "comment", "profile", "group_post"]
+    canonical_url: Optional[str]
+    parent_external_id: Optional[str]
+    author_external_id: Optional[str]
+    author_display_name: Optional[str]
+    created_at_utc: Optional[datetime]
+    text: str
+    engagement: dict
+    raw: dict
