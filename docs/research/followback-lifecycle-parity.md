@@ -4,7 +4,7 @@ Fecha de corte: **10/10/2026**. Rama: `research/47-followback-lifecycle-parity`.
 Alcance: comportamiento offline común y propuestas de limpieza sin ejecutar acciones
 en redes. La rama contiene código, pruebas y fixture ficticio, no datos personales.
 
-## Hueco real y referencias del sistema
+## Problema
 
 En el espejo `tools/unfollow_cleanup.py` disponía de cuatro adaptadores
 (Bluesky, Mastodon, X, Threads); `tools/mechanical_round.py` los ejecuta en
@@ -54,7 +54,7 @@ El replay nuevo NO equivale a nueve adaptadores de ejecución. Llamarlo
 «paridad completa de unfollow» sería falso. Conservar el acceso vivo detrás
 de cada adaptador es preferible a simular un detector negativo y borrar por error.
 
-## Diseño e implementación
+## Decisión e implementación
 
 `tools/followback_lifecycle.py` separa tres hechos:
 
@@ -85,7 +85,19 @@ La decisión ante dato incompleto es **revisión pendiente**, no un falso
 negativo. No se añade una espera arbitraria cuando el dato es completo.
 Por defecto sigue vigente el período de 7 días del sistema real.
 
-## Comparación aplicada de software público (corte 10/10/2026)
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/fgmacedo/python-statemachine
+Fecha de consulta: 2026-10-10
+Licencia SPDX: MIT
+Referencia inmutable: https://github.com/fgmacedo/python-statemachine/commit/525bcddcc5bb9793ce03d7b3e560f9c2ec0c5ee2
+
+Se revisaron también los otros tres orígenes y commits fijados abajo.
+No se incorporó código de terceros: se evaluaron sus APIs y patrones.
+El proyecto propio conserva su licencia existente; sin vendoring ni
+nuevas dependencias en esta PR.
+
+## Alternativas (corte 10/10/2026)
 
 | Candidato | Commit exacto / licencia | Mantenimiento y compatibilidad | Decisión |
 | --- | --- | --- | --- |
@@ -102,7 +114,7 @@ de Edge/ADB en Windows. La elección reduce coste de paquetes nuevos a cero,
 mantiene las tres colas desacopladas y permite revertir el proyector sin
 migrar datos.
 
-## Medición, pruebas y segunda revisión adversarial
+## Pruebas y segunda revisión adversarial
 
 Fixture reproducible: `tests/fixtures/followback_lifecycle_sample.json`
 (solo handles de dominios reservados). Comandos:
@@ -135,7 +147,7 @@ precisión en redes reales sin observaciones etiquetadas y verificadas.
 - Dominio de fixture: se usan dominios reservados `example.com`,
   `example.org`, `example.net` que admite el guardián de privacidad.
 
-## Limitaciones, migración reversible y entrega para Claude
+## Retirada, limitaciones y entrega para Claude
 
 **Simulado:** replay y candidatos con CSV/JSON ficticios. **No probado:**
 comprobación en vivo en Edge, ADB, Android o Windows físico; recolección
