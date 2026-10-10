@@ -289,7 +289,7 @@ class TestContracts(unittest.TestCase):
         a = dict(SAMPLES["x"], followers=40)
         b = dict(SAMPLES["x"], followers=50)
         out = n.normalize_candidates("x", [a, b], as_of=NOW)
-        self.assertEqual(out["shortlist"][0]["followers"], 40)
+        self.assertIsNone(out["shortlist"][0]["followers"])
         self.assertIn("conflicting_follower_snapshots",
                       [d["reason"] for d in out["diagnostics"]])
 
@@ -603,6 +603,50 @@ class TestContracts(unittest.TestCase):
         with self.assertRaises(ValueError):
             n.rank_with_66(normalized, quality.rank_all, as_of=NOW,
                            native_snapshots={"x": []})
+
+
+    def test_conflicting_profile_signals_fail_closed_in_any_observation_order(self):
+        import target_quality_ranking as quality
+        base = dict(SAMPLES["x"], account_id="stable_123",
+                    permalink=None, verified_actions=["follow"])
+        earlier = dict(base, bio="Leo fantasía", followers=40,
+                       profile_language="es", following=False, followed_by=True)
+        later = dict(base, bio="Solo deporte", followers=500_000,
+                     profile_language="en", following=True, followed_by=False)
+        for observations in ((earlier, later), (later, earlier),
+                             (earlier, later, earlier)):
+            with self.subTest(order=[p["followers"] for p in observations]):
+                result = n.normalize_candidates("x", list(observations), as_of=NOW)
+                self.assertEqual(len(result["shortlist"]), 1)
+                candidate = result["shortlist"][0]
+                for signal in ("bio", "followers", "language", "following", "followed_by"):
+                    self.assertIsNone(candidate[signal], signal)
+                self.assertNotIn("follow", candidate["actions"])
+                reasons = {d["reason"] for d in result["diagnostics"]}
+                self.assertTrue({"conflicting_profile_bio",
+                                 "conflicting_follower_snapshots",
+                                 "conflicting_profile_language",
+                                 "conflicting_following",
+                                 "conflicting_followed_by"} <= reasons)
+                ranked = quality.rank_network("x", result["shortlist"], as_of=NOW)
+                self.assertEqual(ranked["ranked"][0]["opportunities"], [])
+                parts = ranked["ranked"][0]["explanation"]
+                for signal in ("spanish", "audience", "reciprocity"):
+                    self.assertIsNone(parts[signal]["value"], signal)
+
+    def test_matching_profile_signals_keep_verified_follow(self):
+        base = dict(SAMPLES["x"], account_id="stable_123",
+                    permalink=None, bio="Leo fantasía", followers=40,
+                    profile_language="es", following=False, followed_by=True,
+                    verified_actions=["follow"])
+        result = n.normalize_candidates("x", [base, dict(base)], as_of=NOW)
+        self.assertEqual(result["diagnostics"], [])
+        candidate = result["shortlist"][0]
+        self.assertEqual(candidate["followers"], 40)
+        self.assertEqual(candidate["language"], "es")
+        self.assertEqual(candidate["following"], False)
+        self.assertEqual(candidate["followed_by"], True)
+        self.assertEqual(candidate["actions"], ["follow"])
 
 if __name__ == "__main__":
     unittest.main()
