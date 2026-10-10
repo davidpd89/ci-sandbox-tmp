@@ -1,0 +1,30 @@
+python
+# tests/test_tiktok_time_contract.py
+# Propuesta propia para davidpd89/rrss-davidporto-CODE
+from datetime import datetime, timezone
+
+import pytest
+
+from growth.adapters.tiktok.normalize import normalize_created_at
+
+
+@pytest.mark.tiktok
+@pytest.mark.contract
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (1760104560, datetime(2025, 10, 10, 13, 16, tzinfo=timezone.utc)),
+        ("2026-10-10T15:16:00+02:00", datetime(2026, 10, 10, 13, 16, tzinfo=timezone.utc)),
+        ("2026-10-10T15:16:00Z", datetime(2026, 10, 10, 15, 16, tzinfo=timezone.utc)),
+    ],
+)
+def test_created_at_normalization(value, expected):
+    assert normalize_created_at(value) == expected
+
+
+@pytest.mark.tiktok
+@pytest.mark.contract
+def test_invalid_date_returns_none():
+    assert normalize_created_at(None) is None
+    assert normalize_created_at("") is None
+    assert normalize_created_at("no-es-fecha") is None
