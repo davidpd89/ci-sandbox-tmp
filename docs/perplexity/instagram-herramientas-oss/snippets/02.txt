@@ -1,0 +1,28 @@
+python
+# https://github.com/bellingcat/toolkit/blob/main/gitbook/tools/instaloader/README.md
+"""
+Build hashtag counts across the latest 400 posts of a target profile.
+Output TSV sorted by frequency.
+"""
+import re, collections, instaloader, itertools, csv
+
+TARGET = "nasa"
+MAX_POSTS = 400
+hashtag_re = re.compile(r"#(\w+)")
+
+freq = collections.Counter()
+L = instaloader.Instaloader(quiet=True)
+
+for post in itertools.islice(
+    instaloader.Profile.from_username(L.context, TARGET).get_posts(),
+    MAX_POSTS,
+):
+    freq.update(hashtag_re.findall(post.caption or ""))
+
+with open(f"{TARGET}_hashtags.tsv", "w", newline="", encoding="utf-8") as f:
+    writer = csv.writer(f, delimiter="\t")
+    writer.writerow(["hashtag", "count"])
+    for tag, count in freq.most_common():
+        writer.writerow([tag.lower(), count])
+
+print("Top 10:", freq.most_common(10))
