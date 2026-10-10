@@ -10,6 +10,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from reply_context_grounding import (
     NETWORKS, QUEUES, build_packet, render_packet, audit_reply, tally,
+    summarize_outcomes,
 )
 
 NOW = datetime(2026, 10, 10, 2, 0, tzinfo=timezone.utc)
@@ -81,6 +82,24 @@ class ContextPacketTests(unittest.TestCase):
         self.assertEqual([e.id for e in p.evidence], ["post", "body"])
         self.assertIn("voces infantiles", render_packet(p))
 
+    def test_author_is_metadata_not_citable_fact(self):
+        p = self.packet(author="Cuenta sintética", text="Leí dos tomos")
+        self.assertEqual(p.author, "Cuenta sintética")
+        self.assertIn("Cuenta sintética", render_packet(p))
+        self.assertEqual([e.id for e in p.evidence], ["post"])
+
+    def test_invalid_nested_fields_cannot_throw_typeerror(self):
+        for kw in ({"context_status": []}, {"context_status": {}},
+                   {"visual": [{"description": "Algo", "asset_id": "x",
+                                "verified": True, "provenance": {}}]}):
+            with self.subTest(kw=kw):
+                if "context_status" in kw:
+                    with self.assertRaises(ValueError):
+                        self.packet(**kw)
+                else:
+                    p = self.packet(**kw)
+                    self.assertIn("visual:0_not_verified", p.warnings)
+
     def test_thread_order_is_caller_supplied(self):
         p = self.packet(reply_to_us=True, parents=[
             {"stable_id": "parent1", "verified": True, "text": "¿Qué edición escogiste?"},
@@ -123,9 +142,16 @@ class ContextPacketTests(unittest.TestCase):
         self.assertFalse(p.eligible)
         self.assertIn("required_visual_missing", p.warnings)
 
-    def test_no_text_abstains_even_if_visual_exists(self):
+    def test_verified_visual_only_post_is_eligible(self):
         p = self.packet(text="", visual=[{
             "asset_id": "image-a", "verified": True, "provenance": "vision_verified",
+            "description": "Una estantería"}], requires_visual=True)
+        self.assertTrue(p.eligible)
+        self.assertEqual(p.evidence[0].id, "visual:0")
+
+    def test_unverified_visual_only_post_abstains(self):
+        p = self.packet(text="", visual=[{
+            "asset_id": "image-a", "verified": False, "provenance": "vision_verified",
             "description": "Una estantería"}])
         self.assertFalse(p.eligible)
 
@@ -240,6 +266,55 @@ class GroundedDraftTests(unittest.TestCase):
             "evaluated": 3, "abstained": 1, "rejected": 1,
             "awaiting_semantic_review": 1, "quoted_units": 1, "total_units": 2,
         })
+
+
+class OutcomeTests(unittest.TestCase):
+    def result(self, variant="baseline", sample_id="s1", **kwargs):
+        r = {
+            "network": "reddit", "variant": variant, "sample_id": sample_id,
+            "published": True, "received_reply": None,
+            "continuation_turns": None, "perceived_value": None,
+        }
+        r.update(kwargs)
+        return r
+
+    def test_synthetic_replies_continuation_and_value(self):
+        rows = [
+            self.result(sample_id="s1", received_reply=True,
+                        continuation_turns=2, perceived_value=4),
+            self.result(sample_id="s2", received_reply=False,
+                        continuation_turns=0, perceived_value=2),
+            self.result(variant="H1", sample_id="s1", received_reply=True,
+                        continuation_turns=3, perceived_value=5),
+        ]
+        output = summarize_outcomes(rows)
+        self.assertEqual(output["reddit/baseline"]["reply_rate_observed"], 0.5)
+        self.assertEqual(output["reddit/baseline"]["continuation_turns"], 2)
+        self.assertEqual(output["reddit/baseline"]["average_perceived_value"], 3)
+        self.assertEqual(output["reddit/H1"]["reply_rate_observed"], 1)
+
+    def test_missing_result_is_unknown_not_zero(self):
+        result = summarize_outcomes([
+            self.result(published=True),
+            self.result(sample_id="s2", published=False),
+        ])["reddit/baseline"]
+        self.assertEqual(result["samples"], 2)
+        self.assertEqual(result["published"], 1)
+        self.assertIsNone(result["reply_rate_observed"])
+        self.assertIsNone(result["average_perceived_value"])
+
+    def test_reject_duplicates_and_invalid_outcome(self):
+        with self.assertRaises(ValueError):
+            summarize_outcomes([self.result(), self.result()])
+        for kw in (
+            {"received_reply": 1}, {"continuation_turns": -1},
+            {"perceived_value": 6}, {"perceived_value": True},
+            {"published": False, "received_reply": True},
+            {"published": False, "continuation_turns": 1},
+            {"published": "true"},
+        ):
+            with self.subTest(kw=kw), self.assertRaises(ValueError):
+                summarize_outcomes([self.result(**kw)])
 
 
 if __name__ == "__main__":
