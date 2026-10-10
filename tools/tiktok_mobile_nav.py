@@ -190,7 +190,7 @@ class TikTokNavigator:
 
         Optional reference is a schema-1 diagnostic, never a raw screenshot.
         """
-        snapshot = diagnose_ui_tree(self.tree())
+        snapshot = diagnose_ui_tree(self.tree(validate_shape=True))
         if reference is None:
             return snapshot
         return {"snapshot": snapshot, "comparison": compare_ui_diagnostics(reference, snapshot)}

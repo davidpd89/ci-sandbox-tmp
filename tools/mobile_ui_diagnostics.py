@@ -87,10 +87,12 @@ def _landmark(element: dict[str, Any]) -> str:
 def _geometry(element: dict[str, Any]) -> tuple[float, float] | None:
     rect = element["rect"]
     try:
-        y, h = float(rect["y"]), float(rect["height"])
+        x, y = float(rect["x"]), float(rect["y"])
+        width, h = float(rect["width"]), float(rect["height"])
     except (TypeError, ValueError, KeyError, OverflowError):
         return None
-    if not (math.isfinite(y) and math.isfinite(h) and y >= 0 and h >= 0):
+    if not (all(map(math.isfinite, (x, y, width, h)))
+            and y >= 0 and width > 0 and h > 0):
         return None
     center, bottom = y + h / 2, y + h
     if not (math.isfinite(center) and math.isfinite(bottom)):
@@ -110,7 +112,7 @@ def diagnose(tree: Any) -> dict[str, Any]:
         raise ValueError("UI viewport is empty")
     features: Counter[str] = Counter()
     for element, (center, _) in valid:
-        region = min(3, int(4 * center / bottom))
+        region = min(3, int(4 * (center / bottom)))
         features[f"{_role(element)}:{region}:{_landmark(element)}"] += 1
     ordered = dict(sorted(features.items()))
     payload = json.dumps(ordered, ensure_ascii=True, sort_keys=True, separators=(",", ":"))

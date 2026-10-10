@@ -29,10 +29,10 @@ class DiagnosticsTests(unittest.TestCase):
         import tiktok_mobile_nav as nav
         navigator = object.__new__(nav.TikTokNavigator)
         calls = []
-        navigator.tree = lambda **kwargs: calls.append("read") or ui()
+        navigator.tree = lambda **kwargs: calls.append(kwargs) or ui()
         reference = diag.diagnose(ui())
         result = navigator.diagnose_current_ui(reference=reference)
-        self.assertEqual(calls, ["read"])
+        self.assertEqual(calls, [{"validate_shape": True}])
         self.assertTrue(result["comparison"]["same_fingerprint"])
         self.assertEqual(result["snapshot"], reference)
 
@@ -84,6 +84,20 @@ class DiagnosticsTests(unittest.TestCase):
         sample = {"elements": [node("X", y=1e308, h=1e308)]}
         with self.assertRaisesRegex(ValueError, "no valid geometry"):
             diag.diagnose(sample)
+
+    def test_large_finite_coordinates_do_not_overflow(self):
+        # The product 4 * center could overflow even for finite coordinates.
+        sample = {"elements": [node("X", y=1e308, h=1e292)]}
+        self.assertEqual(diag.diagnose(sample)["elements"], 1)
+
+    def test_invalid_horizontal_or_zero_area_geometry_is_rejected(self):
+        for key, value in (("x", float("nan")), ("width", float("inf")),
+                           ("width", 0), ("height", 0)):
+            with self.subTest(key=key, value=value):
+                sample = {"elements": [node("X")]}
+                sample["elements"][0]["rect"][key] = value
+                with self.assertRaisesRegex(ValueError, "no valid geometry"):
+                    diag.diagnose(sample)
 
     def test_rejects_tampered_result(self):
         first = diag.diagnose(ui())
