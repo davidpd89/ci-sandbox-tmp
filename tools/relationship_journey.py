@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter, defaultdict
 import csv
+from contextlib import closing
 from datetime import date, datetime, timezone, timedelta
 import json
 from pathlib import Path
@@ -45,7 +46,7 @@ def read_ledger(path: str | Path):
     omitted = Counter()
     records = []
     try:
-        with sqlite3.connect(uri, uri=True, timeout=5) as conn:
+        with closing(sqlite3.connect(uri, uri=True, timeout=5)) as conn:
             conn.row_factory = sqlite3.Row
             cols = {r[1] for r in conn.execute("PRAGMA table_info(relationship_events)")}
             if not COLUMNS.issubset(cols):
