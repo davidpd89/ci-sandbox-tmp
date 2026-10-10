@@ -1,0 +1,19 @@
+python
+# Propuesta: tools/growth_contracts.py
+import re
+
+_REDDIT_ID = re.compile(r"^[A-Za-z0-9]+$")
+_ALLOWED_PREFIXES = {"t1", "t2", "t3"}
+
+def normalize_reddit_ref(value: str | None) -> tuple[str, str] | None:
+    if not value:
+        return None
+    ref = value.strip()
+    if "_" in ref:
+        prefix, short_id = ref.split("_", 1)
+        if prefix not in _ALLOWED_PREFIXES or not _REDDIT_ID.match(short_id):
+            return None
+        return prefix, short_id
+    if not _REDDIT_ID.match(ref):
+        return None
+    return None, ref
