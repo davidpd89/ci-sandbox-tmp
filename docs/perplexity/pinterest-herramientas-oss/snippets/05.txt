@@ -1,0 +1,15 @@
+json
+// https://github.com/data-scrape/pinterest-scraper
+{
+  "pin_id": "1234567890",
+  "title": "Mapa de un reino de fantasía",
+  "description": "Inspiración para construir mundos y sagas",
+  "image_url": "https://...",
+  "board_name": "Fantasía juvenil española",
+  "board_url": "https://...",
+  "pinner_name": "autor",
+  "repins": 12,
+  "saves": 34,
+  "link": "https://...",
+  "created_at": "2026-10-10T00:00:00Z"
+}
