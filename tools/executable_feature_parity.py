@@ -67,7 +67,9 @@ def _kind_branches(tree):
     """Sólo literales de comparaciones sobre kind; docstrings no prueban soporte."""
     found = set()
     for node in ast.walk(tree):
-        if not isinstance(node, ast.Compare):
+        if not isinstance(node, ast.Compare) or any(
+            not isinstance(op, (ast.Eq, ast.In)) for op in node.ops
+        ):
             continue
         expression = ast.unparse(node.left)
         if not (expression == "kind" or expression.endswith("['kind']") or expression.endswith(".get('kind')")):
