@@ -20,7 +20,7 @@ class IdentityGraph(IdentityGraphBase):
         Never writes to relationship_policy, loyalty or action_ledger.
         """
         group = self.cluster(account)
-        unique, counts, conversations = set(), {}, set()
+        unique, counts, conversations = {}, {}, set()
         for event in records:
             key = event.get("account")
             if key not in group:
@@ -31,11 +31,15 @@ class IdentityGraph(IdentityGraphBase):
                     or not kind or direction not in {"inbound", "outbound"}):
                 raise IdentityError("event_invalid")
             dedupe = (key, ident)
-            if dedupe in unique:
-                continue
-            unique.add(dedupe)
-            bucket = (key.split("|", 1)[0], direction, kind)
-            counts[bucket] = counts.get(bucket, 0) + 1
+            event_type = (direction, kind)
+            prior = unique.get(dedupe)
+            if prior is not None and prior != event_type:
+                raise IdentityError("event_conflict")
+            if prior is None:
+                unique[dedupe] = event_type
+                bucket = (key.split("|", 1)[0], direction, kind)
+                counts[bucket] = counts.get(bucket, 0) + 1
+            # A second observation may supply a previously missing thread ref.
             ref = event.get("conversation_ref")
             if ref:
                 if not isinstance(ref, str):
