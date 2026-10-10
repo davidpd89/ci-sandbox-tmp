@@ -1,0 +1,13 @@
+text
+themes:
+  romantasy:
+    query_es: "romantasy libros"
+    x: "romantasy libros español"
+    threads: "romantasy libros"
+    facebook: "grupos lectura romantasy"
+    pinterest: "romantasy libros"
+    reddit: "r/RomantasyBooks romantasy español"
+    bluesky: "romantasy libros"
+    mastodon: "romantasy libros"
+    tiktok: "#BookTokEspañol romantasy"
+    instagram: "#BookstagramEspañol romantasy"
