@@ -40,6 +40,9 @@ class ObservationError(ValueError):
     """Página o identidad incompleta; no fabricar una observación."""
 
 
+_CURSOR_UNSET = object()
+
+
 def timestamp(value: str | datetime | None) -> str | None:
     if value is None or value == "":
         return None
@@ -186,7 +189,8 @@ class AudienceStore:
 
     def ingest(self, rows: Sequence[Observation], *, network: str, surface: str,
                seed: str, next_cursor: str | None, now: str,
-               max_post_age_hours: float = 168) -> dict[str, int]:
+               max_post_age_hours: float = 168,
+               expected_cursor: str | None | object = _CURSOR_UNSET) -> dict[str, int]:
         """Se guardan páginas completas o ninguna. No filtrar likes antiguos por edad del like."""
         if network not in LANES or not surface or not seed or max_post_age_hours <= 0:
             raise ObservationError("lote_invalido")
@@ -197,6 +201,11 @@ class AudienceStore:
             # BEGIN IMMEDIATE serializa escritores de las tres colas sin bloquear
             # lecturas SQLite; evita dos inserciones concurrentes de una cuenta.
             self.db.execute("BEGIN IMMEDIATE")
+            # Compare-and-swap: la lectura de páginas ocurre fuera del lock.
+            # Si otro recolector avanzó, no escribir datos ni retrasar cursor.
+            if (expected_cursor is not _CURSOR_UNSET and
+                    self.cursor(network, surface, seed) != expected_cursor):
+                raise ObservationError("cursor_cambiado_durante_fetch")
             for row in rows:
                 if row.network != network or row.surface != surface:
                     raise ObservationError("origen_cruzado")
@@ -400,7 +409,8 @@ def collect_pages(store: AudienceStore, *, network: str, surface: str, seed: str
         ]
         stats = store.ingest(normalized, network=network, surface=surface, seed=seed,
                              next_cursor=nxt, now=observed_at,
-                             max_post_age_hours=max_post_age_hours)
+                             max_post_age_hours=max_post_age_hours,
+                             expected_cursor=cursor)
         for field in totals:
             totals[field] += stats[field]
         cursor = nxt
