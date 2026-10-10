@@ -143,7 +143,7 @@ class HashtagExpansionTest(unittest.TestCase):
     def test_malformed_static_network_entry_falls_back_without_crashing(self):
         with tempfile.TemporaryDirectory() as folder:
             static = pathlib.Path(folder) / "catalog.json"
-            with patch.object(discovery_terms, "PATH", str(static)), \\
+            with patch.object(discovery_terms, "PATH", str(static)), \
                  patch.object(h, "snapshot_terms", return_value=[]):
                 for document in ('{"bluesky": "not-a-dict"}',
                                  '{"bluesky": ["no"]}',
