@@ -1,0 +1,18 @@
+text
+# Archivo nuevo: config/instagram_discovery.yaml
+version: 1
+network: instagram
+adapter: instaloader
+max_posts_per_hashtag: 50
+max_posts_per_profile: 30
+min_caption_length: 20
+require_language_es: true
+deduplicate_by: shortcode
+retention_days: 90
+
+ranking_signals:
+  recency_hours: 0.35
+  spanish_caption: 0.20
+  intent_score: 0.25
+  niche_hashtag_match: 0.15
+  seed_author_affinity: 0.05
