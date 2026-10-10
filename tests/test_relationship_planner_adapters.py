@@ -22,6 +22,11 @@ import relationship_planner_adapters as bridge
 TODAY = dt.date(2026, 10, 10)
 
 
+def proof(net, *, start="2020-01-01", through="2026-10-10"):
+    return {net: {"status": "complete", "from": start,
+                  "account_since": "2020-01-01", "through": through}}
+
+
 def pre(**changes):
     return {"checked_at": TODAY.isoformat(), "self_account": False, "blocked": False,
             "follow_state_verified": True, "already_following": False,
@@ -81,7 +86,8 @@ class PlannerBridge(unittest.TestCase):
             self.assertEqual(got["candidates"], [], date)
         recent = source("bluesky", "API", kind="reply", target_created_at="2026-10-09T23:00:00Z",
                         preflight=pre(follow_eligible=False))
-        got, _ = bridge.build_snapshot([recent], {}, [], today=TODAY)
+        got, _ = bridge.build_snapshot([recent], {"bluesky": []}, [], today=TODAY,
+                                       outbound_coverage=proof("bluesky"))
         self.assertTrue(got["candidates"][0]["reply_eligible"])
 
     def test_comment_policy_uses_confirmed_and_distinct_events(self):
@@ -93,11 +99,13 @@ class PlannerBridge(unittest.TestCase):
                       "tipo": "comment", "resultado": "intentado"}]}
         incoming = [{"network": "threads", "event_id": "100", "handle": "reader_threads",
                      "kind": "comment", "day": "2026-10-10", "author_id": "id-threads"}] * 3
-        got, _ = bridge.build_snapshot([row], outbound, incoming, today=TODAY)
+        got, _ = bridge.build_snapshot([row], outbound, incoming, today=TODAY,
+                                       outbound_coverage=proof("threads"))
         self.assertEqual(got["candidates"][0]["inbound"]["comment"], 1)
         self.assertEqual(got["candidates"][0]["outbound_30d"], 2)
         self.assertTrue(got["candidates"][0]["reply_eligible"])
-        got2, _ = bridge.build_snapshot([row], outbound, [], today=TODAY)
+        got2, _ = bridge.build_snapshot([row], outbound, [], today=TODAY,
+                                        outbound_coverage=proof("threads"))
         self.assertEqual(got2["candidates"], [])
 
     def test_unverified_and_stale_preflights_rejected(self):
@@ -148,7 +156,9 @@ class PlannerBridge(unittest.TestCase):
               "data": {"candidates": [{"handle": "t_author", "preflight": pre(), "kind": "follow",
                         "posts": [{"created_at": "2026-10-10", "kind": "reply",
                                    "preflight": pre(follow_eligible=False)}]}]}}
-        result, _ = bridge.build_snapshot([pi, tt], {}, [], today=TODAY)
+        result, _ = bridge.build_snapshot([pi, tt], {"pinterest": [], "tiktok": []}, [],
+                                          today=TODAY, outbound_coverage={
+                                              **proof("pinterest"), **proof("tiktok")})
         self.assertEqual([x["handle"] for x in result["candidates"]],
                          ["p_author", "p_pins", "t_author", "t_author"])
 
@@ -203,7 +213,8 @@ class PlannerBridge(unittest.TestCase):
             self.assertEqual(bridge._day(value), "2026-10-09")
             row = source("reddit", "WEB", kind="reply", post={"created_utc": value},
                          preflight=pre(follow_eligible=False))
-            prepared, _ = bridge.build_snapshot([row], {}, [], today=TODAY)
+            prepared, _ = bridge.build_snapshot([row], {"reddit": []}, [], today=TODAY,
+                                                outbound_coverage=proof("reddit"))
             self.assertEqual(prepared["candidates"][0]["reply_target_at"], "2026-10-09")
 
     def test_huge_numeric_affinity_never_crashes_entire_batch(self):
@@ -231,6 +242,62 @@ class PlannerBridge(unittest.TestCase):
             prepared, diag = bridge.build_snapshot(sources, outbound, inbound, today=TODAY)
             self.assertEqual([item["network"] for item in prepared["candidates"]], ["x"])
             self.assertEqual(len([x for x in diag["excluded"] if "reason" in x]), 2)
+
+    def test_missing_or_partial_outbound_does_not_offer_reply(self):
+        # Los flags de preflight no acreditan cobertura del histórico entero.
+        rows = [source(net, kind="reply", target_created_at="2026-10-10",
+                       preflight=pre(follow_eligible=False))
+                for net in bridge.NETWORKS]
+        outbound = {net: [] for net in bridge.NETWORKS}
+        complete = proof("threads")
+        missing = bridge.build_snapshot(rows, outbound, [], today=TODAY)[0]
+        self.assertEqual(missing["candidates"], [])
+        partial = {"x": {"status": "complete", "from": "2026-10-09",
+                         "account_since": "2020-01-01", "through": "2026-10-10"}}
+        snapshot, diag = bridge.build_snapshot(
+            rows, outbound, [], today=TODAY, outbound_coverage={**complete, **partial})
+        self.assertEqual([r["network"] for r in snapshot["candidates"]], ["threads"])
+        self.assertEqual(diag["outbound_coverage"]["x"], "unknown_or_incomplete")
+        # Ninguna certificación es válida sin fichero exportado.
+        snapshot, _ = bridge.build_snapshot([rows[1]], {}, [], today=TODAY,
+                                            outbound_coverage=complete)
+        self.assertEqual(snapshot["candidates"], [])
+
+    def test_inbound_30day_cutoff_and_stale_volume_nine_networks(self):
+        events = []
+        cutoff = (TODAY - dt.timedelta(days=29)).isoformat()
+        old = (TODAY - dt.timedelta(days=30)).isoformat()
+        for net in bridge.NETWORKS:
+            for i in range(75):
+                events.append({"network": net, "event_id": f"old-{i}",
+                               "handle": f"reader_{net}", "author_id": f"id-{net}",
+                               "kind": "like", "day": old})
+            for day, suffix in ((cutoff, "edge"), (TODAY.isoformat(), "now")):
+                event = {"network": net, "event_id": suffix,
+                         "handle": f"reader_{net}", "author_id": f"id-{net}",
+                         "kind": "comment", "day": day}
+                events.extend([event] * 3)  # múltiples colectores, un evento
+        snapshot, diag = bridge.build_snapshot(
+            [source(net) for net in bridge.NETWORKS], {}, events, today=TODAY)
+        self.assertEqual(diag["inbound_id_conflicts"], 0)
+        self.assertEqual(len(snapshot["candidates"]), 9)
+        for row in snapshot["candidates"]:
+            self.assertEqual(row["inbound"], {"comment": 2})
+            self.assertEqual(row["last_inbound_at"], TODAY.isoformat())
+        old_only = [{"network": "x", "event_id": "veryold", "handle": "reader_x",
+                     "author_id": "id-x", "kind": "like", "day": old}]
+        snapshot, _ = bridge.build_snapshot([source("x")], {}, old_only, today=TODAY)
+        self.assertNotIn("inbound", snapshot["candidates"][0])
+        self.assertIsNone(snapshot["candidates"][0]["last_inbound_at"])
+
+    def test_lane_limits_use_current_common_scorer(self):
+        from relationship_priority import rank_daily
+        snapshot, _ = bridge.build_snapshot(
+            [source("x", "WEB"), source("x", "API")], {}, [], today=TODAY)
+        ranked = rank_daily(snapshot, today=TODAY,
+                            limits={"WEB": 0, "API": 1, "MOBILE": 0})
+        self.assertEqual(len(ranked["queues"]["API"]), 1)
+        self.assertEqual(ranked["queues"]["WEB"], [])
 
     def test_cost_read_microbenchmark_synthetic(self):
         samples = [source(net, lane, handle=f"reader_{net}_{lane}_{i}")
