@@ -106,6 +106,9 @@
     "quoted_message_missing": {
       "plan": {
         "quoted_comment_id": "t1_notfound"
+      },
+      "review": {
+        "quoted_comment_id": "t1_notfound"
       }
     },
     "quoted_message_valid": {
@@ -168,7 +171,10 @@
             "link_id": "t3_abc123"
           }
         }
-      ]
+      ],
+      "review": {
+        "quoted_comment_id": "t1_c001"
+      }
     },
     "automod_notice": {
       "comments": [
