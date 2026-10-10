@@ -47,6 +47,12 @@ jobs:
         # En push/dispatch HEAD^1 sería el commit previo, no la base de una PR.
         if: github.event_name == 'pull_request'
         run: python tools/repo_hygiene.py --base "HEAD^1"
+      - name: Instalar Gitleaks CLI desde release fijada y verificada
+        if: github.event_name == 'pull_request'
+        run: python tools/install_gitleaks_ci.py
+      - name: Escanear contenido añadido en diff de PR (Gitleaks)
+        if: github.event_name == 'pull_request'
+        run: python tools/pr_secret_content_scan.py
       - name: Instalar dependencias de pruebas
         run: python -m pip install --disable-pip-version-check -r requirements-ci.txt
       - name: Comprobar sintaxis sin conectar redes
