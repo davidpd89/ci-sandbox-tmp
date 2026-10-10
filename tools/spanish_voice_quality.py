@@ -67,9 +67,9 @@ def audit(text: str, *, network: str, locale: str = "es-ES", queue: str | None =
           check_accents: bool = True) -> dict:
     if not isinstance(text, str):
         raise TypeError("text debe ser str")
-    if network not in NETWORKS:
+    if not isinstance(network, str) or network not in NETWORKS:
         raise ValueError("red desconocida")
-    if queue is not None and queue not in QUEUES:
+    if queue is not None and (not isinstance(queue, str) or queue not in QUEUES):
         raise ValueError("cola desconocida")
     if locale not in ("es-ES", "es"):
         raise ValueError("locale desconocido")
@@ -110,13 +110,17 @@ def audit(text: str, *, network: str, locale: str = "es-ES", queue: str | None =
             add("literal_translation", "hint", match.start(), match.end(), advice)
     checker = _accent_checker() if check_accents else None
     if checker is not None:
-        proposed = {(word.casefold(), suggestion) for word, suggestion in checker(masked)}
+        # Indexación O(n), orden estable: varias sugerencias no dependen
+        # del orden aleatorio del set ni del PYTHONHASHSEED del proceso.
+        proposed = {}
+        for wrong, suggestion in checker(masked):
+            if isinstance(wrong, str) and isinstance(suggestion, str):
+                proposed.setdefault(wrong.casefold(), set()).add(suggestion)
         for match in WORD_PATTERN.finditer(masked):
-            for wrong, suggestion in proposed:
-                if match.group().casefold() == wrong:
-                    add("possible_missing_accent", "hint", match.start(), match.end(),
-                        "Comprobar tilde según contexto: " + suggestion)
-                    break
+            alternatives = proposed.get(match.group().casefold())
+            if alternatives:
+                add("possible_missing_accent", "hint", match.start(), match.end(),
+                    "Comprobar tilde según contexto: " + min(alternatives))
     if unicodedata.normalize("NFC", text) != text:
         add("unicode_normalization", "hint", 0, 0,
             "Comprobar NFC solo en texto propio, sin sustituir nombres o citas")
