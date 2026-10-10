@@ -1,0 +1,26 @@
+python
+# Adaptación propia para davidpd89/ci-sandbox-tmp.
+# Se integra con tools/action_ledger.py y tools/growth_attribution.py.
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class TikTokCandidate:
+    video_id: str
+    author_id: str
+    views: int
+    likes: int
+    comments: int
+    shares: int
+    follower_delta: int
+    age_hours: float
+    spanish_score: float
+    booktok_score: float
+
+
+def rank_tiktok_candidate(c: TikTokCandidate) -> float:
+    engagement = (c.likes + 3 * c.comments + 5 * c.shares) / max(c.views, 1)
+    freshness = 1 / (1 + c.age_hours / 24)
+    growth = min(c.follower_delta / 100, 1.0)
+    niche = 0.6 * c.spanish_score + 0.4 * c.booktok_score
+    return round(0.40 * engagement + 0.25 * freshness + 0.20 * growth + 0.15 * niche, 6)
