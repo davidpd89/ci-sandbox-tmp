@@ -1,0 +1,35 @@
+name: hashtag-query-consumers-offline
+
+on:
+  pull_request:
+    paths:
+      - "tools/hashtag_query_consumers.py"
+      - "tools/*_scan.py"
+      - "tools/pinterest_growth.py"
+      - "tools/bluesky_growth_scan.py"
+      - "tools/mastodon_growth_scan.py"
+      - "tools/tiktok_growth_scan.py"
+      - "tests/test_hashtag_query_consumers.py"
+      - ".github/workflows/hashtag-query-consumers-offline.yml"
+  push:
+    branches: ["research/hashtag-query-consumer-parity"]
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile consumer modules offline
+        run: python -m compileall -q tools/hashtag_query_consumers.py tools/x_scan.py tools/threads_scan.py tools/facebook_scan.py tools/pinterest_growth.py tools/reddit_scan.py tools/bluesky_scan.py tools/bluesky_growth_scan.py tools/mastodon_scan.py tools/mastodon_growth_scan.py tools/tiktok_growth_scan.py tools/instagram_scan.py
+      - name: Offline synthetic unittest (no accounts)
+        run: python -m unittest discover -s tests -p test_hashtag_query_consumers.py -v
