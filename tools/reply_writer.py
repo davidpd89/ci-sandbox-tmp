@@ -85,19 +85,39 @@ MEMORIA_PATH = os.path.join(ROOT, "00_OPERATIVO", "respuestas_memoria.json")
 AUTHOR_COOLDOWN_DAYS = 30        # a quien ya le hemos comentado no se le vuelve a comentar de nuestra iniciativa (David, 07/10: «ahi no se comenta mas»)
 
 
-def memoria_texto(recent=(), path=None):
-    """Bloque «memoria» del prompt: ejemplos que David aprobo, errores que no deben repetirse y lo ultimo que publicamos (para variar). Asi cada consulta empieza con lo aprendido, sin depender de un chat largo."""
+def memoria_texto(recent=(), path=None, *, items=None, network=None):
+    """Memoria editorial por post para lotes GPT; legacy sin items conserva su API."""
     try:
-        data = json.load(open(path or MEMORIA_PATH, encoding="utf-8"))
+        with open(path or MEMORIA_PATH, encoding="utf-8") as stream:
+            data = json.load(stream)
+        if not isinstance(data, dict):
+            data = {}
     except (OSError, ValueError):
         data = {}
     parts = []
-    good = data.get("buenas") or []
-    if good:
-        parts.append("RESPUESTAS QUE YA FUNCIONARON (aprobadas; mismo tono, no las copies):\n" + "\n".join(f"- «{g['post'][:90]}» -> «{g['respuesta']}»" for g in good[-10:]))
-    bad = data.get("malas") or []
-    if bad:
-        parts.append("ERRORES QUE NO SE PUEDEN REPETIR:\n" + "\n".join(f"- «{b['post'][:90]}» -> «{b['respuesta']}» ({b['motivo']})" for b in bad[-8:]))
+    if items is not None:
+        # Importación offline sin datos de red, archivo de estado ni escrituras.
+        # Los ejemplos de otros posts son estilo, nunca contexto factual.
+        import reply_context_memory as rcm
+        contextual = rcm.render_for_batch(items, data, default_network=network)
+        if contextual:
+            parts.append(contextual)
+    else:
+        # Compatibilidad con consumidores legados que llaman memoria_texto().
+        good = data.get("buenas") or []
+        if isinstance(good, list) and good:
+            valid = [g for g in good if isinstance(g, dict) and
+                     isinstance(g.get("post"), str) and isinstance(g.get("respuesta"), str)]
+            if valid:
+                parts.append("RESPUESTAS QUE YA FUNCIONARON (aprobadas; mismo tono, no las copies):\n" +
+                             "\n".join(f"- «{g['post'][:90]}» -> «{g['respuesta']}»" for g in valid[-10:]))
+        bad = data.get("malas") or []
+        if isinstance(bad, list) and bad:
+            valid = [b for b in bad if isinstance(b, dict) and all(
+                isinstance(b.get(k), str) for k in ("post", "respuesta", "motivo"))]
+            if valid:
+                parts.append("ERRORES QUE NO SE PUEDEN REPETIR:\n" +
+                             "\n".join(f"- «{b['post'][:90]}» -> «{b['respuesta']}» ({b['motivo']})" for b in valid[-8:]))
     last = [t for t in list(recent)[-40:] if t and len(re.findall(r"[^\W_]+", t)) >= 7][-14:]      # sin las frases cortas de banco antiguas (no son modelo a seguir)
     if last:
         parts.append("LO ÚLTIMO QUE HEMOS PUBLICADO (varía: no repitas arranques, ideas ni forma):\n" + "\n".join(f"- {t[:110]}" for t in last))
@@ -301,7 +321,7 @@ def build_prompt(items, network, recent=None, memoria=None):
         context = f" Contexto: {item['context']}{extra}." if item.get("context") else (f" Contexto:{extra}." if extra else "")
         red = item.get("network") or network
         lines.append(f'{item["id"]} [red: {red}] Autor: {item.get("author", "")}.{context} Publicación: «{" ".join(str(item["text"]).split())[:600]}»')
-    block = memoria if memoria is not None else memoria_texto(recent if recent is not None else recent_reply_texts(14))
+    block = memoria if memoria is not None else memoria_texto(recent if recent is not None else recent_reply_texts(14),\n                                                             items=items, network=network)
     estilo = estilo_red_texto([i.get("network") or network for i in items])
     return PROMPT.format(n=len(items), items="\n".join(lines), memoria=block, estilo_red=estilo)
 
