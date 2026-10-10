@@ -1,6 +1,6 @@
 """Cuentas RECIPROCAS («hubs de follow-back») para todas las redes (07/10/2026).
 
-Descubrimiento (David, 07/10): @rober@masto.es (admin de masto.es) tiene 33.750 seguidores y sigue a 37.400: crece SIGUIENDO a mucha gente que le sigue de vuelta. Quien tiene
+Descubrimiento (David, 07/10): un hub ilustrativo (datos orientativos) tiene 33.750 seguidores y sigue a 37.400: crece SIGUIENDO a mucha gente que le sigue de vuelta. Quien tiene
 esa conducta (sigue casi tantas cuentas como le siguen) devuelve el follow; y sus listas de seguidores y de seguidos son un caladero de cuentas con la misma cultura de follow-back.
 No es una anecdota de Mastodon: el patron vale en Bluesky, X, Threads, Instagram, TikTok y Pinterest.
 
