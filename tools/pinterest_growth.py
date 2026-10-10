@@ -150,7 +150,8 @@ def build_plan(candidates, max_follows=10, max_saves=10, max_reacts=15, max_comm
             seen_pin_react.add(pin["url"])
             caption = f"{pin.get('title') or ''} {pin.get('desc') or ''}".strip()
             plan.append({"kind": "react", "url": pin["url"], "title": (pin.get("title") or "")[:80],
-                         "post_text": caption[:600], "media_present": True})
+                         "post_text": caption[:600], "media_present": True,
+                         "post_created_at": pin.get("post_created_at") or pin.get("created_at") or pin.get("created_time") or ""})
     for pin in pins:
         if len([a for a in plan if a["kind"] == "save"]) >= max_saves:
             break
@@ -158,7 +159,8 @@ def build_plan(candidates, max_follows=10, max_saves=10, max_reacts=15, max_comm
         if pin.get("board") and not pin.get("done_save") and pin["url"] not in seen_pin_save and author not in authors_used:
             seen_pin_save.add(pin["url"])
             authors_used.add(author)
-            plan.append({"kind": "save", "url": pin["url"], "board": pin["board"], "title": pin["title"][:80]})
+            plan.append({"kind": "save", "url": pin["url"], "board": pin["board"], "title": pin["title"][:80],
+                         "post_created_at": pin.get("post_created_at") or pin.get("created_at") or pin.get("created_time") or ""})
     commented, used_texts, comment_authors = set(), set(), set()
     for pin in pins:       # comentarios: pins del nicho con tablero asignado, un comentario corto por pin y por autor
         if len(commented) >= max_comments:
@@ -169,7 +171,8 @@ def build_plan(candidates, max_follows=10, max_saves=10, max_reacts=15, max_comm
         text = PENDING_TEXT
         commented.add(pin["url"])
         comment_authors.add(author)
-        plan.append({"kind": "comment", "url": pin["url"], "text": text, "title": pin["title"][:80], "desc": (pin.get("desc") or "")[:300], "author": pin.get("author") or ""})
+        plan.append({"kind": "comment", "url": pin["url"], "text": text, "title": pin["title"][:80], "desc": (pin.get("desc") or "")[:300], "author": pin.get("author") or "",
+                     "post_created_at": pin.get("post_created_at") or pin.get("created_at") or pin.get("created_time") or ""})
     for author in sorted(candidates.get("authors", []), key=lambda a: -a.get("score", 0)):
         if len([a for a in plan if a["kind"] == "follow"]) >= max_follows:
             break
