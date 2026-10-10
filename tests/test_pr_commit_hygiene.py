@@ -108,6 +108,16 @@ class PRHistoryTests(unittest.TestCase):
         self.assertEqual(parsed, {"folder with space/secrets/odd\nname.json", "normal.txt"})
         self.assertTrue(all(h.forbidden_path(p) for p in parsed if p != "normal.txt"))
 
+    def test_invalid_utf8_path_fails_closed_even_when_absent_in_final_diff(self):
+        from unittest import mock
+
+        # Git supports arbitrary filename bytes on some filesystems. A
+        # transient invalid path must not be silently decoded/reclassified.
+        raw = b"normal.txt\\0credentials.json\\xff\\0".replace(b"\\0", bytes([0])).replace(b"\\xff", bytes([255]))
+        with mock.patch.object(h, "git", return_value=raw):
+            with self.assertRaises(UnicodeDecodeError):
+                h.changes(self.root, "parent", "commit")
+
     def test_merging_new_base_does_not_import_false_positive(self):
         self.topic()
         self.write("topic.md")
