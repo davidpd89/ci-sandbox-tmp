@@ -91,7 +91,8 @@ class ConfirmedOutcomeTests(unittest.TestCase):
         result = run([
             {"kind": "follow", "handle": "@a"},
             {"kind": "like", "handle": "@b", "text_fragment": "x"},
-            {"kind": "reply", "handle": "@c", "text_fragment": "y", "text": "respuesta",\n             "permalink": "https://www.threads.com/@c/post/ABCD1234"},
+            {"kind": "reply", "handle": "@c", "text_fragment": "y", "text": "respuesta",
+             "permalink": "https://www.threads.com/@c/post/ABCD1234"},
         ], prevalidated=True)
         self.assertEqual(
             [r["resultado"] for r in result],
@@ -99,7 +100,8 @@ class ConfirmedOutcomeTests(unittest.TestCase):
         )
         ns["_verified_via_api"] = lambda text: True   # la API oficial si ve la respuesta: queda confirmada
         result = load_function("threads_execute.py", "run_plan", ns)(
-            [{"kind": "reply", "handle": "@c", "text_fragment": "y", "text": "respuesta",\n              "permalink": "https://www.threads.com/@c/post/ABCD1234"}], prevalidated=True)
+            [{"kind": "reply", "handle": "@c", "text_fragment": "y", "text": "respuesta",
+              "permalink": "https://www.threads.com/@c/post/ABCD1234"}], prevalidated=True)
         self.assertEqual([r["resultado"] for r in result], ["confirmado"])
 
     def test_instagram_pending_private_follow_is_not_confirmed(self):
