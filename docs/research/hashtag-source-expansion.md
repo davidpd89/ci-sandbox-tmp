@@ -1,5 +1,34 @@
 # PR #63 — Expansión inteligente de hashtags (10/10/2026)
 
+Fuente primaria: https://github.com/rapidfuzz/RapidFuzz/blob/db6e504539a9c895180b266a06b36a32cb6029ee/LICENSE
+Fecha de consulta: 2026-10-10
+Licencia SPDX: MIT
+Referencia inmutable: https://github.com/rapidfuzz/RapidFuzz/tree/db6e504539a9c895180b266a06b36a32cb6029ee
+
+## Problema
+
+No había ranking multired con fuentes y caducidad compartidas. Véase diagnóstico siguiente.
+
+## Alternativas
+
+Contraste de RapidFuzz, YAKE, trendspyg y NetworkX en la tabla inferior.
+
+## Licencias y procedencia
+
+Se examinaron ficheros LICENSE y commits inmutables; no se copió código externo.
+
+## Decisión
+
+Mantener los adaptadores existentes y añadir una capa offline incremental de biblioteca estándar.
+
+## Pruebas
+
+Tests sintéticos y workflow Python 3.11 Ubuntu/Windows; resultados y limitaciones abajo.
+
+## Retirada
+
+Borrar la caché opcional y revertir el cambio aditivo en discovery_terms; no hay migración.
+
 ## Diagnóstico y fuente oficial
 
 En el espejo, tools/discovery_terms.py solo lee bancos estáticos del JSON 00_OPERATIVO/descubrimiento_gpt.json (que no está incluido en el espejo). Bluesky tiene un minero propio en tools/bluesky_vocab_miner.py que cuenta autores distintos y Mastodon dispone de tools/hashtag_report.py para métricas semanales. Las demás redes tienen pools de búsqueda independientes, pero no existía un sistema común de coocurrencia, resultados, procedencia y caducidad.
