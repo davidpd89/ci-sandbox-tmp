@@ -92,6 +92,35 @@ class RankingTests(unittest.TestCase):
         self.assertEqual({x["reason"] for x in got["post_rejections"]},
                          {"post_outside_age_window", "missing_post_timestamp"})
 
+    def test_rejected_posts_do_not_inflate_account_topic(self):
+        baseline = rank("bluesky", [account(hits=False)])["ranked"][0]
+        for altered in (
+            post(created_at="2026-01-01T00:00:00Z", text="fantasía romantasy libros"),
+            post(created_at="2099-01-01T00:00:00Z", text="fantasía romantasy libros"),
+            post(created_at="2026-10-09T08:00:00", text="fantasía romantasy libros"),
+            post(language="en", text="fantasía romantasy libros"),
+            {"text": "fantasía romantasy libros", "language": "es",
+             "created_at": "2026-10-09T08:00:00Z"},
+        ):
+            with self.subTest(altered=altered):
+                result = rank("bluesky", [account(hits=False, posts=[altered])])["ranked"][0]
+                self.assertEqual(result["explanation"]["topic"], baseline["explanation"]["topic"])
+                self.assertEqual(result["opportunities"], baseline["opportunities"])
+
+    def test_unknown_language_cannot_increase_account_affinity_or_generate_post_action(self):
+        row = account(hits=False, posts=[post(language=None, text="fantasía romantasy libros")])
+        result = rank("bluesky", [row])["ranked"][0]
+        self.assertEqual(result["explanation"]["topic"]["value"], 0.)
+        self.assertEqual(result["posts"][0]["actions"], [])
+        self.assertEqual([a["action"] for a in result["opportunities"]], ["follow"])
+
+    def test_valid_spanish_post_adds_account_topic_evidence(self):
+        result = rank("bluesky", [
+            account(hits=False, posts=[post(text="fantasía romantasy libros")])
+        ])["ranked"][0]
+        self.assertGreater(result["explanation"]["topic"]["value"], 0.)
+        self.assertIn("comment", [a["action"] for a in result["opportunities"]])
+
     def test_spanish_explicit_false_excludes_foreign_posts(self):
         row = account(posts=[post(language="en")])
         got = rank("bluesky", [row])["ranked"][0]
@@ -102,6 +131,9 @@ class RankingTests(unittest.TestCase):
         row = account(posts=[post(language=None)])
         found = rank("bluesky", [row])["ranked"][0]["posts"][0]
         self.assertIsNone(found["explanation"]["spanish"]["value"])
+        self.assertEqual(found["actions"], [])  # Unknown language is informational only.
+        self.assertFalse(any(a.get("post_id") == found["id"] for a in
+                             rank("bluesky", [row])["ranked"][0]["opportunities"]))
 
     def test_only_existing_actions_surface_no_auto_x_like(self):
         candidate = account("x", posts=[post(actions=["like", "reply", "repost"])],

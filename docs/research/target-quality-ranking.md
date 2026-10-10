@@ -107,6 +107,9 @@ los no observados **no** se convierten en resultados negativos.
   respuestas y antigüedad. Límite adquisición 21 días, comunidad 45 días
   por defecto (parámetros ajustables al `growth_policy` de cada scan).
   Fuera de edad o con fecha ausente no obtiene oportunidad de interactuar.
+  Un post de idioma desconocido se conserva solo como evidencia informativa:
+  no genera interacciones ni aumenta el score temático de la cuenta.
+  Únicamente los posts vigentes con español explícito suman afinidad.
   Una cuenta no desaparece por tener todos sus posts vencidos.
 - Acciones: **solo** las permitidas por la shortlist de origen:
   `follow`, `reply`, `comment`, `repost`. `like` no se propone,

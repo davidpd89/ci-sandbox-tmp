@@ -215,9 +215,8 @@ def rank_network(network, candidates, *, as_of, outcomes=None,
         _, raw = entries[0]
         item = _adapt(network, raw)
         bio_hits = _hits(item["bio"])
-        post_hits = max((_hits(str(p.get("text") or p.get("caption") or ""))
-                         for p in item["posts"] if isinstance(p, Mapping)), default=0)
-        topical = min(1.0, (bio_hits * 1.5 + post_hits) / 4) if (item["bio"] or post_hits) else None
+        # Do not let stale, future, invalid or foreign posts boost account affinity.
+        post_hits = 0
         sources = min(1.0, item["sources"] / 4) if item["sources"] is not None else None
         audience = _number(item["followers"], 1_000_000_000)
         if audience is not None:
@@ -255,6 +254,8 @@ def rank_network(network, candidates, *, as_of, outcomes=None,
             if lang == 0:
                 post_rejected.append({"id": key, "reason": "non_spanish_post"})
                 continue
+            if lang == 1:
+                post_hits = max(post_hits, _hits(str(post.get("text") or post.get("caption") or "")))
             activity_t = max(t for t in (activity_t, timestamp) if t is not None)
             stats = post.get("stats") if isinstance(post.get("stats"), Mapping) else {}
             engagement = stats.get("replies", post.get("replies"))
@@ -271,7 +272,9 @@ def rank_network(network, candidates, *, as_of, outcomes=None,
                 actions = ()
             valid_posts.append({"id": key, "score": pscore, "coverage": pcover,
                                 "explanation": pparts, "age_days": round(age, 2),
-                                "actions": sorted({a for a in actions if isinstance(a, str)} & _ACTIONS)})
+                                "actions": sorted({a for a in actions if isinstance(a, str)} & _ACTIONS)
+                                                  if lang == 1 else []})
+        topical = min(1.0, (bio_hits * 1.5 + post_hits) / 4) if (item["bio"] or post_hits) else None
         activity = None
         if activity_t is not None:
             age = (now - activity_t).total_seconds() / 86400
