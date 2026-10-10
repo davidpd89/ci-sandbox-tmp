@@ -23,3 +23,35 @@ El repositorio privado, rama `integracion/crecimiento-2026-10` (HEAD de referenc
 `python -m unittest discover -s tests -p test_niche_query_bank.py -v`: **7/7 OK**. `python -m pytest -q tests/test_niche_query_bank.py`: **7/7 OK**; `python -m compileall -q tools tests`: OK; Linux Python **3.13.5**. Datos totalmente sintéticos, nueve redes (24–27 consultas adicionales en cada una), orden original y Unicode, control de duplicados, JSON ausente/corrupto y conservación de hashtags. El número de candidatos/seguidores obtenidos no se ha medido.
 
 **Falta para Claude:** ejecutar la suite privada y Windows/Python 3.11, reconciliar el posible conflicto de `discovery_terms.py` con #63, comprobar consumos de las nueve redes tras #101 y realizar comparación real por fuente sin interactuar durante QA. Ninguna red fue utilizada, no se accedió a secretos, no se ha hecho merge.
+
+
+## Problema
+
+La búsqueda existente se apoya en gran parte en términos genéricos y de apoyo entre autores, con déficit de peticiones de recomendaciones, reseñas, lectura activa, comunidades y subgéneros en español. La investigación propone nueve clientes y un almacén nuevo, pero el oficial ya tiene escáneres, ranking, atribución, Jetstream y rotación. El cambio se restringe a ampliar consultas sin inventar datos.
+
+## Alternativas
+
+A. Crear motores independientes por plataforma: descartado por duplicación con los nueve escáneres.
+B. Instalar Instaloader, snscrape y archivadores: descartado en esta PR por solapamientos, mantenimiento incierto y dependencia operativa.
+C. Ampliar el contrato `discovery_terms` compartido y mantener adaptadores: **seleccionado**; se conserva el catálogo inicial y la planificación actual. #101 cubre la conexión de consumidores restantes.
+
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/bluesky-social/jetstream/tree/f42df08ba0ca9e4287020139aefbcfe24506d1ef
+Fecha de consulta: 2026-10-10
+Licencia SPDX: Apache-2.0
+Referencia inmutable: N/A (sin codigo incorporado)
+
+Esta ficha identifica una fuente pública comparada, no una biblioteca vendorizada: Jetstream admite la licencia MIT **o** Apache-2.0 y está escrito en Go. El código implementado aquí es propio y adapta el helper existente. Otras fuentes y SHA figuran en «Fuentes públicas verificadas».
+
+## Decisión
+
+Mantener el único banco compartido y ampliar búsquedas por intención; nueve familias de salida, sin red ni acciones. La integración real de los cinco consumidores aún no conectados debe realizarse al incorporar #101. La PR #136 reutiliza por separado el contrato externo JSONL del archivador MIT sin desplegarlo.
+
+## Pruebas
+
+Linux Python 3.13.5: unittest 7/7, pytest 7/7 y compileall OK con fixtures sintéticos. Las pruebas verifican nueve redes, orden y deduplicación, unicode sin confundir ñ/n, JSON ausente y catálogo de hashtags inalterado. El gate de campaña ejecuta sus propias pruebas en Python 3.11 Linux/Windows, no necesariamente estos siete tests; requieren validación expresa de Claude en los dos entornos.
+
+## Retirada
+
+Revertir el commit de esta PR o pasar `include_niche=False` en el helper: se recupera el banco previo de búsquedas sin migración de SQLite, sin tocar el historial ni perder registros. Sin despliegue o modificación de cuentas.
