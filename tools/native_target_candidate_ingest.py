@@ -335,7 +335,11 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
                 account[rel] = row[rel]
         # 'kind' means scanner preference, not observed permission/capability.
         explicit = row.get("verified_actions")
-        if isinstance(explicit, (list, tuple)):
+        # A post assigned to a different immutable author cannot grant a
+        # follow opportunity on the enclosing candidate account.
+        row_author_id = _id(row.get("author_id"))
+        if (isinstance(explicit, (list, tuple)) and
+            not (stable and row_author_id and row_author_id != stable)):
             account["actions"].update(a for a in explicit if isinstance(a, str)
                                       and a in _ALLOWED_ACTIONS)
         posts = row.get("posts")
