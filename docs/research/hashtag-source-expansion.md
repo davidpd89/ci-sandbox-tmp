@@ -37,7 +37,7 @@ En el espejo, tools/discovery_terms.py solo lee bancos estáticos del JSON 00_OP
 
 ## Código implementado
 
-tools/hashtag_expansion.py implementa una capa 100 % offline de biblioteca estándar Python 3.11, con observaciones proporcionadas explícitamente por adaptadores: network, source, post_id, author_id, created_at, text y tags opcionales. Cuenta posts una sola vez por (red, ID), reúne procedencias y exige autores únicos. Extrae hashtags Unicode, normaliza acentos, exige coincidencia con semillas (fantasía, lectura, escritura, libro y actualidad, ampliables con JSON); mínimo dos autores y asociación temática de 0,60. Ignora posts con edad superior a 14 días, fechas futuras o sin zona horaria.
+tools/hashtag_expansion.py implementa una capa 100 % offline de biblioteca estándar Python 3.11, con observaciones proporcionadas explícitamente por adaptadores: network, source, post_id, author_id, created_at, text y tags opcionales. Cuenta posts una sola vez por (red, ID), reúne procedencias y exige autores únicos. Extrae hashtags Unicode, normaliza a NFC y conserva las tildes/ñ en la identidad de la etiqueta (por ejemplo, `#año` y `#ano` no se confunden); usa plegado de acentos solo para buscar semillas temáticas, exige coincidencia con semillas (fantasía, lectura, escritura, libro y actualidad, ampliables con JSON); mínimo dos autores y asociación temática de 0,60. Ignora posts con edad superior a 14 días, fechas futuras o sin zona horaria.
 
 Ranking: asociación temática 55 %, autores distintos 20 %, frescura 15 % y resultados agregados 10 %. El feedback opcional contiene por red/etiqueta eligible, engaged, replies y followers. Realiza rotación determinista diaria entre etiquetas de puntuación cercana y reparto por temas; máximo 10 por red. El snapshot solo almacena puntuaciones, fuentes y agregados, sin identidades de autores ni posts.
 
@@ -88,3 +88,23 @@ Workflow dedicado en Ubuntu y Windows con Python 3.11 y sin conexión a redes so
 **Segunda revisión adversarial (puntos revisados)**: no contar el mismo post dos veces, ni la misma cuenta como varios autores; no promover hashtags que solo aparecen junto a fútbol; no filtrar historiales de otras redes; fallar a cache estática tras vencimiento; mantener límites del escáner destino. Las pruebas no ejecutan una ronda WEB/API/MOBILE. Mantenida la diferencia entre simulación y canario supervisado.
 
 **Pendientes para Claude**: incorporar datos anonimizados de colectores, reconciliar tag_seeds del oficial (#48), comprobar formato de búsqueda por red y medir rendimiento de forma prospectiva (aceptados/obtenidos, respuestas, seguidores) con grupo estático de control. Validación viva de Edge, Windows de trabajo y Android pendiente. No hay secretos, acciones en redes ni merge. SPDX del código propio: ninguna dependencia incorporada o vendorizada.
+
+## Revisión independiente adicional (10/10/2026)
+
+La revisión detectó dos regresiones de integración no cubiertas antes: importación desde la raíz
+mediante `from tools import discovery_terms` y entradas de red no-diccionario en el
+catálogo estático. Ambas se repararon con pruebas. También se corrigió la identidad de
+etiquetas en español: NFC y `casefold()` mantienen las tildes, mientras que el
+texto de semillas conserva la comparación insensible a acentos. Se añadieron
+fixtures con `#año`/`#ano`, `#niño`/`#nino` y Unicode descompuesto.
+
+**Limitaciones pendientes del motor, no demostradas por datos sintéticos**:
+los nueve adaptadores de observaciones aún no existen en esta PR (seguimiento #99);
+ningún incremento de candidatos/clicks/respuestas/seguidores está validado con datos
+observados de las redes. El feedback por `network,tag` no incluye IDs de ventana/evento
+ni atribución causal, por lo que una reingesta puede duplicar sus agregados.
+La normalización de la salida conserva ahora los acentos; hay que comprobar
+las consultas reales de cada adaptador antes de activar el flujo operativo.
+La integración en el repositorio oficial debe conservar `tag_seeds` y sus
+constantes, ausentes en la base del espejo. Aún es necesaria la validación
+de canario en Edge, Windows de trabajo y móvil.
