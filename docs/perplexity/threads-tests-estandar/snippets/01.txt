@@ -1,0 +1,23 @@
+json
+{
+  "platform": "threads",
+  "action": "reply|like|follow|publish",
+  "target": {
+    "post_id": "threads_post_id",
+    "author": {"user_id": "threads_user_id", "username": "usuario"},
+    "permalink": "https://www.threads.com/@usuario/post/..."
+  },
+  "candidate": {
+    "identity_key": "threads:user_id",
+    "created_at_utc": "2026-10-10T10:15:00Z",
+    "language": "es",
+    "text": "..."
+  },
+  "execution": {
+    "container_id": "...",
+    "published_id": "...",
+    "status": "pending|created|processing|published|failed|skipped",
+    "attempts": 0,
+    "error_class": "transient|recoverable|terminal|quota"
+  }
+}
