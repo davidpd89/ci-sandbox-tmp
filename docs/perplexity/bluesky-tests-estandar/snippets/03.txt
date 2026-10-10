@@ -1,0 +1,48 @@
+python
+# tests/bluesky_syntax_loader.py
+# Adaptación propia para consumir los vectores de:
+# https://github.com/bluesky-social/atproto-interop-tests/tree/main/syntax
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+import pytest
+
+FIXTURES = Path(__file__).parent / "fixtures" / "atproto-interop-tests" / "syntax"
+
+
+@dataclass(frozen=True)
+class SyntaxVector:
+    kind: str
+    value: str
+    source_file: str
+
+
+def _read_lines(path: Path) -> list[str]:
+    return [
+        line.strip()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.startswith("#")
+    ]
+
+
+def syntax_vectors(kind: str) -> list[SyntaxVector]:
+    valid = _read_lines(FIXTURES / f"{kind}_syntax_valid.txt")
+    invalid = _read_lines(FIXTURES / f"{kind}_syntax_invalid.txt")
+    return [
+        SyntaxVector(kind, value, f"{kind}_syntax_valid.txt")
+        for value in valid
+    ] + [
+        SyntaxVector(kind, value, f"{kind}_syntax_invalid.txt")
+        for value in invalid
+    ]
+
+
+@pytest.fixture(scope="session")
+def aturi_vectors() -> list[SyntaxVector]:
+    return syntax_vectors("aturi")
+
+
+@pytest.fixture(scope="session")
+def datetime_vectors() -> list[SyntaxVector]:
+    return syntax_vectors("datetime")
