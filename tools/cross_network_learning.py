@@ -104,7 +104,9 @@ def _positive_effect(arms):
         return None
     # Separación descriptiva de los extremos de Wilson, NO un IC válido
     # de la diferencia ni una inferencia causal o ajustada por múltiples tests.
-    return {"wilson_interval_gap": round(lo_a - hi_b, 4),
+    # No redondear: una separación estrictamente positiva puede ser <0.00005.
+    # La precisión del efecto calculado debe conservarse en el informe v2.
+    return {"wilson_interval_gap": lo_a - hi_b,
             "treatment_n": a["n"], "control_n": b["n"]}
 
 

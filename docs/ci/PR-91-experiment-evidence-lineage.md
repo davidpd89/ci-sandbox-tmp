@@ -171,3 +171,24 @@ entre procesos: no asegura la autenticidad del archivo externo.
 - Sigue pendiente conciliar #3 antes de integrar #91 y repetir
   Windows/Ubuntu sobre el HEAD final. La capacidad demostrada
   es del registro offline, no prueba aprendizaje causal ni acciones reales.
+
+## Actualización independiente — 10/10/2026 (control de integración)
+
+- Se sincroniza esta rama con `ci/test-campaign-parent` en
+  `c48480c979fdfc06fb4169a53da0b92c36601766` mediante commit de
+  combinación con dos padres. La base aportaba 15 archivos distintos
+  de los ocho modificados por #91; no se resolvieron colisiones descartando código.
+- Se recupera la corrección de #3 para `_positive_effect`: un
+  `wilson_interval_gap` estrictamente positivo no debe redondearse a
+  `0.0`. Regresión determinista: dos muestras de un millón,
+  500.990 frente a 499.010 éxitos, brecha positiva inferior a 0,00005.
+- **Estado de dependencia corregido:** #3 figura **closed, merged=false**
+  en el mirror. El último comentario sostiene que se integró en el oficial
+  mediante `89469ebd`, pero ese commit modifica followback/hashtags, no
+  `tools/cross_network_learning.py`. En la rama oficial el archivo sigue
+  con blob `673c74ab2c19831debc1827812eeb1b47a259f31` y `schema=1`.
+  Antes de incorporar #91, Claude debe confirmar en qué rama/commit está
+  realmente integrado el gate por cola de #3. Esta PR transporta los cambios
+  del gate y añade el contrato v2; no debe restaurarse el verificador legacy.
+- La integración operativa exige repetir CI y comparar el gate del oficial
+  con el de esta PR, además de la suite offline.
