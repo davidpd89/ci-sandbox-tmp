@@ -1306,6 +1306,18 @@
         80
       ],
       "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/86"
+    },
+    {
+      "number": 204,
+      "title": "Docs: mapa de dependencias y consolidacion de PR abiertas",
+      "objective": "Mapa de dependencias y consolidacion de PR abiertas",
+      "state": "open",
+      "base": "research/public-reuse-parent",
+      "head": "audit/pr-relationships-2026-10-10",
+      "head_sha": "5ca61c4627198a5370cba8854f7ddf880d6f2cca",
+      "area": "operations",
+      "related_prs": [],
+      "url": "https://github.com/davidpd89/ci-sandbox-tmp/pull/204"
     }
   ]
 }
