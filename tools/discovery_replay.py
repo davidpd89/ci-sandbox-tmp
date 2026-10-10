@@ -41,6 +41,8 @@ def compare_rankings(train, holdout, *, train_as_of, holdout_as_of,
     raw = rank_cohorts(train, min_sample=1, as_of=train_as_of)
     guarded = rank_cohorts(train, min_sample=min_sample, as_of=train_as_of)
     future = rank_cohorts(holdout, min_sample=1, as_of=holdout_as_of)
+    if raw["rejected_without_network"] or future["rejected_without_network"]:
+        raise ValueError("cohorts with unknown network cannot enter replay")
     out = {}
     for net in NETWORKS:
         if net not in SUPPORTED_SNAPSHOTS:
