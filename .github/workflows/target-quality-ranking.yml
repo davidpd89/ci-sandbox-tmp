@@ -1,0 +1,30 @@
+name: Target quality ranking (synthetic)
+on:
+  pull_request:
+    paths:
+      - 'tools/target_quality_ranking.py'
+      - 'tests/test_target_quality_ranking.py'
+      - '.github/workflows/target-quality-ranking.yml'
+  push:
+    branches:
+      - 'research/56-target-quality-ranking'
+    paths:
+      - 'tools/target_quality_ranking.py'
+      - 'tests/test_target_quality_ranking.py'
+      - '.github/workflows/target-quality-ranking.yml'
+permissions:
+  contents: read
+jobs:
+  offline-contract:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run synthetic ranking contracts
+        run: python -m unittest discover -s tests -p test_target_quality_ranking.py -v
