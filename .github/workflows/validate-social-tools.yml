@@ -67,3 +67,26 @@ jobs:
         run: python -m compileall -q tools tests
       - name: Ejecutar regresiones offline
         run: python -m pytest tests -q -p no:cacheprovider --deselect tests/test_bluesky_growth_docs.py::BlueskyGrowthDocsTests::test_daily_docs_use_orchestrated_state_ai_and_report_files --deselect tests/test_bluesky_growth_docs.py::BlueskyGrowthDocsTests::test_hot_path_points_to_growth_flow_not_legacy_scan --deselect tests/test_language_variety.py::LanguageVarietyTests::test_real_repository_history_is_readable_without_schema_or_status_errors --deselect tests/test_loyalty_writer.py::WriterRulesTests::test_prompt_has_memory_feedback_rule_and_reply_to_us --deselect tests/test_metricool_retired.py::MetricoolRetiredTests::test_common_publisher_refuses_before_media --deselect tests/test_metricool_retired.py::MetricoolRetiredTests::test_operational_entrypoints_mark_metricool_retired --deselect tests/test_reddit_publish.py::StatesFileTests::test_real_bank_and_states_are_consistent
+
+  # Independent, sparse checkout: the full Git DAG is required for intermediate
+  # commits, while the whole working tree and secret contents are not.
+  pr-history:
+    name: pr-history (${{ matrix.os }})
+    if: github.event_name == 'pull_request'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          sparse-checkout: tools
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Verify every PR commit, including transient paths
+        run: python tools/pr_commit_hygiene.py --pr-merge HEAD --expected-head "${{ github.event.pull_request.head.sha }}" --expected-base "${{ github.event.pull_request.base.sha }}"
