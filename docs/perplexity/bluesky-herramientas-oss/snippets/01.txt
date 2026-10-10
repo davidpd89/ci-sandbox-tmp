@@ -1,0 +1,30 @@
+python
+# Fuente base: https://github.com/MarshalX/atproto/blob/main/examples/send_post.py
+# SDK: https://github.com/MarshalX/atproto
+# Objetivo: adaptador común para scan, reply, like, follow y publicación.
+
+from atproto import Client
+from tenacity import retry, stop_after_attempt, wait_exponential_jitter
+
+class BlueskyClient:
+    def __init__(self, handle: str, app_password: str):
+        self._client = Client()
+        self._handle = handle
+        self._app_password = app_password
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential_jitter(initial=1, max=30))
+    def login(self):
+        return self._client.login(self._handle, self._app_password)
+
+    def author_feed(self, actor: str, limit: int = 50, cursor: str | None = None):
+        return self._client.get_author_feed(actor=actor, limit=limit, cursor=cursor)
+
+    def search_posts(self, q: str, limit: int = 50, cursor: str | None = None):
+        return self._client.app.bsky.feed.search_posts({"q": q, "limit": limit, "cursor": cursor})
+
+    def reply(self, parent_uri: str, parent_cid: str, text: str):
+        return self._client.send_post(
+            text=text,
+            reply={"root": {"uri": parent_uri, "cid": parent_cid},
+                   "parent": {"uri": parent_uri, "cid": parent_cid}},
+        )
