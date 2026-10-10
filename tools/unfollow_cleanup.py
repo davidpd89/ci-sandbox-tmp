@@ -44,7 +44,7 @@ def candidates(rows, followers, today, *, days=gp.NONRECIPROCAL_DAYS,
     """
     import followback_lifecycle as fl
 
-    net = network or "bluesky"
+    net = network if network in fl.NETWORKS else "bluesky"
     key = lambda handle: fl.account_key(net, handle)
     protected = protected_accounts()
 
