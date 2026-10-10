@@ -129,39 +129,81 @@ def select(network: str, kind: str, seeds, *, budget: int, tick: int,
     return selected
 
 
+def _entry_key(item):
+    """Identidad de consulta: también admite (familia, query) y filas tag."""
+    if isinstance(item, tuple):
+        return str(item[-1])
+    if isinstance(item, dict):
+        return str(item.get("tag") or "")
+    return str(item)
+
+
+def reserve_fresh(chosen, fresh, *, budget: int, tick: int):
+    """Reserva una exploración léxica dentro de la cuota del selector nativo.
+
+    No modifica métricas, rankings o pools originales. Con términos frescos
+    sustituye a lo sumo una consulta del lote ya seleccionado. No ejecuta I/O.
+    """
+    if not isinstance(budget, int) or budget < 0 or not isinstance(tick, int):
+        raise ValueError("presupuesto o tick invalidos")
+    result = list(chosen)[:budget]
+    if not budget:
+        return []
+    used = {_key(_entry_key(item)) for item in result}
+    additions = []
+    seen = set()
+    for item in fresh:
+        key = _key(_entry_key(item))
+        if key and key not in used and key not in seen:
+            additions.append(item)
+            seen.add(key)
+    if not additions:
+        return result
+    selected = additions[tick % len(additions)]
+    if len(result) == budget:
+        result[-1] = selected
+    else:
+        result.append(selected)
+    return result
+
+
 def extend_native_config(network: str, config: dict, *,
                          reader: Reader | None = None) -> dict:
-    """Conserva el esquema de los tres escáneres por configuración.
+    """Guarda la expansión separada de los pools nativos y sus presupuestos.
 
-    Solo amplía pools; la cobertura/presupuesto/ranking originales siguen
-    decidiendo cuántas consultas ejecutar. No escribe la configuración.
+    Evita que una familia extra aumente Bluesky 38->40, que Mastodon descarte
+    siempre la familia 19/15 o que TikTok postergue novedades tras 144 semillas.
+    La reserva se decide en los selectores reales, una sola cuota por superficie.
     """
     if network not in ("bluesky", "mastodon", "tiktok"):
         raise ValueError("red sin adaptador de config")
     data = deepcopy(config)
     if network in ("bluesky", "mastodon"):
-        families = data.setdefault("query_families", [])
-        old = [q for f in families for q in f.get("queries", [])]
-        _, new_queries = combine(network, "busquedas", old, reader=reader)
-        if new_queries:
-            families.append({"name": "lexical_expansion", "queries": new_queries})
+        families = data.get("query_families") or []
+        old = [q for f in families if isinstance(f, dict)
+               for q in f.get("queries", [])]
+        _, fresh = combine(network, "busquedas", old, reader=reader)
+        data["lexical_queries"] = fresh
         if network == "bluesky":
-            tags = data.setdefault("tag_queries", [])
-            old_tags = [row.get("tag", "") for row in tags]
+            tags = data.get("tag_queries") or []
+            old_tags = [row.get("tag", "") for row in tags if isinstance(row, dict)]
             _, new_tags = combine(network, "hashtags", old_tags, reader=reader)
-            tags.extend({"tag": tag[1:], "query": tag[1:]}
-                        for tag in new_tags)
+            data["lexical_tags"] = [
+                {"tag": tag[1:], "query": tag[1:]} for tag in new_tags
+            ]
         else:
-            tags = data.setdefault("hashtags", [])
-            _, new_tags = combine(network, "hashtags", tags, reader=reader)
-            tags.extend(tag[1:] for tag in new_tags)
+            old_tags = data.get("hashtags") or []
+            _, new_tags = combine(network, "hashtags", old_tags, reader=reader)
+            data["lexical_tags"] = [tag[1:] for tag in new_tags]
     else:
-        for field, kind in (("actor_queries", "busquedas"),
-                            ("video_queries", "busquedas")):
-            original = data.setdefault(field, [])
-            _, fresh = combine(network, kind, original, reader=reader)
-            original.extend(fresh)
-        original = data.setdefault("video_queries", [])
-        _, fresh = combine(network, "hashtags", original, reader=reader)
-        original.extend(fresh)
+        for field, dest in (
+            ("actor_queries", "lexical_actor_queries"),
+            ("video_queries", "lexical_video_queries"),
+        ):
+            original = data.get(field) or []
+            _, fresh = combine(network, "busquedas", original, reader=reader)
+            data[dest] = fresh
+        original = (data.get("video_queries") or []) + data["lexical_video_queries"]
+        _, new_tags = combine(network, "hashtags", original, reader=reader)
+        data["lexical_video_queries"] += new_tags
     return data
