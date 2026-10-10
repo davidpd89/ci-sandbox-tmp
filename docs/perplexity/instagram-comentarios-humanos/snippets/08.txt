@@ -1,0 +1,48 @@
+python
+# tools/comment_style_audit.py — adaptación nueva para el sistema; no es copia literal de un repo externo.
+from __future__ import annotations
+
+import csv
+import re
+from collections import Counter
+from pathlib import Path
+
+FORMATOS = ("reaccion", "pregunta", "observacion", "observacion_pregunta", "recomendacion")
+EMOJI = re.compile("[\U0001F300-\U0001FAFF\u2600-\u27BF]")
+
+def clasificar(texto: str) -> str:
+    t = texto.strip()
+    if "?" in t:
+        return "observacion_pregunta" if len(t.split()) > 6 else "pregunta"
+    if re.search(r"\b(prueba|prueba a|te recomiendo|échale un ojo|pruébate)\b", t, re.I):
+        return "recomendacion"
+    if len(t.split()) <= 6:
+        return "reaccion"
+    return "observacion"
+
+def auditar(filas: list[dict], red: str, max_formato: float = 0.40) -> dict:
+    textos = [f["texto"] for f in filas if f.get("texto")]
+    formatos = Counter(clasificar(t) for t in textos)
+    total = len(textos) or 1
+    emojis = sum(len(EMOJI.findall(t)) for t in textos)
+    arranques = Counter(" ".join(re.findall(r"[^\W_]+", t.lower())[:2]) for t in textos)
+    return {
+        "red": red,
+        "total": len(textos),
+        "formatos": dict(formatos),
+        "formato_dominante": formatos.most_common(1)[0][0] if formatos else "",
+        "formato_dominante_pct": round(formatos.most_common(1)[0][1] / total, 3) if formatos else 0,
+        "preguntas_pct": round(formatos.get("pregunta", 0) / total + formatos.get("observacion_pregunta", 0) / total, 3),
+        "emoji_total": emojis,
+        "emoji_por_comentario": round(emojis / total, 3),
+        "arranques_repetidos": sum(v - 1 for v in arranques.values() if v > 1),
+        "valido": formatos.most_common(1)[0][1] / total <= max_formato if formatos else False,
+    }
+
+def escribir_informe(resultados: list[dict], ruta: str | Path) -> None:
+    ruta = Path(ruta)
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    with ruta.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(resultados[0].keys()))
+        writer.writeheader()
+        writer.writerows(resultados)
