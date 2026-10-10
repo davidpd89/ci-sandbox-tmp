@@ -144,6 +144,11 @@ def init_db(path):
     db.execute(
         "CREATE INDEX IF NOT EXISTS idx_posts_match ON posts(match_count DESC, time_us DESC)"
     )
+    # El feed preview pagina por (time_us, uri), no solo por time_us.
+    # Índice adicional: evita ordenar los empates en un B-tree temporal.
+    db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_posts_feed ON posts(time_us DESC, uri DESC)"
+    )
     db.execute(
         """
         CREATE TABLE IF NOT EXISTS state (
