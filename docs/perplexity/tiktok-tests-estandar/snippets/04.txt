@@ -1,0 +1,4 @@
+python
+# https://github.com/davidteather/TikTok-Api/blob/main/TikTokApi/api/video.py
+        self.create_time = datetime.fromtimestamp(timestamp)
+        self.stats = data.get("statsV2") or data.get("stats")
