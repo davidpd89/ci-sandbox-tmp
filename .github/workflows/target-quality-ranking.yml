@@ -12,6 +12,7 @@ on:
     paths:
       - 'tools/target_quality_ranking.py'
       - 'tests/test_target_quality_ranking.py'
+      - 'tools/target_quality_benchmark.py'
       - '.github/workflows/target-quality-ranking.yml'
 permissions:
   contents: read
