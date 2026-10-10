@@ -410,6 +410,40 @@ class ObservationTests(unittest.TestCase):
             self.assertEqual(bridge.counts["invalid"], 2, network)
             self.assertEqual(bridge.aggregate_report()["unique_posts"], 2, network)
 
+    def test_control_characters_cannot_alias_stable_ids_or_provenance(self):
+        # Identity and source names are reused in logs/ranking; reject
+        # embedded control characters rather than silently treating them as IDs.
+        for network in sorted(NETWORKS):
+            bridge = ObservationCollector(now=NOW)
+            invalid = sample(network, post="valid", author="author")
+            if network == "reddit":
+                invalid["author_fullname"] = "t2_au\\nthor"
+            elif network == "bluesky":
+                invalid["author"]["did"] = "did:plc:au\\nthor"
+            elif network == "mastodon":
+                invalid["account"]["url"] = "https://example.social/@au\\nthor"
+            elif network == "x":
+                invalid["user"]["id_str"] = "au\\nthor"
+            elif network == "threads":
+                invalid["user_id"] = "au\\nthor"
+            elif network == "facebook":
+                invalid["from"]["id"] = "au\\nthor"
+            elif network == "pinterest":
+                invalid["creator"]["id"] = "au\\nthor"
+            elif network == "tiktok":
+                invalid["author"]["uid"] = "au\\nthor"
+            elif network == "instagram":
+                invalid["user"]["id"] = "au\\nthor"
+            bridge.add_posts(network, "API", "read-only", [invalid])
+            self.assertEqual(bridge.to_engine_rows(), [], network)
+            self.assertEqual(bridge.counts["invalid"], 1, network)
+        bridge = ObservationCollector(now=NOW)
+        for source in ("channel\\nspoof", "channel\\x00spoof", "\\rreader"):
+            with self.assertRaises(ValueError):
+                bridge.add_posts("x", "WEB", source, [sample("x")])
+            with self.assertRaises(ValueError):
+                bridge.add_feedback("x", "WEB", source, [])
+
     def test_strict_bad_scope_bounds_and_rollback(self):
         c = ObservationCollector(now=NOW)
         for args in (("fake", "WEB", "test", []),
