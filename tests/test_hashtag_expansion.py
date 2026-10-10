@@ -122,8 +122,8 @@ class HashtagExpansionTest(unittest.TestCase):
             catalog = pathlib.Path(folder) / "catalog.json"
             catalog.write_text('{"bluesky":{"busquedas":["año","niño"]}}',
                                encoding="utf-8")
-            with patch.object(discovery_terms, "PATH", str(catalog)), \\
-                 patch.object(h, "snapshot_terms", return_value=["ano", "nino"]):
+            with (patch.object(discovery_terms, "PATH", str(catalog)),
+                  patch.object(h, "snapshot_terms", return_value=["ano", "nino"])):
                 self.assertEqual(discovery_terms.terms("bluesky", "busquedas"),
                                  ["año", "niño", "ano", "nino"])
 
