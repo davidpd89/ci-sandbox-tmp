@@ -167,3 +167,4 @@ incorporadas el 2026-10-09. El validador exige que la primera ola permanezca
 | [#84](https://github.com/davidpd89/ci-sandbox-tmp/pull/84) | Ledger comun de relaciones |
 | [#85](https://github.com/davidpd89/ci-sandbox-tmp/pull/85) | Identidad entre redes |
 | [#86](https://github.com/davidpd89/ci-sandbox-tmp/pull/86) | Embudo de comunidad y trafico |
+| [#204](https://github.com/davidpd89/ci-sandbox-tmp/pull/204) | Mapa de dependencias y consolidacion de PR abiertas |

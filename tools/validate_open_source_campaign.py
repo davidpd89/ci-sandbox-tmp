@@ -14,7 +14,7 @@ from urllib.request import Request, urlopen
 ROOT = Path(__file__).resolve().parents[1]
 REPO = 'davidpd89/ci-sandbox-tmp'
 PARENT = 'research/public-reuse-parent'
-RANGE = set(range(11, 57))
+RANGE = set(range(11, 87))
 ROW = re.compile(r'^\| \[#(\d+)\]\((https://github\.com/[^)]+)\) \| ([^|]+) \|$', re.M)
 SECRET = re.compile(
     r'(?:gh[pousr]_[A-Za-z0-9]{25,}|github_pat_[A-Za-z0-9_]{25,}|'
@@ -31,12 +31,13 @@ def check_metadata(doc, protocol):
     children = doc.get('children', [])
     if doc.get('repository') != REPO or doc.get('parent_pr') != 10 or doc.get('parent_head') != PARENT:
         errors.append('campaign identity mismatch')
-    if len(children) < 46:
-        errors.append(f'expected at least 46 original children, got {len(children)}')
+    if len(children) < len(RANGE):
+        errors.append(f'expected at least {len(RANGE)} original children, got {len(children)}')
     nums = [p.get('number') for p in children]
     numbers = set(nums)
-    if not RANGE.issubset(numbers) or len(numbers) != len(nums) or numbers != set(range(11, max(numbers, default=10) + 1)):
-        errors.append('missing, out-of-sequence or duplicate PR numbers')
+    if (not RANGE.issubset(numbers) or len(numbers) != len(nums)
+            or any(not isinstance(n, int) or n < 11 for n in nums)):
+        errors.append('missing original, invalid or duplicate PR numbers')
     rows = ROW.findall(protocol)
     rownums = [int(n) for n, _, _ in rows]
     if len(rows) != len(children) or set(rownums) != numbers or len(set(rownums)) != len(rownums):
@@ -53,7 +54,9 @@ def check_metadata(doc, protocol):
         if str(p.get('objective', '')).strip().casefold() != by_number.get(n, ('', ''))[1].casefold():
             errors.append(f'#{n}: objective/index mismatch')
         head = p.get('head', '')
-        if not isinstance(head, str) or not head.startswith(f'research/{n-10:02}-') or not re.fullmatch(r'research/\d{2,}-[a-z0-9]+(?:-[a-z0-9]+)*', head):
+        numbered = isinstance(head, str) and head.startswith(f'research/{n-10:02}-')
+        audit = isinstance(head, str) and n > max(RANGE) and head.startswith('audit/')
+        if not (numbered or audit) or not re.fullmatch(r'(?:research/\d{2,}-|audit/)[a-z0-9]+(?:-[a-z0-9]+)*', head):
             errors.append(f'#{n}: branch naming mismatch')
         if p.get('base') != PARENT or p.get('state') not in ('open', 'closed'):
             errors.append(f'#{n}: base or state mismatch')
