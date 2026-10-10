@@ -229,6 +229,8 @@ def rank_network(network, candidates, *, as_of, outcomes=None,
         else:
             reciprocity = None
         activity_t = _instant(item["last_status_at"])
+        if activity_t is not None and activity_t > now:
+            activity_t = None  # A future profile date must not hide valid post activity.
         valid_posts, post_rejected = [], []
         seen_posts = set()
         for index, post in enumerate(item["posts"]):
@@ -281,7 +283,7 @@ def rank_network(network, candidates, *, as_of, outcomes=None,
             "reciprocity": reciprocity, "outcomes": _outcome_signal(outcomes.get(identity))}, _WEIGHTS)
         valid_posts.sort(key=lambda p: (-p["score"], -p["coverage"], p["id"]))
         opportunities = ([{"action": "follow", "score": score}]
-                         if "follow" in item["actions"] else [])
+                         if "follow" in item["actions"] and item["following"] is not True else [])
         for p in valid_posts:
             for action in p["actions"]:
                 if action in ("reply", "comment", "repost"):
