@@ -13,7 +13,7 @@ NETWORK_QUEUES = {
     "x": {"x_execute.run_plan": ("WEB",)},
     "threads": {"threads_execute.run_plan": ("WEB",), "threads_api.publish_reply": ("API",)},
     "facebook": {"facebook_execute.run_plan": ("WEB",)},
-    "pinterest": {"pinterest_growth.run": ("WEB",), "pinterest_loyalty_observations": ("API",)},
+    "pinterest": {"pinterest_growth.cmd_run": ("WEB",), "pinterest_loyalty_observations": ("API",)},
     "reddit": {"reddit_execute.run_plan": ("WEB",)},
     "bluesky": {"bluesky_execute.run_plan": ("API",)},
     "mastodon": {"mastodon_execute.run_plan": ("API",)},
@@ -21,10 +21,10 @@ NETWORK_QUEUES = {
     "instagram": {"instagram_execute.run_plan": ("WEB", "MOBILE")},
 }
 KINDS = {"follow": "follow", "unfollow": "unfollow", "like": "like",
-         "like_latest": "like", "vote": "like", "favourite": "like",
+         "like_latest": "like", "like_external": "like", "vote": "like", "favourite": "like",
          "favorite": "like", "comment": "comment", "comment_external": "comment",
          "reply": "reply", "boost": "repost", "quote": "repost",
-         "repost": "repost", "visit": "visit", "save": "repost"}
+         "repost": "repost", "visit": "visit"}
 BASIS = {"WEB": {"ui_state"}, "API": {"api_response"},
          "MOBILE": {"mobile_observed"}}
 # No se codifican alias dependientes del idioma para otros estados.
