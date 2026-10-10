@@ -297,20 +297,29 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
             "followers": None, "sources": set(), "posts": {},
             "conflicting_posts": set(),
             "language": None, "following": None, "followed_by": None,
-            "actions": set(), "lane": lane,
+            "actions": set(), "lane": lane, "conflicts": set(),
         })
         if stable and handle and account["handle"] not in (None, handle):
             diagnostics.append({"index": i, "reason": "handle_rename_for_stable_id"})
         if handle:
             account["handle"] = handle
         bio = row.get("bio")
-        if isinstance(bio, str) and bio.strip() and account["bio"] is None:
-            account["bio"] = bio[:2000]
+        if isinstance(bio, str) and bio.strip() and "bio" not in account["conflicts"]:
+            observed_bio = bio.strip()[:2000]
+            if account["bio"] is None:
+                account["bio"] = observed_bio
+            elif account["bio"] != observed_bio:
+                account["bio"] = None
+                account["conflicts"].add("bio")
+                diagnostics.append({"index": i, "reason": "conflicting_profile_bio"})
         followers = row.get("followers")
-        if type(followers) is int and 0 <= followers <= 1_000_000_000:
+        if (type(followers) is int and 0 <= followers <= 1_000_000_000
+                and "followers" not in account["conflicts"]):
             if account["followers"] is None:
                 account["followers"] = followers
             elif account["followers"] != followers:
+                account["followers"] = None
+                account["conflicts"].add("followers")
                 diagnostics.append({"index": i, "reason": "conflicting_follower_snapshots"})
         for field in ("source", "tag"):
             src = row.get(field)
@@ -328,11 +337,21 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
         if not profile_hint and network == "pinterest" and not row.get("_pin"):
             profile_hint = row.get("language") or row.get("lang")
         profile_lang = _language({"language": profile_hint})
-        if profile_lang is not None and account["language"] is None:
-            account["language"] = profile_lang
+        if profile_lang is not None and "language" not in account["conflicts"]:
+            if account["language"] is None:
+                account["language"] = profile_lang
+            elif account["language"] != profile_lang:
+                account["language"] = None
+                account["conflicts"].add("language")
+                diagnostics.append({"index": i, "reason": "conflicting_profile_language"})
         for rel in ("following", "followed_by"):
-            if type(row.get(rel)) is bool:
-                account[rel] = row[rel]
+            if type(row.get(rel)) is bool and rel not in account["conflicts"]:
+                if account[rel] is None:
+                    account[rel] = row[rel]
+                elif account[rel] != row[rel]:
+                    account[rel] = None
+                    account["conflicts"].add(rel)
+                    diagnostics.append({"index": i, "reason": "conflicting_" + rel})
         # 'kind' means scanner preference, not observed permission/capability.
         explicit = row.get("verified_actions")
         # A post assigned to a different immutable author cannot grant a
@@ -440,7 +459,7 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
                             reverse=True)[:MAX_POSTS_PER_ACCOUNT],
             "language": account["language"], "following": account["following"],
             "followed_by": account["followed_by"], "lane": lane,
-            "actions": sorted(account["actions"]),
+            "actions": sorted(account["actions"] - ({"follow"} if "following" in account["conflicts"] else set())),
         }
         if account["account_id"]:
             value["account_id"] = account["account_id"]
