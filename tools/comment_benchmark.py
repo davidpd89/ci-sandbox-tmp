@@ -178,8 +178,8 @@ def _ratings(path: str | Path, tokens: set[str]) -> dict[str, dict[str, float]]:
             if any(not 0 <= v <= 4 or str(v) != row[axis].strip() for v, axis in zip(scores, AXES)):
                 raise ValueError("Nota fuera de rango o decimal")
             grouped[token].append(sum(scores) / (4 * len(AXES)))
-    return {token: {"mean": sum(v) / len(v), "judges": len(v)}
-            for token, values in grouped.items() for v in [values]}
+    return {opaque: {"mean": sum(v) / len(v), "judges": len(v)}
+            for opaque, values in grouped.items() for v in [values]}
 
 
 def evaluate(cases: list[dict], candidates: list[dict], ratings_path: str | None = None, *, salt="benchmark-v1") -> dict:
