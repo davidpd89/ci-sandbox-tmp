@@ -186,3 +186,17 @@ no necesariamente de la #47 del mirror; los tests operativos aludidos en su docs
 son del **repo oficial**, no de la PR #73 del mirror. En el mirror, #30 cubre
 contratos/tests y #26 colas. No duplicar esos alcances.
 **Integración:** pendiente del controlador; **no merge**.
+
+
+## Revisión independiente del controlador (2026-10-10)
+
+- Se evita atribuir un escritor genérico a otra red cuando el argumento de red
+  no coincide. El escritor específico de TikTok sigue reconocido sin parámetro.
+- Los límites de conteo y los overrides enteros de la política compartida ya
+  no admiten fracciones que los consumidores truncarían con `int()`.
+- Las rutas de configuración con symlink colgante se clasifican como inválidas,
+  no como configuración ausente. Pruebas sintéticas adicionales y contrato de
+  cobertura frente a `CONTENT_QUEUE_NETWORKS`.
+- Pendiente fuera del alcance declarativo: derivar matrices efectivas de todas
+  las rutas de ejecución y validar la consistencia del registro cuando `--root`
+  apunta a otro checkout; coordinar con #81 y #82 antes de duplicar.

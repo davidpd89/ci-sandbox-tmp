@@ -72,12 +72,13 @@ def validate_config(config):
     if not isinstance(budgets, dict) or not budgets:
         issues.append("budgets: objeto no vacío requerido")
     else:
+        count_keys = {"max_read_requests", "max_candidates", "max_posts_total"}
         for key, value in budgets.items():
-            if not _number(value) or value < 0:
+            if key in count_keys:
+                if type(value) is not int or value <= 0:
+                    issues.append(f"budgets.{key}: entero positivo requerido")
+            elif not _number(value) or value < 0:
                 issues.append(f"budgets.{key}: número finito no negativo requerido")
-        for key in ("max_read_requests", "max_candidates", "max_posts_total"):
-            if key in budgets and _number(budgets[key]) and budgets[key] <= 0:
-                issues.append(f"budgets.{key}: debe ser mayor que cero")
     shortlist = config.get("shortlist", {})
     if not isinstance(shortlist, dict):
         issues.append("shortlist: se esperaba objeto")
@@ -85,8 +86,8 @@ def validate_config(config):
         for aliases in COMMON_KEYS.values():
             defined = [(key, shortlist[key]) for key in aliases if key in shortlist]
             for key, value in defined:
-                if not _number(value) or value <= 0:
-                    issues.append(f"shortlist.{key}: número positivo requerido")
+                if type(value) is not int or value <= 0:
+                    issues.append(f"shortlist.{key}: entero positivo requerido")
             if len(defined) == 2 and defined[0][1] != defined[1][1]:
                 issues.append(f"shortlist: alias contradictorios {defined[0][0]} y {defined[1][0]}")
     for group in ("surfaces",):
@@ -229,16 +230,16 @@ def audit(root=ROOT, *, pipelines=None, cleanup_adapters=None, harvesters=None):
             continue
         relative = CONFIG_PATHS[network]
         path = root / relative
-        if not path.is_file():
-            result["configurations"][network] = {"status": "missing_in_checkout", "path": relative}
-            result["findings"].append({"network": network, "kind": "missing_in_checkout",
-                                       "detail": relative, "severity": "info"})
-            continue
         if path.is_symlink() or not path.resolve().is_relative_to(root.resolve()):
             result["errors"] += 1
             result["configurations"][network] = {"status": "invalid", "path": relative}
             result["findings"].append({"network": network, "kind": "invalid_config",
                                        "detail": "config symlink/path escape", "severity": "error"})
+            continue
+        if not path.is_file():
+            result["configurations"][network] = {"status": "missing_in_checkout", "path": relative}
+            result["findings"].append({"network": network, "kind": "missing_in_checkout",
+                                       "detail": relative, "severity": "info"})
             continue
         try:
             config = _read_config(path)

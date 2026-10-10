@@ -12,8 +12,9 @@ import network_capabilities as cap
 
 class CapabilityMatrixTests(unittest.TestCase):
     def test_coverage_is_exactly_nine_networks_including_instagram(self):
-        from mechanical_round import PIPELINES
+        from mechanical_round import PIPELINES, CONTENT_QUEUE_NETWORKS
         matrix = cap.build_matrix()
+        self.assertTrue(CONTENT_QUEUE_NETWORKS.issubset(set(cap.NETWORKS)))
         self.assertEqual(set(matrix), set(cap.NETWORKS))
         self.assertIn("instagram", matrix)
         # Algunas redes (p. ej. Reddit) usan una ruta propia fuera de
@@ -104,6 +105,20 @@ class CapabilityMatrixTests(unittest.TestCase):
     def test_command_parser_supports_windows_separators(self):
         pipe = {"pre": [["python.exe", "tools\\reply_writer.py", "x"]]}
         self.assertTrue(cap._scheduled(pipe, "reply_writer.py"))
+
+    def test_writer_is_attributed_to_correct_network(self):
+        pipelines = {
+            "x": {"pre": [["python", "tools/reply_writer.py", "mastodon"]]},
+            "bluesky": {"pre": [["python", "tools/api_comment_writer.py", "mastodon"]]},
+            "instagram": {"pre": [["python", "tools/tiktok_comment_writer.py"]]},
+            "threads": {"pre": [["python", "tools/reply_writer.py", "threads"]]},
+            "tiktok": {"pre": [["python", "tools/tiktok_comment_writer.py"]]},
+        }
+        matrix = cap.build_matrix(pipelines=pipelines, cleanup_adapters={}, harvesters={})
+        for network in ("x", "bluesky", "instagram"):
+            self.assertFalse(matrix[network]["gpt_writer_scheduled"], network)
+        for network in ("threads", "tiktok"):
+            self.assertTrue(matrix[network]["gpt_writer_scheduled"], network)
 
 
 if __name__ == "__main__":

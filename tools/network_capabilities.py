@@ -60,9 +60,13 @@ def build_matrix(*, pipelines=None, cleanup_adapters=None, harvesters=None):
         has_harvest = net in harvesters
         unfollow_job = _scheduled(pipe, "unfollow_cleanup.py", net)
         loyalty_job = _scheduled(pipe, "loyalty.py", net)
-        writer_job = any(
-            _scheduled(pipe, filename, sections=("pre",))
-            for filename in ("reply_writer.py", "api_comment_writer.py", "tiktok_comment_writer.py")
+        # Los escritores comunes requieren la red como argumento; TikTok usa
+        # su escritor específico sin argumento. No atribuir la ejecución a otra red.
+        writer_job = (
+            _scheduled(pipe, "tiktok_comment_writer.py", sections=("pre",))
+            if net == "tiktok" else
+            any(_scheduled(pipe, filename, net, sections=("pre",))
+                for filename in ("reply_writer.py", "api_comment_writer.py"))
         )
         out[net] = {
             "pipeline": bool(pipe),

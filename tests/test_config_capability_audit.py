@@ -216,6 +216,26 @@ class ConfigCapabilityAuditTests(unittest.TestCase):
         self.assertEqual(result["configurations"]["tiktok"]["status"], "missing_in_checkout")
         self.assertEqual(result["configurations"]["instagram"]["status"], "not_declared")
 
+    def test_fractional_counts_and_age_overrides_do_not_silently_truncate(self):
+        cfg = config(shortlist={"like_max_age_days": 21.5})
+        cfg["budgets"]["max_candidates"] = 3.5
+        self.write_config("bluesky", cfg)
+        result = self.report()
+        self.assertEqual(result["errors"], 2, result["findings"])
+        self.assertEqual(result["configurations"]["bluesky"]["status"], "invalid")
+        self.assertNotIn("effective_common_policy", result["configurations"]["bluesky"])
+
+    def test_dangling_config_symlink_is_invalid_not_absent(self):
+        path = self.root / audit.CONFIG_PATHS["mastodon"]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            path.symlink_to(self.root / "missing-target.json")
+        except (OSError, NotImplementedError):
+            self.skipTest("sin permisos para crear symlinks en este sistema")
+        result = self.report()
+        self.assertEqual(result["configurations"]["mastodon"]["status"], "invalid")
+        self.assertEqual(result["errors"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()
