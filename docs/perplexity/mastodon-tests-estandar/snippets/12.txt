@@ -1,0 +1,27 @@
+python
+# tests/test_mastodon_pagination.py
+import json
+from pathlib import Path
+
+from growth.adapters.mastodon import MastodonAdapter
+
+
+FIXTURES = Path(__file__).parents[1] / "fixtures" / "mastodon"
+
+
+def test_pagination_splits_limit_above_40(fake_mastodon):
+    adapter = MastodonAdapter(instance="mastodon.social", http=fake_mastodon)
+
+    page = adapter.discover("#fantasy", limit=80)
+
+    assert len(page.items) <= 40
+    assert page.next_cursor is not None
+
+
+def test_pagination_deduplicates_by_instance_and_status_id(fake_mastodon):
+    adapter = MastodonAdapter(instance="mastodon.social", http=fake_mastodon)
+
+    posts = adapter.discover("#fantasy", cursor="109900000000000010").items
+
+    keys = [(post.instance, post.external_id) for post in posts]
+    assert len(keys) == len(set(keys))
