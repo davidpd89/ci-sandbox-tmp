@@ -12,6 +12,7 @@ Aquí se usa time_us + uri (esquema SQLite real del proyecto).
 from __future__ import annotations
 
 import argparse
+from contextlib import closing
 import datetime as dt
 import json
 import os
@@ -84,7 +85,7 @@ def feed_page(
     params.append(limit)
 
     # mode=ro evita crear/modificar archivos (incluidas ejecuciones en Windows).
-    with sqlite3.connect(db_file.as_uri() + "?mode=ro", uri=True, timeout=5) as connection:
+    with closing(sqlite3.connect(db_file.as_uri() + "?mode=ro", uri=True, timeout=5)) as connection:
         rows = connection.execute(
             f"""
             SELECT uri, time_us FROM posts
