@@ -215,6 +215,12 @@ class RelationshipStore:
         if self.path == ":memory:":
             raise ValueError("SQLite :memory: does not survive per-call connections; use a temporary file")
         with closing(self._connect()) as db:
+            # Nunca añadir tablas opt-in al ActionLedger operativo ni al
+            # ledger append-only de #84. Los stores tienen autoridades distintas.
+            foreign = {row[0] for row in db.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'")}
+            if foreign & {"actions", "relationship_events"}:
+                raise ValueError("relationship projection requires a separate SQLite database")
             _validate_sqlite_schema(db)
             db.executescript(_SCHEMA)
             _validate_sqlite_schema(db, require_all=True)
