@@ -134,6 +134,18 @@ class PersistenceTests(unittest.TestCase):
         return [self.store.apply(ev(kind, i, net=net, person=person, lane=lane))
                 for i, kind in enumerate(seq)]
 
+    def test_network_casing_is_consistent_across_store_operations(self):
+        event = ev("discovered", 0, net=" BLUESKY ")
+        self.store.apply(event)
+        self.assertEqual(self.store.snapshot("Bluesky", event.account).state, "descubierto")
+        history = self.store.history("BLUESKY", event.account)
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0].network, "bluesky")
+        self.assertTrue(self.store.verify_replay("Bluesky", event.account))
+        for invalid in ("", " anon", "anon "):
+            with self.subTest(account=invalid), self.assertRaises(ValueError):
+                self.store.snapshot("bluesky", invalid)
+
     def test_restore_and_verified_replay(self):
         results = self.apply_path()
         self.assertTrue(all(d.applied for d in results))
@@ -250,6 +262,14 @@ class PersistenceTests(unittest.TestCase):
 
 
 class ProducerAdapterTests(unittest.TestCase):
+    def test_invalid_or_missing_outcomes_are_not_confirmations(self):
+        for outcome in (None, "", 123, "pendiente"):
+            with self.subTest(outcome=outcome):
+                self.assertIsNone(rm.settled_action_event(
+                    network="bluesky", account="synthetic", event_id="e",
+                    action="follow", outcome=outcome, lane="API",
+                    occurred_at=BASE.isoformat()))
+
     def test_all_networks_and_lanes_only_confirmed_outcomes(self):
         for network in rm.NETWORKS:
             for lane in rm.LANES:

@@ -156,6 +156,18 @@ CREATE INDEX IF NOT EXISTS relation_events_order
 """
 
 
+def _lookup_key(network: str, account: str) -> tuple[str, str]:
+    """Aplica también a las lecturas la normalización usada en apply()."""
+    net = network.strip().casefold() if isinstance(network, str) else ""
+    if net not in NETWORKS:
+        raise ValueError("invalid network")
+    if (not isinstance(account, str) or not account or len(account) > 512
+            or account != account.strip()
+            or any(ord(c) < 32 for c in account)):
+        raise ValueError("invalid account identifier")
+    return net, account
+
+
 class RelationshipStore:
     """SQLite de proyecciones opt-in. Requiere ruta explícita; NO abre datos reales.
 
@@ -187,10 +199,9 @@ class RelationshipStore:
         return Snapshot(row[0], bool(row[1]), bool(row[2]), row[3], row[4]) if row else None
 
     def snapshot(self, network: str, account: str) -> Snapshot | None:
-        if network not in NETWORKS or not account:
-            raise ValueError("invalid identity")
+        net, account = _lookup_key(network, account)
         with closing(self._connect()) as db:
-            return self._read(db, network, account)
+            return self._read(db, net, account)
 
     def apply(self, event: Event) -> Decision:
         net, account, eid, kind, lane, when = _key(event)
@@ -229,26 +240,24 @@ class RelationshipStore:
                 raise
 
     def history(self, network: str, account: str) -> list[Event]:
-        if network not in NETWORKS or not account:
-            raise ValueError("invalid identity")
+        net, account = _lookup_key(network, account)
         with closing(self._connect()) as db:
             rows = db.execute(
                 "SELECT event_id, kind, lane, occurred_at FROM relation_events "
-                "WHERE network=? AND account=? ORDER BY version", (network, account)
+                "WHERE network=? AND account=? ORDER BY version", (net, account)
             ).fetchall()
-        return [Event(network, account, *row) for row in rows]
+        return [Event(net, account, *row) for row in rows]
 
     def verify_replay(self, network: str, account: str) -> bool:
         """Verifica historia y proyección desde una sola instantánea SQLite."""
-        if network not in NETWORKS or not account:
-            raise ValueError("invalid identity")
+        net, account = _lookup_key(network, account)
         with closing(self._connect()) as db:
             db.execute("BEGIN")
             rows = db.execute(
                 "SELECT kind, occurred_at, before_state, after_state, version "
                 "FROM relation_events WHERE network=? AND account=? ORDER BY version",
-                (network, account)).fetchall()
-            saved = self._read(db, network, account)
+                (net, account)).fetchall()
+            saved = self._read(db, net, account)
             db.commit()
         current = None
         try:
@@ -283,7 +292,7 @@ def settled_action_event(*, network: str, account: str, event_id: str,
     }
     if action not in action_map:
         raise ValueError("unknown producer action")
-    if outcome.strip().casefold() not in ("confirmado", "publicado", "verified"):
+    if not isinstance(outcome, str) or outcome.strip().casefold() not in ("confirmado", "publicado", "verified"):
         return None
     observational = {"followback", "activity", "loyalty", "inactive",
                      "reactivation", "followback_lost", "retry"}
