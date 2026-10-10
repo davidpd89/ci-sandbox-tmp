@@ -1,0 +1,10 @@
+python
+# API oficial del proyecto pysentimiento:
+# https://github.com/pysentimiento/pysentimiento
+from pysentimiento import create_analyzer
+
+analyzer = create_analyzer(task="sentiment", lang="es")
+
+def comentario_tono_valido(texto: str) -> bool:
+    resultado = analyzer.predict(texto)
+    return resultado.output in {"POS", "NEU"}
