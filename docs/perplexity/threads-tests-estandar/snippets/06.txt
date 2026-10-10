@@ -1,0 +1,27 @@
+python
+# Propuesto: parche mínimo para tools/candidate_identity.py
+AUTHOR_FIELD = {
+    "bluesky": "handle",
+    "mastodon": "acct",
+    "threads": "username",
+}
+
+
+def resolve_author(network: str, candidate: Mapping) -> str:
+    # ... conservar el código actual ...
+    if network == "threads":
+        if not re.fullmatch(r"[a-z0-9._]{1,30}", author.casefold()):
+            raise CandidateIdentityError("threads:username_invalido")
+    return author.casefold()
+
+
+def resolve_post_ref(network, post):
+    # ... conservar el código actual ...
+    if network == "threads":
+        post_id = post.get("id")
+        if isinstance(post_id, bool) or not isinstance(post_id, (str, int)):
+            raise CandidateIdentityError("threads:post_id_invalido")
+        value = str(post_id).strip()
+        if not value or len(value) > 256 or any(ch.isspace() for ch in value):
+            raise CandidateIdentityError("threads:post_id_invalido")
+        return value
