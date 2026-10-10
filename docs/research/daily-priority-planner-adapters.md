@@ -18,7 +18,7 @@ Los candidatos de terceros analizados son MIT. No se incorpora código ni depend
 Adaptador ligero de solo lectura, preflight explícito, deduplicación por #71 y ninguna acción social.
 
 ## Pruebas
-Pruebas sintéticas 9x3, 16 tests offline con ejecución en Ubuntu y Windows 3.11, revisión adversarial y benchmark local de lectura; detalles y runs en la sección inferior.
+Pruebas sintéticas 9x3, 17 tests offline con ejecución en Ubuntu y Windows 3.11, revisión adversarial y benchmark local de lectura; detalles y runs en la sección inferior.
 
 ## Retirada
 Revertir commits de la PR o no conectar su invocación. No hay migraciones ni modificaciones persistentes.
@@ -33,7 +33,7 @@ Revertir commits de la PR o no conectar su invocación. No hay migraciones ni mo
 ## Entrega efectiva
 
 - `tools/relationship_planner_adapters.py`: interfaz `build_snapshot(sources,outbound,inbound,today)`, `plan_dry_run(...,scorer=rank_daily)` y CLI con `--manifest` y `--today`. Únicamente lee JSON, CSV de acciones **confirmadas** y SQLite verified inbound. No hay credenciales, conexión de red, estado persistente, comentario generado, automatización o ejecución.
-- Adaptadores de entrada de nueve redes: listas nativas, `candidates`, `actors`, Pinterest `authors/pins` y TikTok `posts` anidados. No deducimos «follow» si el productor no declara esa acción. La cola es **declarada** por el productor: en la prueba 9x3 se simulan todas las combinaciones, **no** se afirma que 27 canales reales estén conectados.
+- Adaptadores de entrada de nueve redes: listas nativas, `candidates`, `actors`, Pinterest `authors/pins` y TikTok `posts` anidados. **No se inventan acciones desde el tipo de contenedor:** un `author` de Pinterest no equivale a `follow`, ni un `pin` o `post` a `comment/reply`. Cada fila o post anidado debe declarar `kind`/`actions`; las acciones de un actor TikTok no se heredan en sus posts. Corregido en la revisión independiente con regresión offline. La cola es **declarada** por el productor: en la prueba 9x3 se simulan todas las combinaciones, **no** se afirma que 27 canales reales estén conectados.
 - Un mismo `actor_id` dentro de una red solo ocupa una plaza entre colas por el deduplicador de #71; los alias contradictorios se descartan antes. Cada entrada fallida se aísla con diagnóstico; no consume presupuesto de otras redes.
 - La ventana de comentario exige fecha de destino explícita y válida de máximo **3 días** conforme a `post_age_policy.MAX_AGE_DAYS` de la rama oficial. `created_at` del trabajo no sirve como fecha del destino. Texto únicamente tras `thread_verified`, `comment_allowed` externo confirmado y balance de comentarios confirmado frente a entradas deduplicadas. Follow solo con estado de seguimiento verificado. Bloqueos y cuentas propias no entran en el ranking.
 - X nunca recibe recomendaciones automáticas `like`; `repost` queda fuera de este score, sin alterar el trabajo del ejecutor. Las recomendaciones son etiquetas y scores, no JSON ejecutable por motores nativos. Todas las rutas de ejecución deben mantener sus propias comprobaciones inmediatas (estado, fecha, bloqueo y límites).
@@ -74,4 +74,12 @@ No se actualiza ningún planificador ni estado persistente. Para desactivar el p
 
 - Revisión de funciones con entrada hostil: rechazos por tipo, fecha futura, desconocimiento de cuenta propia, score externo sin validar y colisiones de eventos.
 - Auditado que el código no importa clientes de redes, no crea archivos ni escribe SQLite. `plan_dry_run` invoca directamente al score #71 sin añadir acciones.
-- La suite específica fijada a #71 ha pasado en Windows y Ubuntu (15 pruebas en la ejecución previa, ampliada a 16 con aislamiento de archivos). La suite general omite exclusivamente la integración #71 cuando no está presente en la rama base; el workflow dedicado la ejecuta obligatoriamente. **Bloqueo externo:** el validador de campaña comunica `#103: child absent from parent manifest` para la rama padre `research/public-reuse-parent`; el controlador deberá sincronizar `children.json`/índice en la PR padre sin modificar esta rama. No es fallo del puente ni permite afirmar merge listo.
+- La suite específica fijada a #71 ha pasado en Windows y Ubuntu (15 pruebas en la ejecución previa, ampliada a 17 con verificación de acciones declaradas y aislamiento de archivos). La suite general omite exclusivamente la integración #71 cuando no está presente en la rama base; el workflow dedicado la ejecuta obligatoriamente. **Bloqueo externo:** el validador de campaña comunica `#103: child absent from parent manifest` para la rama padre `research/public-reuse-parent`; el controlador deberá sincronizar `children.json`/índice en la PR padre sin modificar esta rama. No es fallo del puente ni permite afirmar merge listo.
+
+### Hallazgos de revisión independiente pendientes
+
+- **Historial de salida y preflight:** `read_manifest` acepta CSV ausentes por red y `build_snapshot` interpreta un `outbound` vacío como ausencia de interacción. Antes de habilitar sugerencias de comentario en integración real, exigir una prueba positiva de cobertura del ledger completo por red/actor; falta de fuente o truncamiento no es equivalente a cero. El preflight fechado solo al día no es prueba de frescura en tiempo real; cada ejecutor revalida antes de actuar.
+- **Integración nativa:** estas funciones crean snapshots offline, pero ningún planificador de producción importa o invoca aún el puente. El objetivo de nueve redes requiere un contrato exportador por cada productor realmente conectado, más fixtures nativos reales anonimizados y pruebas en modo shadow; la prueba sintética 9x3 no certifica esa integración.
+- **Dependencia #71:** el ranking elige una única cola por actor antes de aplicar límites por cola; hay que probar el caso de un mismo actor en dos colas cuando su cola ganadora tiene cupo cero o está agotada. La corrección de selección, si procede, pertenece al scorer común, no a este adaptador.
+
+Estas pendientes no quedan resueltas por la regresión de acciones explícitas. El código sigue siendo un lector sin efectos sobre cuentas.
