@@ -25,7 +25,6 @@ from zoneinfo import ZoneInfo
 sys.path.insert(0, os.path.dirname(__file__))
 import content_queue as cq
 import content_queue_alert as cqa
-import media_preflight as media_preflight
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 CONFIG = os.path.join(ROOT, "00_OPERATIVO", "auto_publicacion.json")
@@ -84,7 +83,13 @@ def blockers_of(item, issues_by_path, now=None):
             reasons.append(f"falta el archivo {media.get('filename')}")
     # Validacion comun *antes* de elegir adaptador WEB/API/MOBILE.
     # Una ficha con media corrupta o incompatible no puede parecer elegible.
-    reasons.extend("media: " + message for message in media_preflight.inspect_item(item))
+    if any(media.get("exists") for media in item.get("media") or []):
+        try:
+            import media_preflight
+        except ImportError:
+            reasons.append("media: Pillow no disponible; imagen/video sin verificar")
+        else:
+            reasons.extend("media: " + message for message in media_preflight.inspect_item(item))
     return reasons
 
 
@@ -308,6 +313,13 @@ def run(red, *, apply=False, now=None, out=print, publishers=None, verify=_verif
     if not apply:
         out(f"[{red}] publicaria: {label}")
         return None
+    # Segundo preflight inmediatamente antes del adaptador: el archivo puede
+    # haber cambiado mientras se obtenia el turno de la cola/navegador.
+    if item.get("media"):
+        final_reasons = blockers_of(item, issues, now)
+        if final_reasons:
+            out(f"[{red}] NO se publica {label}: media modificada/invalida: " + "; ".join(final_reasons))
+            return None
     try:
         url = publishers[red](item)
     except Exception:
