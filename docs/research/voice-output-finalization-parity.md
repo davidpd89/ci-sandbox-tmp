@@ -1,9 +1,9 @@
 # QA en puntos de salida finales — PR #106
 
 Fecha de investigación: 10/10/2026. Rama `research/voice-output-finalization-parity`.
-Dependencia obligatoria **#79** `tools/spanish_voice_quality.py` (abierta en esta fecha).
+El auditor `tools/spanish_voice_quality.py` de #79 ya se encuentra en la base sincronizada `737fc011` y en el repositorio oficial; #79 se cerró sin merge formal.
 La PR #106 **no trae una copia** del auditor: importa `spanish_voice_quality.audit` en el último preflight.
-Antes de integrar #106, fusionar y verificar #79; si falta el módulo, cualquier llamada nueva a QA falla
+La actualización sobre la base actual incorpora el módulo real. Si falta durante el despliegue, cualquier llamada nueva a QA falla
 sin enviar. El código original de esta rama puede ejecutarse sin él mientras no pase por salidas auditadas.
 
 ## Problema y alcance comprobado
@@ -57,7 +57,7 @@ impide el envío; solo se registran códigos y etiquetas red/cola, nunca el cuer
 Los campos independientes (título, descripción, ALT, cuerpo) usan `inspect_fields`.
 Para salidas automáticas la cola es explícita WEB/API/MOBILE. Para un aviso manual es `None`.
 
-Si hay excepción técnica, falta #79 o se altera `changed=False` o `findings` esperado,
+Si hay excepción técnica, falta el módulo o se altera `schema_version=1`, red/cola, `changed=False` o `findings` esperado,
 `VoicePreflightUnavailable` impide alcanzar el envío. Esta distinción preserva la
 política de **no bloquear por estilo**, pero evita considerar diagnóstico inexistente un OK.
 No hay reintentos de acción ni autoedición de tildes, títulos, citas, hashtags, URLs o
@@ -97,14 +97,13 @@ python -m unittest discover -s tests -p test_voice_output_finalization.py -v
 
 Resultado contrastado en el HEAD `bbb1256aef78d1828fb221e3542530f7d1a9b958`:
 [CI offline](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38023070577),
-25/25 tests en Ubuntu Python 3.11 y 25/25 en Windows Python 3.11.
+La revisión anterior pasó 25/25. La base sincronizada y los nuevos tests de integración superan 28/28 en Ubuntu y Windows Python 3.11, CI: https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38049627273.
 El runner Windows necesita `tzdata` (ya consta en `requirements-ci.txt`);
 se instala en el workflow aislado sin contactar con cuentas sociales.
 
 En CI `.github/workflows/voice-output-finalization.yml` ejecuta tests offline
 en Windows y Ubuntu, Python 3.11, sin token de red social ni acciones reales.
-El auditor #79 se simula en tests de contrato porque no está fusionado en esta rama;
-no se atribuye con ello una validación de producción.
+Los tests de fallo usan dobles del auditor; además, hay una prueba con el auditor real presente en la base y pruebas con seis publicadores falsos para demostrar bloqueo técnico, no mutación y auditoría por campo.
 
 Métrica de cobertura documentada antes/después:
 - Antes: 0 de los **13 grupos de salida adicional** instrumentados aquí con QA final:
@@ -112,15 +111,14 @@ Métrica de cobertura documentada antes/después:
   Pinterest directo (incluye pin diario), aviso de ficha manual, y seis ejecutores
   de salida (X, Bluesky, Mastodon, Threads, Facebook e Instagram).
 - Después: **13/13 grupos con llamada explícita comprobable** más cobertura parcial de #79,
-  **solo cuando #79 esté disponible**. Esto mide puntos de inserción, no nueve redes
+  **solo cuando el módulo esté disponible**. También hay gate final para seis publicadores automáticos, además del Pinterest directo. Esto mide puntos de inserción, no nueve redes
   plenamente integradas ni tasa real de detección.
 - Contratos simulados: matriz 9 × 3; inmutabilidad de cadenas Unicode y formatos protegidos;
   fallos técnicos antes del punto de escritura; sin cambios en resultados editoriales.
 
 ## Retirada y segunda revisión adversarial
 
-1. **Crítico — ausencia de #79:** rama #106 aislada no puede ejercer el motor real.
-   Resuelto como dependencia explícita y preflight de fallo controlado; orden de merge obligatorio.
+1. **Crítico — auditor real de #79:** resuelto mediante la actualización sobre `737fc011`, donde el módulo ya existe. #79 cerrada sin merge formal; no fusionar su código otra vez sin comparar.
 2. **Alto — Pinterest puede omitir QA final de la descripción:** corregido eliminando
    `voice_checked=True`. El aviso previo de #79 es informativo y no garantiza éxito;
    ahora todas las vías auditadas revisan los tres campos antes de abrir CDP.
@@ -130,7 +128,7 @@ Métrica de cobertura documentada antes/después:
    antes de la acción, hallazgo editorial nunca bloquea; registrar tasa y duración en canario.
 5. **Medio — pruebas de frontera por análisis estático:** AST confirma el orden, no
    demuestra comportamiento UI ni CDP en vivo. Requiere canarios supervisados
-   por Claude tras integrar #79. En Reddit el formulario puede quedar en borrador ante un
+   por Claude con el auditor ya integrado en la base. En Reddit el formulario puede quedar en borrador ante un
    fallo después de rellenarlo, pero no se pulsa Publicar.
 6. **Corregido en la segunda pasada:** los despachadores de reply/cita de
    Threads API, Bluesky API, Mastodon API y comentarios WEB de X/Facebook/Instagram
@@ -143,5 +141,14 @@ Métrica de cobertura documentada antes/después:
 
 **Rollback:** revertir los commits de #106; no hay cambios de esquema,
 flags persistentes nuevos ni migraciones de estado. Antes de activar en despliegue,
-integrar #79, pasar suite completa, comparar fixtures y probar canarios supervisados
+verificar la API del auditor presente, pasar suite completa, comparar fixtures y probar canarios supervisados
 en Windows/Edge/móvil sin atribuir una ejecución real a estos tests.
+
+## Auditoría final sobre base sincronizada
+
+- Actualizada esta rama sobre el commit de base `737fc011` mediante merge de dos padres, sin fusionar la PR; se mantienen `circuit_breaker.write_preflight`, ledger, POST/ACK y salvaguardas de las redes.
+- Se añade `voice_output_finalization.inspect_fields` en `content_publisher.run`, inmediatamente antes del despachador, para Bluesky, Mastodon, Threads, X, Facebook e Instagram; se inspeccionan texto exacto y ALT disponibles, con cola WEB/API verdadera. Una excepción técnica ocurre fuera del bloque que reconcilia errores posteriores al envío.
+- Pinterest usa el control directo en `publish_pin` para título, descripción y ALT antes de Playwright, sin doble gate final. `--apply` falso conserva comportamiento informativo.
+- La PR #121 no es implementación independiente: contiene solo `.gitignore` encima del antiguo HEAD #106. #119 se solapa en investigación lingüística, no obliga a crear un motor nuevo.
+- CI específico Ubuntu/Windows 28/28 verde: https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38049627273. Gate general rojo en live manifest: #106 ausente en `children.json` de la rama padre #10; corregirlo en padre, no en esta hija: https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38049627302.
+- Pendiente: suite completa en entorno oficial, smoke supervisado Windows/Edge, TikTok Android, trazabilidad de salidas API/manual no integradas; no se han ejecutado acciones sociales.
