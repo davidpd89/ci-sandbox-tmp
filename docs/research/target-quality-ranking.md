@@ -104,10 +104,16 @@ universo evaluado, no únicamente los recuperados en top-k.
   12 %. Score **0..100** = suma de puntos conocidos con pesos fijos; campo
   `coverage` separa evidencia ausente de evidencia negativa. No vender
   `score` como probabilidad ni como conversión causal.
-- Histórico: solo `{verified:true, mature:true, trials>=10, followbacks,
-  responses, conversations, traffic}`; Wilson unilateral 95 % combinado
-  con pesos explícitos. Fuente sin confirmación: valor `null`, no cero.
-- Posts: fecha con zona, idioma observado, coincidencias de nicho,
+- Histórico: solo `verified:true` y `mature:true`, con cuatro exposiciones
+  auditadas por separado en `by_metric` (cada `followbacks`, `responses`,
+  `conversations`, `traffic` contiene `{verified:true, mature:true,
+  successes:int, trials:int>=10}`). Se admite el formato `trials` único
+  **solo** con `shared_exposure_verified:true`: confirmar explícitamente
+  que todas las métricas usan la misma población elegible. Sin esa marca
+  la señal es `null`, no cero. Wilson unilateral 95 % combinado con pesos
+  explícitos; no equiparar follows, respuestas y tráfico automáticamente.
+- Posts: fecha con zona, idioma ISO/BCP-47 español exacto (`es`, `es-ES`,
+  `es_419`, pero **no** códigos con prefijo ajeno como `est`), coincidencias de nicho,
   respuestas y antigüedad. Límite adquisición 21 días, comunidad 45 días
   por defecto (parámetros ajustables al `growth_policy` de cada scan).
   Fuera de edad o con fecha ausente no obtiene oportunidad de interactuar.
@@ -189,7 +195,9 @@ Pasadas adversariales:
 2. Unicode/tildes, valores NaN/Inf/bool, idiomas incorrectos y desconocidos.
 3. Necroposting, fecha sin zona, fecha futura, límite comunidad vs adquisición,
    publicaciones duplicadas, ordinal del scan sin ID real.
-4. Cohortes pequeñas/inmaduras o inverificadas: no elevar tasas de éxito.
+4. Cohortes pequeñas/inmaduras o inverificadas y denominadores heterogéneos:
+   no elevar tasas de éxito. Validar `shared_exposure_verified` o cuatro
+   exposiciones maduras `by_metric`.
    Evaluación con etiquetas parciales: sin compactar slots desconocidos
    hacia puestos más altos ni ideal nDCG autorreferencial.
 5. Sin auto-like X, sin ampliar permisos de acciones observadas, sin acceso
