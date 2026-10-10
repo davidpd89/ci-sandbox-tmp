@@ -8,27 +8,27 @@ ROOT = Path(__file__).resolve().parents[1] / "publicaciones GPT"
 CAPTURES = [
     (
         2,
-        "https://autorademodiaz.com/las-manecillas-del-recuerdo/fragmentos/",
+        "https://davidportodiaz.com/las-manecillas-del-recuerdo/fragmentos/",
         None,
     ),
     (
         4,
-        "https://autorademodiaz.com/premios.html",
+        "https://davidportodiaz.com/premios.html",
         "[data-award-result]:has-text('Primer Premio')",
     ),
     (
         5,
-        "https://autorademodiaz.com/prensa.html",
+        "https://davidportodiaz.com/prensa.html",
         "text=La orilla de las letras",
     ),
     (
         7,
-        "https://autorademodiaz.com/cuaderno/que-es-el-portal-fantasy/",
+        "https://davidportodiaz.com/cuaderno/que-es-el-portal-fantasy/",
         None,
     ),
     (
         8,
-        "https://autorademodiaz.com/herramientas/repeticiones/",
+        "https://davidportodiaz.com/herramientas/repeticiones/",
         "text=Analizar repeticiones",
     ),
 ]

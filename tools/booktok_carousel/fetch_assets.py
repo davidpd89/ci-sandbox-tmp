@@ -24,7 +24,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-UA = "rrss-autorademo-production-kit/1.0 (+https://autorademodiaz.com)"
+UA = "rrss-davidporto-production-kit/1.0 (+https://davidportodiaz.com)"
 
 
 def get_text(url: str) -> str:

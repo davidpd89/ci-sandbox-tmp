@@ -93,7 +93,7 @@ def spanish_score(text):
     return len(SPANISH.findall(text or "")) - len(ENGLISH.findall(text or ""))
 
 
-def evaluate(handle, profile, comment, *, button, my_handle="autorademodiaz", discarded=frozenset(), known=frozenset()):
+def evaluate(handle, profile, comment, *, button, my_handle="davidportodiaz", discarded=frozenset(), known=frozenset()):
     """(puntuacion, motivo_descarte). Puntuacion mayor = mejor candidato; motivo != '' => descartado."""
     key = handle.casefold()
     if key == my_handle or key in discarded or key in known:
@@ -151,7 +151,7 @@ def pick_seeds(seeds, n=SEEDS_PER_DAY):
     return [handle for handle, _ in sorted(pool.items(), key=key)[:n]]
 
 
-def seed_ok(handle, bio, followers, *, known=frozenset(), my_handle="autorademodiaz"):
+def seed_ok(handle, bio, followers, *, known=frozenset(), my_handle="davidportodiaz"):
     """(ok, motivo) para aceptar una cuenta hallada en la busqueda como semilla de comentaristas."""
     if handle.casefold() in known or handle.casefold() == my_handle:
         return False, "ya es semilla"

@@ -186,23 +186,26 @@ def by_source(rows, followers, today, min_age=2):
 
 
 def holdout_view(holdout_rows, followers, today, min_age=14):
-    """Seguimiento ORGANICO del grupo de control: candidatos que detectamos y apartamos a
-    proposito sin seguir. Devuelve (apartados con edad suficiente, ya nos siguen).
-    La diferencia con el follow-back de los que SI seguimos son los seguidores incrementales."""
+    """Control histórico observacional, NO incremento causal.
+
+    Una cuenta se cuenta una vez (primera fecha válida), no una vez por línea:
+    duplicados de importación inflaban el denominador de holdout.
+    """
     followers = {norm(f) for f in followers}
-    n = back = 0
+    first_seen = {}
     for row in holdout_rows:
+        account = norm(row.get("cuenta"))
+        if not account or account.startswith("https"):
+            continue
         try:
             when = datetime.date.fromisoformat((row.get("fecha") or "")[:10])
-        except ValueError:
+        except (ValueError, TypeError):
             continue
-        if (today - when).days < min_age:
-            continue
-        n += 1
-        account = norm(row.get("cuenta"))
-        if any(_same(account, f) for f in followers):
-            back += 1
-    return n, back
+        first_seen[account] = min(when, first_seen.get(account, when))
+    mature = [account for account, when in first_seen.items()
+              if (today - when).days >= min_age]
+    back = sum(any(_same(account, f) for f in followers) for account in mature)
+    return len(mature), back
 
 
 def wilson(back, n, z=1.64):
@@ -253,6 +256,44 @@ def mastodon_followers():
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
+    # Lectura offline explícita: sin followers API, registros de producción ni publicación.
+    # El JSON debe contener solo identificadores seudónimos y datos ya auditados.
+    if argv[:1] == ["--experiment-report"]:
+        if len(argv) != 2:
+            return 2
+        import json
+        from experiment_uplift import analyze_experiment
+
+        def reject_duplicate_keys(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise ValueError("clave JSON duplicada")
+                result[key] = value
+            return result
+
+        def reject_nonstandard_constant(value):
+            raise ValueError("constante JSON no estándar")
+
+        try:
+            with open(argv[1], "rb") as stream:
+                raw = stream.read(2_000_001)
+                if len(raw) > 2_000_000:
+                    raise ValueError("archivo demasiado grande")
+                payload = json.loads(
+                    raw, object_pairs_hook=reject_duplicate_keys,
+                    parse_constant=reject_nonstandard_constant)
+            if not isinstance(payload, dict):
+                raise ValueError("formato inválido")
+            result = analyze_experiment(
+                payload["records"], design=payload["design"],
+                expected_treatment_fraction=payload["design"].get(
+                    "expected_treatment_fraction", 0.5))
+        except (OSError, ValueError, TypeError, KeyError, OverflowError, RecursionError):
+            print("Experimento inválido/inaccesible; no se calcula ni aprueba uplift.")
+            return 2
+        print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+        return 0 if result["status"] == "review_only" else 3
     if not argv or argv[0] not in ("bluesky", "mastodon"):
         print(__doc__)
         return 2
@@ -280,7 +321,8 @@ def main(argv=None):
             low, high = wilson(back, n)
             print(f"Grupo de control (follows apartados, >= 14 dias): {back}/{n} nos siguen solos "
                   f"({100 * back / n:.1f} %, 90 %: {100 * low:.0f}-{100 * high:.0f} %). "
-                  "Restar a la tasa de follow-back de los seguidos = seguidores incrementales.")
+                  "Diferencia observacional; NO llamarla incremental sin diseño aleatorio, "
+                  "grupos comparables, ventana igual y control no contaminado.")
         else:
             print("Grupo de control: aun sin candidatos con 14 dias de edad.")
     style = by_reply_style(rows, followers, datetime.date.today(), min_age)

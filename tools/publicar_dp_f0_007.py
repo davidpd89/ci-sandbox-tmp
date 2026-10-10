@@ -16,7 +16,7 @@ import urllib.request
 BRAND_ID = "6435452"
 MCP = "https://ai.metricool.com/mcp"
 
-IMAGE_URL = "https://autorademodiaz.com/assets/eventos/samuel-entre-mundos-feria-libro-madrid-2026-caseta-337.webp"
+IMAGE_URL = "https://davidportodiaz.com/assets/eventos/samuel-entre-mundos-feria-libro-madrid-2026-caseta-337.webp"
 FECHA = "2026-06-26T18:00:00+02:00"
 
 CAPTION_IG = """Un libro en una caseta no se vende solo.
@@ -36,9 +36,9 @@ Samuel entre mundos estuvo en la Feria del Libro de Madrid 2026, caseta 337.
 
 Y yo sigo aprendiendo a explicar una historia sin quitarle el misterio.
 
-La crónica y más sobre el libro están en autorademodiaz.com.
+La crónica y más sobre el libro están en davidportodiaz.com.
 
-#AutoraDemoDiaz #SamuelEntreMundos #FeriaDelLibroMadrid #FantasiaEspanola #VidaDeAutor"""
+#DavidPortoDiaz #SamuelEntreMundos #FeriaDelLibroMadrid #FantasiaEspanola #VidaDeAutor"""
 
 CAPTION_FB = """Un libro en una caseta no se vende solo.
 
@@ -46,7 +46,7 @@ Primero está la mesa. Luego la portada. Luego alguien que pasa, mira un segundo
 
 Samuel entre mundos estuvo en la Feria del Libro de Madrid 2026, caseta 337. Para un autor debut, esos momentos pequeños sostienen mucho.
 
-https://autorademodiaz.com
+https://davidportodiaz.com
 
 #SamuelEntreMundos #FeriaDelLibroMadrid"""
 

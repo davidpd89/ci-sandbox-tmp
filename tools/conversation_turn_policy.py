@@ -165,6 +165,10 @@ def check_execution(network, item):
     Los replies *de seguimiento* siempre requieren historial verificado y
     coherencia del destino; no confiar solo en un marcador textual del plan.
     """
+    import post_age_policy                      # 09/10: anti-necroposting comun a las ocho redes (reply/comment/like/boost sobre posts viejos)
+    fresh, why = post_age_policy.check(network, item)
+    if not fresh:
+        return False, why
     if item.get("kind") not in _REPLY_KINDS:
         return True, "accion_no_es_respuesta"
     reason = str(item.get("motivo") or "").casefold()

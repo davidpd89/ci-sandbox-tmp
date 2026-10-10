@@ -1244,9 +1244,9 @@ def run(*, config_path=CONFIG_PATH, write_metrics=True, today=None):
                 )
 
         c.collect(
-            "domain_search", "autorademodiaz.com",
-            lambda: m.search_statuses("autorademodiaz.com", limit=40, max_pages=b["search_pages"]),
-            lambda status: c.add_status(status, "domain_search", "autorademodiaz.com"),
+            "domain_search", "davidportodiaz.com",
+            lambda: m.search_statuses("davidportodiaz.com", limit=40, max_pages=b["search_pages"]),
+            lambda status: c.add_status(status, "domain_search", "davidportodiaz.com"),
         )
 
         selected_queries = _query_selection(c)
