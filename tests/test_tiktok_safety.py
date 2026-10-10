@@ -359,12 +359,12 @@ class TikTokSafetyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             path = pathlib.Path(folder) / "registro.csv"
             intent_id = "d" * 32
-            # The quota is for today; the fixture must not expire at midnight.
-            event_day = dt.date.today().isoformat()
+            # followed_before() mide la cuota del día de ejecución.
+            today = dt.date.today().isoformat()
             lines = [
                 "fecha,cuenta,tipo,post_resumen,texto_usado,resultado,notas",
-                f"{event_day},@privada,follow,,,pendiente_verificacion,x | intent_id={intent_id}",
-                f"{event_day},@privada,follow,,,pendiente_aprobacion,x | intent_id={intent_id}",
+                f"{today},@privada,follow,,,pendiente_verificacion,x | intent_id={intent_id}",
+                f"{today},@privada,follow,,,pendiente_aprobacion,x | intent_id={intent_id}",
             ]
             path.write_text("\n".join(lines) + "\n", encoding="utf-8-sig")
             with mock.patch.object(bulk, "REGISTRO_CSV", str(path)):
