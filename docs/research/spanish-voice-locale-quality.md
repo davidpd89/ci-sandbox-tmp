@@ -6,7 +6,7 @@ Rama: research/69-spanish-voice-locale-quality. Se leyó el encargo, PROTOCOL.md
 
 **Implementación:** `tools/spanish_voice_quality.py`: `audit(text, network, queue, locale)`, nueve redes (X, Threads, Facebook, Pinterest, Reddit, Bluesky, Mastodon, TikTok, Instagram), colas WEB/API/MOBILE, offsets por puntos de código, lista de códigos y niveles, `changed=false`. No es corrector general ni filtro de naturalidad. Solo revisa reglas acotadas y reutiliza el corrector de tildes ya presente si la dependencia está instalada; devuelve `accent_check=unavailable_or_disabled` cuando no lo está. Acepta `es` sin imponer localismos peninsulares. Citas entre comillas, títulos, enlaces Markdown, URLs, correos, hashtags, menciones y código inline se enmascaran sin mover índices. Ninguna sugerencia reescribe nombres, citas ni formatos.
 
-`tools/reply_writer.py`: invoca el auditor solo después de superar la validación preexistente. Emite **códigos de aviso, nunca el contenido auditado**, sin bloquear respuesta, alterar candidatos ni actuar en redes. `reddit_micro` reutiliza el adaptador de Reddit. Las nueve redes pueden llamar a `audit` desde los demás productores. Integración activa ya verificada por código compartido de `reply_queue`: los productores que usan `rw.write_replies`; no se afirma que todos los publicadores o caminos manuales estén conectados. El publicador común `content_publisher.py` también invoca `_voice_diagnostics` para sus siete adaptadores (Bluesky, Mastodon, X, Threads, Facebook, Instagram, Pinterest), tanto en vista previa como antes del envío; es solo informativo y no modifica los siete publicadores ni las colas. Para Reddit/TikTok y caminos manuales queda la API común y el escritor de respuestas, sin fingir paridad de puntos de integración. No se modifica la cola WEB/API/MOBILE ni los preflights de seguridad.
+`tools/reply_writer.py`: invoca el auditor solo después de superar la validación preexistente. Propaga `queue` **solo si el origen del candidato la conoce**, no etiqueta arbitrariamente todo como WEB; el publicador asigna API o WEB por su adaptador real. Emite **códigos de aviso, nunca el contenido auditado**, sin bloquear respuesta, alterar candidatos ni actuar en redes. `reddit_micro` reutiliza el adaptador de Reddit. Las nueve redes pueden llamar a `audit` desde los demás productores. Integración activa ya verificada por código compartido de `reply_queue`: los productores que usan `rw.write_replies`; no se afirma que todos los publicadores o caminos manuales estén conectados. El publicador común `content_publisher.py` también invoca `_voice_diagnostics` para sus siete adaptadores (Bluesky, Mastodon, X, Threads, Facebook, Instagram, Pinterest), tanto en vista previa como antes del envío; es solo informativo y no modifica los siete publicadores ni las colas. Para Reddit/TikTok y caminos manuales queda la API común y el escritor de respuestas, sin fingir paridad de puntos de integración. No se modifica la cola WEB/API/MOBILE ni los preflights de seguridad.
 
 `tools/spanish_voice_blind.py`: revisión A/B emparejada con semilla, orden estable y fichero de clave aparte. Cada caso incluye el mismo contexto y dos textos; las preferencias quedan vacías hasta que un revisor humano puntúe `left/right/tie/both_bad`. `score` no acepta opiniones ausentes. `tools/spanish_voice_eval.py` mide avisos en antes/después sintéticos y genera los dos ficheros ciegos opcionalmente. No confunde menos avisos con ser más humano.
 
@@ -21,7 +21,16 @@ Fecha de consulta: 2026-10-10
 Licencia SPDX: MIT
 Referencia inmutable: https://github.com/barrust/pyspellchecker/commit/f72172c4ddb3d1c3464cf500cc2420a4831a2b55
 
-### Comparativa aplicada
+### Comparativa aplicada (contraste adicional al 10/10/2026)
+
+El código de pyspellchecker a `f72172c` exige Python >=3.10 según su pyproject y su licencia MIT está confirmada en LICENSE. La alternativa de motor de gramática completo incluye LanguageTool (núcleo LGPL-2.1) y dos clientes Python, pero es una carga adicional para comentarios cortos: el motor local precisa JVM; un cliente HTTP no aporta reglas por sí mismo.
+
+| Candidato complementario | Referencia inmutable verificada | Licencia / mantenimiento | Encaje |
+|---|---|---|---|
+| [LanguageTool núcleo](https://github.com/languagetool-org/languagetool/commit/170f9698d9b15bc0cde1094156bc60d0007ca7e0) | `170f969` (09/10/2026) | LGPL-2.1, proyecto activo; requiere entorno Java | Gramática completa, útil fuera de la ruta caliente, no sustituto ligero |
+| [pyLanguagetool](https://github.com/Findus23/pylanguagetool/commit/e29f87dae8cdaa9fc87bc5e7192edae3d286c596) | `e29f87d` (13/04/2025) | MIT, menor actividad reciente | Cliente HTTP/API, no corrige localmente por sí mismo; no adoptado |
+
+### Primera comparación
 
 | Opción | Versión de referencia comprobada / actividad | Licencia | Compatibilidad y coste | Decisión |
 |---|---|---|---|---|
@@ -42,10 +51,12 @@ Conservar y reutilizar el corrector de tildes ya instalado; añadir diagnóstico
 python -m unittest discover -s tests -p test_spanish_voice_quality.py -v
 python tools/spanish_voice_eval.py tests/fixtures/spanish_voice_pairs.json
 python tools/spanish_voice_quality.py --network x --queue WEB --text "Cuantos tomos tiene?"
-python tools/spanish_voice_eval.py tests/fixtures/spanish_voice_pairs.json --blind-prefix revision79 --seed revisor1
+New-Item -ItemType Directory -Force "$env:TEMP\rrss_revision79" | Out-Null
+New-Item -ItemType Directory -Force "$env:TEMP\rrss_clave79" | Out-Null
+python tools/spanish_voice_eval.py tests/fixtures/spanish_voice_pairs.json --blind-prefix "$env:TEMP\rrss_revision79\revision79" --blind-key-dir "$env:TEMP\rrss_clave79" --seed revisor1
 ```
 
-Fixture propia sintética: **9 pares / 9 redes**. Auditor sin diccionario (reglas deterministas): **10 avisos antes / 0 después**. Es un caso de regresión construido para comprobar las reglas, no una ganancia real de 100 % ni un benchmark de publicaciones. Tests: 14 casos unitarios sintéticos (paridad 9×3, citas, offsets, UTF-8, calcos, tildes inyectadas, preguntas, comparación A/B, fallos de esquema); CI Windows/Ubuntu Python 3.11 en `.github/workflows/spanish-voice-quality.yml`. Pruebas locales también ejecutadas con Python 3.13 stdlib. **Preferencia humana antes/después: pendiente** de al menos dos revisores independientes con clave oculta, sin mostrar el nombre de variante, sin inferir consenso de un scoring de reglas.
+Fixture propia sintética: **9 pares / 9 redes**. Auditor sin diccionario (reglas deterministas): **10 avisos antes / 0 después**. Es un caso de regresión construido para comprobar las reglas, no una ganancia real de 100 % ni un benchmark de publicaciones. Tests: 23 casos unitarios sintéticos (paridad 9×3, citas, offsets, UTF-8, calcos, tildes inyectadas, preguntas, comparación A/B, fallos de esquema); CI Windows/Ubuntu Python 3.11 en `.github/workflows/spanish-voice-quality.yml`. Pruebas locales también ejecutadas con Python 3.13 stdlib. **Preferencia humana antes/después: pendiente** de al menos dos revisores independientes con clave oculta, sin mostrar el nombre de variante, sin inferir consenso de un scoring de reglas.
 
 ## Segunda revisión adversarial
 
@@ -54,10 +65,17 @@ Fixture propia sintética: **9 pares / 9 redes**. Auditor sin diccionario (regla
 3. **Confundir heurística con verdad:** pyspellchecker puede generar falsos positivos en formas verbales y nombres. Corregido: usar módulo ya existente, incluir la disponibilidad en salida, señales como hipótesis editoriales y no contar tildes en el benchmark determinista.
 4. **Sesgo A/B:** comparaciones sin mismos posts, elección inventada o clave visible contaminan el resultado. Corregido: pares con contexto común, IDs únicos, clave aparte, decisión vacía por defecto y excepción si falta un voto. Revisión humana aún no realizada.
 5. **Interferencia con crecimiento:** nuevo preflight impediría comentarios sanos. Corregido: diagnóstico posterior a `valid_reply`, informativo, excepción del auditor aislada; ninguna operación de escritura remota ni modificación de colas.
-6. **Alcance parcial:** originalmente faltaban las fichas de publicación; corregido en esta PR conectando siete adaptadores de `content_publisher.py` al mismo auditor, sin bloqueo. Reddit/TikTok, publicadores directos y edición manual siguen precisando inventario de puntos de salida; no atribuir cobertura universal a una función que acepta nueve redes.
+6. **Defecto reproducido del benchmark:** los avisos de casos sucesivos de la misma red se sobrescribían en `by_network`; ahora acumula contadores y casos. Regresión: dos casos de X deben sumar 2, no 1.
+7. **Revisión ciega manipulable:** antes se podía editar red/contexto/variantes del formulario después de generar la clave, y se escribía la clave en el mismo directorio público que la revisión. Corregido: huella SHA-256 por pareja sobre contenido canónico, validación estricta, clave y revisión en directorios distintos fuera del repo, sin sobrescritura. No confundir firma de integridad local con cifrado ni anonimización.
+8. **Markdown y texto protegido:** la exclamación de `![portada](...)` generaba un falso positivo; los bloques de código delimitados con tres acentos graves o virgulillas podían etiquetar signos dentro del código como errores lingüísticos. Corregido con pruebas específicas.
+9. **Cola inferida incorrectamente:** las llamadas sin dato de origen antes se declaraban WEB, aunque la salida podía ser API o MOBILE; ahora devuelven `queue: null`, y el escritor propaga información explícita. Las fichas del publicador diferencian WEB/API.
+10. **Seguridad operativa de CI:** el workflow original estaba sin acciones inmovilizadas, permisos explícitos ni instalación del diccionario; se fijaron los SHA de acciones ya usados por el espejo, `contents: read`, sin persistir credenciales, Python 3.11, prueba del diccionario real y timeout.
+11. **Alcance parcial:** originalmente faltaban las fichas de publicación; corregido en esta PR conectando siete adaptadores de `content_publisher.py` al mismo auditor, sin bloqueo. Reddit/TikTok, publicadores directos y edición manual siguen precisando inventario de puntos de salida; no atribuir cobertura universal a una función que acepta nueve redes.
 
 ## Retirada y pendientes para Claude
 
 Revertir los commits de integración en `reply_writer.py` y `content_publisher.py` para volver exactamente a la lógica anterior (los módulos nuevos no tienen efectos por importación). Los tests y reportes se pueden retirar independientemente. No hay esquema, DB, fichero operativo ni credenciales modificados. Ejecutar la suite global del mirror y de la rama privada tras integrar; verificar en Windows vivo con tildes, consolidador de logs, Edge real y móvil en **canario supervisado**, no en prueba simulada; repetir evaluación ciega con corpus propio/autorizado y seguimiento de preferencia humana. Ninguna acción real de redes fue realizada por esta PR. En las pruebas de integración se simula `reply_writer` y el diagnóstico del publicador sin sesiones, clientes sociales ni escrituras operativas.
+
+**Autorrevisión sucesiva:** los defectos anteriores fueron detectados en una segunda revisión, corregidos en la misma rama y regresados en CI. En particular los formularios ciegos no se deben subir al repositorio; revisar y clave deben permanecer fuera de él y bajo distintos directorios. Esta suite no valida contenido real ni interpreta matices de registro de cada red.
 
 **Límites conocidos:** no valida semántica, contexto conversacional, concordancia general, contenido multimedia ni naturalidad; los regex se restringen deliberadamente a señales de alta precisión. El detector de tildes no es infalible. Las pruebas de esta PR son offline y sintéticas.
