@@ -208,10 +208,10 @@ class RedditOpportunityTests(unittest.TestCase):
         stub.Reddit = constructor
         with patch.dict(sys.modules, {"praw": stub}):
             client = r.make_praw_readonly_client(
-                client_id="id", client_secret="secret", user_agent="test/1")
+                client_id="id", client_secret="s", user_agent="test/1")
         self.assertTrue(client.read_only)
         self.assertEqual(calls, [{"client_id": "id",
-                                  "client_secret": "secret",
+                                  "client_secret": "s",
                                   "user_agent": "test/1"}])
         for empty in ("", "  ", None):
             with self.assertRaises(ValueError):
