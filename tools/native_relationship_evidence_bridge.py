@@ -133,6 +133,7 @@ def bridge_results(ledger: LedgerSink, batch: Batch, records: Iterable[dict]) ->
     """
     batch.validate()
     events, unknown, downgraded = [], {}, 0
+    ack_refs: dict[str, dict[str, list[int]]] = {}
     for index, item in enumerate(records):
         reason = None
         if not isinstance(item, dict):
@@ -179,12 +180,24 @@ def bridge_results(ledger: LedgerSink, batch: Batch, records: Iterable[dict]) ->
                     "target_id": target, "occurred_at": item["occurred_at"],
                     "correlation_id": correlation or None,
                 })
+                if ack_id:
+                    ack_refs.setdefault(ack_id, {}).setdefault(record_id, []).append(len(events) - 1)
         if reason:
             unknown[reason] = unknown.get(reason, 0) + 1
+    # Un mismo ACK no puede acreditar dos operaciones distintas del mismo export.
+    # La unicidad entre exports requiere un índice persistente en la cola (#112).
+    reused = 0
+    for owners in ack_refs.values():
+        if len(owners) > 1:
+            for positions in owners.values():
+                for position in positions:
+                    events[position]["outcome"] = "unverified"
+                    reused += 1
     # append_many de #84 valida y confirma el lote atómicamente.
     stats = ledger.append_many(events)
     return {**stats, "unknown": sum(unknown.values()),
-            "unknown_reasons": unknown, "downgraded_no_ack": downgraded}
+            "unknown_reasons": unknown, "downgraded_no_ack": downgraded,
+            "downgraded_reused_ack": reused}
 
 
 
