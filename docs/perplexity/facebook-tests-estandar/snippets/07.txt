@@ -1,0 +1,38 @@
+python
+# tests/test_facebook_datetime_contract.py
+# Contrato propio del sistema; compatible con el formato ISO 8601 documentado por Meta.
+from datetime import datetime, timezone
+
+from tests.contracts.facebook_datetime_contract import parse_facebook_datetime
+
+
+def test_accepts_offset_without_colon():
+    assert parse_facebook_datetime("2026-10-10T10:30:00+0000") == datetime(
+        2026, 10, 10, 10, 30, tzinfo=timezone.utc
+    )
+
+
+def test_accepts_z_suffix():
+    assert parse_facebook_datetime("2026-10-10T10:30:00Z").tzinfo == timezone.utc
+
+
+def test_converts_offset_to_utc():
+    parsed = parse_facebook_datetime("2026-10-10T12:30:00+0200")
+    assert parsed.hour == 10
+    assert parsed.utcoffset().total_seconds() == 0
+
+
+def test_accepts_epoch():
+    assert parse_facebook_datetime(1760000000).tzinfo == timezone.utc
+
+
+def test_null_and_empty_are_none():
+    assert parse_facebook_datetime(None) is None
+    assert parse_facebook_datetime("") is None
+
+
+def test_invalid_date_raises():
+    import pytest
+
+    with pytest.raises(ValueError):
+        parse_facebook_datetime("not-a-date")
