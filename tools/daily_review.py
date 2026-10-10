@@ -164,6 +164,13 @@ def extra_sections(today):
         out += ["## Cola de respuestas de ChatGPT", "", f"- pendientes {len(reply_queue._load(reply_queue.PENDING))}, respuestas utiles {sum(1 for v in answers.values() if v.get('reply'))}, descartadas {sum(1 for v in answers.values() if not v.get('reply'))}", ""]
     except Exception:
         pass
+    # Telemetría transversal y solo lectura: mide edad del POST DESTINO, no
+    # la fecha de encolado. Ausencia de un plan != cero candidatos recientes.
+    try:
+        import post_age_distribution
+        out += post_age_distribution.daily_lines(ROOT)
+    except (OSError, ValueError, TypeError) as exc:
+        out += [f"## Antigüedad de posts: no disponible ({type(exc).__name__})", ""]
     return out
 
 
