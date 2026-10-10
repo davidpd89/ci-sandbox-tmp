@@ -19,6 +19,9 @@ NETWORKS = (
     "bluesky", "mastodon", "tiktok", "instagram",
 )
 BUCKETS = ("0_24h", "24_72h", "72_168h", "over_168h", "unknown", "future", "conflict")
+# Los planes de acciones mezclan posts con perfiles; seguir a alguien no tiene
+# una fecha de publicacion destino que medir.
+PROFILE_ONLY_KINDS = frozenset({"follow", "follow_external", "followback", "unfollow"})
 ORIGIN_FIELDS = ("target_created_at", "post_created_at")
 NESTED_FIELDS = (
     "created_at", "createdAt", "created_utc", "create_time",
@@ -136,14 +139,20 @@ def distribution(network, candidates, *, now):
         raise ValueError("se requiere lista de candidatos")
     counts = dict.fromkeys(BUCKETS, 0)
     sources = {}
+    profile_actions = 0
     for row in candidates:
+        if (isinstance(row, dict) and isinstance(row.get("kind"), str)
+                and row["kind"] in PROFILE_ONLY_KINDS):
+            profile_actions += 1
+            continue
         bucket, source = classify(network, row, now=now)
         counts[bucket] += 1
         if bucket not in ("unknown", "conflict"):
             sources[source] = sources.get(source, 0) + 1
     return {
         "red": network,
-        "total": len(candidates),
+        "total": len(candidates) - profile_actions,
+        "acciones_perfil_excluidas": profile_actions,
         "hasta_24h": counts["0_24h"],
         "hasta_72h": counts["0_24h"] + counts["24_72h"],
         "hasta_7d": counts["0_24h"] + counts["24_72h"] + counts["72_168h"],
@@ -214,7 +223,8 @@ def daily_lines(root, *, now=None):
         else:
             c = row["rangos"]
             lines.append(
-                f"- {network}: {row['total']} candidatos; "
+                f"- {network}: {row['total']} candidatos de post; "
+                f"{row['acciones_perfil_excluidas']} acciones de perfil excluidas; "
                 f"≤24 h {row['hasta_24h']}, ≤72 h {row['hasta_72h']}, "
                 f"≤7 d {row['hasta_7d']}; >7 d {c['over_168h']}, "
                 f"sin fecha {c['unknown']}, futuras {c['future']}, "
