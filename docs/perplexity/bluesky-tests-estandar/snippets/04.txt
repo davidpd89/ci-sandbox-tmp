@@ -1,0 +1,40 @@
+python
+# tests/test_bluesky_syntax_contract.py
+# Valida el normalizador propio contra los vectores CC0 de:
+# https://github.com/bluesky-social/atproto-interop-tests/tree/main/syntax
+import pytest
+
+from growth.bluesky.identity import (
+    normalize_datetime,
+    normalize_post_ref,
+)
+
+
+@pytest.mark.parametrize("vector", "aturi_vectors")
+def test_aturi_contract(aturi_vectors, vector):
+    if vector.value in _invalid_values(aturi_vectors):
+        with pytest.raises(ValueError, match="invalid_at_uri"):
+            normalize_post_ref(vector.value)
+    else:
+        ref = normalize_post_ref(vector.value)
+        assert ref.did.startswith("did:")
+        assert ref.collection == "app.bsky.feed.post"
+        assert ref.rkey
+
+
+@pytest.mark.parametrize("vector", "datetime_vectors")
+def test_datetime_contract(datetime_vectors, vector):
+    if vector.value in _invalid_values(datetime_vectors):
+        with pytest.raises(ValueError, match="invalid_datetime"):
+            normalize_datetime(vector.value)
+    else:
+        parsed = normalize_datetime(vector.value)
+        assert parsed.tzinfo is not None
+
+
+def _invalid_values(vectors):
+    return {
+        vector.value
+        for vector in vectors
+        if vector.source_file.endswith("_invalid.txt")
+    }
