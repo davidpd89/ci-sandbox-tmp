@@ -100,28 +100,38 @@ def _normalize(raw, today, history_days):
     context = raw.get("context_quality")
     source = raw.get("source")
     if source is not None:
-        # Puente explícito de lectura de X/Threads: el target_id NATIVO
-        # apunta a la cuenta/post propio, NO al comentario entrante.
-        allowed = {("x", "api:users_mentions"), ("threads", "api:own_post_replies")}
-        if ((net, source) not in allowed or granularity != "event"
-                or kind not in (("comment", "mention") if net == "x" else ("comment",))):
-            raise ValueError("origen nativo incompatible")
-        native_target = raw.get("target_id")
-        if (not isinstance(native_target, str) or not native_target.strip()
-                or len(native_target) > 240):
-            raise ValueError("origen nativo sin target_id acreditado")
-        if actor_id is not None or target_ref not in (None, event_id):
-            raise ValueError("origen nativo con identidad/destino contradictorios")
-        native_author = raw.get("author_id")
-        if net == "x":
-            if (not isinstance(native_author, str) or not native_author.strip()
-                    or len(native_author) > 240):
-                raise ValueError("autor X no acreditado")
-            actor_id = native_author
-        elif native_author not in ("", None):
-            raise ValueError("identidad Threads no acreditada")
-        target_ref = event_id  # ID del evento entrante, nunca post propio
-        context = context or "partial"
+        # X/Threads usan un adaptador nativo estricto. En las demás redes
+        # source es metadato no acreditado, no una prueba de respuesta.
+        native_source = source in ("api:users_mentions", "api:own_post_replies")
+        if native_source or net in ("x", "threads"):
+            # Puente explícito de lectura de X/Threads: el target_id NATIVO
+            # apunta a la cuenta/post propio, NO al comentario entrante.
+            allowed = {("x", "api:users_mentions"), ("threads", "api:own_post_replies")}
+            if ((net, source) not in allowed or granularity != "event"
+                    or kind not in (("comment", "mention") if net == "x" else ("comment",))):
+                raise ValueError("origen nativo incompatible")
+            native_target = raw.get("target_id")
+            if (not isinstance(native_target, str) or not native_target.strip()
+                    or len(native_target) > 240):
+                raise ValueError("origen nativo sin target_id acreditado")
+            if actor_id is not None or target_ref not in (None, event_id):
+                raise ValueError("origen nativo con identidad/destino contradictorios")
+            native_author = raw.get("author_id")
+            if net == "x":
+                if (not isinstance(native_author, str) or not native_author.strip()
+                        or len(native_author) > 240):
+                    raise ValueError("autor X no acreditado")
+                actor_id = native_author
+            elif native_author not in ("", None):
+                raise ValueError("identidad Threads no acreditada")
+            target_ref = event_id  # ID del evento entrante, nunca post propio
+            context = context or "partial"
+        else:
+            if (not isinstance(source, str) or not source.strip()
+                    or len(source) > 200):
+                raise ValueError("origen canónico inválido")
+            source = None  # no heredar certeza de un productor ajeno
+
     person = _identity(actor_id, handle)
     if target_ref is not None and (not isinstance(target_ref, str)
                                    or not target_ref.strip() or len(target_ref) > 500):
