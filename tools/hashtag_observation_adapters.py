@@ -120,12 +120,16 @@ class _PlainText(HTMLParser):
         self.suppressed = 0
 
     def handle_starttag(self, tag, attrs):
+        if tag in ("p", "div", "br", "li") and not self.suppressed:
+            self.parts.append(" ")
         if tag in ("script", "style"):
             self.suppressed += 1
 
     def handle_endtag(self, tag):
         if tag in ("script", "style") and self.suppressed:
             self.suppressed -= 1
+        if tag in ("p", "div", "li") and not self.suppressed:
+            self.parts.append(" ")
 
     def handle_data(self, data):
         if not self.suppressed:
@@ -140,7 +144,7 @@ def _text(raw, network):
     if network == "mastodon" and "<" in raw:
         parser = _PlainText()
         parser.feed(raw)
-        raw = " ".join(parser.parts)
+        raw = "".join(parser.parts).strip()
     return unicodedata.normalize("NFC", raw)
 
 
@@ -213,11 +217,15 @@ class ObservationCollector:
     Call add_posts separately per read-only producer; to_engine_rows returns
     transient identity-bearing rows for #63 and must NEVER be persisted.
     """
-    def __init__(self, *, now, max_age_days=14):
+    def __init__(self, *, now, max_age_days=14, max_unique_posts=50000):
         self.now = _time(now)
         if not isinstance(max_age_days, int) or isinstance(max_age_days, bool) or not 1 <= max_age_days <= 14:
             raise ValueError("backfill must remain within 14 days")
+        if (type(max_unique_posts) is not int
+                or not 1 <= max_unique_posts <= 200000):
+            raise ValueError("invalid in-memory post budget")
         self.max_age_days = max_age_days
+        self.max_unique_posts = max_unique_posts
         self._posts = {}
         self._conflicts = set()
         self._feedback = {}
@@ -264,6 +272,10 @@ class ObservationCollector:
                 existing["sources"].add(origin)
                 self.counts["duplicates"] += 1
             else:
+                if len(self._posts) >= self.max_unique_posts:
+                    self.counts["capacity_skipped"] += 1
+                    self.by_network_queue[(network, queue, "capacity_skipped")] += 1
+                    continue
                 item["sources"] = {origin}
                 self._posts[key] = item
                 self.by_network_queue[(network, queue, "accepted")] += 1
@@ -337,5 +349,6 @@ class ObservationCollector:
                      "accepted": self.by_network_queue[(network, queue, "accepted")],
                      "invalid": self.by_network_queue[(network, queue, "invalid")],
                      "stale": self.by_network_queue[(network, queue, "stale")],
-                     "future": self.by_network_queue[(network, queue, "future")]}
+                     "future": self.by_network_queue[(network, queue, "future")],
+                     "capacity_skipped": self.by_network_queue[(network, queue, "capacity_skipped")]}
                     for network in sorted(NETWORKS) for queue in sorted(QUEUES)]}
