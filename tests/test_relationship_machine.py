@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 import pathlib
 import random
@@ -207,8 +208,9 @@ class PersistenceTests(unittest.TestCase):
 
     def test_replay_detects_projection_corruption(self):
         self.apply_path()
-        with sqlite3.connect(self.path) as db:
-            db.execute("UPDATE relation_state SET following=0 WHERE network='bluesky'")
+        with closing(sqlite3.connect(self.path)) as db:
+            with db:
+                db.execute("UPDATE relation_state SET following=0 WHERE network='bluesky'")
         self.assertFalse(self.store.verify_replay("bluesky", "anon"))
 
     def test_unknown_network_lane_and_identity_rejected(self):
@@ -225,9 +227,10 @@ class PersistenceTests(unittest.TestCase):
 
     def test_event_history_row_tamper_detected_even_if_projection_is_valid(self):
         self.apply_path()
-        with sqlite3.connect(self.path) as db:
-            db.execute("UPDATE relation_events SET after_state='cerrado' "
-                       "WHERE network='bluesky' AND version=2")
+        with closing(sqlite3.connect(self.path)) as db:
+            with db:
+                db.execute("UPDATE relation_events SET after_state='cerrado' "
+                           "WHERE network='bluesky' AND version=2")
         self.assertFalse(self.store.verify_replay("bluesky", "anon"))
 
     def test_in_memory_database_requires_real_file_for_restart(self):
