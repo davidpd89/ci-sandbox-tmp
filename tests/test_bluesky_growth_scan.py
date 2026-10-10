@@ -1,8 +1,10 @@
 """Regresiones offline del motor amplio de crecimiento Bluesky."""
 import copy
 import datetime
+import os
 import pathlib
 import sys
+import tempfile
 import types
 import unittest
 from unittest.mock import patch
@@ -22,7 +24,7 @@ stub._post_engagers = lambda *a, **k: []
 stub._health_check = lambda: (
     True,
     "OK",
-    {"handle": "autorademodiaz.bsky.social"},
+    {"handle": "davidportodiaz.bsky.social"},
 )
 stub._own_reply_parent_uris = lambda: set()
 
@@ -51,11 +53,18 @@ def post(handle, rkey, text, *, likes=0, reposts=0, replies=0, quotes=0):
 
 class GrowthScanTests(unittest.TestCase):
     def setUp(self):
-        # Aislar discovery_metrics.csv del repo real - ver nota en
-        # test_bluesky_growth_surfaces.py (mismo bug de aislamiento).
-        patcher = patch.object(gs, "METRICS_CSV", "__no_such_metrics__.csv")
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        # Tres fuentes locales que Collector lee al iniciar: ningún test
+        # debe acceder a registro/growth_seen/metrics del árbol operativo.
+        self._scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(self._scratch.cleanup)
+        for key, name in (
+            ("REGISTRO_CSV", "registro_interacciones.csv"),
+            ("SEEN_CSV", "growth_seen.csv"),
+            ("METRICS_CSV", "discovery_metrics.csv"),
+        ):
+            patcher = patch.object(gs, key, os.path.join(self._scratch.name, name))
+            patcher.start()
+            self.addCleanup(patcher.stop)
 
     def config(self):
         cfg = copy.deepcopy(gs._load_config())
@@ -73,7 +82,7 @@ class GrowthScanTests(unittest.TestCase):
             today=datetime.date(2026, 9, 29),
             run_id="test",
         )
-        c.own_handle = "autorademodiaz.bsky.social"
+        c.own_handle = "davidportodiaz.bsky.social"
         c.own_did = "did:plc:david"
         return c
 
@@ -1406,7 +1415,7 @@ class GrowthScanTests(unittest.TestCase):
             today=datetime.date(2026, 9, 29),
             run_id="cap",
         )
-        c.own_handle = "autorademodiaz.bsky.social"
+        c.own_handle = "davidportodiaz.bsky.social"
         self.assertTrue(c.add_post(post("a.bsky.social", "a", "Lectura libro"), "post_search"))
         self.assertTrue(c.add_post(post("b.bsky.social", "b", "Lectura libro"), "post_search"))
         self.assertFalse(c.add_post(post("c.bsky.social", "c", "Lectura libro"), "post_search"))
@@ -1459,7 +1468,7 @@ class GrowthScanTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             db_path = os.path.join(tmp, "pool.sqlite3")
             db = pool.connect(db_path)
-            for handle in ("nueva.bsky.social", "conocida.bsky.social", "autorademodiaz.bsky.social"):
+            for handle in ("nueva.bsky.social", "conocida.bsky.social", "davidportodiaz.bsky.social"):
                 pool.upsert(db, {"did": "did:plc:" + handle.split(".")[0], "handle": handle, "description": "Lectora de fantasía y novela juvenil"},
                             "ed.bsky.social", "followers", "2026-09-29")
             db.commit()
@@ -1472,8 +1481,220 @@ class GrowthScanTests(unittest.TestCase):
                 gs._consume_pool(c)
         self.assertIn("nueva.bsky.social", c.candidates)
         self.assertIn("pool", c.candidates["nueva.bsky.social"]["sources"])
-        self.assertNotIn("autorademodiaz.bsky.social", c.candidates)
+        self.assertNotIn("davidportodiaz.bsky.social", c.candidates)
         self.assertNotIn("pool", c.candidates.get("conocida.bsky.social", {}).get("sources", set()))
+
+    def test_pool_scan_failure_does_not_consume_unexamined_reserve(self):
+        import bluesky_pool as pool
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = os.path.join(tmp, "pool.sqlite3")
+            db = pool.connect(db_path)
+            pool.upsert(db, {"did": "did:plc:lectora", "handle": "lectora.bsky.social",
+                             "description": "Lectora de fantasía y novelas"},
+                        "semilla.bsky.social", "followers", "2026-10-05")
+            db.commit()
+            db.close()
+            c = self.collector()
+            c.config["budgets"]["pool_candidates"] = 5
+            original_connect = pool.connect
+            with patch.object(pool, "connect", lambda path=None: original_connect(db_path)), \
+                 patch.object(c, "add_actor", side_effect=RuntimeError("fallo simulado")):
+                gs._consume_pool(c)
+            db = original_connect(db_path)
+            try:
+                row = db.execute("SELECT offered_at, offered_count FROM accounts WHERE did=?",
+                                 ("did:plc:lectora",)).fetchone()
+                self.assertEqual(row, (None, 0))
+            finally:
+                db.close()
+            self.assertTrue(any("fallo simulado" in line for line in c.issues))
+
+    def test_pool_marks_examined_rows_only_after_consumption(self):
+        import bluesky_pool as pool
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = os.path.join(tmp, "pool.sqlite3")
+            db = pool.connect(db_path)
+            pool.upsert(db, {"did": "did:plc:lectora", "handle": "lectora.bsky.social",
+                             "description": "Lectora de fantasía y novelas"},
+                        "semilla.bsky.social", "followers", "2026-10-05")
+            db.commit()
+            db.close()
+            c = self.collector()
+            c.config["budgets"]["pool_candidates"] = 5
+            original_connect = pool.connect
+            with patch.object(pool, "connect", lambda path=None: original_connect(db_path)):
+                gs._consume_pool(c)
+            db = original_connect(db_path)
+            try:
+                row = db.execute("SELECT offered_at, offered_count FROM accounts WHERE did=?",
+                                 ("did:plc:lectora",)).fetchone()
+                self.assertEqual(row, (c.today.isoformat(), 1))
+            finally:
+                db.close()
+            self.assertIn("lectora.bsky.social", c.candidates)
+
+    def test_pool_full_shortlist_keeps_unexamined_reserve_eligible(self):
+        import bluesky_pool as pool
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "pool.sqlite3")
+            db = pool.connect(path)
+            pool.upsert(db, {"did": "did:plc:book", "handle": "book.bsky.social",
+                             "description": "Lector de libros y fantasía"},
+                        "semilla.bsky.social", "followers", "2026-10-05")
+            db.commit()
+            db.close()
+            c = self.collector()
+            c.config["budgets"]["pool_candidates"] = 5
+            c.config["budgets"]["max_candidates"] = 0
+            original_connect = pool.connect
+            with patch.object(pool, "connect", lambda path=None: original_connect(path or
+                                            os.path.join(tmp, "pool.sqlite3"))):
+                gs._consume_pool(c)
+            db = original_connect(path)
+            try:
+                self.assertEqual(db.execute(
+                    "SELECT offered_at, offered_count FROM accounts WHERE did='did:plc:book'"
+                ).fetchone(), (None, 0))
+            finally:
+                db.close()
+
+    def test_pool_consumption_holds_exclusive_sqlite_claim_lock(self):
+        import bluesky_pool as pool
+        import sqlite3
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "pool.sqlite3")
+            first = pool.connect(path)
+            pool.upsert(first, {"did": "did:plc:writer", "handle": "writer.bsky.social",
+                                "description": "Lectora de fantasía y novela"},
+                        "semilla.bsky.social", "followers", "2026-10-05")
+            first.commit()
+            first.close()
+            second = sqlite3.connect(path, timeout=0.01)
+            c = self.collector()
+            c.config["budgets"]["pool_candidates"] = 1
+            old_add = c.add_actor
+            checked = []
+
+            def assert_locked(actor, source, *, key=""):
+                with self.assertRaises(sqlite3.OperationalError):
+                    second.execute("BEGIN IMMEDIATE")
+                checked.append(True)
+                return old_add(actor, source, key=key)
+
+            original_connect = pool.connect
+            try:
+                with patch.object(pool, "connect", lambda ignored=None: original_connect(path)), \
+                     patch.object(c, "add_actor", side_effect=assert_locked):
+                    gs._consume_pool(c)
+            finally:
+                second.close()
+            self.assertTrue(checked)
+            check = original_connect(path)
+            try:
+                self.assertEqual(check.execute(
+                    "SELECT offered_count FROM accounts WHERE did='did:plc:writer'"
+                ).fetchone(), (1,))
+            finally:
+                check.close()
+
+    def test_pool_mid_batch_failure_rolls_back_offer_claims(self):
+        import bluesky_pool as pool
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "pool.sqlite3")
+            db = pool.connect(path)
+            for handle in ("first.bsky.social", "second.bsky.social"):
+                pool.upsert(db, {"did": "did:plc:" + handle.split(".")[0],
+                                 "handle": handle,
+                                 "description": "Lectora de fantasía y novela"},
+                            "semilla.bsky.social", "followers", "2026-10-05")
+            db.commit()
+            db.close()
+            c = self.collector()
+            c.config["budgets"]["pool_candidates"] = 2
+            calls = []
+            original_add = c.add_actor
+
+            def fail_second(actor, source, *, key=""):
+                calls.append(actor["did"])
+                if len(calls) == 2:
+                    raise RuntimeError("second profile failed")
+                return original_add(actor, source, key=key)
+
+            original_connect = pool.connect
+            with patch.object(pool, "connect", lambda ignored=None: original_connect(path)), \
+                 patch.object(c, "add_actor", side_effect=fail_second):
+                gs._consume_pool(c)
+            self.assertEqual(len(calls), 2)
+            db = original_connect(path)
+            try:
+                self.assertEqual(db.execute(
+                    "SELECT count(*) FROM accounts WHERE offered_at IS NOT NULL"
+                ).fetchone(), (0,))
+            finally:
+                db.close()
+            self.assertTrue(any("second profile failed" in i for i in c.issues))
+
+    def test_reassigned_handle_never_merges_two_dids(self):
+        c = self.collector()
+        first = {"handle": "reader.bsky.social", "did": "did:plc:first",
+                 "description": "Lectora de fantasía y novela"}
+        second = {"handle": "reader.bsky.social", "did": "did:plc:second",
+                  "description": "Lectora de fantasía y novela"}
+        self.assertTrue(c.add_actor(first, "source_first"))
+        self.assertFalse(c.add_actor(second, "source_second"))
+        item = c.candidates["reader.bsky.social"]
+        self.assertEqual(item["profile"]["did"], "did:plc:first")
+        self.assertNotIn("source_second", item["sources"])
+        self.assertIn("BLUESKY_CONFLICTO_IDENTIDAD_DID", c.issues)
+        row = post("reader.bsky.social", "different-did", "Lectura de fantasía")
+        row["author"]["did"] = "did:plc:second"
+        self.assertFalse(c.add_post(row, "source_second"))
+        self.assertNotIn(row["uri"], c.posts)
+
+    def test_author_rejected_for_spam_cannot_enter_via_post(self):
+        c = self.collector()
+        row = post("spam.bsky.social", "rkey", "Leo fantasía juvenil")
+        row["author"]["description"] = "casino crypto trading"
+        self.assertFalse(c.add_post(row, "post_search"))
+        self.assertNotIn(row["uri"], c.posts)
+        self.assertNotIn("spam.bsky.social", c.candidates)
+
+    def test_invalid_actor_and_post_shapes_fail_closed(self):
+        c = self.collector()
+        self.assertFalse(c.add_actor({"handle": 17, "description": "lectura"}, "x"))
+        self.assertFalse(c.add_actor({"handle": "x.bsky.social",
+                                     "description": {"not": "text"}}, "x"))
+        self.assertFalse(c.add_post({"author": "bad", "record": {}}, "x"))
+        self.assertFalse(c.add_post({"author": {"handle": "x.bsky.social"},
+                                     "record": {"text": [1]},
+                                     "uri": "at://did:plc:x/app.bsky.feed.post/r"}, "x"))
+        self.assertEqual(c.candidates, {})
+        self.assertEqual(c.posts, {})
+
+    def test_shortlist_identity_dedup_uses_did_not_mutable_handle(self):
+        a = {"handle": "old.bsky.social", "profile": {"did": "did:plc:same"},
+             "score": 5.0, "posts": {"p1"}}
+        b = {"handle": "new.example", "profile": {"did": "did:plc:same"},
+             "score": 8.0, "posts": {"p1", "p2"}}
+        other = {"handle": "other.bsky.social",
+                 "profile": {"did": "did:plc:other"},
+                 "score": 4.0, "posts": set()}
+        no_did = {"handle": "unknown.bsky.social", "profile": {},
+                  "score": 3.0, "posts": set()}
+        chosen = gs._unique_account_items([a, b, other, no_did, a])
+        self.assertEqual({x["handle"] for x in chosen},
+                         {"new.example", "other.bsky.social", "unknown.bsky.social"})
+        self.assertEqual(len(chosen), 3)
 
     def test_author_feeds_can_be_fetched_in_parallel_with_budget_and_errors(self):
         c = self.collector()
@@ -1646,8 +1867,6 @@ class GrowthScanTests(unittest.TestCase):
         ])
         self.assertEqual(len(c.candidates), 2)
         self.assertNotIn("off.bsky.social", c.candidates)
-
-
 
 if __name__ == "__main__":
     unittest.main()
