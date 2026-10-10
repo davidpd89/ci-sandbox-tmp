@@ -75,17 +75,15 @@ def _nonreciprocity_decisions(registro, today=None):
         options.update(network_settings.get("memoria_reciprocidad") or {})
     except (OSError, ValueError, TypeError, AttributeError):
         pass
-    # Nombres reconocidos; un fichero antiguo no cambia nada.
-    allowed = rm.Policy.__dataclass_fields__
-    options = {key: val for key, val in options.items() if key in allowed}
-    policy = rm.Policy(initial_days=RETRY_COOLDOWN_DAYS,
-                       max_failures=MAX_ATTEMPTS, **{
-                           key: value for key, value in options.items()
-                           if key not in {"initial_days", "max_failures"}})
-    if "initial_days" in options or "max_failures" in options:
-        policy = rm.Policy(**{**policy.__dict__,
-                              **{k: v for k, v in options.items()
-                                 if k in {"initial_days", "max_failures"}}})
+    # Una configuración defectuosa no rompe discovery: se usa la norma común.
+    defaults = rm.Policy(initial_days=RETRY_COOLDOWN_DAYS,
+                         max_failures=MAX_ATTEMPTS)
+    try:
+        options = {key: val for key, val in options.items()
+                   if key in rm.Policy.__dataclass_fields__}
+        policy = rm.Policy(**{**defaults.__dict__, **options})
+    except (TypeError, ValueError, AttributeError):
+        policy = defaults
     return rm.decisions_from_rows(_rows(registro), network,
                                   today=today, policy=policy)
 
