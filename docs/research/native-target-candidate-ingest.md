@@ -279,3 +279,23 @@ manifiesto/índice del padre para superar el gate LIVE, y demostrar
 lectores productores con IDs, fechas de publicación y lenguas verificables
 para cada red/cola que se quiera activar. Las capturas actuales no
 acreditan producción completa; el normalizador permanece desconectado.
+
+
+## Quinta revisión adversarial — contradicciones entre capturas (2026-10-10)
+
+El mismo perfil puede observarse varias veces, con datos distintos. Antes,
+el primer `followers`/`bio`/`profile_language` válido ganaba, y el último
+`following`/`followed_by` ganaba: invertir el orden de las filas alteraba
+score, cobertura y hasta una oportunidad de follow.
+
+El normalizador ahora rechaza la **señal contradictoria**, no la identidad:
+devuelve `None` para bio, seguidores, idioma de perfil o relación incompatible
+y conserva diagnóstico por campo. Una tercera fila no restablece silenciosamente
+el dato. Cuando la relación `following` es contradictoria, se retira
+`follow` de las acciones de la cuenta para no producir propuestas basadas
+en un estado incierto. Entradas coincidentes siguen conservando sus señales.
+
+Regresiones: orden directo/inverso, tercera observación repetida, score real
+con señales desconocidas y caso positivo de duplicados consistentes. El
+normalizador continúa sin conectarse a ejecutores ni inferir datos ausentes.
+No modifica protección de edad, ledger, certificados, POST→ACK→TTL o X.
