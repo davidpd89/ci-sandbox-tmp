@@ -479,7 +479,7 @@ class TestContracts(unittest.TestCase):
             self.assertEqual(partial["networks"][name]["status"], "missing_input")
         native = {
             "bluesky": [{"handle": "lectora.example", "bio": "Leo fantasía"}],
-            "mastodon": [{"acct": "lectora@libros.social", "bio": "Leo libros"}],
+            "mastodon": [{"acct": "lectora@example.org", "bio": "Leo libros"}],
             "tiktok": [{"handle": "lectora_tiktok", "bio": "Leo romantasy"}]}
         ranked = n.rank_with_66(normalized, quality.rank_all, as_of=NOW,
                                 native_snapshots=native)
