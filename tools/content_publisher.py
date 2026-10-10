@@ -227,6 +227,21 @@ def _verify(red, now):
     return cqa.classify(red, now, allow_browser=True)
 
 
+def _voice_diagnostics(red, text, out):
+    """QA editorial común para fichas: informa, nunca reescribe ni frena."""
+    try:
+        import spanish_voice_quality as voice_qa
+        if red not in voice_qa.NETWORKS:
+            return []
+        issues = voice_qa.audit(text, network=red)["findings"]
+        if issues:
+            out(f"[{red}] revision_es: " + ",".join(sorted({issue["code"] for issue in issues})))
+        return issues
+    except Exception as exc:
+        out(f"[{red}] auditor_es_no_disponible: " + type(exc).__name__)
+        return []
+
+
 def run(red, *, apply=False, now=None, out=print, publishers=None, verify=_verify, log_path=None):
     """Publica como mucho una ficha de `red`. Devuelve la URL o None."""
     now = now or datetime.datetime.now(ZoneInfo("Europe/Madrid")).replace(tzinfo=None)
@@ -300,6 +315,7 @@ def run(red, *, apply=False, now=None, out=print, publishers=None, verify=_verif
                     f"(mínimo {xb.MIN_GAP_HOURS} h entre banco y ficha)")
                 return None
     item = ready[0]
+    _voice_diagnostics(red, item.get("texto") or "", out)
     label = f"{os.path.basename(item['carpeta'])} ({item['fecha_hora']:%d/%m %H:%M}) «{' '.join(item['texto'].split())[:60]}»"
     if not apply:
         out(f"[{red}] publicaria: {label}")
