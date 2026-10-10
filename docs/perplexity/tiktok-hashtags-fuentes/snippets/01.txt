@@ -1,0 +1,95 @@
+text
+# Archivo nuevo: tools/hashtag_research/tiktok_nicho_es.yaml
+# Integración: tiktok_discovery.py debe cargarlo como catálogo de fuentes.
+# No sustituye a discovery_terms.py; lo amplía con metadatos y prioridades.
+
+version: "2026-10-10"
+language: es
+network: tiktok
+
+hashtags_core:
+  - term: "#BookTokEspañol"
+    priority: high
+    purpose: discovery
+  - term: "#LibrosRecomendados"
+    priority: high
+    purpose: discovery
+  - term: "#ReseñaDeLibro"
+    priority: high
+    purpose: discovery
+  - term: "#ClubDeLectura"
+    priority: medium
+    purpose: discovery
+  - term: "#BookTok"
+    priority: medium
+    purpose: context
+
+hashtags_genre:
+  - term: "#Romantasy"
+    priority: high
+    purpose: genre
+  - term: "#Fantasia"
+    priority: high
+    purpose: genre
+  - term: "#FantasiaEpica"
+    priority: high
+    purpose: genre
+  - term: "#LiteraturaJuvenil"
+    priority: high
+    purpose: genre
+  - term: "#DarkRomance"
+    priority: medium
+    purpose: genre
+  - term: "#Romance"
+    priority: medium
+    purpose: genre
+
+hashtags_trope:
+  - term: "#EnemiesToLovers"
+    priority: high
+    purpose: trope
+  - term: "#SlowBurn"
+    priority: high
+    purpose: trope
+  - term: "#FaeRomance"
+    priority: medium
+    purpose: trope
+  - term: "#Dragones"
+    priority: medium
+    purpose: trope
+  - term: "#Vampiros"
+    priority: medium
+    purpose: trope
+  - term: "#Worldbuilding"
+    priority: medium
+    purpose: trope
+
+search_queries:
+  - query: "romantasy recomendaciones"
+    priority: high
+  - query: "fantasía juvenil recomendaciones"
+    priority: high
+  - query: "libros romantasy español"
+    priority: high
+  - query: "enemies to lovers libros"
+    priority: high
+  - query: "slow burn fantasía"
+    priority: medium
+  - query: "reseña fantasía"
+    priority: high
+  - query: "booktok español"
+    priority: high
+  - query: "libros de hadas"
+    priority: medium
+  - query: "romance fantasía"
+    priority: medium
+  - query: "dark romance español"
+    priority: medium
+
+seed_accounts: []
+# No incluir handles sin validación. El sistema debe descubrirlos desde
+# hashtags, búsquedas y comentarios, y promocionarlos solo si cumplen:
+# - contenido reciente de libros
+# - idioma español predominante
+# - afinidad con fantasía, romantasy o lectura
+# - no aparece en action_ledger como bloqueada o descartada
