@@ -46,7 +46,8 @@ def _load_config(path=CONFIG_PATH):
         data = json.load(stream)
     if data.get("version") != 1 or data.get("mode") != "supervised_native":
         raise RuntimeError("growth_config TikTok incompatible")
-    return data
+    import hashtag_query_consumers as hqc
+    return hqc.extend_native_config("tiktok", data)
 
 
 def _term_hits(text, terms):
