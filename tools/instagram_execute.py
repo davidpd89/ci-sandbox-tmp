@@ -214,7 +214,8 @@ def run_plan(plan, *, prevalidated=False):
                     raise RuntimeError(f"like devolvió estado inesperado: {outcome!r}")
             elif kind == "comment":
                 import voice_output_finalization as voice
-                voice.inspect(item["text"], network="instagram", queue="WEB")
+                voice.inspect(item["text"], network="instagram",
+                              queue="MOBILE" if BACKEND == "mobile" else "WEB")
                 outcome = ig.comment(item["permalink"], item["text"])
                 if outcome != "created":
                     raise RuntimeError(f"comment devolvió estado inesperado: {outcome!r}")
