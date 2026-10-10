@@ -65,6 +65,33 @@ class EntrypointTests(unittest.TestCase):
                 self.assertEqual([any(row[0] == "search" for row in sample)
                                   for sample in samples], [False, True, False, True])
 
+
+    def test_web_entrypoints_dedup_after_final_format(self):
+        def colliding(network, kind):
+            return ["año"] if kind == "hashtags" else ["#año", "lectura ñ"]
+        with patch.dict(sys.modules, {"hashtag_query_consumers": hqc}):
+            with patch.object(hqc, "_read", side_effect=colliding):
+                x = isolate("x_scan.py", "_lexical_queries",
+                            datetime=datetime,
+                            SEARCH_POOL=["lectores lang:es", "#año lang:es"])
+                t = isolate("threads_scan.py", "_rotate_searches",
+                            datetime=datetime,
+                            SEARCH_POOL=["lectores", "#año"])
+                p = isolate("pinterest_growth.py", "day_queries",
+                            datetime=datetime, QUERIES_PER_DAY=3,
+                            QUERY_POOL=[("lectores", None), ("#año", None)])
+                for network, queries in (
+                    ("x", x(3)),
+                    ("threads", t(3, round_index=1)),
+                    ("pinterest", [name for name, _ in p(
+                        today=datetime.date(2026, 10, 10), n=3, round_index=1)]),
+                ):
+                    with self.subTest(network=network):
+                        self.assertEqual(len(queries), 3)
+                        self.assertEqual(len(set(map(str.casefold, queries))), 3)
+                        self.assertIn(
+                            hqc.format_term(network, "hashtags", "año"), queries)
+
     def test_native_config_loaders_preserve_budgets(self):
         config = {
             "version": 1, "mode": "supervised_native",

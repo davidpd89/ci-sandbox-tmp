@@ -59,6 +59,8 @@ No se copiaron fragmentos de estos repositorios externos: comparación de API, m
 - **Separación**: `#63` produce léxico, `#99` introduce observaciones, `#21` descubre/rankea; #101 **solo** consume términos. No cambia la evaluación de antigüedad, la selección final, ni las colas de escritura.
 - **Huecos que siguen abiertos**: en Instagram el hashtag no se convierte en búsqueda de publicaciones con autores verificados; solo alimenta una trial de perfiles. La selección nativa de Bluesky/Mastodon/TikTok sigue su ranking/budgets y puede posponer un término; `combine` garantiza presencia en el pool, no ejecución en cada ronda. La comprobación conjunta de TTL real requiere fusionar primero #63, y la ruta móvil no se ha ensayado en Xiaomi/Edge/Windows interactivo.
 
+**Tercera revisión del controlador (HEAD 236d3dea, 10/10/2026):** X, Threads y Pinterest pasan por `select_mixed` para deduplicar después de formar las consultas de texto y hashtags; si colisionan, se repone la plaza con otra consulta distinta dentro del presupuesto existente. Test unitario del contrato más test de los tres entrypoints reales aislados por AST. La CI específica debe seguir verde en Ubuntu/Windows; el gate `--live` del manifiesto padre es una comprobación independiente.
+
 ## Retirada, integración, canario y rollback
 
 1. Revisar #63 (motor) y #99 (entrada), integrar después el contrato #101 conservando la API legada `discovery_terms.terms` de la rama oficial. Revisar cherry-pick de archivos y posibles conflictos con cambios posteriores a `5449513d`.
