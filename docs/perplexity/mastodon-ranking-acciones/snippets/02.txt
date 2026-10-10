@@ -1,0 +1,7 @@
+text
+reply_score =
+  0.30 * capacidad_conversacion
++ 0.25 * afinidad_tematica
++ 0.20 * actividad_autor
++ 0.15 * idioma_es
++ 0.10 * frescura
