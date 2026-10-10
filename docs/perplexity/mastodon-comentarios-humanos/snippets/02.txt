@@ -1,0 +1,6 @@
+python
+# https://github.com/Shura0/mastaj/blob/master/mastodon_listener.py
+    def status_post(self, status, visibility='public', in_reply_to_id=None):
+        try:
+            res = self.mastodon.status_post(
+                status=status,
