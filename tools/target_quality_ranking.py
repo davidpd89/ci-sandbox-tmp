@@ -334,8 +334,8 @@ def rank_all(snapshots, *, as_of, outcomes=None, **kwargs):
 def evaluate_orders(ranked_ids, baseline_ids, heldout, *, k=10):
     """Offline P@k and nDCG@k over independently held-out binary outcomes.
 
-    Missing labels are not negatives: rank only labelled candidates in both
-    orders. A prospective time split is the caller's responsibility.
+    Missing labels are not negatives: withhold P@k and nDCG@k when any
+    top-k slot is unjudged. A prospective time split is the caller's responsibility.
     """
     if type(k) is not int or k < 1 or k > 1000 or not isinstance(heldout, Mapping):
         raise ValueError("invalid evaluation parameters")
