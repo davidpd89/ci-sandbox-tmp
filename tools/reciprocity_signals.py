@@ -102,12 +102,21 @@ def classify_text(text: str) -> list[dict]:
     value = fold(text)
     if not value or len(value) > 20000:
         return []
-    meta = bool(_META.search(value))
+    # La negación solo afecta a su cláusula: "No hago f4f, pero sí
+    # intercambio reseñas" es un negativo de follow y un positivo de lectura.
+    clauses = re.split(r"[.;!?\n]+|\bpero\b", value)
     results = []
     for kind, patterns in _PATTERNS.items():
-        found = next((m.group(0) for pattern in patterns
-                      if (m := pattern.search(value))), None)
-        if found:
+        hits = []
+        for clause in clauses:
+            for pattern in patterns:
+                match = pattern.search(clause)
+                if match:
+                    hits.append((match.group(0), bool(_META.search(clause))))
+                    break
+        if hits:
+            found, meta = next(((hit, False) for hit, is_meta in hits if not is_meta),
+                               (hits[0][0], True))
             results.append({
                 "kind": kind, "matched": found,
                 "intent": "mention" if meta else "explicit",
