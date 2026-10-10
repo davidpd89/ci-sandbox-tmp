@@ -7,6 +7,7 @@ on:
       - 'tools/cross_network_learning.py'
       - 'tools/experiment_evidence_lineage.py'
       - 'tools/discovery_attribution.py'
+      - 'tools/growth_attribution.py'
       - 'tests/test_cross_network_learning.py'
       - 'tests/test_experiment_evidence_lineage.py'
   pull_request:
@@ -15,6 +16,7 @@ on:
       - 'tools/cross_network_learning.py'
       - 'tools/experiment_evidence_lineage.py'
       - 'tools/discovery_attribution.py'
+      - 'tools/growth_attribution.py'
       - 'tests/test_cross_network_learning.py'
       - 'tests/test_experiment_evidence_lineage.py'
   workflow_dispatch:
@@ -41,6 +43,6 @@ jobs:
       - name: Dependencias offline
         run: python -m pip install --disable-pip-version-check "pytest>=8,<10" "tzdata>=2026.1,<2027"
       - name: Sintaxis
-        run: python -m compileall -q tools/cross_network_learning.py tools/experiment_evidence_lineage.py tools/discovery_attribution.py tests/test_cross_network_learning.py tests/test_experiment_evidence_lineage.py
+        run: python -m compileall -q tools/cross_network_learning.py tools/experiment_evidence_lineage.py tools/discovery_attribution.py tools/growth_attribution.py tests/test_cross_network_learning.py tests/test_experiment_evidence_lineage.py
       - name: Regresiones de procedencia
         run: python -m pytest -q -p no:cacheprovider tests/test_cross_network_learning.py tests/test_experiment_evidence_lineage.py
