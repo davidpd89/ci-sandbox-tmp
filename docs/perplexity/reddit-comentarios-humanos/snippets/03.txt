@@ -1,0 +1,34 @@
+json
+{
+  "language": "es",
+  "register": "conversacional",
+  "archetypes": [
+    "lector_entusiasta",
+    "lector_critico",
+    "recomendador",
+    "autor_craft",
+    "vecino_subreddit"
+  ],
+  "length_profiles": {
+    "reaction": {"sentences": [1, 1], "chars": [40, 180]},
+    "opinion": {"sentences": [2, 3], "chars": [120, 420]},
+    "recommendation": {"sentences": [3, 6], "chars": [220, 800]}
+  },
+  "emoji_policy": {
+    "max_per_comment": 1,
+    "allowed": ["😅", "😭", "🥹", "👀", "🔥", "📚"],
+    "forbidden_contexts": ["correccion", "debate_tecnico", "queja"]
+  },
+  "question_policy": {
+    "max_per_comment": 1,
+    "required_when": ["recomendacion", "opinion"],
+    "forbidden_when": ["post_pide_recomendacion_cerrada"]
+  },
+  "banned_patterns": [
+    "¡Claro!",
+    "¡Por supuesto!",
+    "Como modelo de lenguaje",
+    "Espero que esto te ayude",
+    "En resumen,"
+  ]
+}
