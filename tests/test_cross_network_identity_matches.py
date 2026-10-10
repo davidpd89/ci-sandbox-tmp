@@ -25,7 +25,7 @@ class MatchTests(unittest.TestCase):
             with self.subTest(network=net):
                 self.assertEqual(account_key(net, "@Lectora"), net + "|lectora")
         self.assertEqual(account_key("mastodon", "@Ana@example.com"),
-                         "mastodon|ana@libros.example")
+                         "mastodon|ana@example.com")
         self.assertNotEqual(account_key("x", "ana"), account_key("instagram", "ana"))
 
     def test_invalid_network_and_handles(self):
