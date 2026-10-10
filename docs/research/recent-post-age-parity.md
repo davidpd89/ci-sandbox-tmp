@@ -3,6 +3,44 @@
 Revisión: 10-10-2026. Rama: research/51-recent-post-age-parity.
 Solo observabilidad de la edad del POST DESTINO: no se ejecutan acciones sociales.
 
+## Problema
+
+La política de antigüedad del post destino ya existe en el repositorio privado
+y en PR #8 del espejo, pero no había distribución agregada común 24/72/168 h
+en el informe diario, ni distinción explícita entre desconocido y plan ausente.
+
+## Alternativas
+
+Se compararon dateparser, python-dateutil, Arrow y datetime de CPython 3.11;
+el detalle de actividad, dependencias y compatibilidad está en la tabla inferior.
+
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/python/cpython
+Fecha de consulta: 2026-10-10
+Licencia SPDX: Python-2.0
+Referencia inmutable: https://github.com/python/cpython/releases/tag/v3.11.14
+
+CPython stdlib es la opción incorporada; no se copia código de las otras
+bibliotecas. Para los repositorios públicos comparados, consultar enlaces de
+SHA, autores y licencias en la tabla del mismo documento.
+
+## Decisión
+
+Añadir medidor offline sin un segundo gate, manteniendo la autorización
+en PR #8 y post_age_policy.py del privado. No requiere librerías externas.
+
+## Pruebas
+
+La suite sintética tests/test_post_age_distribution.py y los dos jobs offline
+de GitHub Actions verifican límites y procedencia. Comprobar el HEAD actual,
+no una ejecución de un commit anterior.
+
+## Retirada
+
+Borrar el hook en tools/daily_review.py, el módulo y su suite; no hay migración.
+
+
 ## Contexto comprobado
 
 Se comparó el espejo con el repo privado davidpd89/rrss-davidporto-CODE
