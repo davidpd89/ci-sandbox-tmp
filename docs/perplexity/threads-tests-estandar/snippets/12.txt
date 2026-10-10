@@ -1,0 +1,9 @@
+json
+// tests/fixtures/threads/reply_candidate.json
+{
+  "id": "threads_post_1",
+  "text": "¿Qué novelas de fantasía española recomendáis para este otoño?",
+  "username": "lector_fantasia",
+  "timestamp": "2026-10-10T10:15:00+0000",
+  "permalink": "https://www.threads.com/@lector_fantasia/post/threads_post_1"
+}
