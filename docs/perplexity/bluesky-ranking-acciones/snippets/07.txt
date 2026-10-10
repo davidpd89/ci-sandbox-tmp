@@ -1,0 +1,18 @@
+python
+# Fuente: https://davidgasquez.com/exploring-atproto-python
+def get_all_follows(author):
+    cursor = None
+    follows = []
+
+    while True:
+        fetched = client.app.bsky.graph.get_follows(
+            params={"actor": author, "cursor": cursor}
+        )
+        follows = follows + fetched.follows
+
+        if not fetched.cursor:
+            break
+
+        cursor = fetched.cursor
+
+    return follows
