@@ -46,6 +46,8 @@ class ContextPacket:
     warnings: tuple[str, ...]
     # Full original source, before bounded render text is truncated.
     source_digest: str = ""
+    reply_to_us: bool = False
+    reply_parent_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -99,7 +101,7 @@ def _raw_source_digest(record: Mapping[str, object]) -> str:
         "metadata": {
             key: string(record.get(key)) for key in (
                 "network", "queue", "target_id", "author", "published_at",
-                "context_status", "text", "post_body",
+                "context_status", "text", "post_body", "reply_parent_id",
             )
         },
         "flags": {
@@ -201,8 +203,16 @@ def build_packet(
         warnings.append("visual_content_not_verified")
     if record.get("requires_visual") is True and not verified_visual:
         warnings.append("required_visual_missing")
-    if record.get("reply_to_us") is True and not any(e.kind == "parent_turn" for e in evidence):
-        warnings.append("conversation_parent_missing")
+    # A verified ancestor is not proof that the immediate reply parent exists.
+    reply_to_us = record.get("reply_to_us") is True
+    reply_parent_id = _clean(record.get("reply_parent_id"), 240)
+    if reply_to_us:
+        direct_parent = parents[-1] if parents else None
+        if (not reply_parent_id or direct_parent is None
+                or direct_parent.get("verified") is not True
+                or _clean(direct_parent.get("stable_id"), 240) != reply_parent_id
+                or not _clean(direct_parent.get("text"), 350)):
+            warnings.append("conversation_parent_missing")
     if state == "partial":
         warnings.append("context_partial")
     if state == "visual_unverified" and not verified_visual:
@@ -214,7 +224,7 @@ def build_packet(
         network, queue, target, _clean(record.get("author"), 120),
         published.isoformat() if published else None,
         state, tuple(evidence), not bool(set(warnings) & blocking), tuple(warnings),
-        _raw_source_digest(record),
+        _raw_source_digest(record), reply_to_us, reply_parent_id,
     )
 
 
@@ -228,6 +238,8 @@ def render_packet(packet: ContextPacket) -> str:
         "target_id": packet.target_id, "author": packet.author,
         "published_at": packet.published_at,
         "context_status": packet.context_status, "eligible": packet.eligible,
+        "reply_to_us": packet.reply_to_us,
+        "reply_parent_id": packet.reply_parent_id,
         "warnings": list(packet.warnings),
         "evidence": [e.__dict__ for e in packet.evidence],
     }
@@ -339,7 +351,8 @@ def summarize_outcomes(rows: Sequence[Mapping[str, object]]) -> dict[str, dict]:
                 (not isinstance(turns, int) or turns < 0)
                 or isinstance(value, bool) or value is not None and
                 (not isinstance(value, int) or not 1 <= value <= 5)
-                or (not published and (received is True or turns not in (None, 0)))):
+                or (not published and (received is True or turns not in (None, 0)))
+                or (received is False and turns is not None and turns > 0)):
             raise ValueError("invalid outcome observation")
         group_id = f"{network}/{variant}"
         group = groups.setdefault(group_id, {
@@ -379,6 +392,8 @@ def packet_fingerprint(packet: ContextPacket) -> str:
         "target_id": packet.target_id, "author": packet.author,
         "published_at": packet.published_at,
         "context_status": packet.context_status,
+        "reply_to_us": packet.reply_to_us,
+        "reply_parent_id": packet.reply_parent_id,
         "eligible": packet.eligible, "warnings": list(packet.warnings),
         "evidence": [e.__dict__ for e in packet.evidence],
         "source_digest": packet.source_digest,
