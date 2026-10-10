@@ -1,0 +1,32 @@
+python
+# tools/reddit_candidate_score.py
+from math import exp
+
+def freshness_score(age_hours, half_life_hours=24.0):
+    if age_hours < 0:
+        return 0.0
+    return exp(-age_hours / half_life_hours)
+
+def score_post(
+    *,
+    age_hours,
+    comment_count,
+    question_or_request,
+    topic_affinity,
+    spanish_probability,
+    author_active_recently,
+):
+    freshness = freshness_score(age_hours)
+    conversation = 1.0 if question_or_request else min(comment_count / 10.0, 1.0)
+    affinity = max(0.0, min(topic_affinity, 1.0))
+    language = max(0.0, min(spanish_probability, 1.0))
+    author_available = 1.0 if author_active_recently else 0.3
+
+    return round(
+        0.30 * freshness
+        + 0.25 * conversation
+        + 0.20 * affinity
+        + 0.15 * language
+        + 0.10 * author_available,
+        4,
+    )
