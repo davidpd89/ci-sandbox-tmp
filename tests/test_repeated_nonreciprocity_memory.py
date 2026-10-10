@@ -68,6 +68,16 @@ class HistoricalMemoryTests(unittest.TestCase):
         rows.append(row("a", "block", "2026-09-03"))
         self.assertEqual(mem.decisions_from_rows(rows, "facebook", today=TODAY)["a"]["status"], "permanent")
 
+    def test_verified_followback_events_from_neighboring_prs_reset_memory(self):
+        # #57 usa followback_observed y #60 followback_confirmed.
+        for kind in ("followback_observed", "followback_confirmed"):
+            with self.subTest(kind=kind):
+                rows = cycle("a", "2026-08-01", "2026-08-02")
+                rows.append(row("a", kind, "2026-09-01", result="pendiente"))
+                self.assertEqual(mem.decisions_from_rows(rows, "x", today=TODAY)["a"]["failures"], 1)
+                rows[-1]["resultado"] = "confirmado"
+                self.assertEqual(mem.decisions_from_rows(rows, "x", today=TODAY)["a"]["failures"], 0)
+
     def test_invalid_skipped_or_undated_legacy(self):
         rows = [row("bot", "unfollow", "", result="saltado_ya_no_seguido"),
                 row("dudosa", "unfollow", "2026-09-01", notes="no devuelve",

@@ -94,7 +94,8 @@ def events_from_rows(rows, network, *, source="registro.csv"):
             continue  # sin confirmación no hay fracaso ni exclusión permanente
         elif kind in {"unfollow", "block"}:
             event_kind, reason = "permanent", "block" if kind == "block" else "other_unfollow"
-        elif kind in {"reciprocated", "followback_verified"}:
+        elif kind in {"reciprocated", "followback_verified",
+                      "followback_observed", "followback_confirmed"}:
             event_kind, reason = "reciprocated", "inbound_confirmed"
         else:
             continue
