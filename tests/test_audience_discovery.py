@@ -149,6 +149,29 @@ class AudienceTests(unittest.TestCase):
         self.assertEqual(self.store.db.execute(
             "SELECT active FROM audience_events").fetchone()[0], 0)
 
+    def test_orphan_delete_tombstone_does_not_count_as_new_reader(self):
+        deleted = event(deleted=True, occurred_at="2026-10-10T11:00:00Z")
+        stats = self.ingest([deleted])
+        self.assertEqual(stats["new_people"], 0)
+        self.assertEqual(stats["new_events"], 1)
+        self.assertEqual(self.store.ranked("bluesky", now=NOW), [])
+        self.assertEqual(self.store.db.execute(
+            "SELECT COUNT(*) FROM audience_accounts").fetchone()[0], 0)
+
+    def test_sqlite_file_concurrent_connection_writer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = str(pathlib.Path(directory) / "queue.db")
+            first = ad.AudienceStore(path)
+            second = ad.AudienceStore(path)
+            first.ingest([event(uid="1")], network="bluesky",
+                         surface="own_post", seed="a", next_cursor=None, now=NOW)
+            second.ingest([event(uid="2")], network="bluesky",
+                          surface="own_post", seed="b", next_cursor=None, now=NOW)
+            self.assertEqual(len(first.ranked("bluesky", now=NOW)), 2)
+            self.assertEqual(len(second.ranked("bluesky", now=NOW)), 2)
+            first.close()
+            second.close()
+
     def test_stale_posts_excluded_but_recent_stored(self):
         old = event(post_created_at="2026-09-01T12:00:00Z")
         stats = self.ingest([old])
