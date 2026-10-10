@@ -39,7 +39,7 @@ class StopIsTerminalTests(unittest.TestCase):
                 )
                 with tempfile.TemporaryDirectory() as folder:
                     plan_path = pathlib.Path(folder) / "plan.json"
-                    plan_path.write_text("[]", encoding="utf-8")
+                    plan_path.write_text('[{"kind": "follow", "handle": "lector"}]', encoding="utf-8")
                     writes = []
                     result = {"kind": "follow", "handle": "lector",
                               "resultado": "parada:CAPTCHA"}
@@ -50,13 +50,16 @@ class StopIsTerminalTests(unittest.TestCase):
                         _refuse_if_paused=lambda: None,
                         session=contextlib.nullcontext,      # Threads abre una sola conexion para todo el plan
                     )
+                    registro_csv = str(pathlib.Path(folder) / "registro.csv")
+                    pathlib.Path(registro_csv).write_text(
+                        "fecha,cuenta,tipo,post_resumen,texto_usado,resultado,notas\n", encoding="utf-8")
                     ns = {
                         "sc": __import__("types").SimpleNamespace(report_plan_style=lambda plan: None, guard_plan_item=lambda *a, **k: None, drop_stacked_actions=lambda plan, **k: plan),
                         "__name__": "__main__", "sys": sys, "json": json,
                         # el bloque principal ahora usa el ledger/bloqueo (03/10)
                         "os": __import__("os"),
-                        "REGISTRO_CSV": str(pathlib.Path(__import__("tempfile").mkdtemp()) / "registro.csv"),
-                        "datetime": datetime, alias: fake_network,
+                        "REGISTRO_CSV": registro_csv,
+                        "datetime": datetime, alias: fake_network, "BACKEND": "web",
                         "_preflight_plan": lambda plan: plan,
                         "_ultima_fila_metricas": lambda: None,
                         "_apply_warmup_gate": lambda plan, dias: (

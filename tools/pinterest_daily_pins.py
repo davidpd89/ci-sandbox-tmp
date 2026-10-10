@@ -1,4 +1,4 @@
-"""Pinterest: Pines propios nuevos cada dia desde las paginas de autorademodiaz.com (07/10/2026).
+"""Pinterest: Pines propios nuevos cada dia desde las paginas de davidportodiaz.com (07/10/2026).
 
 David (07/10): «Pinterest tiene 0 movimiento y el perfil no esta completo; mira lo de "Crea tu primer Pin", ordena mi contenido». Lo que mas mueve Pinterest es el contenido PROPIO nuevo y
 regular (GPT 06/10, guias de 2026); con 1 ficha al dia el perfil sigue casi vacio. La web tiene ~210 paginas utiles (herramientas, guias, perfiles de editoriales para escritores,
@@ -26,7 +26,7 @@ import urllib.parse
 sys.path.insert(0, os.path.dirname(__file__))
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
-SITE = "https://autorademodiaz.com"
+SITE = "https://davidportodiaz.com"
 OUT_DIR = os.path.join(ROOT, "SISTEMA_DIARIO_PINTEREST", "pins_auto")
 LOG = os.path.join(ROOT, "SISTEMA_DIARIO_PINTEREST", "pins_auto.csv")
 PUBLISH_LOG = os.path.join(ROOT, "00_OPERATIVO", "publicaciones_automaticas.csv")
@@ -47,7 +47,7 @@ PALETTE = {"Recursos para escritores": ("#16324f", "#f2c14e", "#f7f3e8"), "Lectu
 
 
 def _get(url, timeout=25):
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; autorademodiaz-pins)"})
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; davidportodiaz-pins)"})
     return urllib.request.urlopen(req, timeout=timeout).read().decode("utf-8", "replace")
 
 
@@ -70,7 +70,7 @@ def meta(html):
 
 def clean_title(title):
     title = " ".join((title or "").split())
-    title = re.sub(r"\s*[|\u2013\u2014-]\s*(Autora Demo D[ií]az.*|autorademodiaz\.com)$", "", title).strip()
+    title = re.sub(r"\s*[|\u2013\u2014-]\s*(David Porto D[ií]az.*|davidportodiaz\.com)$", "", title).strip()
     return re.sub(r"\s*\|\s*(Herramientas|Cuaderno|Recursos|Editoriales|Recomendaciones)$", "", title).strip()
 
 
@@ -160,8 +160,8 @@ def render(title, board, out_path):
         d.text((80, y), line, font=big, fill=ink)
         y += int(size * 1.22)
     d.rectangle([80, 1290, 920, 1296], fill=accent)
-    d.text((80, 1330), "autorademodiaz.com", font=small, fill=ink)
-    d.text((80, 1385), "Autora Demo Díaz · Escritor", font=small, fill=accent)
+    d.text((80, 1330), "davidportodiaz.com", font=small, fill=ink)
+    d.text((80, 1385), "David Porto Díaz · Escritor", font=small, fill=accent)
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     img.save(out_path)
     return out_path
@@ -265,7 +265,7 @@ def prepare(url, rng=None):
     if len(title) < 12 or len(desc) < 60:
         return None
     desc = desc if len(desc) <= 480 else desc[:477].rsplit(" ", 1)[0] + "…"
-    desc = f"{desc} Más en autorademodiaz.com."
+    desc = f"{desc} Más en davidportodiaz.com."
     board = board_for_url(url, f"{title} {desc}")
     try:
         x._check_spanish_orthography(title + "\n" + desc)
@@ -280,7 +280,7 @@ def _owned_page(url):
         p = urllib.parse.urlsplit(url)
     except ValueError:
         return False
-    return (p.scheme == "https" and p.netloc == "autorademodiaz.com"
+    return (p.scheme == "https" and p.netloc == "davidportodiaz.com"
             and p.path not in ("", "/") and not p.query and not p.fragment)
 
 

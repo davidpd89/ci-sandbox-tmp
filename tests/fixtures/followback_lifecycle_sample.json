@@ -1,0 +1,37 @@
+{
+  "network": "mastodon",
+  "today": "2026-10-10",
+  "following": [
+    "ana@example.com",
+    "lectora@example.net",
+    "pendiente@example.net"
+  ],
+  "followers": [
+    "lectora@example.net"
+  ],
+  "followers_complete": true,
+  "following_complete": true,
+  "rows": [
+    {
+      "red": "mastodon",
+      "fecha": "2026-09-20",
+      "cuenta": "ana@example.com",
+      "tipo": "follow",
+      "resultado": "confirmado"
+    },
+    {
+      "red": "mastodon",
+      "fecha": "2026-09-22",
+      "cuenta": "lectora@example.net",
+      "tipo": "follow",
+      "resultado": "confirmado"
+    },
+    {
+      "red": "mastodon",
+      "fecha": "2026-10-02",
+      "cuenta": "pendiente@example.net",
+      "tipo": "follow",
+      "resultado": "pendiente_aprobacion"
+    }
+  ]
+}

@@ -13,6 +13,7 @@ import subprocess
 import tempfile
 import time
 
+from action_ledger import RoundBusy, exclusive, _pid_alive  # compartido con el turno Edge
 from mobile_client import (
     DEFAULT_BASE_URL,
     MobileCliClient,
@@ -23,7 +24,7 @@ from mobile_client import (
 
 EXPECTED_VERSION = "1.0.17"
 LISTEN = "127.0.0.1:12000"
-DEFAULT_LOCK_PATH = os.path.join(tempfile.gettempdir(), "rrss-autorademo-mobile.lock")
+DEFAULT_LOCK_PATH = os.path.join(tempfile.gettempdir(), "rrss-davidporto-mobile.lock")
 
 
 class MobileRuntimeError(RuntimeError):
@@ -34,83 +35,23 @@ class MobileSessionBusy(MobileRuntimeError):
     pass
 
 
-def _pid_alive(pid) -> bool:
-    """True si el proceso existe (o no se puede saber: mejor bloquear que pisar una sesion viva del movil)."""
-    try:
-        pid = int(pid)
-    except (TypeError, ValueError):
-        return True
-    if pid <= 0:
-        return False
-    if os.name == "nt":
-        import ctypes
-        kernel32 = ctypes.windll.kernel32
-        handle = kernel32.OpenProcess(0x1000, False, pid)
-        if not handle:
-            return kernel32.GetLastError() == 5
-        try:
-            code = ctypes.c_ulong()
-            return bool(kernel32.GetExitCodeProcess(handle, ctypes.byref(code))) and code.value == 259
-        finally:
-            kernel32.CloseHandle(handle)
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    return True
-
-
 @contextlib.contextmanager
 def mobile_session_lock(path: str | None = None, *, stale_after: float = 6 * 3600):
-    """Impide que dos procesos del repo controlen el mismo Android a la vez."""
+    """Turno Android con el mismo guard OS y control de PID que Edge.
+
+    Se conserva el nombre del fichero/variable anteriores. Los PID:timestamp
+    antiguos se reconocen para no quitar el turno a un proceso legacy vivo.
+    El archivo .oslock es persistente y nunca debe borrarse manualmente.
+    """
     path = path or os.getenv("MOBILE_SESSION_LOCK") or DEFAULT_LOCK_PATH
-    token = f"{os.getpid()}:{time.time_ns()}"
-    for attempt in range(2):
+    # Traducir solo el conflicto al *adquirir*. Un RoundBusy generado por
+    # el cuerpo (p. ej. por Edge) debe propagarse sin atribuirlo al móvil.
+    with contextlib.ExitStack() as stack:
         try:
-            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            try:
-                os.write(fd, token.encode("ascii"))
-            finally:
-                os.close(fd)
-            break
-        except FileExistsError:
-            try:
-                age = time.time() - os.path.getmtime(path)
-            except OSError:
-                age = 0
-            # 07/10: un proceso matado (timeout, cierre de sesion) dejaba el bloqueo 6 h y las rondas de TikTok se saltaban con el movil libre: si el PID del dueno ya no existe, el bloqueo es suyo y se retira
-            try:
-                with open(path, encoding="ascii") as stream:
-                    owner_pid = stream.read().strip().split(":")[0]
-            except OSError:
-                owner_pid = None
-            if attempt == 0 and owner_pid and not _pid_alive(owner_pid):
-                try:
-                    os.remove(path)
-                    continue
-                except OSError:
-                    pass
-            if attempt == 0 and age > stale_after:
-                try:
-                    os.remove(path)
-                    continue
-                except OSError:
-                    pass
-            raise MobileSessionBusy(
-                f"móvil ocupado por otra sesión del repo: {path}"
-            )
-    try:
+            stack.enter_context(exclusive("mobile", stale_after=stale_after, lock_path=path))
+        except RoundBusy as exc:
+            raise MobileSessionBusy(f"móvil ocupado por otra sesión del repo: {path}") from exc
         yield path
-    finally:
-        try:
-            with open(path, encoding="ascii") as stream:
-                current = stream.read().strip()
-            if current == token:
-                os.remove(path)
-        except OSError:
-            pass
 
 
 def _argv(binary: str, *args: str) -> list[str]:

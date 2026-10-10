@@ -14,53 +14,53 @@ BANK = ROOT / "publicaciones GPT/banco imagenes web"
 
 POSTS = [
     # X
-    dict(net="X", id="XGPT-P003", base="BASE-017", date="2026-09-28", time="18:45", title="Un kit de prensa que se queda en tu navegador", theme="kit de prensa local", objective="clics y conversación profesional", url="https://autorademodiaz.com/herramientas/kit-prensa-escritores/", tags="#Escritores #PrensaCultural", source="publicaciones LinkedIn GPT/2026-09-24/kit-prensa-para-escritores.png", image="kit-prensa-local-escritores.png", alt="Herramienta local para ordenar biografía, fotografías y fichas de un libro y descargar un kit de prensa.", text="""Un kit de prensa no debería obligarte a subir fotos y biografía a una web ajena. Esta herramienta ordena los archivos en tu navegador y descarga un ZIP.
+    dict(net="X", id="XGPT-P003", base="BASE-017", date="2026-09-28", time="18:45", title="Un kit de prensa que se queda en tu navegador", theme="kit de prensa local", objective="clics y conversación profesional", url="https://davidportodiaz.com/herramientas/kit-prensa-escritores/", tags="#Escritores #PrensaCultural", source="publicaciones LinkedIn GPT/2026-09-24/kit-prensa-para-escritores.png", image="kit-prensa-local-escritores.png", alt="Herramienta local para ordenar biografía, fotografías y fichas de un libro y descargar un kit de prensa.", text="""Un kit de prensa no debería obligarte a subir fotos y biografía a una web ajena. Esta herramienta ordena los archivos en tu navegador y descarga un ZIP.
 
 ¿Qué material echas siempre en falta?
 
-https://autorademodiaz.com/herramientas/kit-prensa-escritores/
+https://davidportodiaz.com/herramientas/kit-prensa-escritores/
 
 #Escritores #PrensaCultural"""),
-    dict(net="X", id="XGPT-P004", base="BASE-011", date="2026-10-01", time="12:15", title="Qué estás leyendo, sin otra plataforma", theme="tarjeta abierta de lectura", objective="respuestas y clics", url="https://autorademodiaz.com/herramientas/tarjeta-estoy-leyendo/", tags="#Lectura #BookTwitter", source="publicaciones Bluesky GPT/2026-09-24/tarjeta-estoy-leyendo.png", image="tarjeta-estoy-leyendo-abierta.png", alt="Generador de una tarjeta Estoy leyendo en HTML o Markdown, sin rastreadores.", text="""Hay lecturas que no necesitan puntuación ni reseña: basta con contar qué libro te acompaña hoy.
+    dict(net="X", id="XGPT-P004", base="BASE-011", date="2026-10-01", time="12:15", title="Qué estás leyendo, sin otra plataforma", theme="tarjeta abierta de lectura", objective="respuestas y clics", url="https://davidportodiaz.com/herramientas/tarjeta-estoy-leyendo/", tags="#Lectura #BookTwitter", source="publicaciones Bluesky GPT/2026-09-24/tarjeta-estoy-leyendo.png", image="tarjeta-estoy-leyendo-abierta.png", alt="Generador de una tarjeta Estoy leyendo en HTML o Markdown, sin rastreadores.", text="""Hay lecturas que no necesitan puntuación ni reseña: basta con contar qué libro te acompaña hoy.
 
 Esta tarjeta genera HTML o Markdown y no rastrea a quien la abre. ¿Qué estás leyendo?
 
-https://autorademodiaz.com/herramientas/tarjeta-estoy-leyendo/
+https://davidportodiaz.com/herramientas/tarjeta-estoy-leyendo/
 
 #Lectura #BookTwitter"""),
-    dict(net="X", id="XGPT-P005", base="BASE-016", date="2026-10-04", time="11:30", title="Diez puertas a otros mundos", theme="recomendaciones portal fantasy", objective="recomendaciones, clics y conversación", url="https://autorademodiaz.com/recomendaciones/portal-fantasy-espanol/", tags="#FantasíaJuvenil #Libros", source="publicaciones Pinterest GPT/2026-09-27/libros-portal-fantasy-espanol.png", image="portal-fantasy-juvenil-x.png", alt="Selección de diez libros de portal fantasy juvenil disponibles en español.", text="""Cruzar a otro mundo es solo el principio: la puerta puede ser una huida, una trampa o un viaje sin regreso.
+    dict(net="X", id="XGPT-P005", base="BASE-016", date="2026-10-04", time="11:30", title="Diez puertas a otros mundos", theme="recomendaciones portal fantasy", objective="recomendaciones, clics y conversación", url="https://davidportodiaz.com/recomendaciones/portal-fantasy-espanol/", tags="#FantasíaJuvenil #Libros", source="publicaciones Pinterest GPT/2026-09-27/libros-portal-fantasy-espanol.png", image="portal-fantasy-juvenil-x.png", alt="Selección de diez libros de portal fantasy juvenil disponibles en español.", text="""Cruzar a otro mundo es solo el principio: la puerta puede ser una huida, una trampa o un viaje sin regreso.
 
 Hay 10 libros disponibles en español en la lista. ¿Cuál falta seguro?
 
-https://autorademodiaz.com/recomendaciones/portal-fantasy-espanol/
+https://davidportodiaz.com/recomendaciones/portal-fantasy-espanol/
 
 #FantasíaJuvenil #Libros"""),
 
     # Threads
-    dict(net="Threads", id="THGPT-P003", base="BASE-018", date="2026-09-28", time="20:15", title="Una página de libro debe ayudar a decidir", theme="auditoría de página de libro", objective="conversación y clics cualificados", url="https://autorademodiaz.com/herramientas/auditor-pagina-libro/", topic="Writing", source="publicaciones LinkedIn GPT/2026-09-25/auditor-pagina-libro.png", image="auditor-pagina-libro-threads.png", alt="Auditor que revisa si una página explica qué es un libro, para quién es y cuál es el siguiente paso.", text="""Una página de libro puede ser bonita y seguir sin responder lo básico: qué es, para quién puede encajar y qué debería hacer después quien llega.
+    dict(net="Threads", id="THGPT-P003", base="BASE-018", date="2026-09-28", time="20:15", title="Una página de libro debe ayudar a decidir", theme="auditoría de página de libro", objective="conversación y clics cualificados", url="https://davidportodiaz.com/herramientas/auditor-pagina-libro/", topic="Writing", source="publicaciones LinkedIn GPT/2026-09-25/auditor-pagina-libro.png", image="auditor-pagina-libro-threads.png", alt="Auditor que revisa si una página explica qué es un libro, para quién es y cuál es el siguiente paso.", text="""Una página de libro puede ser bonita y seguir sin responder lo básico: qué es, para quién puede encajar y qué debería hacer después quien llega.
 
 Preparé una revisión guiada para detectar esos huecos sin puntuar el diseño.
 
 ¿Qué dato buscas primero cuando descubres un libro?
 
-https://autorademodiaz.com/herramientas/auditor-pagina-libro/"""),
-    dict(net="Threads", id="THGPT-P004", base="BASE-007", date="2026-10-01", time="20:00", title="Cuando una familia conserva tres historias del mismo objeto", theme="historia de objetos heredados", objective="respuestas con recuerdos concretos", url="https://autorademodiaz.com/recursos/ficha-historia-objeto-heredado/", topic="Book Threads", source="publicaciones Facebook GPT/2026-09-24/ficha-objeto-heredado.png", image="objeto-heredado-threads.png", alt="Ficha para separar hechos comprobables, recuerdos e hipótesis sobre un objeto heredado.", text="""«Ese reloj era de tu bisabuelo». «No, lo compró tu abuelo». «No, apareció después de la mudanza».
+https://davidportodiaz.com/herramientas/auditor-pagina-libro/"""),
+    dict(net="Threads", id="THGPT-P004", base="BASE-007", date="2026-10-01", time="20:00", title="Cuando una familia conserva tres historias del mismo objeto", theme="historia de objetos heredados", objective="respuestas con recuerdos concretos", url="https://davidportodiaz.com/recursos/ficha-historia-objeto-heredado/", topic="Book Threads", source="publicaciones Facebook GPT/2026-09-24/ficha-objeto-heredado.png", image="objeto-heredado-threads.png", alt="Ficha para separar hechos comprobables, recuerdos e hipótesis sobre un objeto heredado.", text="""«Ese reloj era de tu bisabuelo». «No, lo compró tu abuelo». «No, apareció después de la mudanza».
 
 Los objetos heredados suelen guardar varias historias a la vez. Hice una ficha para separar hechos, recuerdos e hipótesis sin borrar ninguna capa.
 
 ¿Qué objeto provocaría más versiones en tu familia?
 
-https://autorademodiaz.com/recursos/ficha-historia-objeto-heredado/"""),
-    dict(net="Threads", id="THGPT-P005", base="BASE-009", date="2026-10-02", time="18:45", title="El protagonista ya vivía allí o tuvo que cruzar", theme="portal fantasy frente a fantasía épica", objective="debate lector", url="https://autorademodiaz.com/cuaderno/portal-fantasy-vs-fantasia-epica/", topic="Book Threads", source="publicaciones TikTok GPT/2026-09-25/portal-fantasy-vs-fantasia-epica-01.png", image="portal-fantasy-o-epica-threads.png", alt="Cabecera de una comparación entre portal fantasy y fantasía épica.", text="""Dos novelas pueden tener magia, criaturas y un mapa enorme, pero pedir cosas muy distintas al lector.
+https://davidportodiaz.com/recursos/ficha-historia-objeto-heredado/"""),
+    dict(net="Threads", id="THGPT-P005", base="BASE-009", date="2026-10-02", time="18:45", title="El protagonista ya vivía allí o tuvo que cruzar", theme="portal fantasy frente a fantasía épica", objective="debate lector", url="https://davidportodiaz.com/cuaderno/portal-fantasy-vs-fantasia-epica/", topic="Book Threads", source="publicaciones TikTok GPT/2026-09-25/portal-fantasy-vs-fantasia-epica-01.png", image="portal-fantasy-o-epica-threads.png", alt="Cabecera de una comparación entre portal fantasy y fantasía épica.", text="""Dos novelas pueden tener magia, criaturas y un mapa enorme, pero pedir cosas muy distintas al lector.
 
 Para mí la diferencia útil empieza aquí: ¿el protagonista ya pertenece al mundo fantástico o tiene que cruzar hasta él?
 
 ¿Qué entrada te engancha más y con qué libro?
 
-https://autorademodiaz.com/cuaderno/portal-fantasy-vs-fantasia-epica/"""),
+https://davidportodiaz.com/cuaderno/portal-fantasy-vs-fantasia-epica/"""),
 
     # Instagram
-    dict(net="Instagram", id="IGGPT-P003", base="BASE-021", date="2026-09-29", time="19:30", title="Tres reconocimientos, tres fuentes", theme="premios documentados", objective="trayectoria y conversación", url="https://autorademodiaz.com/premios.html", profile_label="Premios", tags="#Microrrelato #Escritores #PremiosLiterarios #LiteraturaEspañola", source="publicaciones GPT/banco imagenes web/359/captura.png", image="premios-david-porto-2026.png", alt="Página de premios de Autora Demo Díaz con tres reconocimientos documentados de 2026.", text="""Un premio ocupa una línea. El texto que llegó hasta allí suele haber pasado por bastantes más.
+    dict(net="Instagram", id="IGGPT-P003", base="BASE-021", date="2026-09-29", time="19:30", title="Tres reconocimientos, tres fuentes", theme="premios documentados", objective="trayectoria y conversación", url="https://davidportodiaz.com/premios.html", profile_label="Premios", tags="#Microrrelato #Escritores #PremiosLiterarios #LiteraturaEspañola", source="publicaciones GPT/banco imagenes web/359/captura.png", image="premios-david-porto-2026.png", alt="Página de premios de David Porto Díaz con tres reconocimientos documentados de 2026.", text="""Un premio ocupa una línea. El texto que llegó hasta allí suele haber pasado por bastantes más.
 
 Los he reunido con el resultado exacto, la entidad, la fecha y la fuente. Prefiero que una trayectoria se pueda comprobar, no solo resumir.
 
@@ -69,7 +69,7 @@ Desliza para verlos. ¿Qué te interesa más conocer cuando un autor menciona un
 En el perfil: «Premios».
 
 #Microrrelato #Escritores #PremiosLiterarios #LiteraturaEspañola"""),
-    dict(net="Instagram", id="IGGPT-P004", base="BASE-003", date="2026-10-02", time="11:30", title="Qué hace que sigas leyendo", theme="test de tipo de lector", objective="comentarios y visitas a herramienta", url="https://autorademodiaz.com/herramientas/que-tipo-de-lector-eres/", profile_label="Test lector", tags="#Lectores #BookstagramEspaña #HábitosDeLectura #Libros", source="publicaciones Threads GPT/2026-09-25/test-que-tipo-de-lector-david-porto.png", image="que-te-hace-seguir-leyendo.png", alt="Test breve que propone distintos motivos por los que una persona continúa leyendo.", text="""Hay quien sigue por una pista. Quien necesita encariñarse con alguien. Y quien solo quiere descubrir cómo funciona ese mundo.
+    dict(net="Instagram", id="IGGPT-P004", base="BASE-003", date="2026-10-02", time="11:30", title="Qué hace que sigas leyendo", theme="test de tipo de lector", objective="comentarios y visitas a herramienta", url="https://davidportodiaz.com/herramientas/que-tipo-de-lector-eres/", profile_label="Test lector", tags="#Lectores #BookstagramEspaña #HábitosDeLectura #Libros", source="publicaciones Threads GPT/2026-09-25/test-que-tipo-de-lector-david-porto.png", image="que-te-hace-seguir-leyendo.png", alt="Test breve que propone distintos motivos por los que una persona continúa leyendo.", text="""Hay quien sigue por una pista. Quien necesita encariñarse con alguien. Y quien solo quiere descubrir cómo funciona ese mundo.
 
 Preparé un test breve para jugar con esa diferencia. Si el resultado no te representa, mejor: ahí empieza la conversación.
 
@@ -78,7 +78,7 @@ Desliza, elige y cuéntame qué pesa más en tu caso: personaje, misterio o mund
 En el perfil: «Test lector».
 
 #Lectores #BookstagramEspaña #HábitosDeLectura #Libros"""),
-    dict(net="Instagram", id="IGGPT-P005", base="BASE-008", date="2026-10-03", time="18:30", title="El capítulo antes de la sinopsis", theme="primer capítulo de Samuel entre mundos", objective="lectura y descubrimiento", url="https://autorademodiaz.com/fragmento/", profile_label="Capítulo de Samuel", tags="#FantasíaJuvenil #PortalFantasy #BookstagramEspaña #LecturaEnEspañol", source="publicaciones Facebook GPT/2026-09-26/samuel-entre-mundos-capitulo-gratis.png", image="samuel-capitulo-antes-sinopsis.png", alt="Cabecera del capítulo uno gratuito de Samuel entre mundos.", text="""A veces una sinopsis te cuenta qué promete un libro. Un capítulo te enseña si quieres quedarte.
+    dict(net="Instagram", id="IGGPT-P005", base="BASE-008", date="2026-10-03", time="18:30", title="El capítulo antes de la sinopsis", theme="primer capítulo de Samuel entre mundos", objective="lectura y descubrimiento", url="https://davidportodiaz.com/fragmento/", profile_label="Capítulo de Samuel", tags="#FantasíaJuvenil #PortalFantasy #BookstagramEspaña #LecturaEnEspañol", source="publicaciones Facebook GPT/2026-09-26/samuel-entre-mundos-capitulo-gratis.png", image="samuel-capitulo-antes-sinopsis.png", alt="Cabecera del capítulo uno gratuito de Samuel entre mundos.", text="""A veces una sinopsis te cuenta qué promete un libro. Un capítulo te enseña si quieres quedarte.
 
 El primero de *Samuel entre mundos* empieza con una familia empeñada en parecer normal y un chico que todavía no sabe por qué no encaja.
 
@@ -89,47 +89,47 @@ En el perfil: «Capítulo de Samuel».
 #FantasíaJuvenil #PortalFantasy #BookstagramEspaña #LecturaEnEspañol"""),
 
     # Facebook
-    dict(net="Facebook", id="FBGPT-P003", base="BASE-022", date="2026-09-29", time="12:30", title="Samuel en la Feria del Libro de Madrid", theme="crónica de feria", objective="comunidad y lectura de crónica", url="https://autorademodiaz.com/cuaderno/feria-libro-madrid-2026-samuel-entre-mundos/", tags="#FeriaDelLibroDeMadrid #Autores", source="publicaciones GPT/banco imagenes web/100/captura.png", image="samuel-feria-libro-madrid-2026.png", alt="Crónica de la firma de Samuel entre mundos en la caseta 337 de la Feria del Libro de Madrid 2026.", text="""El 10 de junio firmé ejemplares de *Samuel entre mundos* en la caseta 337 de la Feria del Libro de Madrid.
+    dict(net="Facebook", id="FBGPT-P003", base="BASE-022", date="2026-09-29", time="12:30", title="Samuel en la Feria del Libro de Madrid", theme="crónica de feria", objective="comunidad y lectura de crónica", url="https://davidportodiaz.com/cuaderno/feria-libro-madrid-2026-samuel-entre-mundos/", tags="#FeriaDelLibroDeMadrid #Autores", source="publicaciones GPT/banco imagenes web/100/captura.png", image="samuel-feria-libro-madrid-2026.png", alt="Crónica de la firma de Samuel entre mundos en la caseta 337 de la Feria del Libro de Madrid 2026.", text="""El 10 de junio firmé ejemplares de *Samuel entre mundos* en la caseta 337 de la Feria del Libro de Madrid.
 
 Había imaginado muchas veces lo que sería publicar una novela. Verla sobre una mesa mientras alguien se acercaba a preguntar de qué iba resultó bastante más concreto y más raro.
 
 He dejado una crónica breve de aquella tarde, con fotografías reales:
-https://autorademodiaz.com/cuaderno/feria-libro-madrid-2026-samuel-entre-mundos/
+https://davidportodiaz.com/cuaderno/feria-libro-madrid-2026-samuel-entre-mundos/
 
 ¿Qué recuerdas mejor de una feria: el libro que encontraste, la conversación o el paseo entre casetas?
 
 #FeriaDelLibroDeMadrid #Autores"""),
-    dict(net="Facebook", id="FBGPT-P004", base="BASE-001", date="2026-10-01", time="19:00", title="Lo que cambia cuando cambia el dueño", theme="memoria valor y futuro", objective="comentarios y lectura de la novela", url="https://autorademodiaz.com/las-manecillas-del-recuerdo/", tags="#NovelaCoral #MemoriaFamiliar", source="publicaciones X GPT/2026-09-24/las-manecillas-memoria-valor-futuro-david-porto.png", image="manecillas-tres-vidas-facebook.png", alt="Página de Las manecillas del recuerdo sobre memoria, valor y futuro alrededor de un reloj.", text="""Un mismo reloj puede ser recuerdo para una familia, mercancía para otra persona y una rareza antigua unos años después.
+    dict(net="Facebook", id="FBGPT-P004", base="BASE-001", date="2026-10-01", time="19:00", title="Lo que cambia cuando cambia el dueño", theme="memoria valor y futuro", objective="comentarios y lectura de la novela", url="https://davidportodiaz.com/las-manecillas-del-recuerdo/", tags="#NovelaCoral #MemoriaFamiliar", source="publicaciones X GPT/2026-09-24/las-manecillas-memoria-valor-futuro-david-porto.png", image="manecillas-tres-vidas-facebook.png", alt="Página de Las manecillas del recuerdo sobre memoria, valor y futuro alrededor de un reloj.", text="""Un mismo reloj puede ser recuerdo para una familia, mercancía para otra persona y una rareza antigua unos años después.
 
 Ese cambio de significado es una de las ideas que recorre *Las manecillas del recuerdo*: el objeto sigue ahí, pero cada dueño cree tener una historia distinta entre las manos.
 
 Puedes conocer la novela aquí:
-https://autorademodiaz.com/las-manecillas-del-recuerdo/
+https://davidportodiaz.com/las-manecillas-del-recuerdo/
 
 ¿Conservas algo cuyo valor solo entiende bien tu familia?
 
 #NovelaCoral #MemoriaFamiliar"""),
-    dict(net="Facebook", id="FBGPT-P005", base="BASE-014", date="2026-10-04", time="12:00", title="Las relaciones también tienen versiones", theme="mapa de relaciones de personajes", objective="utilidad y conversación de oficio", url="https://autorademodiaz.com/herramientas/personajes/", tags="#EscrituraCreativa #Personajes", source="publicaciones Mastodon GPT/2026-09-27/mapa-relaciones-personajes.png", image="mapa-relaciones-personajes-facebook.png", alt="Herramienta local para registrar relaciones entre personajes y cómo cambian durante una novela.", text="""Dos personajes no tienen una sola relación durante toda una novela. Pueden empezar como aliados, ocultarse algo y acabar queriendo cosas incompatibles.
+    dict(net="Facebook", id="FBGPT-P005", base="BASE-014", date="2026-10-04", time="12:00", title="Las relaciones también tienen versiones", theme="mapa de relaciones de personajes", objective="utilidad y conversación de oficio", url="https://davidportodiaz.com/herramientas/personajes/", tags="#EscrituraCreativa #Personajes", source="publicaciones Mastodon GPT/2026-09-27/mapa-relaciones-personajes.png", image="mapa-relaciones-personajes-facebook.png", alt="Herramienta local para registrar relaciones entre personajes y cómo cambian durante una novela.", text="""Dos personajes no tienen una sola relación durante toda una novela. Pueden empezar como aliados, ocultarse algo y acabar queriendo cosas incompatibles.
 
 Este mapa permite registrar esas relaciones y sus cambios sin subir el proyecto. No interpreta a los personajes: ayuda a ver contradicciones entre lo que declaraste y lo que termina ocurriendo.
 
-https://autorademodiaz.com/herramientas/personajes/
+https://davidportodiaz.com/herramientas/personajes/
 
 ¿Qué relación te cuesta más controlar mientras escribes: familia, amistad o rivalidad?
 
 #EscrituraCreativa #Personajes"""),
 
     # TikTok
-    dict(net="TikTok", id="TTGPT-P003", base="BASE-023", date="2026-09-30", time="19:30", title="Prueba el capítulo antes de comprar", theme="muestra Kindle de Las manecillas", objective="guardados y lectura de muestra", url="https://autorademodiaz.com/las-manecillas-del-recuerdo/kindle/", tags="#KindleEspaña #LecturaEnEspañol #Libros #BookTokEspaña #MuestraGratis", source="publicaciones GPT/banco imagenes web/315/captura.png", image="muestra-manecillas-kindle-01.png", alt="Página para descargar gratis el capítulo 1.1 de Las manecillas del recuerdo en EPUB o TXT.", text="""Antes de comprar un libro prefiero que puedas leer cómo empieza.
+    dict(net="TikTok", id="TTGPT-P003", base="BASE-023", date="2026-09-30", time="19:30", title="Prueba el capítulo antes de comprar", theme="muestra Kindle de Las manecillas", objective="guardados y lectura de muestra", url="https://davidportodiaz.com/las-manecillas-del-recuerdo/kindle/", tags="#KindleEspaña #LecturaEnEspañol #Libros #BookTokEspaña #MuestraGratis", source="publicaciones GPT/banco imagenes web/315/captura.png", image="muestra-manecillas-kindle-01.png", alt="Página para descargar gratis el capítulo 1.1 de Las manecillas del recuerdo en EPUB o TXT.", text="""Antes de comprar un libro prefiero que puedas leer cómo empieza.
 
 El capítulo 1.1 de *Las manecillas del recuerdo* se descarga gratis en EPUB o TXT. También puedes enviarlo a Kindle.
 
 Desliza para elegir formato. ¿Dónde lees las muestras: móvil, lector electrónico u ordenador?
 
-La muestra está en autorademodiaz.com.
+La muestra está en davidportodiaz.com.
 
 #KindleEspaña #LecturaEnEspañol #Libros #BookTokEspaña #MuestraGratis"""),
-    dict(net="TikTok", id="TTGPT-P004", base="BASE-005", date="2026-10-01", time="12:00", title="Tres voces de una misma novela", theme="tres fragmentos y registros", objective="comentarios y lectura", url="https://autorademodiaz.com/las-manecillas-del-recuerdo/fragmentos/", tags="#NovelaCoral #BookTokEspaña #LecturaEnEspañol #Fragmentos #Libros", source="publicaciones Instagram GPT/2026-09-24/tres-fragmentos-tres-registros.png", image="tres-fragmentos-tiktok-01.png", alt="Portada de tres fragmentos de Las manecillas del recuerdo con registros íntimo, de humor negro y futuro cercano.", text="""Una novela, tres registros que casi parecen de libros distintos.
+    dict(net="TikTok", id="TTGPT-P004", base="BASE-005", date="2026-10-01", time="12:00", title="Tres voces de una misma novela", theme="tres fragmentos y registros", objective="comentarios y lectura", url="https://davidportodiaz.com/las-manecillas-del-recuerdo/fragmentos/", tags="#NovelaCoral #BookTokEspaña #LecturaEnEspañol #Fragmentos #Libros", source="publicaciones Instagram GPT/2026-09-24/tres-fragmentos-tres-registros.png", image="tres-fragmentos-tiktok-01.png", alt="Portada de tres fragmentos de Las manecillas del recuerdo con registros íntimo, de humor negro y futuro cercano.", text="""Una novela, tres registros que casi parecen de libros distintos.
 
 1. Un desayuno donde nadie toca el chocolate.
 2. Una casa de empeños que infla una historia.
@@ -137,71 +137,71 @@ La muestra está en autorademodiaz.com.
 
 Desliza y elige: ¿1, 2 o 3?
 
-Los tres fragmentos están en autorademodiaz.com.
+Los tres fragmentos están en davidportodiaz.com.
 
 #NovelaCoral #BookTokEspaña #LecturaEnEspañol #Fragmentos #Libros"""),
-    dict(net="TikTok", id="TTGPT-P005", base="BASE-012", date="2026-10-03", time="20:00", title="¿Cabe de verdad en cinco minutos?", theme="tiempo de lectura en voz alta", objective="guardados y uso de herramienta", url="https://autorademodiaz.com/herramientas/tiempo-lectura-voz-alta/", tags="#EscrituraCreativa #LecturaEnVozAlta #Autores #BookTokEspaña #HerramientasParaEscritores", source="publicaciones Bluesky GPT/2026-09-26/tiempo-lectura-fragmento.png", image="tiempo-lectura-cinco-minutos-01.png", alt="Estimador local del tiempo necesario para leer un fragmento en voz alta.", text="""«Es corto» no sirve demasiado cuando una lectura tiene cinco minutos exactos.
+    dict(net="TikTok", id="TTGPT-P005", base="BASE-012", date="2026-10-03", time="20:00", title="¿Cabe de verdad en cinco minutos?", theme="tiempo de lectura en voz alta", objective="guardados y uso de herramienta", url="https://davidportodiaz.com/herramientas/tiempo-lectura-voz-alta/", tags="#EscrituraCreativa #LecturaEnVozAlta #Autores #BookTokEspaña #HerramientasParaEscritores", source="publicaciones Bluesky GPT/2026-09-26/tiempo-lectura-fragmento.png", image="tiempo-lectura-cinco-minutos-01.png", alt="Estimador local del tiempo necesario para leer un fragmento en voz alta.", text="""«Es corto» no sirve demasiado cuando una lectura tiene cinco minutos exactos.
 
 Este estimador convierte las palabras en un rango y permite ajustar el ritmo. No es un cronómetro y no guarda el texto.
 
 En las siguientes imágenes hay tres usos concretos. ¿Para qué medirías tú una lectura?
 
-La herramienta está en autorademodiaz.com.
+La herramienta está en davidportodiaz.com.
 
 #EscrituraCreativa #LecturaEnVozAlta #Autores #BookTokEspaña #HerramientasParaEscritores"""),
 
     # Bluesky
-    dict(net="Bluesky", id="BSGPT-P003", base="BASE-024", date="2026-09-28", time="09:30", title="Preguntas que abren un club de lectura", theme="guía de club de lectura", objective="conversación y visitas", url="https://autorademodiaz.com/clubes-de-lectura/samuel-entre-mundos/", tags="#BookSky #ClubDeLectura", source="publicaciones GPT/banco imagenes web/067/captura.png", image="club-lectura-samuel-bluesky.png", alt="Guía de Samuel entre mundos con preguntas de debate y recursos para clubes de lectura.", text="""Un club mejora cuando las preguntas no buscan comprobar quién entendió «bien» el libro. Esta guía de Samuel propone debatir identidad, pertenencia y coste del poder.
+    dict(net="Bluesky", id="BSGPT-P003", base="BASE-024", date="2026-09-28", time="09:30", title="Preguntas que abren un club de lectura", theme="guía de club de lectura", objective="conversación y visitas", url="https://davidportodiaz.com/clubes-de-lectura/samuel-entre-mundos/", tags="#BookSky #ClubDeLectura", source="publicaciones GPT/banco imagenes web/067/captura.png", image="club-lectura-samuel-bluesky.png", alt="Guía de Samuel entre mundos con preguntas de debate y recursos para clubes de lectura.", text="""Un club mejora cuando las preguntas no buscan comprobar quién entendió «bien» el libro. Esta guía de Samuel propone debatir identidad, pertenencia y coste del poder.
 
 ¿Qué pregunta os ha dado más juego?
-https://autorademodiaz.com/clubes-de-lectura/samuel-entre-mundos/
+https://davidportodiaz.com/clubes-de-lectura/samuel-entre-mundos/
 
 #BookSky #ClubDeLectura"""),
-    dict(net="Bluesky", id="BSGPT-P004", base="BASE-002", date="2026-10-03", time="09:45", title="Los ecos que ya no ves", theme="repeticiones en un texto", objective="respuestas y uso de herramienta", url="https://autorademodiaz.com/herramientas/repeticiones/", tags="#Escritura #Autores", source="publicaciones X GPT/2026-09-26/detector-repeticiones-escritores-david-porto.png", image="ecos-repeticiones-bluesky.png", alt="Detector local de palabras próximas, arranques repetidos y frases que vuelven en un texto.", text="""Una repetición puede sostener el ritmo o colarse sin que la veamos. El detector marca los ecos próximos; después toca volver a la frase.
+    dict(net="Bluesky", id="BSGPT-P004", base="BASE-002", date="2026-10-03", time="09:45", title="Los ecos que ya no ves", theme="repeticiones en un texto", objective="respuestas y uso de herramienta", url="https://davidportodiaz.com/herramientas/repeticiones/", tags="#Escritura #Autores", source="publicaciones X GPT/2026-09-26/detector-repeticiones-escritores-david-porto.png", image="ecos-repeticiones-bluesky.png", alt="Detector local de palabras próximas, arranques repetidos y frases que vuelven en un texto.", text="""Una repetición puede sostener el ritmo o colarse sin que la veamos. El detector marca los ecos próximos; después toca volver a la frase.
 
 ¿Cuál se te escapa más: palabras, arranques o muletillas?
-https://autorademodiaz.com/herramientas/repeticiones/
+https://davidportodiaz.com/herramientas/repeticiones/
 
 #Escritura #Autores"""),
-    dict(net="Bluesky", id="BSGPT-P005", base="BASE-010", date="2026-10-04", time="18:00", title="La ciudad que no podría estar en otro sitio", theme="worldbuilding de Noveris", objective="conversación y lectura", url="https://autorademodiaz.com/cuaderno/worldbuilding-noveris-ciudad-magica/", tags="#Worldbuilding #Fantasía", source="publicaciones TikTok GPT/2026-09-27/worldbuilding-noveris-01.png", image="noveris-no-es-decorado-bluesky.png", alt="Artículo sobre cómo la ubicación de Noveris afecta a su arquitectura, economía y conflictos.", text="""Una ciudad fantástica deja de ser decorado cuando su ubicación cambia el mercado, la arquitectura y los conflictos. Noveris empezó con una pregunta: ¿por qué existe justo ahí?
+    dict(net="Bluesky", id="BSGPT-P005", base="BASE-010", date="2026-10-04", time="18:00", title="La ciudad que no podría estar en otro sitio", theme="worldbuilding de Noveris", objective="conversación y lectura", url="https://davidportodiaz.com/cuaderno/worldbuilding-noveris-ciudad-magica/", tags="#Worldbuilding #Fantasía", source="publicaciones TikTok GPT/2026-09-27/worldbuilding-noveris-01.png", image="noveris-no-es-decorado-bluesky.png", alt="Artículo sobre cómo la ubicación de Noveris afecta a su arquitectura, economía y conflictos.", text="""Una ciudad fantástica deja de ser decorado cuando su ubicación cambia el mercado, la arquitectura y los conflictos. Noveris empezó con una pregunta: ¿por qué existe justo ahí?
 
-https://autorademodiaz.com/cuaderno/worldbuilding-noveris-ciudad-magica/
+https://davidportodiaz.com/cuaderno/worldbuilding-noveris-ciudad-magica/
 
 #Worldbuilding #Fantasía"""),
 
     # Mastodon
-    dict(net="Mastodon", id="MAGPT-P003", base="BASE-025", date="2026-09-28", time="08:45", title="Cuando un dato editorial caduca", theme="metodología editorial", objective="confianza y conversación", url="https://autorademodiaz.com/metodologia-editorial/", tags="#Edición #Escritores #DatosAbiertos", source="publicaciones GPT/banco imagenes web/353/captura.png", image="metodologia-editorial-mastodon.png", alt="Página que explica fuentes, fechas de revisión y correcciones del directorio editorial.", text="""Una lista de editoriales deja de ser útil si no explica de dónde sale cada dato o cuándo se revisó.
+    dict(net="Mastodon", id="MAGPT-P003", base="BASE-025", date="2026-09-28", time="08:45", title="Cuando un dato editorial caduca", theme="metodología editorial", objective="confianza y conversación", url="https://davidportodiaz.com/metodologia-editorial/", tags="#Edición #Escritores #DatosAbiertos", source="publicaciones GPT/banco imagenes web/353/captura.png", image="metodologia-editorial-mastodon.png", alt="Página que explica fuentes, fechas de revisión y correcciones del directorio editorial.", text="""Una lista de editoriales deja de ser útil si no explica de dónde sale cada dato o cuándo se revisó.
 
 Por eso el directorio separa la fuente oficial del resumen, marca estados cerrados y explica cómo corregir información. Cuando no hay vía de envío publicada, no la deduce.
 
-https://autorademodiaz.com/metodologia-editorial/
+https://davidportodiaz.com/metodologia-editorial/
 
 ¿Qué dato echáis más en falta al investigar una editorial?
 
 #Edición #Escritores #DatosAbiertos"""),
-    dict(net="Mastodon", id="MAGPT-P004", base="BASE-015", date="2026-10-02", time="08:45", title="Fantasía juvenil española reciente", theme="selección 2025-2026", objective="recomendaciones y clics", url="https://autorademodiaz.com/cuaderno/libros-fantasia-juvenil-espanola-2025-2026/", tags="#Fantasía #LiteraturaEspañola #Lecturas", source="publicaciones Pinterest GPT/2026-09-25/fantasia-juvenil-espanola-2025-2026.png", image="fantasia-juvenil-espanola-mastodon.png", alt="Selección comentada de fantasía juvenil española publicada en 2025 y 2026.", text="""Una lista de novedades sirve poco si solo apila cubiertas.
+    dict(net="Mastodon", id="MAGPT-P004", base="BASE-015", date="2026-10-02", time="08:45", title="Fantasía juvenil española reciente", theme="selección 2025-2026", objective="recomendaciones y clics", url="https://davidportodiaz.com/cuaderno/libros-fantasia-juvenil-espanola-2025-2026/", tags="#Fantasía #LiteraturaEspañola #Lecturas", source="publicaciones Pinterest GPT/2026-09-25/fantasia-juvenil-espanola-2025-2026.png", image="fantasia-juvenil-espanola-mastodon.png", alt="Selección comentada de fantasía juvenil española publicada en 2025 y 2026.", text="""Una lista de novedades sirve poco si solo apila cubiertas.
 
 Esta selección de fantasía juvenil española de 2025 y 2026 explica qué distingue cada libro y para qué lector puede encajar, sin convertirlo en una clasificación automática.
 
-https://autorademodiaz.com/cuaderno/libros-fantasia-juvenil-espanola-2025-2026/
+https://davidportodiaz.com/cuaderno/libros-fantasia-juvenil-espanola-2025-2026/
 
 ¿Qué título reciente añadiríais y por qué?
 
 #Fantasía #LiteraturaEspañola #Lecturas"""),
-    dict(net="Mastodon", id="MAGPT-P005", base="BASE-004", date="2026-10-04", time="17:45", title="La magia cambia cuando obliga a renunciar", theme="fantasía con magia de coste", objective="recomendaciones y conversación", url="https://autorademodiaz.com/recomendaciones/magia-con-coste/", tags="#Fantasía #Libros #Bookstodon", source="publicaciones Threads GPT/2026-09-27/libros-fantasia-magia-con-coste-david-porto.png", image="magia-con-coste-mastodon.png", alt="Selección de seis libros de fantasía donde usar magia tiene un coste real.", text="""Un sistema de magia no necesita una tabla complicada para tener coste. Basta con que usarlo obligue a renunciar a algo que importa.
+    dict(net="Mastodon", id="MAGPT-P005", base="BASE-004", date="2026-10-04", time="17:45", title="La magia cambia cuando obliga a renunciar", theme="fantasía con magia de coste", objective="recomendaciones y conversación", url="https://davidportodiaz.com/recomendaciones/magia-con-coste/", tags="#Fantasía #Libros #Bookstodon", source="publicaciones Threads GPT/2026-09-27/libros-fantasia-magia-con-coste-david-porto.png", image="magia-con-coste-mastodon.png", alt="Selección de seis libros de fantasía donde usar magia tiene un coste real.", text="""Un sistema de magia no necesita una tabla complicada para tener coste. Basta con que usarlo obligue a renunciar a algo que importa.
 
 En los seis libros de la lista, el precio de la magia cambia decisiones; no está solo para decorar el mundo.
 
-https://autorademodiaz.com/recomendaciones/magia-con-coste/
+https://davidportodiaz.com/recomendaciones/magia-con-coste/
 
 ¿Qué coste mágico os ha parecido más difícil de esquivar?
 
 #Fantasía #Libros #Bookstodon"""),
 
     # Pinterest
-    dict(net="Pinterest", id="PINGPT-P003", base="BASE-026", date="2026-09-28", time="10:30", title="Cómo analizar la variedad léxica de un texto", theme="variedad léxica", objective="clics y guardados", url="https://autorademodiaz.com/herramientas/variedad-lexica/", board="Herramientas para escritores", image="analizar-variedad-lexica-texto.png", alt="Portada de una herramienta para comparar la variedad léxica dentro de un texto en español.", description="Herramienta gratuita para analizar la variedad léxica de un fragmento, capítulo o manuscrito mediante formas distintas, MATTR y MTLD. El texto se procesa en el navegador y el resultado no decide si la prosa es buena o mala: sirve para localizar cambios y revisarlos con contexto."),
-    dict(net="Pinterest", id="PINGPT-P004", base="BASE-019", date="2026-10-03", time="10:30", title="Cómo revisar los puntos de vista de una novela", theme="distribución de POV", objective="clics y guardados", url="https://autorademodiaz.com/herramientas/distribucion-pov/", board="Herramientas para escritores", image="revisar-puntos-vista-novela.png", alt="Portada de una herramienta para visualizar cómo se reparten los puntos de vista de una novela.", description="Guía y herramienta para revisar cómo se distribuyen los puntos de vista a lo largo de una novela, detectar ausencias largas y contrastar la estructura sin convertir el gráfico en una regla automática de escritura."),
-    dict(net="Pinterest", id="PINGPT-P005", base="BASE-013", date="2026-10-04", time="10:30", title="Cómo detectar nombres de personajes parecidos", theme="nombres de personajes", objective="clics y guardados", url="https://autorademodiaz.com/herramientas/nombres-personajes/", board="Herramientas para escritores", image="detectar-nombres-personajes-parecidos.png", alt="Portada de una herramienta para detectar nombres de personajes con parecido visual o sonoro.", description="Herramienta gratuita para comparar los nombres de un reparto y localizar similitudes visuales o sonoras que pueden confundir durante la lectura. El análisis se realiza en el navegador y funciona como aviso para revisar, no como una orden para renombrar personajes."),
+    dict(net="Pinterest", id="PINGPT-P003", base="BASE-026", date="2026-09-28", time="10:30", title="Cómo analizar la variedad léxica de un texto", theme="variedad léxica", objective="clics y guardados", url="https://davidportodiaz.com/herramientas/variedad-lexica/", board="Herramientas para escritores", image="analizar-variedad-lexica-texto.png", alt="Portada de una herramienta para comparar la variedad léxica dentro de un texto en español.", description="Herramienta gratuita para analizar la variedad léxica de un fragmento, capítulo o manuscrito mediante formas distintas, MATTR y MTLD. El texto se procesa en el navegador y el resultado no decide si la prosa es buena o mala: sirve para localizar cambios y revisarlos con contexto."),
+    dict(net="Pinterest", id="PINGPT-P004", base="BASE-019", date="2026-10-03", time="10:30", title="Cómo revisar los puntos de vista de una novela", theme="distribución de POV", objective="clics y guardados", url="https://davidportodiaz.com/herramientas/distribucion-pov/", board="Herramientas para escritores", image="revisar-puntos-vista-novela.png", alt="Portada de una herramienta para visualizar cómo se reparten los puntos de vista de una novela.", description="Guía y herramienta para revisar cómo se distribuyen los puntos de vista a lo largo de una novela, detectar ausencias largas y contrastar la estructura sin convertir el gráfico en una regla automática de escritura."),
+    dict(net="Pinterest", id="PINGPT-P005", base="BASE-013", date="2026-10-04", time="10:30", title="Cómo detectar nombres de personajes parecidos", theme="nombres de personajes", objective="clics y guardados", url="https://davidportodiaz.com/herramientas/nombres-personajes/", board="Herramientas para escritores", image="detectar-nombres-personajes-parecidos.png", alt="Portada de una herramienta para detectar nombres de personajes con parecido visual o sonoro.", description="Herramienta gratuita para comparar los nombres de un reparto y localizar similitudes visuales o sonoras que pueden confundir durante la lectura. El análisis se realiza en el navegador y funciona como aviso para revisar, no como una orden para renombrar personajes."),
 
     # Reddit: uno esta semana y dos reservas por la regla de un post propio semanal.
     dict(net="Reddit", id="RDGPT-P002", base="BASE-020", date="2026-09-29", time="18:00", title="¿Limpiáis el formato antes de revisar el fondo?", theme="limpieza de manuscritos", objective="conversación de oficio", subreddit="r/escribir", flair="Duda sobre estilo/ritmo", text="""Cuando un documento tiene espacios dobles, saltos extraños, guiones mezclados y párrafos partidos, cuesta saber qué problemas pertenecen al texto y cuáles al formato.
@@ -213,13 +213,13 @@ https://autorademodiaz.com/recomendaciones/magia-con-coste/
 
 
 NEW_BASES = [
-    ("BASE-021", "Tres reconocimientos de 2026 con resultado y fuente", "premios y trayectoria", "https://autorademodiaz.com/premios.html", "359"),
-    ("BASE-022", "Crónica de Samuel entre mundos en la Feria del Libro de Madrid 2026", "eventos y comunidad", "https://autorademodiaz.com/cuaderno/feria-libro-madrid-2026-samuel-entre-mundos/", "100"),
-    ("BASE-023", "Muestra gratuita en EPUB o TXT de Las manecillas del recuerdo", "Las manecillas del recuerdo", "https://autorademodiaz.com/las-manecillas-del-recuerdo/kindle/", "315"),
-    ("BASE-024", "Preguntas y recursos para un club de lectura de Samuel entre mundos", "clubes de lectura", "https://autorademodiaz.com/clubes-de-lectura/samuel-entre-mundos/", "067"),
-    ("BASE-025", "Cómo se verifican y caducan los datos del directorio editorial", "metodología editorial", "https://autorademodiaz.com/metodologia-editorial/", "353"),
-    ("BASE-026", "Analizar variedad léxica sin convertir una cifra en juicio", "herramientas para escritores", "https://autorademodiaz.com/herramientas/variedad-lexica/", "293"),
-    ("BASE-027", "Usar legibilidad como aviso y no como norma automática", "oficio de escritura", "https://autorademodiaz.com/herramientas/legibilidad/", "249"),
+    ("BASE-021", "Tres reconocimientos de 2026 con resultado y fuente", "premios y trayectoria", "https://davidportodiaz.com/premios.html", "359"),
+    ("BASE-022", "Crónica de Samuel entre mundos en la Feria del Libro de Madrid 2026", "eventos y comunidad", "https://davidportodiaz.com/cuaderno/feria-libro-madrid-2026-samuel-entre-mundos/", "100"),
+    ("BASE-023", "Muestra gratuita en EPUB o TXT de Las manecillas del recuerdo", "Las manecillas del recuerdo", "https://davidportodiaz.com/las-manecillas-del-recuerdo/kindle/", "315"),
+    ("BASE-024", "Preguntas y recursos para un club de lectura de Samuel entre mundos", "clubes de lectura", "https://davidportodiaz.com/clubes-de-lectura/samuel-entre-mundos/", "067"),
+    ("BASE-025", "Cómo se verifican y caducan los datos del directorio editorial", "metodología editorial", "https://davidportodiaz.com/metodologia-editorial/", "353"),
+    ("BASE-026", "Analizar variedad léxica sin convertir una cifra en juicio", "herramientas para escritores", "https://davidportodiaz.com/herramientas/variedad-lexica/", "293"),
+    ("BASE-027", "Usar legibilidad como aviso y no como norma automática", "oficio de escritura", "https://davidportodiaz.com/herramientas/legibilidad/", "249"),
 ]
 
 
@@ -352,13 +352,13 @@ def make_supporting_assets():
     # Pinterest: portadas 2:3 nuevas.
     d = ROOT / "publicaciones Pinterest GPT/2026-09-28"
     d.mkdir(parents=True, exist_ok=True)
-    pinterest_card(d / "analizar-variedad-lexica-texto.png", "Herramienta gratuita", "Variedad léxica en español", "MATTR, MTLD y cambios dentro del texto", "3", "Compara zonas del texto sin convertir una cifra en un juicio sobre la prosa.", "HERRAMIENTAS DE AUTORA DEMO DÍAZ")
+    pinterest_card(d / "analizar-variedad-lexica-texto.png", "Herramienta gratuita", "Variedad léxica en español", "MATTR, MTLD y cambios dentro del texto", "3", "Compara zonas del texto sin convertir una cifra en un juicio sobre la prosa.", "HERRAMIENTAS DE DAVID PORTO DÍAZ")
     d = ROOT / "publicaciones Pinterest GPT/2026-10-03"
     d.mkdir(parents=True, exist_ok=True)
-    pinterest_card(d / "revisar-puntos-vista-novela.png", "Estructura de novela", "Revisa la distribución de POV", "Localiza huecos entre puntos de vista", "POV", "Visualiza el reparto de voces y contrasta la estructura sin imponer una regla automática.", "HERRAMIENTAS DE AUTORA DEMO DÍAZ")
+    pinterest_card(d / "revisar-puntos-vista-novela.png", "Estructura de novela", "Revisa la distribución de POV", "Localiza huecos entre puntos de vista", "POV", "Visualiza el reparto de voces y contrasta la estructura sin imponer una regla automática.", "HERRAMIENTAS DE DAVID PORTO DÍAZ")
     d = ROOT / "publicaciones Pinterest GPT/2026-10-04"
     d.mkdir(parents=True, exist_ok=True)
-    pinterest_card(d / "detectar-nombres-personajes-parecidos.png", "Revisión de personajes", "Detecta nombres demasiado parecidos", "Compara semejanza visual y sonora", "ABC", "Localiza posibles confusiones en el reparto y decide con el contexto de tu novela.", "HERRAMIENTAS DE AUTORA DEMO DÍAZ")
+    pinterest_card(d / "detectar-nombres-personajes-parecidos.png", "Revisión de personajes", "Detecta nombres demasiado parecidos", "Compara semejanza visual y sonora", "ABC", "Localiza posibles confusiones en el reparto y decide con el contexto de tu novela.", "HERRAMIENTAS DE DAVID PORTO DÍAZ")
 
 
 def media_for(post):
