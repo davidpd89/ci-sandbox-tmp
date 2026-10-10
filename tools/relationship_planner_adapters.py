@@ -351,6 +351,9 @@ def build_snapshot(sources, outbound, inbound, *, today, outbound_coverage=None)
                                         "outbound_coverage": {
                                             net: "complete" if coverage_ok[net] else "unknown_or_incomplete"
                                             for net in NETWORKS},
+                                        "inbound_source": ("unavailable" if any(
+                                            isinstance(src, dict) and src.get("_inbound_read_error")
+                                            for src in sources) else "uncertified"),
                                         "sources": len(sources), "prepared": len(candidates)}
 
 
@@ -402,12 +405,17 @@ def read_manifest(path):
             item["_read_error"] = "registro confirmado ausente o inválido"
     inbound = []
     if manifest.get("verified_inbound_sqlite"):
-        # Resolver la ruta local antes de URI: paths Windows y espacios.
-        uri = Path(manifest["verified_inbound_sqlite"]).resolve().as_uri() + "?mode=ro"
-        with closing(sqlite3.connect(uri, uri=True)) as db:
-            db.row_factory = sqlite3.Row
-            inbound = [dict(row) for row in db.execute(
-                "SELECT network, event_id, author_id, handle, kind, day FROM verified_inbound")]
+        # Una fuente inbound ausente no debe impedir procesar otras redes.
+        # Se mantiene "desconocido", no "cero comprobado".
+        try:
+            uri = Path(manifest["verified_inbound_sqlite"]).resolve().as_uri() + "?mode=ro"
+            with closing(sqlite3.connect(uri, uri=True)) as db:
+                db.row_factory = sqlite3.Row
+                inbound = [dict(row) for row in db.execute(
+                    "SELECT network, event_id, author_id, handle, kind, day FROM verified_inbound")]
+        except (sqlite3.Error, OSError, ValueError, TypeError):
+            for source in sources:
+                source["_inbound_read_error"] = "historial inbound no disponible"
     return sources, outbound, inbound
 
 
