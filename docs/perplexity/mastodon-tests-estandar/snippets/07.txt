@@ -1,0 +1,5 @@
+python
+# https://github.com/getsentry/responses/blob/master/responses/tests/test_matchers.py
+def test_query_string_matcher():
+    @responses.activate
+    def run():
