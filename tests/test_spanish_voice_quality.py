@@ -197,6 +197,8 @@ class TestBlind(unittest.TestCase):
         explicit = pack(self.pairs, seed="synthetic-private-entropy")
         self.assertEqual(actual, explicit)
         self.assertNotIn("seed", actual[1])
+        sides = list(actual[1]["after_side"].values())
+        self.assertLessEqual(abs(sides.count("left") - sides.count("right")), 1)
 
     def test_invalid_choice_type_is_rejected(self):
         doc, key = pack(self.pairs, seed="review")
