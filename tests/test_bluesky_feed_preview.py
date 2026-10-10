@@ -1,5 +1,6 @@
 """Contract tests 100% offline for a Bluesky feed preview of Jetstream cache."""
 import json
+from contextlib import closing
 import pathlib
 import sqlite3
 import sys
@@ -22,7 +23,7 @@ class PreviewTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.path = pathlib.Path(self.temp.name) / "jetstream.sqlite3"
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             # Columnas reales de bluesky_jetstream_collect.init_db
             db.execute("""
                 CREATE TABLE posts(
@@ -43,7 +44,7 @@ class PreviewTests(unittest.TestCase):
                 (NOW - age_hours * 3_600_000_000) / 1_000_000,
                 dt.timezone.utc
             ).isoformat()
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("""
                 INSERT INTO posts VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
             """, (
@@ -91,7 +92,7 @@ class PreviewTests(unittest.TestCase):
         self.add("abc", "one")
         self.add("def", "two")
         self.assertEqual(len(self.page()["feed"]), 2)
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("DELETE FROM posts WHERE uri = ?", (uri("abc", "one"),))
         self.assertEqual(self.page()["feed"], [{"post": uri("def", "two")}])
 
@@ -119,10 +120,10 @@ class PreviewTests(unittest.TestCase):
 
     def test_read_only_and_no_network(self):
         self.add("abc", "one")
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             before = db.execute("SELECT * FROM posts").fetchall()
         self.page(limit=1)
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             after = db.execute("SELECT * FROM posts").fetchall()
         self.assertEqual(before, after)
         source = pathlib.Path(preview.__file__).read_text("utf-8")
@@ -135,7 +136,7 @@ class PreviewTests(unittest.TestCase):
         for index in range(115):
             did = f"invalid{index}"
             self.add(did, "post", time_us=NOW - 60_000_000)
-            with sqlite3.connect(self.path) as db:
+            with closing(sqlite3.connect(self.path)) as db, db:
                 db.execute(
                     "UPDATE posts SET uri = ? WHERE uri = ?",
                     (uri(did, "post") + "!", uri(did, "post")),
