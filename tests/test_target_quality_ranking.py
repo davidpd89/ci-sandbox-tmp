@@ -148,7 +148,8 @@ class RankingTests(unittest.TestCase):
         other = account(key="b", hits=False)
         base = rank("bluesky", [good, other])["ranked"]
         observed = {"bluesky:a": {
-            "verified": True, "mature": True, "trials": 100,
+            "verified": True, "mature": True,
+            "shared_exposure_verified": True, "trials": 100,
             "followbacks": 60, "responses": 40,
             "conversations": 20, "traffic": 15}}
         after = rank("bluesky", [good, other], outcomes=observed)["ranked"]
@@ -167,6 +168,52 @@ class RankingTests(unittest.TestCase):
         partial["bluesky:reader.example"]["trials"] = 2
         item = rank("bluesky", [account()], outcomes=partial)["ranked"][0]
         self.assertIsNone(item["explanation"]["outcomes"]["value"])
+
+    def test_iso_spanish_language_not_prefix_match(self):
+        for lang in ("est", "esoteric", "english", "esp"):
+            with self.subTest(lang=lang):
+                row = account(language=lang, posts=[post(language=lang)])
+                ranked = rank("bluesky", [row])["ranked"][0]
+                self.assertEqual(ranked["explanation"]["spanish"]["value"], 0.)
+                self.assertEqual(ranked["posts"], [])
+                self.assertEqual(ranked["post_rejections"][0]["reason"], "non_spanish_post")
+        for lang in ("es", "ES-MX", "es_419", " es-ES "):
+            with self.subTest(lang=lang):
+                row = account(language=lang, posts=[post(language=lang)])
+                ranked = rank("bluesky", [row])["ranked"][0]
+                self.assertEqual(ranked["explanation"]["spanish"]["value"], 1.)
+                self.assertEqual(len(ranked["posts"]), 1)
+        self.assertEqual(r._language({"langs": ["en", "est"]}), 0.)
+        self.assertEqual(r._language({"langs": ["en", "es-AR"]}), 1.)
+
+    def test_shared_exposure_needs_explicit_verification(self):
+        data = {"verified": True, "mature": True, "trials": 100,
+                "followbacks": 80, "responses": 50,
+                "conversations": 30, "traffic": 20}
+        self.assertIsNone(r._outcome_signal(data))
+        data["shared_exposure_verified"] = False
+        self.assertIsNone(r._outcome_signal(data))
+        data["shared_exposure_verified"] = True
+        self.assertGreater(r._outcome_signal(data), 0.)
+
+    def test_by_metric_denominators_and_censoring_are_independent(self):
+        entries = dict(zip(("followbacks", "responses", "conversations", "traffic"),
+                           ((60, 100), (6, 10), (5, 20), (12, 50))))
+        data = {"verified": True, "mature": True,
+                "by_metric": {name: {"successes": success, "trials": trials,
+                                     "verified": True, "mature": True}
+                              for name, (success, trials) in entries.items()}}
+        self.assertGreater(r._outcome_signal(data), 0.)
+        legacy = {"verified": True, "mature": True, "trials": 100,
+                  "shared_exposure_verified": True,
+                  "followbacks": 60, "responses": 6,
+                  "conversations": 5, "traffic": 12}
+        self.assertNotAlmostEqual(r._outcome_signal(data), r._outcome_signal(legacy))
+        data["by_metric"]["responses"]["mature"] = False
+        self.assertIsNone(r._outcome_signal(data))
+        data["by_metric"]["responses"]["mature"] = True
+        data["by_metric"]["conversations"]["trials"] = 2
+        self.assertIsNone(r._outcome_signal(data))
 
     def test_native_bluesky_profile_and_post(self):
         row = {"did": "did:plc:synthetic", "handle": "fiction.test",
