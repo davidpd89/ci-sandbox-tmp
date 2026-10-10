@@ -1,0 +1,64 @@
+python
+# Referencia de integración: https://github.com/davidpd89/ci-sandbox-tmp/blob/main/tools/score_hook.py
+# Archivo nuevo propuesto: tools/threads_opportunity_export.py
+from __future__ import annotations
+
+import csv
+import json
+from pathlib import Path
+from typing import Iterable
+
+from tools.threads_signal_schema import ThreadsPostSignal
+from tools.threads_post_score import score_post
+
+
+def export_post_opportunities(
+    signals: Iterable[ThreadsPostSignal],
+    output_path: str | Path,
+    min_score: float = 0.55,
+) -> list[dict]:
+    rows: list[dict] = []
+
+    for signal in signals:
+        score = score_post(signal)
+        if score < min_score:
+            continue
+
+        rows.append(
+            {
+                "opportunity_id": f"threads:reply:{signal.post_id}",
+                "network": "threads",
+                "action": "reply",
+                "post_id": signal.post_id,
+                "author_candidate_id": signal.author_candidate_id,
+                "score": score,
+                "created_at": signal.created_at.isoformat(),
+                "captured_at": signal.captured_at.isoformat(),
+                "features_json": json.dumps(signal.to_dict(), ensure_ascii=False),
+            }
+        )
+
+    rows.sort(key=lambda row: (-row["score"], row["created_at"]))
+
+    output = Path(output_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    with output.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=[
+                "opportunity_id",
+                "network",
+                "action",
+                "post_id",
+                "author_candidate_id",
+                "score",
+                "created_at",
+                "captured_at",
+                "features_json",
+            ],
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+
+    return rows
