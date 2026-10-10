@@ -1,0 +1,10 @@
+python
+# Fuente exacta: https://github.com/opplieam/FacebookCrawler/blob/9df402d3ee3c27233a49d40ec71c6257044749c1/facebook/items.py
+# Fragmento verificado mediante GitHub code search; no copiar el archivo completo sin revisar licencia.
+
+"""Item models for posts and comments."""
+
+import scrapy
+from itemloaders.processors import Compose, Identity, Join, TakeFirst
+from scrapy import Field
+from scrapy.loader import ItemLoader
