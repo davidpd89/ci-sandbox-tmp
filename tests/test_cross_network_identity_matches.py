@@ -24,7 +24,7 @@ class MatchTests(unittest.TestCase):
         for net in NETWORKS - {"mastodon"}:
             with self.subTest(network=net):
                 self.assertEqual(account_key(net, "@Lectora"), net + "|lectora")
-        self.assertEqual(account_key("mastodon", "@Ana@Libros.Example"),
+        self.assertEqual(account_key("mastodon", "@Ana@example.com"),
                          "mastodon|ana@libros.example")
         self.assertNotEqual(account_key("x", "ana"), account_key("instagram", "ana"))
 
