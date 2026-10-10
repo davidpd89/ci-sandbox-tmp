@@ -87,7 +87,7 @@ def touched_paths(root: Path, commit: str, parents: list[str], *,
                 ["diff-tree", *options, parent, commit])
         data = git(root, *args)
         # Match strict UTF-8 handling in the final-tree/PR scanners.
-        return {p.decode("utf-8") for p in data.split(b"\\0") if p}
+        return {p.decode("utf-8") for p in data.split(b"\0") if p}
 
     if not parents:
         return diff(None)
