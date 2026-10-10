@@ -1,0 +1,17 @@
+python
+# tests/test_mastodon_post_age.py
+# Patrón de freeze_time tomado de:
+# https://github.com/spulec/freezegun/blob/master/tests/test_uuid.py
+from datetime import datetime, timedelta, timezone
+from freezegun import freeze_time
+
+from growth.adapters.mastodon import parse_mastodon_datetime
+
+
+@freeze_time("2026-10-10T12:00:00Z")
+def test_post_age_uses_utc():
+    created_at = parse_mastodon_datetime("2026-10-09T12:00:00.000Z")
+
+    age = datetime.now(timezone.utc) - created_at
+
+    assert age == timedelta(days=1)
