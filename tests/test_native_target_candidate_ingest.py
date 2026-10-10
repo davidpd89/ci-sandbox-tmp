@@ -399,6 +399,27 @@ class TestContracts(unittest.TestCase):
             n.normalize_all({"unknown": []}, as_of=NOW)
 
 
+    def test_mismatched_post_author_never_grants_account_follow(self):
+        import target_quality_ranking as quality
+        for network, original in SAMPLES.items():
+            with self.subTest(network=network):
+                row = dict(original, account_id="account_A",
+                           author_id="account_B", created_at=FRESH,
+                           language="es", verified_actions=["follow"])
+                if network == "pinterest":
+                    pin = dict(row, author="lectora_1",
+                               url="https://www.pinterest.com/pin/123456/")
+                    snapshot = {"authors": [], "pins": [pin]}
+                else:
+                    snapshot = [row]
+                output = n.normalize_candidates(network, snapshot, as_of=NOW)
+                self.assertEqual(len(output["shortlist"]), 1)
+                self.assertEqual(output["shortlist"][0]["actions"], [])
+                ranked = quality.rank_network(network, output["shortlist"], as_of=NOW)
+                self.assertEqual(ranked["ranked"][0]["opportunities"], [])
+                self.assertIn("post_author_mismatch",
+                              [d["reason"] for d in output["diagnostics"]])
+
     def test_conflicting_explicit_account_ids_rejected_across_six_networks(self):
         for network, original in SAMPLES.items():
             with self.subTest(network=network):
