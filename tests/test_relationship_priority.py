@@ -249,3 +249,34 @@ def test_carga_sintetica_900_perfiles():
     result = rank(*rows, limits={lane: 1000 for lane in LANES})
     assert result["summary"]["unique_eligible"] == 900
     assert result["summary"]["selected"] == 900
+
+
+def test_unicode_handle_and_no_markdown_injection():
+    result = rank(row(handle="lectór_ñ"))
+    assert result["queues"]["API"][0]["handle"] == "lectór_ñ"
+    assert "lectór_ñ" in p.markdown(result)
+
+
+def test_actor_id_canonical_case_not_duplicated():
+    result = rank(row(handle="ana", actor_id="DID:PLC:UNO"),
+                  row(handle="otra_ana", actor_id="did:plc:uno"))
+    assert result["summary"]["unique_eligible"] == 1
+
+
+def test_date_compact_and_week_format_rejected():
+    result = rank(row(last_inbound_at="20261009"),
+                  row(handle="otro", last_inbound_at="2026-W41-5"))
+    assert result["summary"]["selected"] == 0
+    assert len(result["excluded"]) == 2
+
+
+def test_evaluation_actor_id_casefold():
+    candidate = row(actor_id="DID:PLC:ONE", converted=True)
+    snapshot = {"candidates": [candidate]}
+    ranked = p.rank_daily(snapshot, today=TODAY)
+    assert p.evaluate_synthetic(snapshot, ranked)["API"]["precision"] == 1.0
+
+
+def test_flag_unknown_missing_never_promotes_to_follow():
+    result = rank(row(reply_eligible=False, follow_eligible=False, visit_eligible=True))
+    assert result["queues"]["API"][0]["action"] == "visit"
