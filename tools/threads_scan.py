@@ -69,8 +69,8 @@ SEARCH_POOL += ["reseña de libro", "fantasía juvenil", "saga de fantasía", "n
                 "recomendación de fantasía", "autores nuevos", "autopublicación", "kindle unlimited", "mi primera novela", "reto de lectura", "lectura conjunta",
                 "libros de magia", "dragones libro", "romantasy", "fantasía épica", "worldbuilding", "mapa de mi mundo", "manuscrito", "escribiendo capítulo", "bloqueo del escritor",
                 "corrección de novela", "novela autopublicada", "feria del libro", "booktuber", "libros que me marcaron", "tbr pile", "relectura", "trilogía de fantasía"]
-import discovery_terms
-SEARCH_POOL += discovery_terms.terms("threads", "busquedas", skip=SEARCH_POOL)      # 07/10: consulta M a GPT
+# discovery_terms se consume a través del adaptador común.
+# Consumo dinámico en _rotate_searches.
 PROFILE_QUERIES = ["libros fantasía", "booktok español", "bookstagram", "reseñas libros", "editorial independiente", "escritora fantasía", "autor fantasía", "lectora fantasía",
                    "club de lectura", "librería", "booktuber", "novela juvenil", "autopublicada", "escritor indie", "lectora compulsiva", "romantasy", "libros y café",
                    "fantasía épica", "reseñas sin spoilers", "autora novela", "escritora", "escritor", "lectora", "libros", "booklover", "bibliófila"]
@@ -90,7 +90,11 @@ def _rotate_searches(n=4, round_index=None):
     """`n` busquedas del pool que rotan por dia Y por ronda: con 3-5 rondas al dia cada una prueba consultas distintas."""
     day = datetime.date.today().timetuple().tm_yday
     start = day * 3 + (round_index if round_index is not None else datetime.datetime.now().hour // 6)
-    return [SEARCH_POOL[(start * n + i) % len(SEARCH_POOL)] for i in range(n)]
+    import hashtag_query_consumers as hqc
+    tick = start
+    tags = hqc.select("threads", "hashtags", [], budget=1, tick=tick)
+    return hqc.select("threads", "busquedas", SEARCH_POOL,
+                      budget=max(0, n - len(tags)), tick=tick) + tags
 
 
 _suggest_kind = lambda *a, **k: sc.downgrade_for_opinion(_suggest_kind_raw(*a, **k), a[0], 'like')
