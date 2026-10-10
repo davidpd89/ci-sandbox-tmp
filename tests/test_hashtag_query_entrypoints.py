@@ -36,9 +36,11 @@ class EntrypointTests(unittest.TestCase):
                             datetime=datetime, SEARCH_POOL=["lectores lang:es"])
                 self.assertEqual(len(x(3)), 3)
                 self.assertTrue(any(query.startswith(("#año", "#ano")) for query in x(3)))
+                self.assertEqual(x(0), [], "X no debe buscar con presupuesto cero")
                 t = isolate("threads_scan.py", "_rotate_searches",
                             datetime=datetime, SEARCH_POOL=["lectores"])
                 self.assertEqual(len(t(3, round_index=0)), 3)
+                self.assertEqual(t(0, round_index=0), [], "Threads no debe buscar con presupuesto cero")
                 fb = isolate("facebook_scan.py", "_rotate_searches",
                              _round_index=lambda: 1, SEARCH_POOL=["lectores"])
                 tags = isolate("facebook_scan.py", "_rotate_hashtags",
@@ -50,6 +52,7 @@ class EntrypointTests(unittest.TestCase):
                             datetime=datetime, QUERIES_PER_DAY=2,
                             QUERY_POOL=[("lectores", None)])
                 self.assertEqual(len(p(today=datetime.date(2026, 10, 10), n=2)), 2)
+                self.assertEqual(p(today=datetime.date(2026, 10, 10), n=0), [], "Pinterest no debe buscar con presupuesto cero")
                 rd = isolate("reddit_scan.py", "_discovery_sources",
                              datetime=datetime,
                              SUBREDDITS=["libros", "lectura_es"])
