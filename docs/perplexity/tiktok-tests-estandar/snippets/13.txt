@@ -1,0 +1,13 @@
+json
+// tests/fixtures/tiktok/error_challenge.json
+{
+  "network": "tiktok",
+  "kind": "error",
+  "error_code": "challenge_detected",
+  "recoverable": false,
+  "expected_action": "stop_round",
+  "raw": {
+    "page": "mobile_feed",
+    "signal": "captcha_or_challenge"
+  }
+}
