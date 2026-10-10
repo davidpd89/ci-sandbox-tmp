@@ -52,7 +52,7 @@ class VoiceContractTests(unittest.TestCase):
 
     def test_findings_are_nonblocking_and_logged_without_source(self):
         events, calls = [], []
-        issue = {"code": "locale_variant", "severity": "hint", "start": 1, "end": 3}
+        issue = {"code": "locale_variant", "severity": "hint", "start": 1, "end": 3, "advice": "Revisar"}
         with mock.patch.dict(sys.modules, {"spanish_voice_quality":
                                             fake_auditor(calls, findings=[issue])}):
             out = voice.inspect(SAMPLE, network="reddit", queue="WEB", log=events.append)
@@ -123,10 +123,108 @@ class VoiceContractTests(unittest.TestCase):
         def no_log(_):
             raise OSError("broken logger")
         calls = []
-        module = fake_auditor(calls, findings=[{"code": "hint"}])
+        module = fake_auditor(calls, findings=[{"code": "locale_variant", "severity": "hint", "start": 0, "end": 0, "advice": "Revisar"}])
         with mock.patch.dict(sys.modules, {"spanish_voice_quality": module}):
             self.assertEqual(len(voice.inspect(SAMPLE, network="x", queue="WEB", log=no_log)), 1)
 
+
+    def test_empty_and_protected_only_texts_are_not_rewritten(self):
+        values = ("", " ", "\n\n", "https://example.org", "#Fantasía @lectora")
+        calls = []
+        with mock.patch.dict(sys.modules, {"spanish_voice_quality": fake_auditor(calls)}):
+            for value in values:
+                self.assertEqual(voice.inspect(value, network="reddit", queue="WEB"), [])
+            result = voice.inspect_fields({"vacio": "", "solo_espacio": " ", "url": values[3]},
+                                          network="reddit", queue="WEB")
+        self.assertNotIn("vacio", result)  # mandatory presence is checked upstream
+        self.assertEqual([x[0] for x in calls], list(values) + [" ", values[3]])
+
+    def test_invalid_fields_are_rejected_before_any_diagnostic(self):
+        calls = []
+        for source in ({"uno": SAMPLE, "dos": None},
+                       {"uno": SAMPLE, "dos": b"bytes"},
+                       {"uno": SAMPLE, "dos": bytearray(b"byte")},
+                       {"uno": SAMPLE, 2: "texto"}):
+            with mock.patch.dict(sys.modules, {"spanish_voice_quality": fake_auditor(calls)}):
+                with self.assertRaises(TypeError):
+                    voice.inspect_fields(source, network="reddit", queue="WEB")
+        self.assertEqual(calls, [])
+
+    def test_unicode_keys_and_str_subclass_remain_unchanged(self):
+        class MyString(str):
+            pass
+        value = MyString("Pequeña ñandú")
+        calls = []
+        with mock.patch.dict(sys.modules, {"spanish_voice_quality": fake_auditor(calls)}):
+            out = voice.inspect_fields({"título Ñ": value}, network="pinterest", queue="WEB")
+        self.assertEqual(calls[0][0], value)
+        self.assertEqual(set(out), {"título Ñ"})
+
+    def test_reject_malformed_findings_without_source_logging(self):
+        cases = [
+            {"code": 1},
+            {"code": SAMPLE, "severity": "hint", "start": 0, "end": 1, "advice": "x"},
+            {"code": "locale_variant", "severity": 1, "start": 0, "end": 1, "advice": "x"},
+            {"code": "locale_variant", "severity": "hint", "start": True, "end": 1, "advice": "x"},
+            {"code": "locale_variant", "severity": "hint", "start": 0, "end": len(SAMPLE)+1, "advice": "x"},
+            {"code": "locale_variant", "severity": "hint", "start": 2, "end": 1, "advice": "x"},
+            {"code": "locale_variant", "severity": "hint", "start": 0, "end": 1, "advice": None},
+            ["code", "hint"],  # lista anidada
+        ]
+        for finding in cases:
+            with self.subTest(finding=finding):
+                events = []
+                module = fake_auditor([], findings=[finding])
+                with mock.patch.dict(sys.modules, {"spanish_voice_quality": module}):
+                    with self.assertRaises(voice.VoicePreflightUnavailable):
+                        voice.inspect(SAMPLE, network="x", queue="WEB", log=events.append)
+                self.assertEqual(events, [])
+
+    def test_partial_auditor_failure_never_returns_fields(self):
+        module = types.ModuleType("spanish_voice_quality")
+        calls = []
+        def audit(text, *, network, queue):
+            calls.append(text)
+            if len(calls) == 2:
+                raise RuntimeError("synthetic failure")
+            return {"schema_version": 1, "network": network, "queue": queue,
+                    "changed": False, "findings": []}
+        module.audit = audit
+        with mock.patch.dict(sys.modules, {"spanish_voice_quality": module}):
+            with self.assertRaises(voice.VoicePreflightUnavailable):
+                voice.inspect_fields({"titulo": SAMPLE, "descripcion": "Otra frase"},
+                                     network="reddit", queue="WEB", log=lambda _: None)
+        self.assertEqual(calls, [SAMPLE, "Otra frase"])
+
+    def test_concurrent_calls_have_no_mutable_cross_queue_state(self):
+        from concurrent.futures import ThreadPoolExecutor
+        calls = []
+        import threading
+        lock = threading.Lock()
+        def audit(text, *, network, queue):
+            with lock:
+                calls.append((text, network, queue))
+            return {"schema_version": 1, "network": network, "queue": queue,
+                    "changed": False, "findings": []}
+        module = types.ModuleType("spanish_voice_quality")
+        module.audit = audit
+        pairs = [(network, queue) for network in NETWORKS for queue in QUEUES]
+        with mock.patch.dict(sys.modules, {"spanish_voice_quality": module}):
+            with ThreadPoolExecutor(max_workers=9) as pool:
+                results = list(pool.map(lambda pair: voice.inspect(
+                    SAMPLE, network=pair[0], queue=pair[1], log=lambda _: None), pairs))
+        self.assertEqual(results, [[]] * len(pairs))
+        self.assertEqual(sorted(calls), sorted((SAMPLE, n, q) for n, q in pairs))
+
+    def test_large_text_does_not_appear_in_diagnostic_logs(self):
+        large = "Ñandú" * 2000
+        events = []
+        issue = {"code": "locale_variant", "severity": "hint", "start": 0, "end": 1, "advice": "Revisar"}
+        with mock.patch.dict(sys.modules, {"spanish_voice_quality": fake_auditor([], findings=[issue])}):
+            voice.inspect(large, network="pinterest", queue="WEB", log=events.append)
+        self.assertEqual(len(events), 1)
+        self.assertNotIn("Ñandú", events[0])
+        self.assertLess(len(events[0]), 200)
 
 class XBankBoundaryTests(unittest.TestCase):
     def _execute(self, audit_side_effect=None):
