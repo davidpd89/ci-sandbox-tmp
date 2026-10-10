@@ -58,7 +58,10 @@ def push_paths(event: dict, *, root: Path, expected_sha: str) -> list[str]:
         # First push of this ref: no previous snapshot. Deliberately check all
         # tracked paths; only this situation may audit paths predating the push.
         raw = _git(root, "ls-tree", "-r", "--name-only", "-z", "HEAD")
-        return [p.decode("utf-8", "surrogateescape") for p in raw.split(b"\0") if p]
+        try:
+            return [p.decode("utf-8") for p in raw.split(b"\0") if p]
+        except UnicodeDecodeError as exc:
+            raise PushRangeError("Git devolvió una ruta sin codificación UTF-8 válida") from exc
     # Make missing/reaped before explicit even if Git's error wording varies.
     _git(root, "cat-file", "-e", f"{before}^{{commit}}")
     return repo_hygiene.changed_paths(before, root=root)

@@ -83,6 +83,24 @@ class PushHygieneTests(unittest.TestCase):
     def test_first_push_without_sensitive_files_passes(self):
         self.assertEqual(self.offenders(self.event("0" * 40)), [])
 
+    def test_first_push_rejects_non_utf8_git_path(self):
+        # Coincide con el contrato estricto del clasificador PR ya integrado.
+        event = self.event("0" * 40)
+        with patch.object(ph, "_git", side_effect=[
+                (self.sha() + "\n").encode("ascii"), b"docs/ni\xffez.md\0",
+        ]):
+            with self.assertRaisesRegex(ph.PushRangeError, "UTF-8"):
+                ph.push_paths(event, root=self.root, expected_sha=event["after"])
+
+    def test_first_push_blocks_sensitive_parent_directory(self):
+        self.write(".env.local/child.py")
+        self.commit("sensitive ancestor")
+        self.assertEqual(self.offenders(self.event("0" * 40)), [".env.local/child.py"])
+
+    def test_before_equal_after_is_empty_delta(self):
+        current = self.sha()
+        self.assertEqual(self.offenders(self.event(current, current)), [])
+
     def test_force_update_uses_two_trees_even_when_unrelated(self):
         self.write("safe.txt")
         self.commit("old tip")
@@ -212,6 +230,11 @@ class WorkflowPushContractTests(unittest.TestCase):
         self.assertIn("python tools/push_hygiene.py", self.workflow)
         self.assertIn("if: github.event_name == 'pull_request'", self.workflow)
         self.assertIn('repo_hygiene.py --base "HEAD^1"', self.workflow)
+
+    def test_push_trigger_is_not_filtered_by_paths(self):
+        # Cambios de solo datos deben disparar la protección global.
+        push_section = self.workflow.split("  push:", 1)[1].split("  workflow_dispatch:", 1)[0]
+        self.assertNotIn("paths:", push_section)
 
     def test_before_never_replaced_by_first_parent(self):
         self.assertIn("fetch-depth: 0", self.workflow)

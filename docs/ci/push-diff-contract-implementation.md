@@ -4,7 +4,7 @@ Fecha de contraste: **2026-10-09**. Rama `ci/push-diff-contract`; base `ci/test-
 
 ## Semántica de los eventos
 
-- `pull_request`: mantener `tools/repo_hygiene.py --base HEAD^1` sobre el merge sintético. El primer padre es la base de la PR, no el límite de un push. Checkout con profundidad 2. Se conserva por compatibilidad el contrato de la PR #2 (aún independiente y abierta).
+- `pull_request`: mantener `tools/repo_hygiene.py --base HEAD^1` sobre el merge sintético. El primer padre es la base de la PR, no el límite de un push. Checkout con profundidad 2. Se conserva el contrato de la PR #2, ya incorporado a la base vigente.
 - `push` **a `main`**, sin filtros de rutas: obtener del fichero local `GITHUB_EVENT_PATH` los SHA `before` y `after`. Exigir que `event.after == GITHUB_SHA == HEAD`, con formato de SHA y `ref=refs/heads/main`. Comparar árboles `git diff --diff-filter=AMT --no-renames before HEAD --` usando `repo_hygiene.changed_paths`, después `violations_for_paths`. **No usar `HEAD^1` en push**. Checkout con profundidad 0, credenciales no persistidas.
 - `before = 000...000` (referencia recién creada): no existe árbol anterior; inspeccionar todas las rutas rastreadas del árbol `HEAD` con `git ls-tree -r -z --name-only HEAD`. Deliberadamente más estricto: podrían entrar rutas heredadas de una rama anterior.
 - Push **forzado/rewrite** con `before` accesible: comparar los dos árboles explícitos aunque no sean antecesor y descendiente; no adivinar merge-base ni rango de commits. Un archivo operativo nuevo queda detectado aunque sea introducido en el segundo de tres commits y permanezca en el árbol final.
@@ -34,7 +34,11 @@ Fuentes: [webhook push de GitHub](https://docs.github.com/en/webhooks/webhook-ev
 1. No interpolar SHA ni JSON del evento en el shell: el fichero del evento lo suministra el runner. Validar SHA, ref, Git HEAD y disponibilidad del objeto anterior.
 2. `fetch-depth: 0` cubre rangos largos, **no garantiza** objetos `before` inalcanzables tras reescribir historial. Error verificable, no falso verde; Claude puede estudiar recuperación o canario.
 3. Los cambios de tipo `T` y renombrados se tratan como modificación/nueva ruta (`--no-renames`); separador NUL. No se escanea ni se imprime el contenido de ficheros.
-4. La rama incluye provisionalmente el contrato de `pull_request` de #2 porque esa PR aún no está en la base. **Integrar #2 antes y resolver cualquier solapamiento en YAML**, manteniendo condiciones distintas por evento. No hacer merge automático.
+4. La base actual contiene #2. La sincronización conserva su clasificador estricto (ancestros, UTF-8, escape de diagnósticos) y separa las condiciones por evento. Volver a ejecutar los checks del HEAD sincronizado. No hacer merge automático.
 5. **Pendiente de Claude:** CI GitHub real en Windows y Ubuntu con Python 3.11; comprobación con actionlint (#90); canario supervisado de push a main sobre espejo sin datos reales; revisión cruzada #2/#87/#89/#92. No se han generado acciones sociales ni pushes a main.
 
 **Rollback:** revertir los commits de #88; sin migraciones, cambios de cuentas ni estados operativos.
+
+## Sincronización y pruebas adicionales (10/10/2026)
+
+La rama se ha incorporado a la base actual `ci/test-campaign-parent` mediante commit de reconciliación, usando la versión más estricta de `tools/repo_hygiene.py` de la base. Se añaden regresiones para UTF-8 inválido en el primer push, ancestros sensibles, `before == after` y ausencia de filtros `paths` en el evento `push`. El análisis de commits transitorios sigue separado en #93. La validación de esta revisión corresponde a los nuevos checks del HEAD, no a los checks históricos de 09/10.
