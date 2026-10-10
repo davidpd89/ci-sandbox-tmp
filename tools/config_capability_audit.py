@@ -143,12 +143,12 @@ def _source_literals(path):
 
 def _candidate_keys(root, network, config):
     scanner = root / SCANNERS[network]
-    if not scanner.is_file():
+    if not scanner.is_file() or scanner.is_symlink():
         return []
     # Cobertura conservadora: también siguen vigentes los adaptadores comunes.
     files = (scanner, root / "tools/growth_policy.py", root / "tools/volume_ramp.py",
              root / "tools/tiktok_discovery.py", root / "tools/tiktok_growth_flow.py")
-    literals = set().union(*(_source_literals(path) for path in files))
+    literals = set().union(*(_source_literals(path) for path in files if path.is_file() and not path.is_symlink()))
     candidates = []
     for section in ("budgets", "coverage", "shortlist", "scoring", "surfaces"):
         for key in (config.get(section) or {}):
@@ -177,6 +177,8 @@ def _env_declarations(root):
     if not tools_dir.is_dir():
         return found
     for path in sorted(tools_dir.glob("*.py")):
+        if path.is_symlink():
+            continue
         try:
             tree = ast.parse(path.read_text(encoding="utf-8-sig"))
         except (OSError, UnicodeError, SyntaxError):
@@ -232,6 +234,12 @@ def audit(root=ROOT, *, pipelines=None, cleanup_adapters=None, harvesters=None):
             result["findings"].append({"network": network, "kind": "missing_in_checkout",
                                        "detail": relative, "severity": "info"})
             continue
+        if path.is_symlink() or not path.resolve().is_relative_to(root.resolve()):
+            result["errors"] += 1
+            result["configurations"][network] = {"status": "invalid", "path": relative}
+            result["findings"].append({"network": network, "kind": "invalid_config",
+                                       "detail": "config symlink/path escape", "severity": "error"})
+            continue
         try:
             config = _read_config(path)
         except (OSError, ValueError, UnicodeError) as exc:
@@ -261,7 +269,7 @@ def audit(root=ROOT, *, pipelines=None, cleanup_adapters=None, harvesters=None):
             key for key, enabled in (config.get("surfaces") or {}).items()
             if enabled is False
         ) if isinstance(config.get("surfaces", {}), dict) else []
-        candidates = _candidate_keys(root, network, config)
+        candidates = _candidate_keys(root, network, config) if not errors else []
         entry["unverified_literal_references"] = candidates
         if candidates:
             result["findings"].append({"network": network, "kind": "review_key_references",
