@@ -79,14 +79,19 @@ Se añade `tools/comment_benchmark.py` y
    límite operativo existente.
 3. Califica automáticamente **solo señales observables**: válido según
    `valid_reply`, anclas textuales presentes, pregunta, formato, duplicados
-   exactos y abstenciones. No las denomina «naturalidad» ni «aportación»:
-   coincidencia de palabras puede engañar y no es un juez semántico.
+   exactos y abstenciones. Añade repeticiones **globales entre redes** y
+   métricas/avisos de aperturas y plantillas mediante `reply_corpus_lint.lint`,
+   además del dato histórico por (red, estrategia). No las denomina
+   «naturalidad» ni «aportación»: coincidencia de palabras puede engañar
+   y no es un juez semántico.
 4. `prepare` exporta `blind.csv` (post, hilo, respuesta, siete ejes 0–4,
-   nombre de evaluador vacío) y un `key.csv` **separado** que vincula
-   identificador opaco ↔ estrategia/caso. No se muestra la estrategia al
-   evaluador. Para evitar sesgos, no entregar `key.csv` al evaluador.
-   Identificadores derivados de sal local, **no cifrado**: no usar
-   con datos sensibles ni publicar juicios privados.
+   nombre de evaluador vacío) y un `key.csv` **privado en otro directorio**,
+   que vincula token aleatorio impredecible ↔ estrategia/caso y huella SHA-256
+   del contenido evaluado. Se usan tokens nuevos en cada ejecución;
+   `evaluate --ratings` exige `--key`, valida la huella y nunca reconstruye
+   los tokens a partir de un valor público. No entregar la clave al evaluador.
+   Los tokens impiden reconstrucción trivial, **no cifran el texto** ni ocultan
+   similitudes estilísticas. No guardar datos identificables en este mirror.
 5. `evaluate --ratings` exige **dos evaluadores distintos por texto**.
    Solo compara estrategias puntuadas sobre los mismos casos. Para sugerir
    preferencia por red exige las cuatro categorías pareadas, dos evaluadores,
@@ -105,19 +110,21 @@ Ejecutar en Windows/Ubuntu con Python 3.11:
 ```sh
 python -m pytest tests/test_comment_benchmark.py -q
 python tools/comment_benchmark.py evaluate --input tests/fixtures/comment_benchmark_synthetic.json
-python tools/comment_benchmark.py prepare --input tests/fixtures/comment_benchmark_synthetic.json --blind blind.csv --key key.csv
-# Copiar blind.csv por separado a dos evaluadores; recibir sus filas con judge único:
-python tools/comment_benchmark.py evaluate --input tests/fixtures/comment_benchmark_synthetic.json --ratings ratings.csv --output result.json
+python -c "from pathlib import Path; Path('revision').mkdir(exist_ok=True); Path('privado').mkdir(exist_ok=True)"
+python tools/comment_benchmark.py prepare --input tests/fixtures/comment_benchmark_synthetic.json --blind revision/blind.csv --key privado/key.csv
+# Distribuir SOLO revision/blind.csv a dos evaluadores; unir las valoraciones en ratings.csv con judge único:
+python tools/comment_benchmark.py evaluate --input tests/fixtures/comment_benchmark_synthetic.json --ratings ratings.csv --key privado/key.csv --output result.json
 ```
 
-Usar la misma opción `--salt` en `prepare` y `evaluate`
-si se cambia la sal predeterminada. `prepare` rechaza sobrescrituras
-y rutas coincidentes. El CLI no crea archivos salvo con nombres de
-salida explícitos. Los tests usan directorios temporales.
+No se admite `--salt`: los identificadores son aleatorios y la **única**
+correspondencia válida se conserva en `privado/key.csv`. `prepare` rechaza
+sobrescrituras, rutas coincidentes y directorios compartidos entre los
+CSV de evaluación y clave. El CLI no crea archivos salvo con nombres
+de salida explícitos. Los tests usan directorios temporales.
 
 **Antes (HEAD original):** 0 pares comparables con anotación ciega en
 las nueve redes. **Después (fixtures):** 36 pares, 72 ejemplos, pero solo **4 publicaciones e hilos únicos** replicados en nueve redes; es una prueba de paridad del harness, no representatividad de contenido propio de cada plataforma;
-14 pruebas unitarias específicas; las pruebas de revisión ficticia
+17 pruebas unitarias específicas tras la revisión adicional; las pruebas de revisión ficticia
 demuestran el funcionamiento del cálculo, **no una preferencia real**.
 Evidencia del HEAD de código `9830eddd79bca6336d5357f7c876cff1077d9cb3`:
 [Actions de pruebas 38016943031](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38016943031),
@@ -150,13 +157,32 @@ los ejecutores dentro de #72.
   se descartan fechas ingenuas, negativas y >72 h.
 - **Cobertura de categorías:** cuatro posts de una misma red ya no bastan para proclamar vencedor si falta alguna de las cuatro categorías editoriales; regresión añadida en revisión independiente.
 - **Pareado adversarial:** una versión inicial permitía comparar una estrategia evaluada en cuatro posts con otra evaluada solo en uno. Ahora exige el mismo conjunto de estrategias y la misma cobertura en todos los casos, y excluye ganadores con respuestas inválidas; hay una regresión sintética específica.
-- **Repetición:** informe por red de duplicados exactos, no detector
-  semántico de paráfrasis; el corpus puede mejorar con revisión humana.
+- **Cegamiento robustecido:** tokens aleatorios por estudio, clave externa
+  obligatoria y huella de integridad por pareja; validación de errores de clave.
+- **Repetición:** además del informe por red/estrategia, se registran duplicados
+  normalizados en las nueve redes y métricas compartidas del linter de voz.
+  No es un detector semántico de paráfrasis.
 - **Desbordamiento:** límites editoriales comunes, incluido Instagram,
   sin cambiar límites de publicación en producción.
 - **No se tocó ningún estado real.** No se invoca navegador, móvil,
   SDK ni API. El canario supervisado y la evaluación de comentarios
   reales son trabajos pendientes de Claude; no hay garantía del 100 %.
+
+## Revisión de controlador adicional — 10/10/2026
+
+La pasada adicional corrige el protocolo de cegamiento cuestionado en los
+comentarios inline: tokens aleatorios con `secrets`, clave privada asociada
+a cada texto/contexto y requisito explícito `--key`. Añade visibilidad
+de repetición entre redes sin crear un linter paralelo; reutiliza
+`reply_corpus_lint.lint`. La interfaz anterior basada en `--salt` se
+retira: solo se afecta la utilidad de benchmark, nunca los publicadores.
+
+**Límite epistemológico sin resolver:** no se ha ejecutado una comparación
+entre generadores ni evaluación humana independiente. El dataset sintético
+de cuatro contextos repetidos por red es un control de paridad, **no una
+validación estadística de calidad**. No configurar un ganador de producción
+a partir del fixture. Coordinar el futuro protocolo ciego con #79 antes
+de integrar dos evaluadores diferentes.
 
 ## Retirada
 
