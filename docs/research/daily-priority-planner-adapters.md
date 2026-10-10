@@ -1,5 +1,28 @@
 # PR #103 — Adaptadores read-only de prioridad relacional (10-10-2026)
 
+Fuente primaria: https://github.com/agronholm/apscheduler
+Fecha de consulta: 2026-10-10
+Licencia SPDX: MIT
+Referencia inmutable: https://github.com/agronholm/apscheduler/commit/a660860d841c5426ec3b7ed2d4ada8fe168710f1
+
+## Problema
+Prioridad pura #71 sin adaptadores secos a los nueve productores, con información relacional desigual entre fuentes y tres colas que no deben pisarse.
+
+## Alternativas
+Se contrastan APScheduler, sqlite-durable-workflow y la continuidad #71 + biblioteca estándar; véase la comparativa y commits fijados más abajo.
+
+## Licencias y procedencia
+Los candidatos de terceros analizados son MIT. No se incorpora código ni dependencia de terceros; el único componente invocado es el score propio de #71.
+
+## Decisión
+Adaptador ligero de solo lectura, preflight explícito, deduplicación por #71 y ninguna acción social.
+
+## Pruebas
+Pruebas sintéticas 9x3, 13 tests offline con ejecución en Ubuntu y Windows 3.11, revisión adversarial y benchmark local de lectura; detalles y runs en la sección inferior.
+
+## Retirada
+Revertir commits de la PR o no conectar su invocación. No hay migraciones ni modificaciones persistentes.
+
 ## Alcance y contratos observados
 
 - Repositorio oficial privado inspeccionado **solo mediante conector** en la rama `integracion/crecimiento-2026-10` (árbol `5449513d9b545d0a6a72abf066ab6a779bfdad71`). No se han trasladado cuentas, bases, tokens ni históricos. Se inspeccionaron `tools/x_build_plan.py`, `threads_build_plan.py`, `instagram_build_plan.py`, `pinterest_growth.py`, `loyalty_events.py`, `reciprocity.py`, `post_age_policy.py`, `network_policy_contracts.py`, `round_queue.py` y otros constructores nativos. Las nueve redes existen, pero **no son equivalentes** sus rutas ejecutables: `network_capabilities.py` ni siquiera incluye Instagram en el inventario general de ocho.
