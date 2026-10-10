@@ -1,0 +1,14 @@
+python
+# Fuente exacta: https://github.com/MarshalX/atproto/blob/main/examples/send_post.py
+from atproto import Client
+
+
+def main() -> None:
+    client = Client()
+    client.login('my-handle', 'my-password')
+
+    client.send_post(text='Hello World from Python SDK!')
+
+
+if __name__ == '__main__':
+    main()
