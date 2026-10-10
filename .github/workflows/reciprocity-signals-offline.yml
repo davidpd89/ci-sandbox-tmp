@@ -1,0 +1,44 @@
+name: Señales de reciprocidad (offline)
+
+on:
+  push:
+    paths:
+      - 'tools/reciprocity_signals.py'
+      - 'tools/reciprocity.py'
+      - 'tools/discovery_terms.py'
+      - 'tests/test_reciprocity_signals.py'
+      - 'tests/fixtures/reciprocity_signals_synthetic.json'
+      - '.github/workflows/reciprocity-signals-offline.yml'
+  pull_request:
+    paths:
+      - 'tools/reciprocity_signals.py'
+      - 'tools/reciprocity.py'
+      - 'tools/discovery_terms.py'
+      - 'tests/test_reciprocity_signals.py'
+      - 'tests/fixtures/reciprocity_signals_synthetic.json'
+      - '.github/workflows/reciprocity-signals-offline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-signals:
+    name: señales offline (py3.11)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Compilar módulo y regresiones
+        run: python -m py_compile tools/reciprocity_signals.py tools/discovery_terms.py tools/reciprocity.py tests/test_reciprocity_signals.py
+      - name: Tests offline (sin paquetes ni red)
+        run: python -m unittest discover -s tests -p test_reciprocity_signals.py -v
