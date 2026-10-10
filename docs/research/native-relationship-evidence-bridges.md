@@ -4,6 +4,35 @@ Investigación: 10/10/2026. Rama: `research/relationship-native-evidence-bridges
 Dependencia de integración estricta: **PR #84 abierta**, revisar e integrar antes.
 No merge, no llamadas a cuentas, no datos de producción.
 
+## Problema
+
+Los resultados nativos no acreditan automáticamente una confirmación estable.
+
+## Alternativas
+
+Se compararon eventsourcing, sqlite-utils, python-jsonschema y stdlib; ver tabla detallada al final.
+
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/pyeventsourcing/eventsourcing
+Fecha de consulta: 2026-10-10
+Licencia SPDX: BSD-3-Clause
+Referencia inmutable: https://github.com/pyeventsourcing/eventsourcing/tree/575d42c10a821828639b90178ed56703abe9c9f1
+
+No se copió código de terceros. Se mantiene el almacén de #84.
+
+## Decisión
+
+Normalización mínima y conservadora, sin dependencias externas y sin modificar productores.
+
+## Pruebas
+
+Suite sintética y de integración contra #84; ejecuciones comprobadas por HEAD en GitHub Actions.
+
+## Retirada
+
+Eliminar el puente sin alterar ActionLedger, CSV ni la base secundaria de #84.
+
 ## Antes / después
 
 **Antes:** el ledger #84 acepta eventos confirmados y snapshots de nueve
