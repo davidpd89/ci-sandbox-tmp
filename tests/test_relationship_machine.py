@@ -256,6 +256,28 @@ class PersistenceTests(unittest.TestCase):
                            "WHERE network='bluesky' AND version=2")
         self.assertFalse(self.store.verify_replay("bluesky", "anon"))
 
+    def test_existing_sqlite_schema_drift_rejected_before_mutation(self):
+        # Un esquema casi válido también puede romper la PK de idempotencia.
+        bad_tables = (
+            "CREATE TABLE relation_state (network TEXT PRIMARY KEY, account TEXT NOT NULL)",
+            "CREATE TABLE relation_events (network TEXT NOT NULL, account TEXT NOT NULL, "
+            "event_id TEXT NOT NULL, kind TEXT NOT NULL, lane TEXT NOT NULL, "
+            "occurred_at TEXT NOT NULL, before_state TEXT, after_state TEXT NOT NULL, "
+            "version INTEGER NOT NULL, PRIMARY KEY(network, event_id))",
+        )
+        for n, ddl in enumerate(bad_tables):
+            with self.subTest(ddl=ddl):
+                path = str(pathlib.Path(self.temp.name) / f"drift-{n}.sqlite")
+                table = "relation_state" if n == 0 else "relation_events"
+                with closing(sqlite3.connect(path)) as db:
+                    db.execute(ddl)
+                    db.commit()
+                    before = db.execute(f"PRAGMA table_info({table})").fetchall()
+                with self.assertRaisesRegex(ValueError, "incompatible relationship SQLite schema"):
+                    rm.RelationshipStore(path)
+                with closing(sqlite3.connect(path)) as db:
+                    self.assertEqual(before, db.execute(f"PRAGMA table_info({table})").fetchall())
+
     def test_in_memory_database_requires_real_file_for_restart(self):
         with self.assertRaises(ValueError):
             rm.RelationshipStore(":memory:")
