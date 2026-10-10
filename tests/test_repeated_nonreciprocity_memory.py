@@ -101,6 +101,10 @@ class HistoricalMemoryTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 memory.replace_source("x", "registro.csv", memory.events("mastodon"))
             self.assertEqual(len(memory.events("x")), 2)
+            src.write_text("cuenta,tipo\\na,unfollow\\n", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                memory.import_csv("x", src)
+            self.assertEqual(len(memory.events("x")), 2)
             write([row("b", "block", "2026-10-01")])
             memory.import_csv("x", src)
             self.assertEqual(memory.lookup("x", "a", today=TODAY)["failures"], 0)
