@@ -78,7 +78,10 @@ def _subject(value: str) -> str:
     # URL case in paths and AT-URI RKEYs may be significant; never fold them.
     if "://" in result or result.startswith("did:"):
         return result
-    return result.lstrip("@").casefold()
+    canonical = result.lstrip("@").casefold()
+    if not canonical:
+        raise ValueError("empty normalized subject")
+    return canonical
 
 
 def _clean(value: str, name: str, maximum: int = 512) -> str:
