@@ -27,6 +27,7 @@ HOSTS = {
     "tiktok": {"tiktok.com", "www.tiktok.com", "m.tiktok.com"},
 }
 TRACKERS = frozenset({"fbclid", "gclid", "igshid", "ref_src", "ref_url"})
+SENSITIVE_QUERY = re.compile(r"(?:token|secret|passw|api[_-]?key|oauth|auth|session|cookie|signature|email|phone|code|^key$)", re.I)
 INTENTS = (
     ("pide_recomendacion", re.compile(r"(?:\brecomend[a-záéíóúñ]+\b|\bqu[eé] (?:libro|saga|novela) (?:me |nos )?(?:recomend[aá]is|recomiendan)\b|\bbusco (?:un |una )?(?:libro|novela|romantasy)\b)", re.I)),
     ("debate_lector", re.compile(r"\b(?:tropos?|enemies.to.lovers|final(?:es)?|personajes?|worldbuilding|fantas[ií]a|romantasy|club de lectura)\b", re.I)),
@@ -54,7 +55,10 @@ def canonical_url(value: object) -> str | None:
         if not u.path or u.path == "/":
             return None
         path = u.path.rstrip("/")
-        query = urlencode(sorted((k, v) for k, v in parse_qsl(u.query, keep_blank_values=True)
+        params = parse_qsl(u.query, keep_blank_values=True)
+        if any(SENSITIVE_QUERY.search(k) for k, _ in params):
+            return None  # jamás exportar tokens/códigos recibidos en enlaces de búsqueda
+        query = urlencode(sorted((k, v) for k, v in params
                                  if not k.lower().startswith("utm_") and k.lower() not in TRACKERS))
         return urlunsplit(("https", host, path, query, ""))
     except (ValueError, UnicodeError):
@@ -80,9 +84,10 @@ def network_and_surface(url: str, declared: object = None) -> tuple[str, str] | 
     return net, "post_unverified"
 
 
-def _strength(row: dict) -> tuple[int, int, int]:
+def _strength(row: dict, url: str) -> tuple[int, int, int, int]:
     text = (str(row.get("title") or "") + " " + str(row.get("snippet") or ""))[:2000]
-    return (int(bool(LITERARY.search(text))), int(bool(INTENTS[0][1].search(text))), len(text))
+    return (int(network_and_surface(url, row.get("network")) is not None),
+            int(bool(LITERARY.search(text))), int(bool(INTENTS[0][1].search(text))), len(text))
 
 
 def dedupe_serp(results: list[dict]) -> tuple[list[tuple[dict, str]], Counter]:
@@ -98,7 +103,7 @@ def dedupe_serp(results: list[dict]) -> tuple[list[tuple[dict, str]], Counter]:
         elif url in seen:
             stats["duplicate"] += 1
             index = seen[url]
-            if _strength(row) > _strength(unique[index][0]):
+            if _strength(row, url) > _strength(unique[index][0], url):
                 unique[index] = (row, url)
         else:
             seen[url] = len(unique)
