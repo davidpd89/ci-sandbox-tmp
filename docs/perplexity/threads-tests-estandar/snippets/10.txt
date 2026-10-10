@@ -1,0 +1,7 @@
+json
+// tests/fixtures/threads/container_error.json
+{
+  "id": "threads_container_1",
+  "status": "ERROR",
+  "error_message": "The container failed to complete the publishing process."
+}
