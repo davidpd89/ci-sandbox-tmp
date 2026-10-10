@@ -86,10 +86,12 @@ def test_write_pool_only_explicit_db(tmp_path, monkeypatch):
     def record(db, values):
         calls.append((db, values))
         return len(values)
-    monkeypatch.setitem(sys.modules, "browser_pool", types.SimpleNamespace(
-        connect=lambda path: Connection(), record_post_rows=record))
+    monkeypatch.setitem(sys.modules, "threads_pool", types.SimpleNamespace(
+        connect=lambda path: Connection(), record_posts=record))
     assert bridge.ingest_rows(rows, db_path=path) == 1
-    assert calls[0][1] == rows and calls[1] == "close"
+    assert calls[0][1] == [("lectora", rows[0][1],
+                            "lectora 1 h " + rows[0][2], "import:th_public_export")]
+    assert calls[1] == "close"
 
 
 def test_output_has_no_private_post_text(tmp_path, capsys):
@@ -114,12 +116,12 @@ def test_url_canonicalization_and_deduplication():
 def test_real_sqlite_adapter_when_checkout_available(tmp_path):
     """Prueba del contrato real con browser_pool cuando el checkout lo incluye."""
     import pytest
-    browser_pool = pytest.importorskip("browser_pool")
+    threads_pool = pytest.importorskip("threads_pool")
     rows, _ = bridge.normalize("threads", [item()], now=NOW)
     path = tmp_path / "pool.sqlite3"
     assert bridge.ingest_rows(rows, db_path=path) == 1
     assert bridge.ingest_rows(rows, db_path=path) == 0
-    db = browser_pool.connect(str(path))
+    db = threads_pool.connect(str(path))
     try:
         handle, source, age, seen = db.execute(
             "SELECT handle, source, age_hours, seen_count FROM posts").fetchone()
