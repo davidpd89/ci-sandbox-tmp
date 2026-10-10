@@ -47,8 +47,8 @@ def ingest_observations(network: str, rows: Iterable[Mapping],
                             verification=verification)
         except KeyError:
             diagnostics.append({"row": index, "reason": "missing_required_field"})
-        except AliasError as exc:
-            diagnostics.append({"row": index, "reason": str(exc)})
+        except ValueError as exc:
+            diagnostics.append({"row": index, "reason": str(exc) if isinstance(exc, AliasError) else "invalid_identity_fields"})
         else:
             accepted.append(eid)
     return {"timeline": t, "accepted": accepted, "diagnostics": diagnostics}
