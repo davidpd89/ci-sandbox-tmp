@@ -33,9 +33,9 @@ def inspect(text: str, *, network: str, queue: str | None, log=print) -> list[di
         raise ValueError("red/cola de salida desconocida")
     try:
         audit = import_module("spanish_voice_quality").audit
-    except ImportError as exc:
+    except (ImportError, AttributeError) as exc:
         raise VoicePreflightUnavailable(
-            "Falta dependencia de QA de voz: integrar PR #79 primero"
+            "No está disponible la API spanish_voice_quality.audit"
         ) from exc
     try:
         outcome = audit(text, network=network, queue=queue)
