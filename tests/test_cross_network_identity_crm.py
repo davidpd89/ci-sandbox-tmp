@@ -71,6 +71,27 @@ class PersistenceAndCrmTests(unittest.TestCase):
         self.assertEqual(sum(e["count"] for e in view["events_by_network"]), 2)
         self.assertEqual(before, json.dumps(self.g.to_document(), sort_keys=True))
 
+    def test_conflicting_duplicate_event_ids_fail_closed(self):
+        events = [
+            {"account": self.a, "event_id": "x:1", "kind": "follow", "direction": "inbound"},
+            {"account": self.a, "event_id": "x:1", "kind": "comment", "direction": "inbound"},
+        ]
+        with self.assertRaisesRegex(IdentityError, "event_conflict"):
+            self.g.crm_view(self.a, events)
+        with self.assertRaisesRegex(IdentityError, "event_conflict"):
+            self.g.crm_view(self.a, list(reversed(events)))
+
+    def test_later_duplicate_observation_keeps_thread_reference(self):
+        events = [
+            {"account": self.a, "event_id": "x:1", "kind": "comment", "direction": "inbound"},
+            {"account": self.a, "event_id": "x:1", "kind": "comment",
+             "direction": "inbound", "conversation_ref": "x:thread:1"},
+        ]
+        view = self.g.crm_view(self.a, events)
+        self.assertEqual(sum(e["count"] for e in view["events_by_network"]), 1)
+        self.assertEqual(view["conversation_refs"], [
+            {"account": self.a, "ref": "x:thread:1"}])
+
     def test_crm_reflects_split_but_not_action_writes(self):
         event = {"account": self.b, "event_id": "ig:1", "kind": "follow", "direction": "inbound"}
         self.assertEqual(len(self.g.crm_view(self.a, [event])["events_by_network"]), 1)
