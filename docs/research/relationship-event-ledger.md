@@ -2,6 +2,35 @@
 
 Fecha de investigación: **2026-10-10**. Rama exclusiva `research/74-relationship-event-ledger`; no merge.
 
+## Problema
+
+El estado actual de acciones es mutable y no permite reconstruir historias relacionales.
+
+## Alternativas
+
+Se contrastaron event sourcing completo, sqlite-utils, sqlite-chronicle y SQLite estándar; la tabla de candidatos más abajo detalla actividad y ajuste al problema.
+
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/simonw/sqlite-utils
+Fecha de consulta: 2026-10-10
+Licencia SPDX: Apache-2.0
+Referencia inmutable: https://github.com/simonw/sqlite-utils/tree/6bc1d33d583c54bd69fbdd2071117e2d38c354a1
+
+No se copian fragmentos; se aplica el patrón SQLite documentado. Otros candidatos figuran en la comparativa.
+
+## Decisión
+
+Implementar almacenamiento mínimo con `sqlite3` estándar, sin dependencia nueva; mantener el ledger de reservas inalterado.
+
+## Pruebas
+
+Suite offline en Ubuntu y Windows Python 3.11, con importación sintética, concurrencia, rollback y proyección de seguimiento. Evidencia de los runs asociada a cada HEAD.
+
+## Retirada
+
+Retirar solo la base secundaria tras cerrar conexiones; no modificar ni eliminar los registros operativos.
+
 ## Objetivo y necesidad
 
 Almacenar historial relacional verificable sin interferir en el ledger operativo.
