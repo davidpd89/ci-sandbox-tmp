@@ -1,0 +1,64 @@
+python
+# Nuevo módulo para davidpd89/ci-sandbox-tmp.
+# Base técnica: https://github.com/praw-dev/praw/blob/main/praw/reddit.py
+
+from __future__ import annotations
+
+import os
+import time
+from dataclasses import dataclass
+from typing import Callable, TypeVar
+
+import praw
+from praw.exceptions import PRAWException
+from prawcore.exceptions import ResponseException
+
+
+T = TypeVar("T")
+
+
+@dataclass(frozen=True)
+class RedditClientConfig:
+    client_id: str
+    client_secret: str
+    user_agent: str
+    username: str | None = None
+    password: str | None = None
+
+
+def build_reddit_client() -> praw.Reddit:
+    config = RedditClientConfig(
+        client_id=os.environ["REDDIT_CLIENT_ID"],
+        client_secret=os.environ["REDDIT_CLIENT_SECRET"],
+        user_agent=os.environ.get("REDDIT_USER_AGENT", "davidporto-growth-system/1.0"),
+        username=os.environ.get("REDDIT_USERNAME"),
+        password=os.environ.get("REDDIT_PASSWORD"),
+    )
+
+    return praw.Reddit(
+        client_id=config.client_id,
+        client_secret=config.client_secret,
+        user_agent=config.user_agent,
+        username=config.username,
+        password=config.password,
+    )
+
+
+def with_reddit_retry(
+    operation: Callable[[], T],
+    attempts: int = 3,
+    base_delay: float = 2.0,
+) -> T:
+    last_error: Exception | None = None
+
+    for attempt in range(1, attempts + 1):
+        try:
+            return operation()
+        except (PRAWException, ResponseException) as error:
+            last_error = error
+            if attempt == attempts:
+                raise
+
+            time.sleep(base_delay * (2 ** (attempt - 1)))
+
+    raise RuntimeError("Reddit operation failed") from last_error
