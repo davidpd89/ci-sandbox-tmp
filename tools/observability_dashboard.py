@@ -46,7 +46,7 @@ def _number(value):
         return None
 
 
-def _read_csv(path):
+def _read_csv(path, *, required=()):
     """None significa ausente/ilegible; [] significa fuente válida sin filas."""
     if not path.is_file():
         return None
@@ -55,7 +55,8 @@ def _read_csv(path):
             return None
         with path.open(encoding="utf-8-sig", newline="") as stream:
             reader = csv.DictReader(stream)
-            if not reader.fieldnames or any(not field for field in reader.fieldnames):
+            if (not reader.fieldnames or any(not field for field in reader.fieldnames)
+                    or not set(required).issubset(set(reader.fieldnames))):
                 return None
             rows = []
             for index, row in enumerate(reader):
@@ -230,12 +231,12 @@ def collect(root, *, as_of, days=7):
     now = as_of
     today = now.date()
     cutoff = today - dt.timedelta(days=days - 1)
-    rounds = _read_csv(root / "00_OPERATIVO" / "tiempos_rondas.csv")
+    rounds = _read_csv(root / "00_OPERATIVO" / "tiempos_rondas.csv", required=("fecha", "red", "estado"))
     pending = _pending_counts(root / "00_OPERATIVO" / "_cola_respuestas" / "pending.json", now)
     networks = {}
     for net, queue in NETWORK_QUEUES.items():
         folder = root / ("SISTEMA_DIARIO_" + net.upper())
-        stats = _actions(_read_csv(folder / "registro_interacciones.csv"), cutoff, today)
+        stats = _actions(_read_csv(folder / "registro_interacciones.csv", required=("fecha", "resultado")), cutoff, today)
         round_stats = _rounds(rounds, net, cutoff, today)
         breaker = _breaker(folder / "cache" / "breaker.json", now)
         phase_stats = _phases(folder / "cache", cutoff, today)
