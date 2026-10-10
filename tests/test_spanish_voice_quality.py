@@ -123,6 +123,20 @@ class TestSpanishVoice(unittest.TestCase):
         self.assertEqual(len(accent), 40)
         self.assertTrue(all("capítulo" in v["advice"] for v in accent))
 
+
+    def test_advisory_never_leaks_text_or_blocks_on_logger(self):
+        from spanish_voice_quality import advisory
+        content = "Voy a checar el carro?"
+        messages = []
+        result = advisory(content, network="tiktok", queue="MOBILE",
+                          log=messages.append)
+        self.assertTrue(result)
+        self.assertTrue(messages)
+        self.assertNotIn(content, " ".join(messages))
+        self.assertEqual(advisory(content, network=[]), [])
+        exploding = lambda *_: (_ for _ in ()).throw(OSError("logger ficticio"))
+        self.assertTrue(advisory(content, network="tiktok", log=exploding))
+
     def test_invalid_network_and_queue_types(self):
         for invalid in ([], {}, 2):
             with self.assertRaises(ValueError):
