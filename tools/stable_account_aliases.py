@@ -12,7 +12,7 @@ import re
 NETWORKS = frozenset({"x", "threads", "facebook", "pinterest", "reddit",
                       "bluesky", "mastodon", "tiktok", "instagram"})
 QUEUES = frozenset({"WEB", "API", "MOBILE"})
-_TOKEN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:~-]{0,319}\Z", re.ASCII)
+_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:~-]{0,319}\Z", re.ASCII)
 _DID = re.compile(r"did:(?:plc:[a-z2-7]{24}|web:[A-Za-z0-9._:%-]+)\Z", re.ASCII)
 
 
@@ -75,7 +75,7 @@ def stable_key(network: str, value: str, verification: str) -> str:
         except (ValueError, UnicodeError) as exc:
             raise AliasError("actor_uri_invalid") from exc
         return network + "|https://" + host + u.path.rstrip("/")
-    if verification != "provider_account_id" or not _TOKEN.fullmatch(value):
+    if verification != "provider_account_id" or not _ID_PATTERN.fullmatch(value):
         raise AliasError("provider_id_unverified")
     return network + "|" + value
 
@@ -108,7 +108,7 @@ class AliasTimeline:
     def observe(self, *, evidence_id: str, network: str, handle: str, stable_id: str,
                 observed_at: str, queue: str, source: str, proof: str,
                 verification: str) -> str:
-        if not isinstance(evidence_id, str) or not _TOKEN.fullmatch(evidence_id):
+        if not isinstance(evidence_id, str) or not _ID_PATTERN.fullmatch(evidence_id):
             raise AliasError("evidence_id_invalid")
         if queue not in QUEUES or not all(isinstance(x, str) and 0 < len(x.strip()) <= 300
                                           for x in (source, proof)):
