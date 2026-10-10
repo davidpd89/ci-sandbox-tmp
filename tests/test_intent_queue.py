@@ -247,3 +247,21 @@ def test_invalid_jitter_rolls_back_entire_transition(tmp_path):
         q.no_effect(t, "proof")
     assert q.status(ident)["status"] == "claimed"
     assert q.events(ident)[-1][0] == "claimed"
+
+def test_producer_retry_with_implicit_due_does_not_conflict(env):
+    q, clock = env
+    ident = put(q)
+    clock.now += 200
+    assert put(q) == ident
+    assert q.status(ident)["source_due"] is None
+    assert q.status(ident)["due"] == 1000
+
+def test_conflicting_explicit_schedule_is_rejected(env):
+    q, clock = env
+    ident = put(q, due=1100.0)
+    clock.now += 30
+    assert put(q, due=1100.0) == ident
+    with pytest.raises(IdempotencyConflict):
+        put(q, due=1101.0)
+    with pytest.raises(IdempotencyConflict):
+        put(q)  # el primer emisor pidió una fecha explícita

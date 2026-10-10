@@ -57,6 +57,8 @@ class IntentQueue:
     def __init__(self, path: str, clock: Callable[[], float] = time.time,
                  jitter: Callable[[], float] = random.random):
         self.path = os.fspath(path)
+        if self.path == ":memory:":
+            raise ValueError("usar un archivo SQLite; :memory: no es durable")
         self.clock = clock
         self.jitter = jitter
         os.makedirs(os.path.dirname(os.path.abspath(self.path)), exist_ok=True)
@@ -76,6 +78,7 @@ class IntentQueue:
                     max_attempts INTEGER NOT NULL,
                     priority INTEGER NOT NULL DEFAULT 0,
                     due REAL NOT NULL,
+                    source_due REAL,
                     expires_at REAL,
                     owner TEXT,
                     fence INTEGER NOT NULL DEFAULT 0,
@@ -134,8 +137,9 @@ class IntentQueue:
                 max_attempts: int = 5) -> int:
         if network not in NETWORKS or channel not in CHANNELS:
             raise ValueError("red/canal desconocidos")
-        for name, val in (("intent_key", intent_key), ("kind", kind), ("target", target)):
-            self._required(val, name)
+        intent_key = self._required(intent_key, "intent_key")
+        kind = self._required(kind, "kind")
+        target = self._required(target, "target")
         if type(max_attempts) is not int or not 1 <= max_attempts <= 100:
             raise ValueError("max_attempts fuera de rango")
         if type(priority) is not int or abs(priority) > 10000:
@@ -148,12 +152,13 @@ class IntentQueue:
         if len(serialized.encode("utf-8")) > MAX_PAYLOAD_BYTES:
             raise ValueError("payload demasiado grande")
         now = self.clock()
-        due = now if due is None else float(due)
+        source_due = None if due is None else float(due)
+        due = now if source_due is None else source_due
         expires_at = None if expires_at is None else float(expires_at)
         if not math.isfinite(due) or (expires_at is not None and not math.isfinite(expires_at)):
             raise ValueError("fechas no finitas")
         identity = (network, channel, intent_key, kind, target, serialized,
-                    max_attempts, priority, due, expires_at)
+                    max_attempts, priority, source_due, expires_at)
         with self._tx() as db:
             old = db.execute(
                 "SELECT * FROM intents WHERE network=? AND intent_key=?",
@@ -162,17 +167,17 @@ class IntentQueue:
             if old is not None:
                 existing = (old["network"], old["channel"], old["intent_key"],
                             old["kind"], old["target"], old["payload"],
-                            old["max_attempts"], old["priority"], old["due"],
+                            old["max_attempts"], old["priority"], old["source_due"],
                             old["expires_at"])
                 if existing != identity:
                     raise IdempotencyConflict("intent_key usado con un contenido distinto")
                 return old["id"]
             cur = db.execute(
                 """INSERT INTO intents(network,channel,intent_key,kind,target,payload,
-                    status,max_attempts,priority,due,expires_at,created,updated)
-                    VALUES (?,?,?,?,?,?,'queued',?,?,?,?,?,?)""",
+                    status,max_attempts,priority,due,source_due,expires_at,created,updated)
+                    VALUES (?,?,?,?,?,?,'queued',?,?,?,?,?,?,?)""",
                 (network, channel, intent_key, kind, target, serialized,
-                 max_attempts, priority, due, expires_at, now, now),
+                 max_attempts, priority, due, source_due, expires_at, now, now),
             )
             self._event(db, cur.lastrowid, "enqueued", now=now)
             return cur.lastrowid
@@ -213,7 +218,7 @@ class IntentQueue:
         if channel not in CHANNELS:
             raise ValueError("canal desconocido")
         owner = self._required(owner, "owner")
-        if not 1 <= lease_seconds <= 86400:
+        if not math.isfinite(lease_seconds) or not 1 <= lease_seconds <= 86400:
             raise ValueError("lease_seconds fuera de rango")
         now = self.clock()
         with self._tx() as db:

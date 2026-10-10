@@ -33,11 +33,11 @@ No se incorporan archivos de los candidatos; los hashes, licencias y descartes e
 
 ## Decisión
 
-**Elección:** ampliar mediante composición con SQLite estándar, sin reescribir el ledger existente ni incluir librería adicional. Inspiración de patrones documentados (transactional claim y fencing) no es copia de archivos. Atribución arriba. Se reduce el coste operativo: **0 dependencias, 0 procesos extra obligatorios**, misma tecnología que `ActionLedger`.
+**Elección:** ampliar mediante composición con SQLite estándar, sin reescribir el ledger existente ni incluir librería adicional. Inspiración de patrones documentados (transactional claim y fencing) no es copia de archivos. Atribución arriba. La fecha inicial solicitada se almacena en `source_due` separada del vencimiento `due` mutable para que un reintento del productor no cree falsos conflictos. Se reduce el coste operativo: **0 dependencias, 0 procesos extra obligatorios**, misma tecnología que `ActionLedger`.
 
 ## Contrato y límites
 
-- `enqueue(network, channel, intent_key, kind, target, payload, due, expires_at)`: persistencia y deduplicación estricta `(network, intent_key)`. El productor define la clave **estable**; un reintento con cuerpo o metadatos incompatibles levanta `IdempotencyConflict`.
+- `enqueue(network, channel, intent_key, kind, target, payload, due, expires_at)`: persistencia y deduplicación estricta `(network, intent_key)`. El productor define la clave **estable**; un reintento con cuerpo o metadatos originales incompatibles levanta `IdempotencyConflict`.
 - `claim(channel, owner)`: `BEGIN IMMEDIATE`, selección por prioridad y fecha, incremento monotónico de fence, lease por canal. Cada red puede elegir el canal según su transporte; no se fija X a WEB o Facebook a API.
 - `mark_dispatched(ticket)`: **commit obligatorio antes de toda petición o click**. Si el proceso cae tras esa frontera, `recover` mueve a `uncertain`, nunca a disponible. Si cae antes, recola de forma segura. Ventana «commit antes de I/O pero no se realizó» produce un incierto conservador, no un doble envío.
 - `confirm(ticket, evidence)`: exige evidencia positiva y fence vigente; acepta confirmación tardía del mismo token, no la de otro propietario.
