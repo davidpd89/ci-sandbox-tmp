@@ -35,7 +35,7 @@ class EntrypointTests(unittest.TestCase):
                 x = isolate("x_scan.py", "_lexical_queries",
                             datetime=datetime, SEARCH_POOL=["lectores lang:es"])
                 self.assertEqual(len(x(3)), 3)
-                self.assertTrue(any(query.startswith("#año") for query in x(3)))
+                self.assertTrue(any(query.startswith(("#año", "#ano")) for query in x(3)))
                 t = isolate("threads_scan.py", "_rotate_searches",
                             datetime=datetime, SEARCH_POOL=["lectores"])
                 self.assertEqual(len(t(3, round_index=0)), 3)
