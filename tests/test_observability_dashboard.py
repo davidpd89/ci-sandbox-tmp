@@ -162,6 +162,30 @@ class DashboardTests(unittest.TestCase):
         report = dash.collect(self.root, as_of=NOW)
         self.assertEqual(report["networks"]["x"]["breaker"]["status"], "cerrado")
 
+    def test_official_breaker_timezone_offsets_and_manual_hold(self):
+        path = self.root / "SISTEMA_DIARIO_X" / "cache" / "breaker.json"
+        def set_breaker(value):
+            path.write_text(json.dumps(value), encoding="utf-8")
+            return dash.collect(self.root, as_of=NOW)
+        # circuit_breaker._record_unlocked guarda timestamps Madrid con offset.
+        report = set_breaker({"fails": 1, "open_until": "2026-10-10T15:00:00+02:00"})
+        self.assertEqual(report["networks"]["x"]["breaker"]["status"], "abierto")
+        self.assertEqual(report["queues"]["WEB"]["open_breakers"], 1)
+        report = set_breaker({"fails": 1, "open_until": "2026-10-10T12:29:00+02:00"})
+        self.assertEqual(report["networks"]["x"]["breaker"]["status"], "cerrado")
+        # Una retencion manual no expira cuando open_until es null o pasado.
+        report = set_breaker({"fails": 1, "open_until": None, "manual_hold": True,
+                              "manual_hold_reason": "edge_ack_uncertain"})
+        self.assertEqual(report["networks"]["x"]["breaker"]["status"], "revision_manual")
+        self.assertIn("retencion_manual", report["networks"]["x"]["alerts"])
+        self.assertEqual(report["queues"]["WEB"]["open_breakers"], 1)
+        report = set_breaker({"fails": 1, "open_until": "bad timestamp"})
+        self.assertEqual(report["networks"]["x"]["breaker"]["status"], "invalido")
+        report = set_breaker({"fails": 1})
+        self.assertEqual(report["networks"]["x"]["breaker"]["status"], "invalido")
+        path.write_text("{broken", encoding="utf-8")
+        self.assertEqual(dash.collect(self.root, as_of=NOW)["networks"]["x"]["breaker"]["status"], "invalido")
+
     def test_bad_csv_numeric_values_ignored_and_no_crash(self):
         rounds = self.root / "00_OPERATIVO" / "tiempos_rondas.csv"
         csv_file(rounds, ["fecha", "red", "minutos", "estado"],
