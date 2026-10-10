@@ -205,7 +205,7 @@ class ConfigCapabilityAuditTests(unittest.TestCase):
         # El scanner debe existir para ejercitar _candidate_keys: antes,
         # scoring=7 pasaba validación y causaba TypeError al iterarlo.
         scanner = self.root / audit.SCANNERS["bluesky"]
-        scanner.write_text("SCORING = {}\\n", encoding="utf-8")
+        scanner.write_text("SCORING = {}", encoding="utf-8")
         for invalid in (7, True, "un mapa", ["texto"]):
             with self.subTest(scoring=invalid):
                 cfg = config()
