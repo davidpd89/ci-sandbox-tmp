@@ -216,3 +216,15 @@ sigue con fallo online Ubuntu por no figurar #100 en el manifiesto del
 padre; la validación offline es correcta. Es bloqueo de coordinación,
 no un fallo de tests funcionales de los adaptadores. No se alteró
 research/public-reuse-parent ni se hizo merge.
+
+
+## Revisiones y mejoras adicionales (REV 100 - Iteración Jules)
+
+1. **Deduplicación de cuentas con ID y Handle mixtos:**
+   - Se corrigió la lógica en `tools/native_target_candidate_ingest.py` para fusionar registros de cuenta creados inicialmente solo por `handle:` con registros posteriores que aportan un `account_id` estable para ese mismo handle.
+2. **Preservación de metadatos de Pins (Pinterest):**
+   - Se conservan todos los metadatos explícitos de la estructura `pins` de Pinterest (incluyendo `verified_actions`, `stats`, `author_id`, `created_at`, `language`), evitando la pérdida de información durante la transformación a objetos de post candidatos.
+3. **Extracción de idioma del perfil a nivel de autor:**
+   - Se habilitó la lectura de idioma en las filas de observaciones de perfil/autor (por ejemplo, en las filas de `authors` de Pinterest) manteniendo las comprobaciones estrictas de idioma para que `est` (Estonio) nunca se clasifique erróneamente como español.
+4. **Validación y pruebas:**
+   - Suite expandida a **47 tests** en `tests/test_native_target_candidate_ingest.py` (47/47 passing), cubriendo casos de deduplicación mixta ID/handle, metadatos de Pinterest y vista previa de ranking con el contrato de 9 redes (#66).

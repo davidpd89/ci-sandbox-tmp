@@ -143,12 +143,20 @@ def _observations(network, snapshot):
         authors, pins = snapshot.get("authors"), snapshot.get("pins")
         if not isinstance(authors, list) or not isinstance(pins, list):
             raise ValueError("pinterest snapshot requires authors and pins lists")
-        # Never mistake a Pin title/description for its author's profile bio.
-        return list(authors) + [{"handle": p.get("author"), "url": p.get("url"),
-                                 "text": " ".join(str(p.get(k) or "") for k in ("title", "desc")),
-                                 "source": p.get("query"), "created_at": p.get("created_at"),
-                                 "language": p.get("language"), "_pin": True}
-                                for p in pins if isinstance(p, Mapping)]
+        # Preserve all Pin metadata while ensuring author/handle, source, and text are set.
+        res_pins = []
+        for p in pins:
+            if isinstance(p, Mapping):
+                pin_row = dict(p)
+                if "handle" not in pin_row and "author" in pin_row:
+                    pin_row["handle"] = pin_row["author"]
+                if "source" not in pin_row and "query" in pin_row:
+                    pin_row["source"] = pin_row["query"]
+                if "text" not in pin_row:
+                    pin_row["text"] = " ".join(str(p.get(k) or "") for k in ("title", "desc"))
+                pin_row["_pin"] = True
+                res_pins.append(pin_row)
+        return list(authors) + res_pins
     if not isinstance(snapshot, (list, tuple)):
         raise ValueError("snapshot must be a sequence of native observations")
     if network == "instagram":
@@ -224,6 +232,7 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
     if len(rows) > MAX_OBSERVATIONS:
         raise ValueError("snapshot exceeds configured bounded size")
     diagnostics, grouped = [], {}
+    handle_to_key = {}
     for i, original in enumerate(_native_rows(network, rows)):
         if not isinstance(original, Mapping):
             diagnostics.append({"index": i, "reason": "invalid_observation"})
@@ -236,6 +245,31 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
         if key is None:
             diagnostics.append({"index": i, "reason": "missing_stable_account_identity"})
             continue
+
+        # Check if an existing account key was created solely by handle ("handle:...") and now we have a stable ID for the same handle
+        if stable and handle and handle in handle_to_key:
+            prev_key = handle_to_key[handle]
+            if prev_key != key and prev_key.startswith("handle:") and prev_key in grouped:
+                # Merge handle-keyed account into ID-keyed account
+                prev_acc = grouped.pop(prev_key)
+                if key not in grouped:
+                    grouped[key] = prev_acc
+                    grouped[key]["account_id"] = stable
+                else:
+                    curr = grouped[key]
+                    if curr["bio"] is None: curr["bio"] = prev_acc["bio"]
+                    if curr["followers"] is None: curr["followers"] = prev_acc["followers"]
+                    curr["sources"].update(prev_acc["sources"])
+                    curr["actions"].update(prev_acc["actions"])
+                    if curr["language"] is None: curr["language"] = prev_acc["language"]
+                    if curr["following"] is None: curr["following"] = prev_acc["following"]
+                    if curr["followed_by"] is None: curr["followed_by"] = prev_acc["followed_by"]
+                    for p_url, p_data in prev_acc["posts"].items():
+                        if p_url not in curr["posts"]:
+                            curr["posts"][p_url] = p_data
+                    curr["conflicting_posts"].update(prev_acc["conflicting_posts"])
+                handle_to_key[handle] = key
+
         # In each network, a verified platform ID survives handle changes.
         account = grouped.setdefault(key, {
             "account_id": stable, "handle": handle, "bio": None,
@@ -244,6 +278,8 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
             "language": None, "following": None, "followed_by": None,
             "actions": set(), "lane": lane,
         })
+        if handle:
+            handle_to_key[handle] = key
         if stable and handle and account["handle"] not in (None, handle):
             diagnostics.append({"index": i, "reason": "handle_rename_for_stable_id"})
         if handle:
@@ -266,9 +302,14 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
             account["sources"].update(s.strip() for s in sources
                                        if isinstance(s, str) and 0 < len(s.strip()) <= 200)
         # A post language does not prove the account/profile language.
+        # Profile language can come from row profile_language, profile.language, or profile-level language/lang field on author profile observations.
         profile = row.get("profile") if isinstance(row.get("profile"), Mapping) else {}
-        profile_lang = _language({"language": row.get("profile_language") or
-                                             profile.get("language")})
+        is_pin_row = bool(row.get("_pin"))
+        is_post_row = is_pin_row or bool(row.get("url") or row.get("permalink") or row.get("created_at") or row.get("created_utc"))
+        raw_prof_lang = row.get("profile_language") or profile.get("language")
+        if not raw_prof_lang and not is_post_row:
+            raw_prof_lang = row.get("language") or row.get("lang")
+        profile_lang = _language({"language": raw_prof_lang})
         if profile_lang is not None and account["language"] is None:
             account["language"] = profile_lang
         for rel in ("following", "followed_by"):

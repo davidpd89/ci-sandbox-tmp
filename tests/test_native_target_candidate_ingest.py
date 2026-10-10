@@ -398,6 +398,54 @@ class TestContracts(unittest.TestCase):
         with self.assertRaises(ValueError):
             n.normalize_all({"unknown": []}, as_of=NOW)
 
+    def test_mixed_handle_and_account_id_observations_deduplicate(self):
+        obs1 = dict(SAMPLES["threads"], handle="lectora.1", text="post 1")
+        obs2 = dict(SAMPLES["threads"], handle="lectora.1", account_id="acc_999", text="post 2")
+        out = n.normalize_candidates("threads", [obs1, obs2], as_of=NOW)
+        self.assertEqual(len(out["shortlist"]), 1)
+        self.assertEqual(out["shortlist"][0]["account_id"], "acc_999")
+        self.assertEqual(out["shortlist"][0]["observed_handle"], "lectora.1")
+
+    def test_pinterest_pin_metadata_preserved(self):
+        author_row = {"handle": "pin_author", "bio": "Bio pin", "language": "es"}
+        pin_row = {
+            "author": "pin_author",
+            "url": "https://www.pinterest.com/pin/999888/",
+            "title": "Fantasía oscura",
+            "desc": "Lectura recomendada",
+            "query": "fantasía",
+            "created_at": FRESH,
+            "language": "es",
+            "verified_actions": ["comment"],
+            "author_id": "pin_author_id"
+        }
+        res = n.normalize_candidates("pinterest", {"authors": [author_row], "pins": [pin_row]}, as_of=NOW)
+        self.assertEqual(len(res["shortlist"]), 1)
+        c = res["shortlist"][0]
+        self.assertEqual(c["language"], "es")
+        self.assertEqual(len(c["posts"]), 1)
+        p = c["posts"][0]
+        self.assertEqual(p["url"], "https://www.pinterest.com/pin/999888")
+        self.assertEqual(p["actions"], ["comment"])
+
+    def test_nine_network_rank_preview_integration(self):
+        snapshots = {
+            "x": [dict(SAMPLES["x"], created_at=FRESH, language="es")],
+            "threads": [dict(SAMPLES["threads"], created_at=FRESH, language="es")],
+            "facebook": [dict(SAMPLES["facebook"], account_id="f1", created_at=FRESH, language="es")],
+            "reddit": [dict(SAMPLES["reddit"], created_utc=FRESH, language="es")],
+            "pinterest": {"authors": [{"handle": "p1", "language": "es"}], "pins": [{"author": "p1", "url": "https://www.pinterest.com/pin/111/", "title": "Pin", "created_at": FRESH, "language": "es"}]},
+            "instagram": [dict(SAMPLES["instagram"], created_at=FRESH, language="es")]
+        }
+        normalized = n.normalize_all(snapshots, as_of=NOW)
+        dummy_ranker_called = []
+        def dummy_ranker(snaps, *, as_of, **kw):
+            dummy_ranker_called.append(list(snaps.keys()))
+            return {"ranked": True, "count": sum(len(v.get("shortlist", [])) for v in snaps.values())}
+        res = n.rank_with_66(normalized, dummy_ranker, as_of=NOW)
+        self.assertTrue(res["ranked"])
+        self.assertEqual(sorted(dummy_ranker_called[0]), sorted(n.NETWORKS))
+
 
 if __name__ == "__main__":
     unittest.main()
