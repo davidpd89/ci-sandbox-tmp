@@ -1,0 +1,8 @@
+json
+// Fuente exacta: https://github.com/lakpriya1s/hushreply/blob/main/README.md
+{
+  "id": "link",
+  "keyword": "LINK",
+  "dm": "Hey {{name}}! Here's the link you asked for 👇\n\nhttps://example.com",
+  "publicReply": ["Just sent it to your DMs 📬", "Check your DMs {{name}} 📬"]
+}
