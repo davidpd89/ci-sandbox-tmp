@@ -42,7 +42,9 @@ def changes(root: pathlib.Path, parent: str | None, commit: str, *, statuses: st
         data = git(root, "diff", *opts, parent, commit)
     else:
         data = git(root, "diff-tree", "--root", "-r", "--no-commit-id", *opts, commit)
-    return {s.decode("utf-8", "surrogateescape") for s in data.split(bytes([0])) if s}
+    # Reject invalid UTF-8 rather than treating a malformed path as benign.
+    # The final-tree policy is already strict; transient paths must match it.
+    return {s.decode("utf-8") for s in data.split(bytes([0])) if s}
 
 
 def scan_pr(base: str, head: str, *, root: pathlib.Path = ROOT) -> list[tuple[str, int]]:
