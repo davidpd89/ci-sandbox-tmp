@@ -103,12 +103,19 @@ def _confirmed_outbound(rows, network, today):
     per = defaultdict(lambda: {"comments": 0, "out30": 0, "last": None,
                                "blocked": False, "following": None})
     for row in rows:
-        if not isinstance(row, dict) or (row.get("resultado") or "").casefold() not in CONFIRMED:
+        if not isinstance(row, dict):
             continue
-        if row.get("red") not in (None, "", network):
+        result = row.get("resultado")
+        if not isinstance(result, str) or result.strip().casefold() not in CONFIRMED:
             continue
+        declared_network = row.get("red")
+        if declared_network not in (None, ""):
+            if (not isinstance(declared_network, str)
+                    or declared_network.strip().casefold() != network):
+                continue
         handle = _handle(row.get("cuenta") or row.get("handle"))
-        kind = str(row.get("tipo") or "").casefold()
+        raw_kind = row.get("tipo")
+        kind = raw_kind.strip().casefold() if isinstance(raw_kind, str) else ""
         when = _day(row.get("fecha"))
         if not handle or not when or when > today.isoformat():
             continue
@@ -408,9 +415,9 @@ def read_manifest(path):
             unavailable.add(net)
     for item in sources:
         if item["network"] in unavailable:
-            # Un CSV dañado no invalida el productor ni un follow con
-            # preflight verificado; solo bloquea acciones dependientes
-            # de la cobertura del ledger (reply).
+            # Un CSV dañado puede esconder bloqueos/follows confirmados:
+            # cerrar toda la fuente antes que saltarse el ledger.
+            item["_read_error"] = "registro confirmado ausente o inválido"
             item["_outbound_read_error"] = "registro confirmado ausente o inválido"
     inbound = []
     if manifest.get("verified_inbound_sqlite"):

@@ -240,13 +240,12 @@ class PlannerBridge(unittest.TestCase):
             sources, outbound, inbound = bridge.read_manifest(root / "manifest.json")
             self.assertEqual(outbound, {})
             prepared, diag = bridge.build_snapshot(sources, outbound, inbound, today=TODAY)
-            self.assertEqual([item["network"] for item in prepared["candidates"]],
-                             ["x", "reddit"])
-            self.assertEqual(len([x for x in diag["excluded"] if "reason" in x]), 1)
+            self.assertEqual([item["network"] for item in prepared["candidates"]], ["x"])
+            self.assertEqual(len([x for x in diag["excluded"] if "reason" in x]), 2)
             self.assertEqual(diag["outbound_read_errors"], ["reddit"])
             self.assertEqual(diag["outbound_coverage"]["reddit"], "unknown_or_incomplete")
 
-    def test_malformed_outbound_disables_reply_not_verified_follow(self):
+    def test_malformed_outbound_fails_closed_and_reports_ledger(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             rows = source("x", "WEB", actions=["follow", "reply"],
@@ -266,11 +265,25 @@ class PlannerBridge(unittest.TestCase):
             sources, outbound, inbound = bridge.read_manifest(root / "manifest.json")
             snapshot, diag = bridge.build_snapshot(
                 sources, outbound, inbound, today=TODAY)
-            self.assertEqual(len(snapshot["candidates"]), 1)
-            self.assertTrue(snapshot["candidates"][0]["follow_eligible"])
-            self.assertFalse(snapshot["candidates"][0]["reply_eligible"])
+            self.assertEqual(snapshot["candidates"], [])
             self.assertEqual(diag["outbound_read_errors"], ["x"])
             self.assertEqual(diag["outbound_coverage"]["x"], "unknown_or_incomplete")
+
+    def test_confirmed_ledger_whitespace_and_bad_cells_nine_networks(self):
+        # Normalizar solo registros confirmados: un bloqueo de CSV nunca
+        # se ignora por espacios/mayúsculas, y una celda dañada no aborta.
+        for net in bridge.NETWORKS:
+            outbound = {net: [
+                {"red": net, "cuenta": "reader_" + net,
+                 "fecha": "2026-10-10", "tipo": "follow", "resultado": 99},
+                {"red": f" {net.upper()} ", "cuenta": "reader_" + net,
+                 "fecha": "2026-10-10", "tipo": " Block ",
+                 "resultado": " Confirmado "}]}
+            with self.subTest(network=net):
+                snapshot, diag = bridge.build_snapshot(
+                    [source(net)], outbound, [], today=TODAY)
+                self.assertEqual(snapshot["candidates"], [])
+                self.assertEqual(diag["outbound_read_errors"], [])
 
     def test_missing_or_partial_outbound_does_not_offer_reply(self):
         # Los flags de preflight no acreditan cobertura del histórico entero.
