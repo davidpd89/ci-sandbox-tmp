@@ -15,12 +15,7 @@ from __future__ import annotations
 import sys
 
 import scan_common as _sc
-<<<<<<< HEAD
 from candidate_identity import resolve_post_ref
-=======
-from candidate_identity import resolve_author, resolve_post_ref
-from reply_provenance import carry_decision_proof
->>>>>>> origin/research/public-reuse-parent
 
 VALID = {"follow", "favourite", "boost", "reply"}
 TEXT_KINDS = {"reply"}
@@ -66,11 +61,7 @@ def build(scan, decisions):
                     f"decisión {index}: account fuera de follow_pool {decision['account']!r}"
                 )
             row = {
-<<<<<<< HEAD
                 "handle": entry["acct"],
-=======
-                "handle": resolve_author("mastodon", entry),
->>>>>>> origin/research/public-reuse-parent
                 "kind": kind,
                 "lane": "pool",
                 "account_id": entry.get("account_id"),
@@ -89,11 +80,7 @@ def build(scan, decisions):
             if kind not in (candidate.get("actions") or []):
                 raise ValueError(f"decisión {index}: follow no propuesto para {cid}")
             row = {
-<<<<<<< HEAD
                 "handle": candidate["acct"],
-=======
-                "handle": resolve_author("mastodon", candidate),
->>>>>>> origin/research/public-reuse-parent
                 "kind": kind,
                 "lane": candidate.get("lane", "unknown"),
                 "account_id": candidate.get("account_id"),
@@ -113,20 +100,11 @@ def build(scan, decisions):
             if kind not in (post.get("actions") or []):
                 raise ValueError(f"decisión {index}: {kind} no propuesto para {pid}")
             row = {
-<<<<<<< HEAD
                 "handle": candidate["acct"],
-=======
-                "handle": resolve_author("mastodon", candidate),
->>>>>>> origin/research/public-reuse-parent
                 "kind": kind,
                 "lane": candidate.get("lane", "unknown"),
                 "url": post["url"],
                 "status_id": str(post["status_id"]),
-<<<<<<< HEAD
-=======
-                "created_at": post.get("created_at") or "",
-                "post_created_at": post.get("created_at") or "",
->>>>>>> origin/research/public-reuse-parent
                 "motivo": f"growth:{pid}:" + ",".join(post.get("sources") or []) + (f":src={candidate['first_source']}" if candidate.get("first_source") else ""),
             }
             key = row["status_id"]
@@ -137,12 +115,6 @@ def build(scan, decisions):
                 row["text"] = text.strip()
                 _sc.opinion_guard(post.get("text", ""), row["text"])
                 row["post_text"] = post.get("text", "")  # contexto para el filtro de opinion del ejecutor
-<<<<<<< HEAD
-=======
-                row = carry_decision_proof(row, decision, "mastodon", post.get("text", ""))
-                if row is None:
-                    continue
->>>>>>> origin/research/public-reuse-parent
         if key in seen:
             raise ValueError(f"decisión {index}: acción duplicada {key}")
         seen.add(key)

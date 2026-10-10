@@ -1,9 +1,5 @@
 """El ejecutor Reddit no convierte un voto ya existente o incierto en éxito."""
 import importlib
-<<<<<<< HEAD
-=======
-import datetime as dt
->>>>>>> origin/research/public-reuse-parent
 import pathlib
 import sys
 import types
@@ -18,29 +14,14 @@ fake.AlreadyCommented = type("AlreadyCommented", (RuntimeError,), {})
 fake.comment = lambda *a, **k: None
 fake.vote = lambda *a, **k: "already"
 fake._check_length = lambda text: None
-<<<<<<< HEAD
-=======
-fake._check_micro_comment = lambda text: None
->>>>>>> origin/research/public-reuse-parent
 fake._check_spanish_orthography = lambda text: None
 fake._thread_identity = lambda url: ("libros", "abc")
 fake._normalize_subreddit_name = lambda value: (
     value[3:] if value.startswith("/r/") else value[2:] if value.startswith("r/") else value
 )
 
-<<<<<<< HEAD
 with patch.dict(sys.modules, {"reddit_interact": fake}):
     ex = importlib.import_module("reddit_execute")
-=======
-# Cargar bajo nombre único: otro test puede importar el ejecutor real durante
-# pytest collection; import_module devolvería ese módulo ya cacheado.
-spec = importlib.util.spec_from_file_location(
-    "_reddit_execute_vote_fixture", pathlib.Path(__file__).resolve().parents[1] / "tools" / "reddit_execute.py"
-)
-ex = importlib.util.module_from_spec(spec)
-with patch.dict(sys.modules, {"reddit_interact": fake}):
-    spec.loader.exec_module(ex)
->>>>>>> origin/research/public-reuse-parent
 
 
 class RedditVoteOutcomeTests(unittest.TestCase):
@@ -95,29 +76,18 @@ class RedditVoteOutcomeTests(unittest.TestCase):
         self.assertTrue(result[0]["resultado"].startswith("fallo_plan:"))
         vote.assert_not_called()
 
-<<<<<<< HEAD
     def test_repeated_comment_text_across_subreddits_blocks_whole_plan(self):
         plan = [
             {"kind": "comment", "url": "https://www.reddit.com/r/libros/comments/abc/t/",
              "subreddit": "libros", "text": "Una observación útil."},
             {"kind": "comment", "url": "https://www.reddit.com/r/escribir/comments/def/t/",
              "subreddit": "escribir", "text": "  una   OBSERVACIÓN útil.  "},
-=======
-    def test_repeated_comment_text_across_subreddits_omits_second_comment(self):
-        recent = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=2)).isoformat()
-        plan = [
-            {"kind": "comment", "url": "https://www.reddit.com/r/libros/comments/abc/t/",
-             "subreddit": "libros", "text": "Una observación útil.", "post_created_at": recent},
-            {"kind": "comment", "url": "https://www.reddit.com/r/escribir/comments/def/t/",
-             "subreddit": "escribir", "text": "  una   OBSERVACIÓN útil.  ", "post_created_at": recent},
->>>>>>> origin/research/public-reuse-parent
         ]
 
         def identity(url):
             return ("escribir", "def") if "/r/escribir/" in url else ("libros", "abc")
 
         with patch.object(ex.r, "_thread_identity", side_effect=identity), \
-<<<<<<< HEAD
              patch.object(ex.dup, "check", return_value=[]), \
              patch.object(ex.r, "comment") as comment:
             result = ex.run_plan(plan)
@@ -126,43 +96,17 @@ class RedditVoteOutcomeTests(unittest.TestCase):
         comment.assert_not_called()
 
     def test_duplicate_text_in_later_comment_blocks_first_write(self):
-=======
-             patch.object(ex, "_recent_micro_repeat", return_value=False), \
-             patch.object(ex.sc, "guard_plan_item"), \
-             patch.object(ex.r, "comment") as comment, \
-             patch.object(ex, "_pause", return_value=None):
-            result = ex.run_plan(plan)
-
-        self.assertEqual([x["resultado"] for x in result],
-                         ["saltado_preflight_texto_repetido_lote", "confirmado"])
-        comment.assert_called_once()
-
-    def test_recent_microtext_in_later_comment_does_not_block_valid_vote(self):
->>>>>>> origin/research/public-reuse-parent
         plan = [
             {"kind": "vote", "url": "https://www.reddit.com/r/libros/comments/abc/t/",
              "subreddit": "libros", "direction": "up"},
             {"kind": "comment", "url": "https://www.reddit.com/r/libros/comments/abc/t/",
              "subreddit": "libros", "text": "texto repetido"},
         ]
-<<<<<<< HEAD
         with patch.object(ex.dup, "check", return_value=[("X", "2026-09-20", "@x", "texto repetido")]), \
              patch.object(ex.r, "vote") as vote:
             result = ex.run_plan(plan)
         self.assertTrue(result[0]["resultado"].startswith("fallo_plan:"))
         vote.assert_not_called()
-=======
-        with patch.object(ex, "_recent_micro_repeat", return_value=True), \
-             patch.object(ex.r, "vote", return_value="created") as vote, \
-             patch.object(ex.r, "comment") as comment, \
-             patch.object(ex.sc, "guard_plan_item"), \
-             patch.object(ex, "_pause", return_value=None):
-            result = ex.run_plan(plan)
-        self.assertEqual([x["resultado"] for x in result],
-                         ["saltado_preflight_microtexto_publicado", "confirmado"])
-        vote.assert_called_once()
-        comment.assert_not_called()
->>>>>>> origin/research/public-reuse-parent
 
     def test_local_comment_validation_in_later_item_blocks_first_write(self):
         plan = [

@@ -316,11 +316,7 @@ class ReplyQueueIdentityTests(unittest.TestCase):
                 self.assertEqual(next(iter(got.values()))["context"], "vigente")
 
 
-<<<<<<< HEAD
     def test_two_fresh_legacy_aliases_keep_newer_ttl_and_richer_context(self):
-=======
-    def test_two_fresh_legacy_aliases_keep_newer_snapshot_without_splicing_context(self):
->>>>>>> origin/research/public-reuse-parent
         with tempfile.TemporaryDirectory() as root:
             path = pathlib.Path(root)
             older = {"network": "x", "author": "ana", "text": "La novela fantástica",
@@ -341,14 +337,7 @@ class ReplyQueueIdentityTests(unittest.TestCase):
                 self.assertEqual(len(pending), 1)
                 only = next(iter(pending.values()))
                 self.assertEqual(only["ts"], latest["ts"])
-<<<<<<< HEAD
                 self.assertEqual(only["context"], older["context"])
-=======
-                # Contexto nuevo y bio antigua no deben componerse:
-                # la combinación nunca fue un snapshot de publicación real.
-                self.assertEqual(only["context"], latest["context"])
-                self.assertEqual(only["conversation_context"], latest["conversation_context"])
->>>>>>> origin/research/public-reuse-parent
                 self.assertTrue(only["reply_to_us"])
 
 

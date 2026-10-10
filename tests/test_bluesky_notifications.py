@@ -11,11 +11,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools"))
 stub = types.ModuleType("bluesky_interact")
-<<<<<<< HEAD
 stub._health_check = lambda: (True, "OK", {"handle": "autorademodiaz.bsky.social"})
-=======
-stub._health_check = lambda: (True, "OK", {"handle": "davidportodiaz.bsky.social"})
->>>>>>> origin/research/public-reuse-parent
 stub._get_timeline = lambda: []
 stub._search_posts = lambda *args, **kwargs: []
 stub._own_reply_parent_uris = lambda: set()
@@ -47,11 +43,7 @@ class NotificationTests(unittest.TestCase):
         self.assertEqual(text.count("sugerido=reply | @lectora.bsky.social"), 2)
 
     def test_discarded_handle_and_own_handle_are_case_insensitive(self):
-<<<<<<< HEAD
         own = {"reason": "reply", "author": {"handle": "AUTORADEMODIAZ.BSKY.SOCIAL"},
-=======
-        own = {"reason": "reply", "author": {"handle": "DAVIDPORTODIAZ.BSKY.SOCIAL"},
->>>>>>> origin/research/public-reuse-parent
                "uri": "at://did:plc:author/app.bsky.feed.post/own",
                "record": {"text": "Mi respuesta"}}
         blocked = {"reason": "reply", "author": {"handle": "lectora.bsky.social"},

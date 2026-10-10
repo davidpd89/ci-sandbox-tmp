@@ -8,11 +8,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="repla
 from playwright.sync_api import sync_playwright
 
 CDP_URL = "http://127.0.0.1:9223"
-<<<<<<< HEAD
 OUT_DIR = Path(r"C:\GIT\RRSS_AutoraDemo\09_Usados_video\pixverse\piezas\04-resaca-libro")
-=======
-OUT_DIR = Path(r"C:\GIT\RRSS_DavidPorto\09_Usados_video\pixverse\piezas\04-resaca-libro")
->>>>>>> origin/research/public-reuse-parent
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 PROMPT = (

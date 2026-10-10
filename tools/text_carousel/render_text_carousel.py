@@ -43,11 +43,7 @@ def shell(content: str, counter: str, dark: bool = False, cue: bool = True) -> s
     cue_html = '<div class="cue">DESLIZA →</div>' if cue else ""
     return f"""<!doctype html><html lang='es'><head><meta charset='utf-8'><style>{CSS}</style></head><body>
 <div class='{cls}'>
-<<<<<<< HEAD
 <div class='brandrow'><div>AUTORA DEMO DÍAZ</div><div class='count'>{esc(counter)}</div></div>
-=======
-<div class='brandrow'><div>DAVID PORTO DÍAZ</div><div class='count'>{esc(counter)}</div></div>
->>>>>>> origin/research/public-reuse-parent
 <div class='rule'></div>{content}{cue_html}</div></body></html>"""
 
 

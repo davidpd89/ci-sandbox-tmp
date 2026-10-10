@@ -30,18 +30,13 @@ PY = sys.executable
 LOG = os.path.join(ROOT, "00_OPERATIVO", "tiempos_rondas.csv")
 STARTED = time.time()
 # 08/10 (David): INICIAR_RONDAS con la cola ya en marcha deja «recargar» (cada cadena acaba su ronda, no lanza otra y la cola se relanza sola con el
-<<<<<<< HEAD
 # codigo nuevo, siguiendo donde iba gracias a tiempos_rondas.csv); PARAR_RONDAS deja «parar». Solo cuentan las senales posteriores al arranque del proceso.
-=======
-# codigo nuevo, siguiendo donde iba gracias a tiempos_rondas.csv); PARAR_RONDAS deja «parar». La parada persiste hasta INICIAR; solo la recarga exige senal posterior al arranque.
->>>>>>> origin/research/public-reuse-parent
 RELOAD_FLAG = os.path.join(ROOT, "00_OPERATIVO", "cola_recargar.flag")
 STOP_FLAG = os.path.join(ROOT, "00_OPERATIVO", "cola_parar.flag")
 QUEUE_LOCK_DIR = os.path.join(ROOT, "00_OPERATIVO")        # un bloqueo POR CADENA (cola_rondas_web.lock, ..._api.lock, ..._tiktok.lock)
 
 
 def control_signal(started=None):
-<<<<<<< HEAD
     """«parar» o «recargar» si se pidio despues de arrancar este proceso; None si no."""
     started = STARTED if started is None else started
     for name, path in (("parar", STOP_FLAG), ("recargar", RELOAD_FLAG)):
@@ -50,27 +45,6 @@ def control_signal(started=None):
                 return name
         except OSError:
             pass
-=======
-    """Parada persistente; recarga solo posterior al arranque.
-
-    Una parada no puede caducar al reiniciar la tarea programada. Si el
-    estado del fichero de parada es inaccesible, no se autoriza ejecutar.
-    """
-    started = STARTED if started is None else started
-    try:
-        os.stat(STOP_FLAG)
-    except FileNotFoundError:
-        pass
-    except OSError:
-        return "parar"  # Windows: sharing violation/PermissionError => cerrado
-    else:
-        return "parar"
-    try:
-        if os.path.getmtime(RELOAD_FLAG) >= started:
-            return "recargar"
-    except OSError:
-        pass
->>>>>>> origin/research/public-reuse-parent
     return None
 
 
@@ -365,15 +339,8 @@ def relaunch(script_args, log_name):
         log = open(path, "a", encoding="utf-8")
     except OSError:                          # 08/10: la tarea programada (cmd >>) o PowerShell pueden tener el log abierto en exclusiva: la recarga NUNCA debe morir por eso
         log = open(path[:-4] + f"_{os.getpid()}.log", "a", encoding="utf-8")
-<<<<<<< HEAD
     subprocess.Popen([PY, "-u"] + list(script_args), cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, creationflags=flags,
                      env={**os.environ, "PYTHONIOENCODING": "utf-8"})
-=======
-    with log:
-        subprocess.Popen([PY, "-u"] + list(script_args), cwd=ROOT, stdout=log,
-                         stderr=subprocess.STDOUT, creationflags=flags,
-                         env={**os.environ, "PYTHONIOENCODING": "utf-8"})
->>>>>>> origin/research/public-reuse-parent
 
 
 WEB = ("x", "threads", "facebook", "pinterest")
@@ -382,43 +349,6 @@ PHONE = ("tiktok",)
 SUMMARY = re.compile(r"\[(\w+)\] (\d+) confirmadas (\{.*?\}), (\d+) saltadas, (\d+) fallos")
 _write_lock = threading.Lock()
 
-<<<<<<< HEAD
-=======
-ROUND_CSV_COLUMNS = (
-    "fecha", "red", "inicio", "fin", "minutos", "estado",
-    "confirmadas", "saltadas", "fallos", "codigo",
-)
-
-
-def _append_round_csv(row):
-    """Escritura entre procesos: los tres supervisores comparten el mismo CSV.
-
-    No usar una comprobación exists() fuera del guard: en Windows/spawn dos
-    procesos pueden crear dos cabeceras. El .writer.guard es permanente y no
-    se borra ni al parar; un fallo de lock hace fallar la escritura cerrada.
-    """
-    directory = os.path.dirname(LOG)
-    os.makedirs(directory, exist_ok=True)
-    deadline = time.monotonic() + 15       # el guard del SO es no bloqueante: con varios procesos a la vez hay que reintentar, no perder la fila
-    with _write_lock:
-        while True:
-            with _recovery_guard(LOG + ".writer") as locked:
-                if locked:
-                    with open(LOG, "a+", encoding="utf-8", newline="") as stream:
-                        stream.seek(0, os.SEEK_END)
-                        empty = stream.tell() == 0
-                        writer = csv.writer(stream)
-                        if empty:
-                            writer.writerow(ROUND_CSV_COLUMNS)
-                        writer.writerow(row)
-                        stream.flush()
-                        os.fsync(stream.fileno())
-                    return
-            if time.monotonic() >= deadline:
-                raise OSError("No se pudo adquirir la exclusión de tiempos_rondas.csv")
-            time.sleep(0.02 + random.random() * 0.05)
-
->>>>>>> origin/research/public-reuse-parent
 
 def rounds_target(network):
     """Rondas del dia que pide la etapa/configuracion de la red."""
@@ -454,16 +384,8 @@ def done_today(today=None):
 
 def run_round(network):
     start = datetime.datetime.now()
-<<<<<<< HEAD
     proc = subprocess.run([PY, "-u", os.path.join("tools", "mechanical_round.py"), network], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
                           env={**os.environ, "PYTHONIOENCODING": "utf-8"})
-=======
-    env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
-    if network == "instagram":
-        env.setdefault("RRSS_INSTAGRAM_BACKEND", "mobile")     # desde la cadena del movil, Instagram se ejecuta por la app (la web sigue disponible a mano)
-    proc = subprocess.run([PY, "-u", os.path.join("tools", "mechanical_round.py"), network], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
-                          env=env)
->>>>>>> origin/research/public-reuse-parent
     out = (proc.stdout or "") + (proc.stderr or "")
     end = datetime.datetime.now()
     found = [summary for summary in SUMMARY.findall(out) if summary[0] == network]
@@ -496,7 +418,6 @@ def run_round(network):
     else:
         state = "saltada"             # solo saltos, sin una accion confirmada
     row = [start.date().isoformat(), network, start.strftime("%H:%M:%S"), end.strftime("%H:%M:%S"), round((end - start).total_seconds() / 60, 1), state, confirmed, skipped, failed, proc.returncode]
-<<<<<<< HEAD
     with _write_lock:
         new = not os.path.exists(LOG)
         with open(LOG, "a", newline="", encoding="utf-8") as stream:
@@ -504,9 +425,6 @@ def run_round(network):
             if new:
                 w.writerow(["fecha", "red", "inicio", "fin", "minutos", "estado", "confirmadas", "saltadas", "fallos", "codigo"])
             w.writerow(row)
-=======
-    _append_round_csv(row)
->>>>>>> origin/research/public-reuse-parent
     print(f"[cola] {network}: {state} en {row[4]} min {confirmed} saltadas={skipped} fallos={failed}", flush=True)
     return state
 
@@ -534,30 +452,11 @@ def classify_round_state(state, failures, *, network=None, now=None):
                 import circuit_breaker
                 directory = os.path.join(ROOT, f"SISTEMA_DIARIO_{network.upper()}")
                 breaker = circuit_breaker.load(directory)
-<<<<<<< HEAD
                 opened = breaker.get("open_until") if isinstance(breaker, dict) else None
                 if opened:
                     until = datetime.datetime.fromisoformat(opened)
                     remaining = (until - (now or datetime.datetime.now())).total_seconds()
                     delay = max(delay, remaining)
-=======
-                if not isinstance(breaker, dict):
-                    return False, delay, False         # forma desconocida: sin ampliar la espera, pero nunca crash
-                opened = breaker.get("open_until")
-                if breaker.get("manual_hold"):
-                    # Evitar que la cadena sondee cada 12 minutos un ACK en revisión.
-                    delay = max(delay, 3 * 3600)
-                if opened:
-                    until = datetime.datetime.fromisoformat(opened)
-                    # #59: open_until puede tener offset Madrid; comparar
-                    # instantes, no reloj de pared (DST) ni naive vs aware.
-                    remaining = (circuit_breaker._instant(until) -
-                                 circuit_breaker._instant(now)).total_seconds()
-                    delay = max(delay, remaining)
-                elif breaker.get("invalid"):
-                    # La cuarentena está corrupta: evitar sondear 5 veces/hora.
-                    delay = max(delay, 3 * 3600)
->>>>>>> origin/research/public-reuse-parent
             except (OSError, ValueError, TypeError, OverflowError):
                 # Un breaker malformado no justifica un bucle rápido.
                 pass
@@ -711,14 +610,6 @@ def spaced_chain(network, until, target, done_count, label):
 
 def run_bulk():
     """Sesion de seguimiento masivo de TikTok (tiktok_bulk_follow.py) registrada en el CSV como red `tiktok_bulk`."""
-<<<<<<< HEAD
-=======
-    import circuit_breaker as cb
-    allowed, reason = cb.write_preflight("tiktok")
-    if not allowed:
-        print(f"[cola] tiktok_bulk: cortacircuitos ABIERTO ({reason}); no lanzar móvil", flush=True)
-        return "saltada", "cortacircuitos ABIERTO"
->>>>>>> origin/research/public-reuse-parent
     start = datetime.datetime.now()
     proc = subprocess.run([PY, "-u", os.path.join("tools", "tiktok_bulk_follow.py"), "--max-follows", "120", "--max-minutes", "50"], cwd=ROOT, capture_output=True, text=True,
                           encoding="utf-8", errors="replace", env={**os.environ, "PYTHONIOENCODING": "utf-8"})
@@ -735,7 +626,6 @@ def run_bulk():
     else:
         state = "saltada"
     row = [start.date().isoformat(), "tiktok_bulk", start.strftime("%H:%M:%S"), end.strftime("%H:%M:%S"), round((end - start).total_seconds() / 60, 1), state, "{'follow': %d}" % follows, 0, len(re.findall(r"^(FALLO|PARADA)", out, re.MULTILINE)), proc.returncode]
-<<<<<<< HEAD
     with _write_lock:
         new = not os.path.exists(LOG)
         with open(LOG, "a", newline="", encoding="utf-8") as stream:
@@ -743,66 +633,10 @@ def run_bulk():
             if new:
                 w.writerow(["fecha", "red", "inicio", "fin", "minutos", "estado", "confirmadas", "saltadas", "fallos", "codigo"])
             w.writerow(row)
-=======
-    _append_round_csv(row)
->>>>>>> origin/research/public-reuse-parent
     print(f"[cola] tiktok_bulk: {state} en {row[4]} min follows={follows}", flush=True)
     return state, out
 
 
-<<<<<<< HEAD
-=======
-def tiktok_writes_blocked():
-    """True si una pausa de TikTok, un hold externo o un estado inválido impiden escritura."""
-    try:
-        import circuit_breaker as cb
-        if not cb.write_preflight("tiktok")[0]:
-            return True
-        import tiktok_safety as safety
-        safety.require_writable(kind="like")      # una pausa solo de follows no cuenta: like/comment siguen
-        return False
-    except Exception:
-        return True
-
-
-def instagram_due(now=None, today=None, log=None):
-    """Instagram por el movil mientras TikTok descansa: como mucho 1 ronda buena al dia y 2 intentos fallidos separados 60 min.
-
-    False si ya hubo una ronda ok/parcial hoy, si Instagram tiene su propio descanso de seguridad activo o si el ultimo intento fue hace <60 min.
-    Solo lee el CSV de tiempos y el fichero de descanso: no toca el movil.
-    """
-    now = now or datetime.datetime.now()
-    day = (today or now.date()).isoformat()
-    attempts, last = 0, None
-    try:
-        with open(log or LOG, encoding="utf-8", newline="") as stream:
-            for row in csv.DictReader(stream):
-                if row.get("fecha") != day or row.get("red") != "instagram":
-                    continue
-                if row.get("estado") in ("ok", "parcial"):
-                    return False
-                if row.get("estado") == "ocupada":
-                    continue
-                attempts += 1
-                try:
-                    last = datetime.datetime.combine(now.date(), datetime.time.fromisoformat(row.get("fin") or row["inicio"]))
-                except (ValueError, KeyError):
-                    last = now
-    except OSError:
-        pass
-    if attempts >= 2 or (last is not None and (now - last).total_seconds() < 60 * 60):
-        return False
-    try:
-        import tiktok_safety as safety
-        import instagram_mobile_interact as igm
-        if safety.remaining_minutes(igm.COOLDOWN_PATH) > 0:
-            return False
-    except Exception:       # estado ilegible: no actuar sobre Instagram sin poder leer su descanso
-        return False
-    return True
-
-
->>>>>>> origin/research/public-reuse-parent
 def phone_chain(until, target, done_count):
     """TikTok: respetar descanso móvil; normal y bulk comparten clasificación."""
     left = target - done_count
@@ -828,16 +662,6 @@ def phone_chain(until, target, done_count):
                 wait = min(wait, max(1, normal_due))
             nap_before_deadline(wait, until)
             continue
-<<<<<<< HEAD
-=======
-        if tiktok_writes_blocked():
-            # 09/10: TikTok en descanso por aviso de la plataforma (bulk Y ronda normal comparten el fichero de descanso: fallan al instante).
-            # El movil no se queda ocioso: Instagram por la app hasta que TikTok vuelva a poder escribir.
-            if instagram_due():
-                run_round("instagram")
-            nap_before_deadline(10 * 60, until)
-            continue
->>>>>>> origin/research/public-reuse-parent
         if (not cooling and not (due_normal and last_normal is None)
                 and (not bulk_at or datetime.datetime.now() >= bulk_at)):
             state, _ = run_bulk()
@@ -872,23 +696,12 @@ def phone_chain(until, target, done_count):
                 print("[cola] tiktok: ALERTA errores repetidos", flush=True)
             nap_before_deadline(random.uniform(4 * 60, 9 * 60) if counts else delay, until)
         elif cooling:
-<<<<<<< HEAD
-=======
-            # Limite de seguir en curso: la ronda normal (likes/comentarios) ya se atiende arriba; el rato libre del movil es para Instagram.
-            if instagram_due():
-                run_round("instagram")
->>>>>>> origin/research/public-reuse-parent
             nap_before_deadline(10 * 60, until)
     print("[cola] tiktok: cadena terminada", flush=True)
 
 
 def ensure_reply_worker(until):
     """Trabajador de la cola de respuestas de ChatGPT (reply_queue.py): una sola instancia; las rondas por API/movil encolan y no esperan el navegador."""
-<<<<<<< HEAD
-=======
-    if control_signal() == "parar":
-        return
->>>>>>> origin/research/public-reuse-parent
     try:
         import reply_queue
         if reply_queue.worker_running():
@@ -954,7 +767,6 @@ def launch_independent(argv):
     Cada cadena escribe en 00_OPERATIVO/cola_rondas_<cadena>.log."""
     flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     procs = []
-<<<<<<< HEAD
     for chain in CHAINS:
         log = open(os.path.join(QUEUE_LOCK_DIR, f"cola_rondas_{chain}.log"), "a", encoding="utf-8")
         procs.append(subprocess.Popen([PY, "-u", os.path.join("tools", "round_queue.py"), "--only", chain] + list(argv), cwd=ROOT, stdout=log, stderr=subprocess.STDOUT,
@@ -965,82 +777,22 @@ def launch_independent(argv):
     for proc in procs:
         proc.wait()
     return 0
-=======
-    launch_failures = []
-    for chain in CHAINS:
-        if control_signal() == "parar":
-            print("[cola] parada solicitada: no se lanzan nuevos hijos", flush=True)
-            break
-        try:
-            with open(os.path.join(QUEUE_LOCK_DIR, f"cola_rondas_{chain}.log"),
-                      "a", encoding="utf-8") as log:
-                child = subprocess.Popen(
-                    [PY, "-u", os.path.join("tools", "round_queue.py"), "--only", chain] + list(argv),
-                    cwd=ROOT, stdout=log, stderr=subprocess.STDOUT,
-                    creationflags=flags, env={**os.environ, "PYTHONIOENCODING": "utf-8"})
-        except (OSError, subprocess.SubprocessError) as exc:
-            launch_failures.append(chain)
-            print(f"[cola] ALERTA: no se pudo lanzar {chain} ({type(exc).__name__}); se prueban las demas", flush=True)
-            continue
-        procs.append(child)  # solo hijos iniciados; el contexto cierra el log
-        print(f"[cola] cadena {chain}: proceso {child.pid} (log cola_rondas_{chain}.log)", flush=True)
-        time.sleep(2)
-    for proc in procs:
-        proc.wait()
-    if launch_failures:
-        print(f"[cola] ALERTA: cadenas sin arrancar: {', '.join(launch_failures)}", flush=True)
-    return 1 if launch_failures else 0
-
-
-def requested_chains(argv):
-    """No aceptar rutas arbitrarias como nombres de cadenas en los locks."""
-    if "--only" not in argv:
-        return set(CHAINS)
-    try:
-        raw = argv[argv.index("--only") + 1]
-    except IndexError as exc:
-        raise ValueError("--only requiere web,api,tiktok") from exc
-    parts = raw.split(",")
-    if not parts or any(part not in CHAINS for part in parts):
-        raise ValueError("--only solo admite web,api,tiktok")
-    return set(parts)
->>>>>>> origin/research/public-reuse-parent
 
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
-<<<<<<< HEAD
     sys.stdout.reconfigure(encoding="utf-8")
     if "--lock-probe" in argv:
         return _run_lock_probe(argv)
     if "--only" not in argv and "--dry" not in argv:
         return launch_independent(argv)
-=======
-    if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(encoding="utf-8")
-    if "--lock-probe" in argv:
-        return _run_lock_probe(argv)
-    if "--dry" not in argv and control_signal() == "parar":
-        print("[cola] parada persistente: no se arranca hasta usar INICIAR_RONDAS", flush=True)
-        return 0
-    if "--only" not in argv and "--dry" not in argv:
-        return launch_independent(argv)
-    try:
-        wanted = requested_chains(argv)
-    except ValueError as exc:
-        print(f"[cola] argumentos invalidos: {exc}", flush=True)
-        return 2
->>>>>>> origin/research/public-reuse-parent
     until = deadline_from(argv[argv.index("--until") + 1] if "--until" in argv else "23:20")
     targets = {n: rounds_target(n) for n in WEB + API + PHONE}
     done = done_today()
     print(f"[cola] objetivos {targets}; ya hechas hoy {done}; hasta {until:%H:%M}", flush=True)
     if "--dry" in argv:
         return 0
-<<<<<<< HEAD
     wanted = set(argv[argv.index("--only") + 1].split(",")) if "--only" in argv else {"web", "api", "tiktok"}
-=======
->>>>>>> origin/research/public-reuse-parent
     mine = {chain for chain in sorted(wanted) if take_chain_lock(chain)}
     for chain in sorted(wanted - mine):
         print(f"[cola] la cadena {chain} ya la lleva otra cola viva: esta no la repite", flush=True)
@@ -1049,26 +801,12 @@ def main(argv=None):
         return 0
     heartbeat_stop = threading.Event()
     heartbeat = threading.Thread(target=_heartbeat_owned_locks, args=(tuple(mine), heartbeat_stop), daemon=True)
-<<<<<<< HEAD
     heartbeat.start()
     try:
         return _run_chains(argv, until, targets, done, only=mine)
     finally:
         heartbeat_stop.set()
         heartbeat.join(timeout=2)
-=======
-    heartbeat_started = False
-    try:
-        heartbeat.start()
-        heartbeat_started = True
-        return _run_chains(argv, until, targets, done, only=mine)
-    finally:
-        heartbeat_stop.set()
-        # Jamás liberar locks si la hebra de latido aún pudiera hacer utime
-        # sobre ellos. También liberar si Thread.start() falló antes del try.
-        if heartbeat_started:
-            heartbeat.join()
->>>>>>> origin/research/public-reuse-parent
         released = {chain: release_chain_lock(chain) for chain in mine}
         if control_signal() == "recargar" and all(released.values()):
             # No relanzar hasta confirmar que liberamos todos los locks.
@@ -1081,12 +819,6 @@ def main(argv=None):
 
 
 def _run_chains(argv, until, targets, done, only=None):
-<<<<<<< HEAD
-=======
-    if control_signal() == "parar":
-        print("[cola] parada solicitada: no se inician rondas ni trabajador", flush=True)
-        return 0
->>>>>>> origin/research/public-reuse-parent
     ensure_reply_worker(until)
     only = only if only is not None else (set(argv[argv.index("--only") + 1].split(",")) if "--only" in argv else {"web", "api", "tiktok"})
     chains = []
@@ -1097,7 +829,6 @@ def _run_chains(argv, until, targets, done, only=None):
             chains.append(threading.Thread(target=spaced_chain, args=(network, until, targets[network], done.get(network, 0), network), name=network, daemon=True))
     if "tiktok" in only:
         chains.append(threading.Thread(target=phone_chain, args=(until, targets["tiktok"], done.get("tiktok", 0)), name="tiktok", daemon=True))
-<<<<<<< HEAD
     for thread in chains:
         thread.start()
         nap(5)
@@ -1105,32 +836,6 @@ def _run_chains(argv, until, targets, done, only=None):
         thread.join()
     print("[cola] " + {"parar": "parada pedida (PARAR_RONDAS)", "recargar": "rondas en curso terminadas; recargando"}.get(control_signal(), "fin del dia"), flush=True)
     return 0
-=======
-    started_threads = []
-    startup_failed = False
-    try:
-        for thread in chains:
-            if control_signal() == "parar":
-                break
-            try:
-                thread.start()
-            except (RuntimeError, OSError) as exc:
-                # No liberar el lock del proceso mientras otras cadenas vivas
-                # sigan trabajando bajo él; tampoco iniciar cadenas nuevas.
-                print(f"[cola] no se pudo arrancar {thread.name}: {type(exc).__name__}",
-                      flush=True)
-                startup_failed = True
-                break
-            started_threads.append(thread)
-            nap(5)
-    finally:
-        # Se espera también si nap/control_signal/Thread.start falla: main()
-        # suelta sus candados únicamente DESPUÉS del fin de los hilos vivos.
-        for thread in started_threads:
-            thread.join()
-    print("[cola] " + {"parar": "parada pedida (PARAR_RONDAS)", "recargar": "rondas en curso terminadas; recargando"}.get(control_signal(), "fin del dia"), flush=True)
-    return 1 if startup_failed else 0
->>>>>>> origin/research/public-reuse-parent
 
 
 if __name__ == "__main__":

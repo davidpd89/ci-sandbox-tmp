@@ -117,31 +117,6 @@ def _candidate_from_snapshot(snapshot, *, config, known, followed, discarded):
     }
 
 
-<<<<<<< HEAD
-=======
-# Contrato cerrado de roles. Un source desconocido puede conservarse para
-# revisión, pero no acreditar afinidad, recurrencia o un plan automático.
-TRUSTED_CANDIDATE_SOURCES = frozenset({
-    "for_you", "following", "video_search:author", "video_search:comment",
-    "user_search", "inbox:new_follower", "seed:profile", "seed:post",
-    "author_post",
-})
-ACTIONABLE_POST_SOURCES = frozenset({
-    "for_you", "following", "video_search:author", "seed:post", "author_post",
-})
-
-# Relaciones observables fuente/superficie. Un `provenance` copiado desde
-# otro tipo de pantalla NO constituye prueba de autoría ni de comentario.
-PROVENANCE_ROLES = {
-    "user_search": frozenset({"user_search"}),
-    "video_search": frozenset({"video_search:author", "video_search:comment"}),
-    "seed_comments": frozenset({"seed:profile", "seed:post", "video_search:comment"}),
-    "author_posts": frozenset({"author_post"}),
-    "inbox": frozenset({"inbox:new_follower"}),
-}
-
-
->>>>>>> origin/research/public-reuse-parent
 _CREATOR_WORDS = ("editorial", "libreria", "librería", "escritor", "escritora", "autor", "autora", "booktok")
 
 
@@ -156,10 +131,6 @@ def _lane(item):
 
 
 def _compact_shortlist(rows, *, limit, config=None):
-<<<<<<< HEAD
-=======
-    import tiktok_discovery as disc
->>>>>>> origin/research/public-reuse-parent
     grouped = {}
     for row in rows:
         key = row["handle"].casefold()
@@ -169,7 +140,6 @@ def _compact_shortlist(rows, *, limit, config=None):
             "known_date": row["known_date"],
             "followed": row["followed"],
             "sources": set(),
-<<<<<<< HEAD
             "posts": [],
             "score": 0,
         })
@@ -182,69 +152,6 @@ def _compact_shortlist(rows, *, limit, config=None):
         post_key = (row.get("url"), row["caption"])
         if row["source"] in ("user_search", "video_search:comment"):
             continue  # filas de persona: no son un post accionable
-=======
-            "trusted_sources": set(),
-            "provenance": {},
-            "posts": [],
-            "score": 0,
-            "quality_decisions": set(),
-            "quality_reasons": set(),
-        })
-        # Solo se evalua calidad con filas de fuente reconocida: una fuente desconocida
-        # (p. ej. frontier historico) no puede aportar la evidencia que aprueba un follow.
-        if config and config.get("niche_terms") and row["source"] in TRUSTED_CANDIDATE_SOURCES:
-            evidence = disc.assess_quality(row, config)
-            item["quality_decisions"].add(evidence["decision"])
-            if evidence["decision"] != "eligible":
-                item["quality_reasons"].add(evidence["reason"])
-        # El orden de filas/checkpoints no puede revocar la evidencia de
-        # un follow ya existente ni de una solicitud pendiente.
-        item["known"] = bool(item["known"] or row["known"])
-        item["followed"] = bool(
-            item["followed"] or row["followed"]
-            or row.get("relation") in ("following", "friends", "requested")
-        )
-        for extra in ("name", "bio", "followers", "relation", "proof", "comment_text"):
-            if row.get(extra) and not item.get(extra):
-                item[extra] = row[extra]
-        source = row["source"]
-        item["sources"].add(source)
-        trusted = source in TRUSTED_CANDIDATE_SOURCES
-        if trusted:
-            item["trusted_sources"].add(source)
-            item.setdefault("contexts", set()).add(row.get("ctx") or source)
-        # Los hallazgos repetidos por frontier son evidencia de procedencia,
-        # no otra acción ni otra puntuación de actividad del mismo perfil.
-        origins = [row.get("provenance"), *(row.get("extra_provenance") or [])]
-        for origin in origins:
-            if not isinstance(origin, dict):
-                continue
-            origin_source = origin.get("source")
-            if not isinstance(origin_source, str) or not origin_source:
-                continue
-            if origin is row.get("provenance") and origin_source != row["source"]:
-                continue  # metadato contradictorio: no reinterpretar autorías
-            surface = str(origin.get("surface") or "")
-            query = str(origin.get("query") or "")
-            phase = str(origin.get("phase") or "direct")
-            if (origin_source not in TRUSTED_CANDIDATE_SOURCES
-                    or phase not in ("direct", "frontier")
-                    or (surface and origin_source not in PROVENANCE_ROLES.get(surface, ()))):
-                continue
-            item["provenance"][(surface, query, origin_source, phase)] = {
-                "surface": surface, "query": query,
-                "source": origin_source, "phase": phase,
-            }
-        # Nunca permitir que un checkpoint legado o source inesperado
-        # eleve el score de una observación fiable del mismo handle.
-        if trusted:
-            item["score"] = max(item["score"], row.get("score", row["niche_hits"]))
-        post_key = (row.get("url"), row["caption"])
-        # Nunca convertir un origen antiguo/desconocido (incluido
-        # frontier:video_search:comment) en vídeo propio accionable.
-        if source not in ACTIONABLE_POST_SOURCES:
-            continue
->>>>>>> origin/research/public-reuse-parent
         if not any((p.get("url"), p["caption"]) == post_key for p in item["posts"]):
             actions = []
             if row.get("url"):
@@ -265,26 +172,10 @@ def _compact_shortlist(rows, *, limit, config=None):
     for item in grouped.values():
         # independent_source_count: en cuántos contextos INDEPENDIENTES (queries/semillas/superficies)
         # aparece. 3 búsquedas distintas + 2 semillas valen mucho más que 7 resultados de la misma query.
-<<<<<<< HEAD
         independent = max(len(item.get("contexts", ())), len(item["sources"]))
         weight = float(((config or {}).get("scoring") or {}).get("recurrence_weight", 1.5))
         item["score"] += min(4, max(0, independent - 1)) * weight
         item["independent"] = independent
-=======
-        independent = max(len(item.get("contexts", ())), len(item["trusted_sources"]))
-        weight = float(((config or {}).get("scoring") or {}).get("recurrence_weight", 1.5))
-        item["score"] += min(4, max(0, independent - 1)) * weight
-        item["independent"] = independent
-        # Mantener compatible la vista de análisis sin configuración; en el
-        # flujo real sí hay config y no se aprueba un nombre aislado.
-        blockers = {"ultima_publicacion_antigua", "fecha_actividad_inconsistente",
-                    "fecha_actividad_invalida", "cuenta_organizacion",
-                    "idioma_no_confirmado"}
-        item["quality"] = (
-            "eligible" if "eligible" in item["quality_decisions"] and
-            not (item["quality_reasons"] & blockers) else "review"
-        ) if config and config.get("niche_terms") else "unassessed"
->>>>>>> origin/research/public-reuse-parent
 
     ranked = sorted(
         grouped.values(),
@@ -301,13 +192,7 @@ def _compact_shortlist(rows, *, limit, config=None):
         cid = f"T{ci:03d}"
         candidate_actions = []
         min_follow = float(((config or {}).get("scoring") or {}).get("min_follow_score", 2))
-<<<<<<< HEAD
         if not item["followed"] and item["score"] >= min_follow:
-=======
-        if (item["trusted_sources"] and not item["followed"]
-                and item["score"] >= min_follow
-                and item["quality"] in ("eligible", "unassessed")):
->>>>>>> origin/research/public-reuse-parent
             candidate_actions.append("follow")
         posts = []
         for pi, post in enumerate(
@@ -328,18 +213,9 @@ def _compact_shortlist(rows, *, limit, config=None):
             "known_date": item["known_date"],
             "followed": item["followed"],
             "sources": sorted(item["sources"]),
-<<<<<<< HEAD
             "actions": candidate_actions,
             "posts": posts,
             "score": round(item["score"], 1),
-=======
-            "provenance": [item["provenance"][key] for key in sorted(item["provenance"])],
-            "actions": candidate_actions,
-            "posts": posts,
-            "score": round(item["score"], 1),
-            "quality": item["quality"],
-            "quality_reasons": sorted(item["quality_reasons"]),
->>>>>>> origin/research/public-reuse-parent
             "name": item.get("name", ""),
             "bio": (item.get("bio") or "")[:200],
             "followers": item.get("followers"),
@@ -368,36 +244,8 @@ def _checkpoint(rows_new, path=CHECKPOINT):
 def load_checkpoint(path=CHECKPOINT):
     if not os.path.exists(path):
         return []
-<<<<<<< HEAD
     with open(path, encoding="utf-8") as stream:
         return [json.loads(line) for line in stream if line.strip()]
-=======
-    rows = []
-    # Compatibilidad de lectura únicamente: los checkpoints antiguos de
-    # frontier reetiquetaban autores/comentaristas y carecían de provenance.
-    # No escribir ni migrar silenciosamente el historial original.
-    recognized = {
-        "video_search:comment", "video_search:author",
-        "seed:profile", "seed:post", "user_search",
-        "inbox:new_follower", "author_post",
-    }
-    with open(path, encoding="utf-8") as stream:
-        for line in stream:
-            if not line.strip():
-                continue
-            row = json.loads(line)
-            source = row.get("source") if isinstance(row, dict) else None
-            if isinstance(source, str) and source.startswith("frontier:"):
-                original = source[len("frontier:"):]
-                if original in recognized:
-                    row["source"] = original
-                    row.setdefault("provenance", {
-                        "surface": "", "query": "", "source": original,
-                        "phase": "frontier",
-                    })
-            rows.append(row)
-    return rows
->>>>>>> origin/research/public-reuse-parent
 
 
 def _progress(message):
@@ -478,13 +326,7 @@ def build_auto_plan(shortlist, config):
     plan = []
     for candidate in shortlist:
         lane = candidate.get("lane") or "unknown"
-<<<<<<< HEAD
         if "follow" in (candidate.get("actions") or []) and candidate["score"] >= follow_min:
-=======
-        if ("follow" in (candidate.get("actions") or [])
-                and candidate["score"] >= follow_min
-                and candidate.get("quality") == "eligible"):
->>>>>>> origin/research/public-reuse-parent
             plan.append({
                 "kind": "follow", "handle": candidate["handle"], "lane": lane,
                 "motivo": f"auto:{candidate['id']}:score={candidate['score']}:" + ",".join(candidate.get("sources") or []),
@@ -495,10 +337,6 @@ def build_auto_plan(shortlist, config):
                     plan.append({
                         "kind": "like", "handle": candidate["handle"], "lane": lane, "url": post["url"],
                         "post_ref": post.get("post_ref"),
-<<<<<<< HEAD
-=======
-                        "post_created_at": post.get("created_at") or post.get("create_time") or post.get("created_time") or "",
->>>>>>> origin/research/public-reuse-parent
                         "post_resumen": (post.get("caption") or "")[:300],
                         "motivo": f"auto:{post['id']}:{post.get('source') or 'unknown'}",
                     })
@@ -570,12 +408,7 @@ def _run_frontier(nav, config, ctx, rows, known, followed, stats):
     n = int(b.get("frontier_seeds", 3))
     if n <= 0 or not config.get("surfaces", {}).get("seed_comments"):
         return
-<<<<<<< HEAD
     taken = {r["handle"].casefold() for r in rows}
-=======
-    existing_rows = {r["handle"].casefold(): r for r in rows}
-    taken = set(existing_rows)
->>>>>>> origin/research/public-reuse-parent
     ranked = sorted(
         [r for r in rows if r.get("score", 0) >= float(config["scoring"].get("frontier_min_score", 7))
          and (r.get("followers") or 0) >= int(config["scoring"].get("frontier_min_followers", 300))
@@ -594,7 +427,6 @@ def _run_frontier(nav, config, ctx, rows, known, followed, stats):
         valid, st = disc.run_surface(nav, "seed_comments", handle, config, ctx)
         new_rows = 0
         for item in valid:
-<<<<<<< HEAD
             if item["handle"].casefold() in taken:
                 continue
             taken.add(item["handle"].casefold())
@@ -607,36 +439,6 @@ def _run_frontier(nav, config, ctx, rows, known, followed, stats):
                 "followed": item["handle"].casefold() in followed,
                 "caption": item.get("caption") or item.get("comment_text") or item.get("bio") or "",
             })
-=======
-            key = item["handle"].casefold()
-            raw_origin = item.get("provenance")
-            origin = ({**raw_origin, "phase": "frontier"}
-                      if isinstance(raw_origin, dict)
-                      and raw_origin.get("source") == item.get("source") else None)
-            if key in taken:
-                # Evitar perder una segunda semilla sin duplicar ni aumentar
-                # el score, los posts o los follows del candidato ya conocido.
-                if origin is not None:
-                    other = existing_rows[key].setdefault("extra_provenance", [])
-                    if origin not in other:
-                        other.append(origin)
-                continue
-            taken.add(key)
-            new_rows += 1
-            candidate = {
-                **item,
-                # El rol no cambia al entrar por frontier: sigue siendo
-                # comentarista del vídeo ajeno, no autor de esa caption.
-                "provenance": origin,
-                "niche_hits": max(1, int(item["score"])),
-                "known": key in known,
-                "known_date": known.get(key),
-                "followed": key in followed,
-                "caption": item.get("caption") or item.get("comment_text") or item.get("bio") or "",
-            }
-            rows.append(candidate)
-            existing_rows[key] = candidate
->>>>>>> origin/research/public-reuse-parent
         for key in ("rows", "valid", "new"):
             stats_out[key] += st[key]
         if new_rows < 2:      # rama poco productiva: no se sigue profundizando

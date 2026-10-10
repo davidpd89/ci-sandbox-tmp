@@ -8,11 +8,6 @@ from __future__ import annotations
 import json
 import sys
 
-<<<<<<< HEAD
-=======
-from reply_provenance import carry_decision_proof
-
->>>>>>> origin/research/public-reuse-parent
 VALID = {"follow", "like", "comment"}
 TEXT_KINDS = {"comment"}
 
@@ -84,10 +79,6 @@ def build(scan, decisions):
                 "handle": candidate["handle"],
                 "url": url,
                 "post_ref": post.get("post_ref"),
-<<<<<<< HEAD
-=======
-                "post_created_at": post.get("created_at") or post.get("create_time") or post.get("created_time") or "",
->>>>>>> origin/research/public-reuse-parent
                 "post_resumen": (post.get("caption") or "")[:500],
                 "motivo": f"growth:{pid}:{post.get('source') or 'unknown'}",
             }
@@ -97,13 +88,6 @@ def build(scan, decisions):
                 if not isinstance(text, str) or not text.strip():
                     raise ValueError(f"decisión {index}: comment exige text")
                 row["text"] = text.strip()
-<<<<<<< HEAD
-=======
-                row = carry_decision_proof(row, decision, "tiktok",
-                                           post.get("caption", ""), source_limit=None)
-                if row is None:
-                    continue
->>>>>>> origin/research/public-reuse-parent
         if key in auto_keys:
             continue  # ya decidida mecánicamente (auto_plan)
         if key in seen:

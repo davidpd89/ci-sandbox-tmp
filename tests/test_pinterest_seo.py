@@ -14,11 +14,7 @@ def run_clean(code):
 
 
 BASE = ("{'kind': 'manual_pin', 'text': %(text)r, 'media': ['a.png'], 'media_alt_text': ['Portada de un libro'],"
-<<<<<<< HEAD
         " 'board_name': %(board)r, 'pin_title': %(title)r, 'pin_link': 'https://autorademodiaz.com/guias/lectura/'}")
-=======
-        " 'board_name': %(board)r, 'pin_title': %(title)r, 'pin_link': 'https://davidportodiaz.com/guias/lectura/'}")
->>>>>>> origin/research/public-reuse-parent
 
 
 class PinterestSeoTests(unittest.TestCase):

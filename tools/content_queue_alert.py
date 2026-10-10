@@ -129,7 +129,6 @@ def main(argv=None):
     verify = "--no-verify" not in argv
     now = datetime.datetime.now(ZoneInfo("Europe/Madrid")).replace(tzinfo=None)
     results = {red: classify(red, now, verify) for red in cq.RED_FOLDERS}
-<<<<<<< HEAD
     import voice_output_finalization as voice
     # Salida editorial manual: no implica un publicador remoto ni una cola WEB.
     # Se audita solo la ficha pendiente y una vez por campo, sin editar el MD.
@@ -145,8 +144,6 @@ def main(argv=None):
                 # Este flujo no emite publicaciones remotas.
                 print(f"[{red}] auditor_es_no_disponible; se conserva el informe manual")
                 break
-=======
->>>>>>> origin/research/public-reuse-parent
     lines = [f"# Publicaciones pendientes ({now:%d/%m/%Y %H:%M})", "",
              "Generado por `tools/content_queue_alert.py` en cada ronda. No publica nada: avisa de lo vencido y de lo de hoy. Las de Bluesky, Mastodon y Threads se comprueban en la red y las "
              "ya publicadas se marcan solas; en el resto, «sin verificar» significa que hay que mirar a mano si ya salio.", ""]

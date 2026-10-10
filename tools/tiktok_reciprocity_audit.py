@@ -26,11 +26,6 @@ import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 import tiktok_bulk_follow as bulk
-<<<<<<< HEAD
-=======
-import tiktok_cohort_adapter as cohorts
-from cohort_metrics import TZ
->>>>>>> origin/research/public-reuse-parent
 
 ROOT = bulk.ROOT
 AUDIT_PATH = os.path.join(ROOT, "reciprocity_audit.json")
@@ -220,17 +215,6 @@ def summarize(follows, reciprocal):
     return dict(sorted(stats.items(), key=lambda kv: (-kv[1]["rate"], -kv[1]["followed"], kv[0])))
 
 
-<<<<<<< HEAD
-=======
-def _valid_snapshot_day(value):
-    try:
-        datetime.date.fromisoformat(value)
-    except (TypeError, ValueError):
-        return False
-    return True
-
-
->>>>>>> origin/research/public-reuse-parent
 def load_audit_state(path=AUDIT_PATH):
     """No reiniciar la historia si el fichero existente está dañado."""
     try:
@@ -249,16 +233,6 @@ def load_audit_state(path=AUDIT_PATH):
             raise ValueError("fecha observed_since inválida") from exc
     if not isinstance(data.get("first_back_date", {}), dict):
         raise ValueError("first_back_date no es un objeto")
-<<<<<<< HEAD
-=======
-    complete_dates = data.get("complete_dates", [])
-    if not isinstance(complete_dates, list) or any(
-        not isinstance(value, str) or not _valid_snapshot_day(value)
-        for value in complete_dates
-    ):
-        raise ValueError("complete_dates inválido")
-
->>>>>>> origin/research/public-reuse-parent
     return data
 
 
@@ -302,7 +276,6 @@ def partial_snapshot_state(follows, followers, state, today=None):
 
 
 def deadline_summary(follows, first_back_date, observed_since, today=None, deadlines=DEADLINE_DAYS):
-<<<<<<< HEAD
     """Conversion por deadline real observado.
 
     Solo entran follows hechos desde observed_since. Para D+N, la cuenta debe tener al
@@ -342,24 +315,6 @@ def deadline_summary(follows, first_back_date, observed_since, today=None, deadl
 
 def update_seeds(stats):
     """Guarda el follow-back real de cada semilla para que pick_seeds priorice las mejores."""
-=======
-    """Compatibilidad de #33: delegar AL ÚNICO motor compartido (#77).
-
-    Esta vista legacy incluye unknown implícitos como cero; el KPI certificado
-    es 'cohorts_v2' y no debe usar 'deadlines' para selección de fuentes.
-    """
-    today = today or datetime.datetime.now(TZ).date()
-    _v2, legacy = cohorts.project(follows, first_back_date, observed_since, today,
-                                  deadlines=deadlines)
-    return legacy
-
-def update_seeds(stats):
-    """Compatibilidad: guarda conteos observados, NUNCA un nuevo score operativo.
-
-    El histórico no acredita identidad estable ni baseline de terceros y no
-    permite convertir su tasa suavizada en prioridad de seguimiento.
-    """
->>>>>>> origin/research/public-reuse-parent
     try:
         with open(bulk.SEEDS_PATH, encoding="utf-8") as stream:
             seeds = json.load(stream)
@@ -378,12 +333,8 @@ def update_seeds(stats):
             record.update({
                 "followed": entry["followed"],
                 "back": entry["back"],
-<<<<<<< HEAD
                 "rate": entry["rate"],
                 "yield": round((entry["back"] + 1) / (entry["followed"] + 10), 4),
-=======
-                "rate": entry["rate"],  # observacional, no certificado
->>>>>>> origin/research/public-reuse-parent
             })
     save_audit_state(seeds, path=bulk.SEEDS_PATH)
     return True
@@ -452,11 +403,7 @@ def main(argv=None):
         print(f"FALLO audit: {type(exc).__name__}: {str(exc)[:120]}")
         return 0
 
-<<<<<<< HEAD
     today = datetime.date.today()
-=======
-    today = datetime.datetime.now(TZ).date()
->>>>>>> origin/research/public-reuse-parent
     follows = all_follows(today)
     if not complete:
         # Una lista parcial sí confirma positivos, pero no demuestra ausencias.
@@ -482,16 +429,7 @@ def main(argv=None):
         print(f"[audit] {exc}; se conserva el archivo para revisión")
         return 0
     observed_since, first_back = update_back_observations(follows, reciprocal, previous, today)
-<<<<<<< HEAD
     deadlines = deadline_summary(follows, first_back, observed_since, today)
-=======
-    # Historial de snapshots COMPLETOS; los parciales nunca incorporan fechas.
-    previous_complete_dates = previous.get("complete_dates") or []
-    complete_dates = list(dict.fromkeys([*previous_complete_dates, today.isoformat()]))
-    cohorts_v2, deadlines = cohorts.project(
-        follows, first_back, observed_since, today, complete_dates=complete_dates,
-    )
->>>>>>> origin/research/public-reuse-parent
 
     audit = {
         "date": today.isoformat(),
@@ -502,13 +440,6 @@ def main(argv=None):
         "sources": stats,
         "deadlines": deadlines,
         "first_back_date": first_back,
-<<<<<<< HEAD
-=======
-        "complete_dates": complete_dates,
-        "cohorts_v2": {"schema_version": 2, "timezone": "Europe/Madrid",
-                       "definition": "first_observed_positive_by_local_D+N",
-                       "windows": cohorts_v2},
->>>>>>> origin/research/public-reuse-parent
     }
     save_audit_state(audit)
     update_seeds(stats)

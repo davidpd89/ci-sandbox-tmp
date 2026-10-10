@@ -19,7 +19,6 @@ class ThreadsPostConfirmationTests(unittest.TestCase):
         node = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
                     and n.name == "_matching_own_post_urls")
         self.env = {
-<<<<<<< HEAD
             "MY_HANDLE": "autorademodiaz",
             "_check_bot_warning": lambda pg: None,
             "_extract_posts": lambda pg, limit=20: [
@@ -28,16 +27,6 @@ class ThreadsPostConfirmationTests(unittest.TestCase):
                 ("otra", "https://www.threads.com/@otra/post/2",
                  "Mi texto exacto para publicar"),
                 ("autorademodiaz", None, "Mi texto exacto para publicar"),
-=======
-            "MY_HANDLE": "davidportodiaz",
-            "_check_bot_warning": lambda pg: None,
-            "_extract_posts": lambda pg, limit=20: [
-                ("davidportodiaz", "https://www.threads.com/@davidportodiaz/post/1",
-                 "David Porto Hace 1 min Mi texto exacto para publicar"),
-                ("otra", "https://www.threads.com/@otra/post/2",
-                 "Mi texto exacto para publicar"),
-                ("davidportodiaz", None, "Mi texto exacto para publicar"),
->>>>>>> origin/research/public-reuse-parent
             ],
         }
         exec(compile(ast.Module(body=[node], type_ignores=[]), str(SOURCE), "exec"), self.env)
@@ -47,11 +36,7 @@ class ThreadsPostConfirmationTests(unittest.TestCase):
             FakePage(), "Mi texto exacto para publicar"
         )
         self.assertEqual(
-<<<<<<< HEAD
             urls, {"https://www.threads.com/@autorademodiaz/post/1"}
-=======
-            urls, {"https://www.threads.com/@davidportodiaz/post/1"}
->>>>>>> origin/research/public-reuse-parent
         )
 
     def test_unrelated_text_does_not_confirm(self):

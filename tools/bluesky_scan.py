@@ -320,24 +320,15 @@ def scan():
     # Señal fuerte y barata: alguien enlazando la web propia.
     try:
         domain_posts = b._search_posts(
-<<<<<<< HEAD
             "autorademodiaz.com", "all", limit=10,
             domain="autorademodiaz.com", sort="latest",
-=======
-            "davidportodiaz.com", "all", limit=10,
-            domain="davidportodiaz.com", sort="latest",
->>>>>>> origin/research/public-reuse-parent
         )
     except b.RateLimitExceeded:
         raise
     except Exception as exc:
         print(f"AVISO búsqueda de dominio propio: {exc}")
         domain_posts = []
-<<<<<<< HEAD
     add_posts(domain_posts, "domain:autorademodiaz.com")
-=======
-    add_posts(domain_posts, "domain:davidportodiaz.com")
->>>>>>> origin/research/public-reuse-parent
 
     # Timeline antes de búsquedas abiertas: ya contiene afinidad previa.
     add_posts(b._get_timeline(), "timeline")

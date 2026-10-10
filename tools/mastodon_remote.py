@@ -89,11 +89,7 @@ def keep(status, today=None):
 
 
 def _get(url, params):
-<<<<<<< HEAD
     response = requests.get(url, params=params, timeout=TIMEOUT, headers={"User-Agent": "RRSS-AutoraDemo/1.0 (lectura publica; contacto autorademodiaz.com)"})
-=======
-    response = requests.get(url, params=params, timeout=TIMEOUT, headers={"User-Agent": "RRSS-DavidPorto/1.0 (lectura publica; contacto davidportodiaz.com)"})
->>>>>>> origin/research/public-reuse-parent
     if response.status_code != 200:
         raise RuntimeError(f"{response.status_code}")
     return response.json()

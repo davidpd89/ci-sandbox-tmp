@@ -4,10 +4,6 @@ Casos basados en intercambio real de Bluesky, sin datos identificativos.
 """
 from __future__ import annotations
 
-<<<<<<< HEAD
-=======
-import datetime as dt
->>>>>>> origin/research/public-reuse-parent
 import pathlib
 import sys
 import unittest
@@ -15,11 +11,6 @@ import unittest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools"))
 import conversation_turn_policy as cp
 
-<<<<<<< HEAD
-=======
-RECENT = dt.datetime.now(dt.timezone.utc).isoformat()
-
->>>>>>> origin/research/public-reuse-parent
 
 class ConversationTurnsTests(unittest.TestCase):
     def test_example_photo_session_stops_without_question(self):
@@ -47,20 +38,12 @@ class ConversationTurnsTests(unittest.TestCase):
                     "facebook", "pinterest", "reddit", "tiktok"):
             with self.subTest(network=net):
                 self.assertTrue(cp.check_execution(net, {
-<<<<<<< HEAD
                     "kind": "reply", "reply_to_us": True,
-=======
-                    "kind": "reply", "post_created_at": RECENT, "reply_to_us": True,
->>>>>>> origin/research/public-reuse-parent
                     "post_text": "Me ha encantado tu reseña",
                     "context_quality": "partial",
                 })[0])
                 self.assertFalse(cp.check_execution(net, {
-<<<<<<< HEAD
                     "kind": "reply", "reply_to_us": True,
-=======
-                    "kind": "reply", "post_created_at": RECENT, "reply_to_us": True,
->>>>>>> origin/research/public-reuse-parent
                     "post_text": "Gracias, compañero",
                 })[0])
 
@@ -128,11 +111,7 @@ class ConversationTurnsTests(unittest.TestCase):
                         "facebook", "pinterest", "reddit", "tiktok"):
             with self.subTest(network=network):
                 allowed, reason = cp.check_execution(network, {
-<<<<<<< HEAD
                     "kind": "reply", "reply_to_us": True,
-=======
-                    "kind": "reply", "post_created_at": RECENT, "reply_to_us": True,
->>>>>>> origin/research/public-reuse-parent
                     "motivo": "fidelizacion:contestar_a_su_comentario",
                     "text": "Gracias, compañero.",
                     "thread_turns": [],
@@ -142,11 +121,7 @@ class ConversationTurnsTests(unittest.TestCase):
 
     def test_old_followup_plan_cannot_post_gracias_even_with_valid_target(self):
         plan = {
-<<<<<<< HEAD
             "kind": "reply", "motivo": "followup:F01:respuesta a nuestra reply",
-=======
-            "kind": "reply", "post_created_at": RECENT, "motivo": "followup:F01:respuesta a nuestra reply",
->>>>>>> origin/research/public-reuse-parent
             "_target_uri": "at://reply", "thread_turns": [
                 {"role": "theirs", "text": "Busco modelos", "post_id": "at://root"},
                 {"role": "ours", "text": "Ojalá salga bien", "post_id": "at://ours"},
@@ -163,11 +138,7 @@ class ConversationTurnsTests(unittest.TestCase):
 
     def test_threads_api_followup_tag_is_also_protected(self):
         allowed, reason = cp.check_execution("threads", {
-<<<<<<< HEAD
             "kind": "reply", "motivo": "followup API Threads",
-=======
-            "kind": "reply", "post_created_at": RECENT, "motivo": "followup API Threads",
->>>>>>> origin/research/public-reuse-parent
             "reply_to_id": "98765", "text": "Gracias, compañero",
         })
         self.assertEqual((allowed, reason), (False, "falta_texto_de_la_persona"))
@@ -176,11 +147,7 @@ class ConversationTurnsTests(unittest.TestCase):
         for network in ("bluesky", "mastodon", "x", "threads", "facebook",
                         "pinterest", "reddit", "tiktok"):
             self.assertTrue(cp.check_execution(network, {
-<<<<<<< HEAD
                 "kind": "reply", "motivo": "primer_comentario_a_un_autor"
-=======
-                "kind": "reply", "post_created_at": RECENT, "motivo": "primer_comentario_a_un_autor"
->>>>>>> origin/research/public-reuse-parent
             })[0])
 
     def test_normalized_thread_excludes_missing_or_tampered_turns(self):

@@ -66,11 +66,7 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(len(grv.view(state, include_opinion=True)), 1)
 
     def test_builder_blocks_long_reply_to_opinion_request(self):
-<<<<<<< HEAD
         state = {"shortlist": [{"id": "G1", "handle": "a", "lane": "acquisition", "actions": [],
-=======
-        state = {"shortlist": [{"id": "G1", "handle": "lectora.bsky.social", "lane": "acquisition", "actions": [],
->>>>>>> origin/research/public-reuse-parent
                                 "posts": [{"id": "G1-P1", "url": "u", "text": "Lee mi relato y dime qué te parece",
                                            "actions": ["reply"], "sources": []}]}]}
         with self.assertRaises(ValueError):

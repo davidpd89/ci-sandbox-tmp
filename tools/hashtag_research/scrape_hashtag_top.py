@@ -6,11 +6,7 @@ exploracion de un hashtag y los posts/reels que aparecen ahi, y lee los
 meta-tags og:description/og:title/og:image (los mismos que usan los bots
 de previsualizacion de enlaces) para sacar likes, comentarios, cuenta,
 caption y hashtags usados, sin necesidad de iniciar sesion ni de usar la
-<<<<<<< HEAD
 cuenta @autorademodiaz.
-=======
-cuenta @davidportodiaz.
->>>>>>> origin/research/public-reuse-parent
 
 IMPORTANTE: esto es solo lectura de paginas publicas, no toca la cuenta
 de David ni publica nada. No confundir con automatizacion de publicacion

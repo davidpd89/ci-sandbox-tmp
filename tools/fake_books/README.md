@@ -135,11 +135,7 @@ Comprobar primero que:
 - slide 1 dice exactamente `EDICIÓN IMAGINARIA`;
 - slide 2 dice exactamente `NO EXISTE. DE MOMENTO.`;
 - no hay ISBN, editorial ficticia, precio, estrellas, reseña ni sello de venta;
-<<<<<<< HEAD
 - `brand_line` conserva `ARCHIVO DE PROBLEMAS DE LECTORES · AUTORA DEMO DÍAZ`.
-=======
-- `brand_line` conserva `ARCHIVO DE PROBLEMAS DE LECTORES · DAVID PORTO DÍAZ`.
->>>>>>> origin/research/public-reuse-parent
 
 Si aun así parece un producto real, FAIL visual y revisar el sistema completo antes de producir el lote.
 

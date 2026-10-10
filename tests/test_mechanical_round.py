@@ -131,11 +131,7 @@ class FailureSemanticsTests(unittest.TestCase):
 
 
 class WatchdogRetryTests(unittest.TestCase):
-<<<<<<< HEAD
     """06/10: si el vigilante aborta el ejecutor de una red por navegador (Edge colgado), la ronda reanuda los workers y reintenta UNA vez."""
-=======
-    """#59: un watchdog deja ACK incierto y nunca reejecuta la escritura."""
->>>>>>> origin/research/public-reuse-parent
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -149,11 +145,7 @@ class WatchdogRetryTests(unittest.TestCase):
         mr.ROOT, mr.LOCK_DIR = self._root, self._lock
         self.tmp.cleanup()
 
-<<<<<<< HEAD
     def test_retry_after_watchdog_resumes_workers_and_sums_both_attempts(self):
-=======
-    def test_watchdog_no_retry_preserves_prior_confirmations(self):
->>>>>>> origin/research/public-reuse-parent
         calls, executes = [], []
 
         def runner(cmd):
@@ -166,20 +158,9 @@ class WatchdogRetryTests(unittest.TestCase):
             return 0, "ok"
         lines = []
         res = mr.run("threads", runner=runner, out=lines.append)
-<<<<<<< HEAD
         self.assertEqual(len(executes), 2)
         self.assertTrue(any("cdp_resume_workers" in c for c in calls))
         self.assertTrue(any("3 confirmadas" in l for l in lines), lines)
-=======
-        self.assertEqual(len(executes), 1)
-        self.assertTrue(any("cdp_resume_workers" in item for item in calls))
-        self.assertFalse(any("reintento tras vigilante" in item for item in calls))
-        self.assertEqual(res["error_reason"], "edge_ack_uncertain")
-        self.assertEqual(res["summary"]["confirmadas"], {"like": 1})
-        self.assertTrue(res["partial"])
-        self.assertTrue(any("1 confirmadas" in line and "1 fallos" in line
-                            for line in lines), lines)
->>>>>>> origin/research/public-reuse-parent
 
     def test_no_retry_without_the_watchdog_message(self):
         executes = []

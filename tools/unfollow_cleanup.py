@@ -33,7 +33,6 @@ import text_common as tc
 ROOT = ga.ROOT
 
 
-<<<<<<< HEAD
 def candidates(rows, followers, today, *, days=gp.NONRECIPROCAL_DAYS, following=None):
     """[{account, reason}] a dejar de seguir. `following`: {handle_en_minuscula: biografia} de todo lo que seguimos (para la regla de idioma)."""
     out, seen = [], set()
@@ -53,50 +52,6 @@ def candidates(rows, followers, today, *, days=gp.NONRECIPROCAL_DAYS, following=
         language = tc.foreign_language(bio or "")
         if language:
             out.append({"account": handle, "reason": f"biografia en otro idioma ({language})"})
-=======
-def candidates(rows, followers, today, *, days=gp.NONRECIPROCAL_DAYS,
-               following=None, network=None):
-    """Candidatos offline, sin usar ausencias de una lista parcial como prueba.
-
-    Si se conoce la lista de seguidos, un follow historico solo puede producir
-    candidato cuando el mismo identificador sigue presente. Las biografias de
-    cuentas seguidas manualmente siguen siendo evaluables. Antes de cualquier
-    accion se exige la comprobacion individual en vivo de run().
-    """
-    import followback_lifecycle as fl
-
-    net = network if network in fl.NETWORKS else "bluesky"
-    key = lambda handle: fl.account_key(net, handle)
-    protected = protected_accounts()
-
-    def is_protected(handle):
-        normalized = key(handle)
-        # Una entrada local en la lista de proteccion cubre tambien dominios
-        # federados; jamas se usa esa tolerancia para equiparar seguidores.
-        return normalized in protected or normalized.split("@")[0] in protected
-
-    out, seen = [], set()
-    followed_now = None if following is None else {key(h) for h in following}
-    follower_keys = {key(f) for f in followers}
-    for item in fr.review(rows, followers, today, days, network=net):
-        account = key(item["account"])
-        if (not account or is_protected(account) or
-                (followed_now is not None and account not in followed_now) or
-                account in seen or "reply" in item["actions"]):
-            continue
-        out.append({"account": account,
-                    "reason": f"no devuelve el follow tras {item['age_days']} dias"})
-        seen.add(account)
-    for handle, bio in (following or {}).items():
-        account = key(handle)
-        if (not account or account in seen or account in follower_keys
-                or is_protected(account)):
-            continue
-        language = tc.foreign_language(bio or "")
-        if language:
-            out.append({"account": account, "reason": f"biografia en otro idioma ({language})"})
-            seen.add(account)
->>>>>>> origin/research/public-reuse-parent
     return out
 
 
@@ -145,14 +100,7 @@ class Bluesky:
 
     def follows_me(self, account):
         profile = self.b._get(self.b.AUTH_BASE, "app.bsky.actor.getProfile", {"actor": account})
-<<<<<<< HEAD
         return bool((profile.get("viewer") or {}).get("followedBy"))
-=======
-        viewer = profile.get("viewer") if isinstance(profile, dict) else None
-        if not isinstance(viewer, dict):
-            raise RuntimeError("Bluesky: sin viewer autenticado; followback no verificable")
-        return bool(viewer.get("followedBy"))
->>>>>>> origin/research/public-reuse-parent
 
     def unfollow(self, account):
         return self.b.unfollow(account)
@@ -173,35 +121,18 @@ class Mastodon:
         for account in m.patient(lambda: m.account_neighbors(me["id"], "following", limit=80, max_pages=15)):
             text = m._plain_text(f"{account.get('display_name', '')} {account.get('note', '')}")
             following[account["acct"].casefold()] = text
-<<<<<<< HEAD
             for key in {account["acct"].casefold(), account["acct"].split("@")[0].casefold()}:
                 self.ids.setdefault(key, account["id"])
-=======
-            # En Mastodon un nombre local puede pertenecer a varios servidores.
-            self.ids.setdefault(account["acct"].casefold(), account["id"])
->>>>>>> origin/research/public-reuse-parent
         return following, ga.mastodon_followers()
 
     def _id(self, account):
         key = ga.norm(account).casefold()
-<<<<<<< HEAD
         return self.ids.get(key) or self.ids.get(key.split("@")[0])
-=======
-        return self.ids.get(key)
->>>>>>> origin/research/public-reuse-parent
 
     def follows_me(self, account):
         account_id = self._id(account) or self.m._resolve_account_id(account)
         rel = self.m.patient(lambda: self.m._get("accounts/relationships", {"id[]": account_id}))
-<<<<<<< HEAD
         return bool(rel and rel[0].get("followed_by"))
-=======
-        if (not isinstance(rel, list) or len(rel) != 1
-                or not isinstance(rel[0], dict)
-                or type(rel[0].get("followed_by")) is not bool):
-            raise RuntimeError("Mastodon: followback no verificable; omitir unfollow")
-        return rel[0]["followed_by"]
->>>>>>> origin/research/public-reuse-parent
 
     def unfollow(self, account):
         return self.m.patient(lambda: self.m.unfollow(account, self._id(account)))
@@ -306,11 +237,7 @@ def run(net, *, apply=False, limit=40, days=gp.NONRECIPROCAL_DAYS, pause=(0.8, 2
     done = failed = 0
     with adapter.session():
         following, followers = adapter.load()
-<<<<<<< HEAD
         todo = candidates(rows, followers, datetime.date.today(), days=days, following=following)
-=======
-        todo = candidates(rows, followers, datetime.date.today(), days=days, following=following, network=net)
->>>>>>> origin/research/public-reuse-parent
         out(f"{net}: {len(todo)} cuentas a dejar de seguir ({len(followers)} seguidores leidos, {len(following)} seguidos); tope {limit}")
         for item in todo:
             if done >= limit:
@@ -318,22 +245,9 @@ def run(net, *, apply=False, limit=40, days=gp.NONRECIPROCAL_DAYS, pause=(0.8, 2
             out(f"  {item['account']:<42} {item['reason']}")
             if not apply:
                 continue
-<<<<<<< HEAD
             try:
                 if adapter.follows_me(item["account"]):            # comprobacion EN VIVO: la lista de seguidores puede estar incompleta
                     out("    nos sigue (comprobado en vivo): no se toca")
-=======
-            import circuit_breaker as cb
-            allowed, why = cb.write_preflight(net)
-            if not allowed:
-                out(f"{net}: unfollow detenido por cortacircuitos ABIERTO ({why})")
-                break
-            try:
-                follows_back = adapter.follows_me(item["account"])     # comprobacion EN VIVO: la lista de seguidores puede estar incompleta
-                # Solo un negativo booleano verificado autoriza retirar el follow (#57).
-                if follows_back is not False:
-                    out("    nos sigue o reciprocidad no verificable: no se toca")
->>>>>>> origin/research/public-reuse-parent
                     continue
                 outcome = adapter.unfollow(item["account"])
                 if outcome in ("unfollowed", "already"):

@@ -182,16 +182,6 @@ def run_plan(plan, *, prevalidated=False, on_result=None):
             print(f"FALLO DE PREFLIGHT: {type(exc).__name__}: {exc}")
             return [{"kind": "plan", "handle": "", "resultado": f"fallo_plan:{exc}"}]
     for i, item in enumerate(plan):
-<<<<<<< HEAD
-=======
-        # Una ronda puede durar horas: revalidar la cuarentena antes de CADA
-        # acción, incluso si el lanzador aprobó el lote al comienzo.
-        import circuit_breaker as _cb
-        _write_ok, _hold_reason = _cb.write_preflight("threads")
-        if not _write_ok:
-            print(f"[threads] cortacircuitos ABIERTO: {_hold_reason}; detener el lote")
-            break
->>>>>>> origin/research/public-reuse-parent
         kind = item["kind"]
         import conversation_turn_policy as ctp
         permitted, reason = ctp.check_execution("threads", item)
@@ -241,14 +231,9 @@ def run_plan(plan, *, prevalidated=False, on_result=None):
             elif kind == "reply" and item.get("reply_to_id"):
                 import threads_api as api
                 env = api._env()
-<<<<<<< HEAD
                 import voice_output_finalization as voice
                 voice.inspect(item["text"], network="threads", queue="API")
                 api.publish_reply(env["THREADS_ACCESS_TOKEN"], env["THREADS_USER_ID"], item["reply_to_id"], item["text"])
-=======
-                api.publish_reply(env["THREADS_ACCESS_TOKEN"], env["THREADS_USER_ID"],
-                                  item["reply_to_id"], item["text"], proof_action=item)
->>>>>>> origin/research/public-reuse-parent
             elif kind == "reply":
                 if _already_replied_via_api(item["text"]):
                     # 03/10: una ronda cortada dejo la respuesta publicada sin registrar y el reintento la
@@ -256,11 +241,8 @@ def run_plan(plan, *, prevalidated=False, on_result=None):
                     results.append({**item, "resultado": "saltado_ya_comentado"})
                     continue
                 profile_url = f"https://www.threads.com/@{handle}"
-<<<<<<< HEAD
                 import voice_output_finalization as voice
                 voice.inspect(item["text"], network="threads", queue="WEB")
-=======
->>>>>>> origin/research/public-reuse-parent
                 outcome = t.reply_to(item.get("text_fragment", ""), item["text"], profile_url)
                 if outcome == "unverified":
                     # la interfaz no siempre muestra la respuesta al instante: la API oficial es la fuente fiable
@@ -283,21 +265,6 @@ def run_plan(plan, *, prevalidated=False, on_result=None):
         except t.AlreadyCommented as e:
             print(f"SALTADO: {e}")
             results.append({**item, "resultado": "saltado_ya_comentado"})
-<<<<<<< HEAD
-=======
-        except ec.WriteOutcomeUnknown:
-            # No hay ACK tras el POST: se retiene UNCERTAIN en el ledger común.
-            # Ni fallo reintentable ni éxito inventado. Continuar otras acciones.
-            print("PENDIENTE_VERIFICACION: Threads sin ACK remoto; no reintentar")
-            results.append({**item, "resultado": "pendiente_verificacion"})
-        except PermissionError as e:
-            if kind == "reply" and item.get("reply_to_id"):
-                print(f"OMITIDO: contrato contextual de Threads: {type(e).__name__}")
-                results.append({**item, "resultado": "saltado_contexto_api_no_verificado"})
-            else:
-                print(f"FALLO: {type(e).__name__}")
-                results.append({**item, "resultado": "fallo:permiso_denegado"})
->>>>>>> origin/research/public-reuse-parent
         except getattr(t, "ProfileRejected", ()) as e:
             print(f"SALTADO: perfil no apto: {e}")
             results.append({**item, "resultado": f"saltado_perfil:{e}"})
@@ -335,11 +302,7 @@ def _append_registro(results):
 def _fetch_metrics():
     p, pg = t._connect()
     try:
-<<<<<<< HEAD
         pg.goto("https://www.threads.com/@autorademodiaz", wait_until="domcontentloaded", timeout=20000)
-=======
-        pg.goto("https://www.threads.com/@davidportodiaz", wait_until="domcontentloaded", timeout=20000)
->>>>>>> origin/research/public-reuse-parent
         pg.wait_for_timeout(2200)
         body = pg.inner_text("body")[:1500]
         followers = re.search(r"([\d.,mil]+)\s+seguidores", body, re.I)

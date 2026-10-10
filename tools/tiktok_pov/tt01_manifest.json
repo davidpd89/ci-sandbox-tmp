@@ -1,11 +1,7 @@
 {
   "series": "TT-01 — Dos pantallas y ya estás dentro",
   "canvas": [1080, 1920],
-<<<<<<< HEAD
   "brand": "AUTORA DEMO DÍAZ",
-=======
-  "brand": "DAVID PORTO DÍAZ",
->>>>>>> origin/research/public-reuse-parent
   "production_route": "REAL_DIRECT",
   "production_note": "Ruta vigente 20/08/2026: fotografía Pexels real exacta + crop/zoom/oscurecido CSS. Sin image-to-image.",
   "items": [

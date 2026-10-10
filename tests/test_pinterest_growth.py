@@ -29,11 +29,7 @@ class PureTests(unittest.TestCase):
         ok, _ = pg.author_ok("ana", "Escritora de fantasía y lectora", 800)
         self.assertTrue(ok)
         for args in (("big", "Autora de fantasía", 90000), ("shop", "Tienda de libros, descuento", 300),
-<<<<<<< HEAD
                      ("eng", "Reading and coffee lover of the best books", 300), ("autorademodiaz", "libros", 10)):
-=======
-                     ("eng", "Reading and coffee lover of the best books", 300), ("davidportodiaz", "libros", 10)):
->>>>>>> origin/research/public-reuse-parent
             self.assertFalse(pg.author_ok(*args)[0], args)
         self.assertFalse(pg.author_ok("ana", "Escritora de fantasía", 800, known={"ana"})[0])
         self.assertFalse(pg.author_ok("x", "Escritora de fantasía", None)[0])
@@ -88,13 +84,8 @@ class PlanTests(unittest.TestCase):
             with open(path, "w", newline="", encoding="utf-8") as f:
                 w = csv.writer(f)
                 w.writerow(["fecha", "cuenta", "tipo", "post_resumen", "texto_usado", "resultado", "notas"])
-<<<<<<< HEAD
                 w.writerow(["2026-10-04", "@autorademodiaz", "react", "https://x/pin/1/", "", "confirmado", ""])
                 w.writerow(["2026-10-04", "@autorademodiaz", "save", "https://x/pin/2/", "tab", "confirmado", ""])
-=======
-                w.writerow(["2026-10-04", "@davidportodiaz", "react", "https://x/pin/1/", "", "confirmado", ""])
-                w.writerow(["2026-10-04", "@davidportodiaz", "save", "https://x/pin/2/", "tab", "confirmado", ""])
->>>>>>> origin/research/public-reuse-parent
                 w.writerow(["2026-10-04", "@Ana", "follow", "", "", "confirmado", ""])
                 w.writerow(["2026-10-04", "@fallo", "follow", "", "", "fallo", ""])
             reacted, saved, followed = pg.done_sets(path)

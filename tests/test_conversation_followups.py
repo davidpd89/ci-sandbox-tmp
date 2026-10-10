@@ -88,23 +88,6 @@ class ItemsAndPlanTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             cf.build_plan(items, {'actions': [{'id': 'F99', 'text': 'x'}]})
 
-<<<<<<< HEAD
-=======
-    def test_followup_preserves_verified_target_date_across_two_builders(self):
-        import datetime as dt
-        created = "2026-10-08T10:00:00Z"
-        row = {"handle": "lectora", "url": "https://example.test/post",
-               "mine": "Hablábamos de novelas",
-               "text": "¿Qué novela de fantasía me recomendarías?",
-               "created": created}
-        items = cf.make_items([row], today=dt.date(2026, 10, 9))
-        self.assertEqual(items[0]["post_created_at"], created)
-        plan = cf.build_plan(items, {"actions": [
-            {"id": "F01", "text": "Puedes probar una fantasía juvenil breve."}]})
-        self.assertEqual(plan[0]["post_created_at"], created)
-        self.assertTrue(plan[0]["reply_to_us"])
-
->>>>>>> origin/research/public-reuse-parent
     def test_followup_text_cannot_hand_the_question_back(self):
         items = cf.make_items([row('ana')])
         with self.assertRaises(ValueError):
@@ -146,18 +129,6 @@ class NotificationSourceTests(unittest.TestCase):
                 "record": {"text": "Una respuesta de prueba en español para ti", "createdAt": f"{day}T10:00:00Z"},
                 "reasonSubject": "at://did:plc:yo/app.bsky.feed.post/mine"}
 
-<<<<<<< HEAD
-=======
-    def test_notification_indexed_at_never_masquerades_as_post_date(self):
-        import datetime
-        notification = self.note("indexed")
-        notification["record"].pop("createdAt")
-        b, _ = self.fake_b([{"notifications": [notification], "cursor": None}])
-        rows = cf.bluesky_all_notifications(b, self.DID, today=datetime.date(2026, 10, 3))
-        self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0]["created"], "")
-
->>>>>>> origin/research/public-reuse-parent
     def test_replies_become_rows_with_answered_liked_and_own_text(self):
         import datetime
         pages = [{"notifications": [self.note("n1"), self.note("liked"), {"reason": "like", "uri": "u", "indexedAt": "2026-10-02T10:00:00Z"},
@@ -291,11 +262,7 @@ class LikeOnlyReadableTextTests(unittest.TestCase):
         import conversation_followups as cf
         rows = [
             {"handle": "solo_imagen", "ref": "r1", "liked": False, "text": ""},
-<<<<<<< HEAD
             {"handle": "mencion_imagen", "ref": "r2", "liked": False, "text": "@autorademo https://t.co/x #arte"},
-=======
-            {"handle": "mencion_imagen", "ref": "r2", "liked": False, "text": "@davidporto https://t.co/x #arte"},
->>>>>>> origin/research/public-reuse-parent
             {"handle": "politica", "ref": "r3", "liked": False, "text": "Vota al partido en las elecciones generales"},
             {"handle": "lectora", "ref": "r4", "liked": False, "text": "Me ha encantado tu reseña, gracias"},
         ]

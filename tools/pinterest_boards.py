@@ -18,32 +18,20 @@ BOARDS = {
     "Lugares literarios, bibliotecas y librerías": "Bibliotecas bonitas, librerías con encanto, cafeterías literarias y rincones de lectura para viajar de libro en libro.",
     "Recursos para escritores": "Herramientas gratuitas, guías y consejos para escribir una novela: personajes, construcción de mundos, estructura, corrección y autopublicación.",
     "Lecturas y reseñas de libros": "Reseñas, listas de lectura, retos y recomendaciones de libros en español: fantasía, novela y literatura para tu próxima lectura.",
-<<<<<<< HEAD
     "Samuel entre mundos": "La novela Samuel entre mundos, de Autora Demo Díaz: portada, fragmentos, reseñas y el universo del libro.",
-=======
-    "Samuel entre mundos": "La novela Samuel entre mundos, de David Porto Díaz: portada, fragmentos, reseñas y el universo del libro.",
->>>>>>> origin/research/public-reuse-parent
 }
 
 
 def board_exists(pg, name):
     """El tablero existe si su pagina carga con cabecera de tablero (la lista del perfil no expone nombres fiables)."""
-<<<<<<< HEAD
     pg.goto(f"https://es.pinterest.com/autorademodiaz/{pp.board_slug(name)}/", wait_until="domcontentloaded", timeout=45000)
-=======
-    pg.goto(f"https://es.pinterest.com/davidportodiaz/{pp.board_slug(name)}/", wait_until="domcontentloaded", timeout=45000)
->>>>>>> origin/research/public-reuse-parent
     pg.wait_for_timeout(4000)
     pp._check(pg)
     return pg.locator('[data-test-id="board-header"]').count() > 0
 
 
 def create_board(pg, name, log=print):
-<<<<<<< HEAD
     pg.goto("https://es.pinterest.com/autorademodiaz/_saved/", wait_until="domcontentloaded", timeout=45000)
-=======
-    pg.goto("https://es.pinterest.com/davidportodiaz/_saved/", wait_until="domcontentloaded", timeout=45000)
->>>>>>> origin/research/public-reuse-parent
     pg.wait_for_timeout(4500)
     pg.get_by_text("Crear", exact=True).last.click()
     pg.wait_for_timeout(1500)
@@ -56,11 +44,7 @@ def create_board(pg, name, log=print):
 
 
 def set_description_if_empty(pg, name, description, log=print):
-<<<<<<< HEAD
     pg.goto(f"https://es.pinterest.com/autorademodiaz/{pp.board_slug(name)}/", wait_until="domcontentloaded", timeout=45000)
-=======
-    pg.goto(f"https://es.pinterest.com/davidportodiaz/{pp.board_slug(name)}/", wait_until="domcontentloaded", timeout=45000)
->>>>>>> origin/research/public-reuse-parent
     pg.wait_for_timeout(4500)
     pg.get_by_label("Más opciones de tablero").first.click()
     pg.wait_for_timeout(900)
@@ -87,15 +71,6 @@ def ensure_boards(apply=False, log=print):
         pg.set_default_timeout(15000)
         try:
             for name, description in BOARDS.items():
-<<<<<<< HEAD
-=======
-                if apply:
-                    import circuit_breaker as cb
-                    allowed, reason = cb.write_preflight("pinterest")
-                    if not allowed:
-                        log(f"[pinterest] cortacircuitos ABIERTO: {reason}; no modificar tableros")
-                        break
->>>>>>> origin/research/public-reuse-parent
                 if not board_exists(pg, name):
                     log(f"- falta el tablero «{name}»" + ("" if apply else " (se crearia)"))
                     if apply:
