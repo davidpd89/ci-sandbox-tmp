@@ -119,8 +119,10 @@ class HashtagExpansionTest(unittest.TestCase):
             static.write_text('{"bluesky":{"hashtags":["#FantasíaÉpica","BookSky"]}}',
                               encoding="utf-8")
             h.save_snapshot(overlay, result)
+            original = h.snapshot_terms
             with patch.object(discovery_terms, "PATH", str(static)), \
-                 patch.object(h, "DEFAULT_CACHE", overlay):
+                 patch.object(h, "DEFAULT_CACHE", overlay), \
+                 patch.object(h, "snapshot_terms", side_effect=lambda network, kind: original(network, kind, now=NOW)):
                 self.assertEqual(discovery_terms.terms("bluesky", "hashtags",
                                                       skip=["BookSky"]), ["FantasíaÉpica"])
                 static.unlink()
