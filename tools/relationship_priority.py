@@ -290,9 +290,16 @@ def rank_daily(snapshot, *, today, limits=None, max_target_age=7, diversity_weig
                     return True
         return False
 
-    priority = sorted(winners, key=lambda actor: (
-        -max(v["score"] for v in winners[actor].values()), actor))
-    for actor in priority:
+    # Intercalar redes con penalizacion blanda ANTES de ocupar plazas: hacerlo
+    # solo al ordenar los ganadores no corrige un cupo ya monopolizado.
+    unassigned = set(winners)
+    while unassigned:
+        network_counts = {lane: Counter(winners[a][lane]["network"] for a in occupants[lane])
+                          for lane in LANES}
+        actor = min(unassigned, key=lambda a: (
+            -max(v["score"] - diversity_weight * network_counts[lane][v["network"]]
+                 for lane, v in winners[a].items()), a))
+        unassigned.remove(actor)
         augment(actor, set())
 
     grouped = {lane: [winners[actor][lane] for actor in occupants[lane]]
