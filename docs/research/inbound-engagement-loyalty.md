@@ -2,8 +2,10 @@
 
 Fecha: 10/10/2026. Rama: research/59-inbound-engagement-loyalty.
 Fuente primaria: https://github.com/chatwoot/chatwoot/tree/e212425e7b1814614bdf8b0beea42ce689baad5c
-Licencia SPDX de la parte comunitaria: MIT (enterprise/ excluido).
-Referencia inmutable de código reutilizado: N/A (sin código de terceros incorporado).
+Fecha de consulta: 2026-10-10
+Licencia SPDX: MIT
+Referencia inmutable: N/A (sin codigo incorporado)
+Nota: MIT solo para la parte comunitaria de Chatwoot; enterprise/ excluido.
 
 ## Problema y contraste con repositorio oficial
 
@@ -16,7 +18,7 @@ Consultado en modo lectura el privado davidpd89/rrss-davidporto-CODE, rama integ
 
 Hueco reproducible: falta una proyección común que trate eventos identificados y el registro diario sin sumar ambos, puntúe recencia/frecuencia/profundidad/diversidad/recurrencia, dé oportunidades editoriales y mida visitas recurrentes por red.
 
-## Reutilización pública: candidatos actuales y licencias
+## Alternativas
 
 | Fuente pública, commit fijo | Licencia | Actividad observada | Decisión |
 | --- | --- | --- | --- |
@@ -26,9 +28,11 @@ Hueco reproducible: falta una proyección común que trate eventos identificados
 | [erxes bfe129a](https://github.com/erxes/erxes/tree/bfe129a372211b90744b36d599f0614ff5da70de) | AGPLv3 con condición adicional de SaaS, EE separada: [licencia](https://github.com/erxes/erxes/blob/bfe129a372211b90744b36d599f0614ff5da70de/LICENSE.md) | commit 09/10/2026 | Suite Nx/TypeScript de mayor complejidad; no se importa |
 | Continuar Python stdlib del RRSS | Sin terceros nuevos | Compatible Python 3.11 | **Elegido**: sin servicio residente, dependencia ni estado adicional |
 
+## Licencias y procedencia
+
 No se han incorporado fragmentos ajenos. Las licencias no autorizan genéricamente copiar las partes EE; ninguna depende aquí de ellas. No hay nuevas dependencias transitivas. Mantenimiento observado no equivale a garantía de seguridad futura. Compatibilidad de la solución nueva prevista para Python 3.11 Windows y Ubuntu, probada por CI.
 
-## Código y decisiones
+## Decisión
 
 El entregable es tools/inbound_loyalty_priority.py, con tests/test_inbound_loyalty_priority.py y workflow propio.
 
@@ -61,7 +65,7 @@ Workflow .github/workflows/research-inbound-loyalty.yml con ubuntu-latest y wind
 4. Otros ataques sintéticos: fechas futuras, necroposting, target antiguo, contradicciones de event_id, cambio de handle, ausencia de answered, contexto parcial, estado outbound no confirmado, X sin auto-like, límites de cola, orden determinista, CSV corrupto y paridad de nueve redes.
 5. Cobertura residual: no se ha probado Edge, móvil, Windows físico del usuario, API real, disponibilidad de likes/guardados en todas las redes, ni canario supervisado. Un ID aportado por el colector no prueba por sí solo su procedencia; esta debe verificarse en el adaptador. Las propuestas son **para revisión**, no autorizaciones de respuesta.
 
-## Despliegue y retirada
+## Retirada
 
 **Default-off**: ningún módulo del orquestador ni ejecutor importa esta proyección, sin escritura a base de datos, CSV o colas existentes. No hay migración. Rollback: eliminar script, tests, documento y workflow. Claude debe validar la procedencia y cobertura por red, evaluar en shadow mode privado y canario supervisado separado, mantener el preflight de edad/identidad y conectar con #25/#70/#71/#77/#84/#85 sin duplicar sus funciones. No tocar repo privado ni fusionar desde esta PR.
 
