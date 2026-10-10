@@ -1,0 +1,11 @@
+text
+"recomendaciones fantasía" lang:es
+"libros romantasy" lang:es
+"novela fantástica" lang:es
+"fantasía juvenil" lang:es
+"qué leo ahora" lang:es
+"necesito recomendaciones" lang:es
+"busco libros de fantasía" lang:es
+"recomendad libros" lang:es
+"reseña fantasía" lang:es
+"lecturas del mes" lang:es
