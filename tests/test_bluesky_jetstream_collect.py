@@ -304,6 +304,66 @@ class JetstreamCollectorTests(unittest.TestCase):
         self.assertTrue(js._is_v2_endpoint(js.DEFAULT_ENDPOINT))
         self.assertIn("network.bsky.jetstream.subscribeEvents", js.DEFAULT_ENDPOINT)
 
+    def test_archive_recovery_and_state_reconciliation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = str(pathlib.Path(tmp) / "cache.sqlite3")
+            db = js.init_db(db_path)
+            js.set_state(db, "last_seq", "500")
+            terms = js.load_terms(self.config())
+
+            def mock_archive(start_seq):
+                page1 = {
+                    "events": [
+                        {
+                            "$type": "message",
+                            "payload": {
+                                "$type": "network.bsky.jetstream.subscribeEvents#commit",
+                                "seq": 501,
+                                "did": "did:plc:user1",
+                                "time": "2026-09-29T08:00:00Z",
+                                "operation": "create",
+                                "collection": "app.bsky.feed.post",
+                                "rkey": "post1",
+                                "record": {
+                                    "$type": "app.bsky.feed.post",
+                                    "text": "Lectura de fantasía recomendada",
+                                    "createdAt": "2026-09-29T08:00:00Z",
+                                },
+                            },
+                        }
+                    ]
+                }
+                page2 = {
+                    "events": [
+                        {
+                            "$type": "message",
+                            "payload": {
+                                "$type": "network.bsky.jetstream.subscribeEvents#commit",
+                                "seq": 502,
+                                "did": "did:plc:user1",
+                                "time": "2026-09-29T08:05:00Z",
+                                "operation": "delete",
+                                "collection": "app.bsky.feed.post",
+                                "rkey": "post1",
+                            },
+                        }
+                    ]
+                }
+                return [page1, page2]
+
+            res = js.recover_archive_gap(db, js.DEFAULT_ENDPOINT, terms, fetch_archive_fn=mock_archive)
+
+            self.assertEqual(res["processed"], 2)
+            self.assertEqual(js.get_state(db, "gap_detected"), "false")
+            self.assertEqual(js.get_state(db, "recovery_pending"), "false")
+            self.assertEqual(js.get_state(db, "last_seq"), "502")
+            self.assertIsNotNone(js.get_state(db, "complete_through"))
+
+            # Confirm delete removed post1
+            count = db.execute("SELECT COUNT(*) FROM posts WHERE rkey = 'post1'").fetchone()[0]
+            self.assertEqual(count, 0)
+            db.close()
+
 
 if __name__ == "__main__":
     unittest.main()

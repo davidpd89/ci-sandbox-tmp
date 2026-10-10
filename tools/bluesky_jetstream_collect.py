@@ -23,7 +23,7 @@ import sqlite3
 import sys
 import time
 import unicodedata
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 sys.path.insert(0, os.path.dirname(__file__))
 import scan_common as sc
@@ -407,17 +407,19 @@ def _resume_cursor(
     is_v2,
     saved_seq=None,
     saved_time=None,
+    saved_source=None,
+    current_source=None,
     overlap_seconds=5,
     initial_lookback_minutes=30,
     now_us=None,
 ):
     """Elige cursor sin empezar siempre en el instante de conexión.
 
-    v2 prioriza seq persistido. Si solo queda estado legacy usa time_us. En una
-    base nueva, un lookback corto recupera actividad inmediatamente sin pedir
-    snapshot/replay HTTP ni API key.
+    v2 prioriza seq persistido si proviene de la misma fuente (host).
+    Si cambia la fuente, detecta brecha. Si solo queda estado legacy usa time_us
+    o un lookback acotado en tiempo sin asumir equivalencia directa entre seq y time_us.
     """
-    if is_v2 and saved_seq:
+    if is_v2 and saved_seq and (saved_source is None or current_source is None or saved_source == current_source):
         return int(saved_seq)
     if saved_time:
         return max(
@@ -437,6 +439,60 @@ def _next_retry_delay(delay):
     return min(60.0, max(1.0, float(delay) * 2.0))
 
 
+def recover_archive_gap(db, endpoint, terms, *, fetch_archive_fn=None):
+    """Recuperación paginada de brecha mediante archive/backfill y reconciliación de estado.
+
+    Ejecuta descarga de páginas/segmentos sintéticos o remotos, actualiza
+    `verified_range_start`, `verified_range_end`, `complete_through`, y limpia
+    `gap_detected` / `recovery_pending`.
+    """
+    set_state(db, "gap_detected", "true")
+    set_state(db, "recovery_pending", "true")
+    db.commit()
+
+    processed_count = 0
+    stored_count = 0
+    start_seq = int(get_state(db, "last_seq") or 0)
+    current_seq = start_seq
+
+    if fetch_archive_fn is not None:
+        pages = fetch_archive_fn(start_seq)
+    else:
+        pages = []
+
+    for page in pages:
+        for raw_event in page.get("events") or []:
+            event, seq, mode = _normalize_frame(raw_event)
+            if not event:
+                continue
+            processed_count += 1
+            if seq:
+                current_seq = max(current_seq, seq)
+            if store_event(db, event, terms):
+                stored_count += 1
+            event_time = int(event.get("time_us") or 0)
+            if event_time:
+                set_state(db, "last_time_us", event_time)
+
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    verified_start = get_state(db, "verified_range_start") or str(start_seq)
+    set_state(db, "verified_range_start", verified_start)
+    set_state(db, "verified_range_end", str(current_seq))
+    set_state(db, "last_seq", str(current_seq))
+    set_state(db, "gap_detected", "false")
+    set_state(db, "recovery_pending", "false")
+    set_state(db, "complete_through", now_iso)
+    db.commit()
+
+    return {
+        "processed": processed_count,
+        "stored": stored_count,
+        "start_seq": start_seq,
+        "end_seq": current_seq,
+        "complete_through": now_iso,
+    }
+
+
 async def collect(
     *,
     db_path,
@@ -445,6 +501,7 @@ async def collect(
     minutes,
     resume_overlap_seconds,
     initial_lookback_minutes=30,
+    fetch_archive_fn=None,
 ):
     try:
         import websockets
@@ -453,6 +510,11 @@ async def collect(
             'Jetstream requiere el paquete opcional "websockets>=12". '
             'Instalarlo solo si se va a usar este recolector.'
         ) from exc
+
+    try:
+        from websockets.exceptions import InvalidStatus
+    except (ImportError, AttributeError):
+        InvalidStatus = Exception
 
     config = load_config(config_path)
     terms = load_terms(config)
@@ -476,16 +538,27 @@ async def collect(
     retry_delay = 1.0
 
     is_v2 = _is_v2_endpoint(endpoint)
+    current_source = urlparse(endpoint).netloc
     saved_seq = get_state(db, "last_seq") if is_v2 else None
     saved_time = get_state(db, "last_time_us")
+    saved_source = get_state(db, "stream_source")
+
+    # Migración reversible pre-#11: si cambia la fuente o no hay fuente, se marca la discrepancia
+    if is_v2 and saved_source and saved_source != current_source:
+        set_state(db, "gap_detected", "true")
+        set_state(db, "recovery_pending", "true")
+        db.commit()
+
     cursor = _resume_cursor(
         is_v2=is_v2,
         saved_seq=saved_seq,
         saved_time=saved_time,
+        saved_source=saved_source,
+        current_source=current_source,
         overlap_seconds=resume_overlap_seconds,
         initial_lookback_minutes=initial_lookback_minutes,
     )
-    last_seq = None
+    last_seq = saved_seq
 
     try:
         while time.monotonic() < deadline:
@@ -502,6 +575,8 @@ async def collect(
                     connect_kwargs["subprotocols"] = ["xrpc.v1.json"]
                 async with websockets.connect(url, **connect_kwargs) as ws:
                     connected_at = time.monotonic()
+                    set_state(db, "stream_source", current_source)
+                    db.commit()
                     while time.monotonic() < deadline:
                         timeout = min(30.0, max(0.1, deadline - time.monotonic()))
                         try:
@@ -532,6 +607,8 @@ async def collect(
                                 set_state(db, "last_time_us", last_time_us)
                             if last_seq:
                                 set_state(db, "last_seq", last_seq)
+                            now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                            set_state(db, "complete_through", now_iso)
                             db.commit()
                 if time.monotonic() < deadline:
                     reconnects += 1
@@ -539,9 +616,30 @@ async def collect(
                         retry_delay = 1.0
                     await asyncio.sleep(retry_delay)
                     retry_delay = _next_retry_delay(retry_delay)
+            except InvalidStatus as exc:
+                connection_errors += 1
+                status_code = getattr(getattr(exc, 'response', None), 'status_code', None)
+                last_error = f"InvalidStatus: {status_code}"
+                if status_code == 400 or "CursorTooOld" in str(exc):
+                    set_state(db, "gap_detected", "true")
+                    set_state(db, "recovery_pending", "true")
+                    db.commit()
+                    # Ejecutar recuperación de brecha
+                    recover_archive_gap(db, endpoint, terms, fetch_archive_fn=fetch_archive_fn)
+                    cursor = get_state(db, "last_seq")
+                if time.monotonic() < deadline:
+                    reconnects += 1
+                    await asyncio.sleep(retry_delay)
+                    retry_delay = _next_retry_delay(retry_delay)
             except Exception as exc:
                 connection_errors += 1
                 last_error = f"{type(exc).__name__}: {str(exc)[:200]}"
+                if "CursorTooOld" in str(exc) or "400" in str(exc):
+                    set_state(db, "gap_detected", "true")
+                    set_state(db, "recovery_pending", "true")
+                    db.commit()
+                    recover_archive_gap(db, endpoint, terms, fetch_archive_fn=fetch_archive_fn)
+                    cursor = get_state(db, "last_seq")
                 if time.monotonic() < deadline:
                     reconnects += 1
                     if connected_at is not None and time.monotonic() - connected_at >= 60:
@@ -553,6 +651,9 @@ async def collect(
             set_state(db, "last_time_us", last_time_us)
         if last_seq:
             set_state(db, "last_seq", last_seq)
+        now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        if get_state(db, "gap_detected") != "true":
+            set_state(db, "complete_through", now_iso)
         db.commit()
         db.close()
 
