@@ -61,6 +61,8 @@ class BenchmarkTests(unittest.TestCase):
         self.assertEqual(set(key[0]), set(b.KEY_COLUMNS))
 
     def test_two_independent_evaluators_enable_paired_results(self):
+        invalid = [(x['case_id'], b._valid(x['reply'], next(c['network'] for c in self.cases if c['id'] == x['case_id']))[1]) for x in self.candidates if x['strategy'] == 'contextual' and not b._valid(x['reply'], next(c['network'] for c in self.cases if c['id'] == x['case_id']))[0]]
+        self.assertEqual(invalid, [], invalid)
         blind, key = b.prepare_blind(self.cases, self.candidates, "review")
         lookup = {r["token"]: r for r in key}
         with tempfile.TemporaryDirectory() as directory:
