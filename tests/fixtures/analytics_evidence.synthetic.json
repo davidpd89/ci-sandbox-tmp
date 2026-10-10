@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-10-10T00:00:00Z",
+  "window_days": 14,
+  "exposures": [
+    {
+      "id": "a",
+      "network": "bluesky",
+      "queue": "API",
+      "campaign": "novela",
+      "subject": "synthetic_a",
+      "action": "follow",
+      "cohort": "treated",
+      "status": "confirmed",
+      "source": "action_ledger",
+      "source_ref": "ack_a",
+      "occurred_at": "2026-09-01T00:00:00Z",
+      "tracking_id": "trk_a",
+      "utm": {
+        "source": "bluesky",
+        "medium": "social",
+        "campaign": "novela"
+      }
+    },
+    {
+      "id": "b",
+      "network": "bluesky",
+      "queue": "API",
+      "campaign": "novela",
+      "subject": "synthetic_b",
+      "action": "follow",
+      "cohort": "control",
+      "status": "holdout",
+      "source": "holdout_ledger",
+      "source_ref": "holdout_b",
+      "occurred_at": "2026-09-01T00:00:00Z"
+    },
+    {
+      "id": "c",
+      "network": "tiktok",
+      "queue": "MOBILE",
+      "campaign": "novela",
+      "subject": "synthetic_c",
+      "action": "reply",
+      "cohort": "treated",
+      "status": "confirmed",
+      "source": "confirmed_mobile",
+      "source_ref": "ack_c",
+      "occurred_at": "2026-10-05T00:00:00Z"
+    }
+  ],
+  "observations": [
+    {
+      "id": "o1",
+      "exposure_id": "a",
+      "outcome": "followback",
+      "positive": true,
+      "complete": false,
+      "observed_at": "2026-09-05T00:00:00Z",
+      "source": "api_snapshot",
+      "source_ref": "snapshot_a",
+      "basis": "identity"
+    },
+    {
+      "id": "o2",
+      "exposure_id": "a",
+      "outcome": "web_visit",
+      "positive": true,
+      "complete": true,
+      "observed_at": "2026-09-03T00:00:00Z",
+      "source": "first_party_analytics",
+      "source_ref": "view_a",
+      "basis": "tracked",
+      "tracking_id": "trk_a",
+      "utm": {
+        "source": "bluesky",
+        "medium": "social",
+        "campaign": "novela"
+      }
+    },
+    {
+      "id": "o3",
+      "exposure_id": "b",
+      "outcome": "followback",
+      "positive": false,
+      "complete": true,
+      "observed_at": "2026-09-15T00:00:00Z",
+      "source": "api_snapshot",
+      "source_ref": "snapshot_b",
+      "basis": "identity"
+    }
+  ]
+}

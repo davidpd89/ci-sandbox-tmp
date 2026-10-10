@@ -155,6 +155,85 @@ class StableAliasTests(unittest.TestCase):
         self.assertFalse(result["linked"])
         self.assertEqual(result["unresolved"][0]["reason"], "event_observation_conflict")
 
+    def test_cross_queue_capture_times_and_distinct_proofs_same_stable_identity(self):
+        for net in NETWORKS:
+            with self.subTest(network=net):
+                g = AliasTimeline()
+                h = "writer@example.org" if net == "mastodon" else "writer"
+                sid = (D1 if net == "bluesky" else
+                       "https://example.org/users/writer" if net == "mastodon" else "4242")
+                add(g, "api", h, sid, T1, net, "API")
+                add(g, "web", h, sid, T2, net, "WEB")
+                add(g, "mobile", h, sid, T3, net, "MOBILE")
+                rows = [dict(network=net, kind="reply", event_id="remote-event",
+                             handle=h, observed_at=when, evidence_id=eid, queue=queue)
+                        for eid, when, queue in (("mobile", T3, "MOBILE"),
+                                                 ("api", T1, "API"),
+                                                 ("web", T2, "WEB"))]
+                for sample in (rows, list(reversed(rows))):
+                    result = g.project_events(sample)
+                    self.assertEqual(result["unresolved"], [])
+                    self.assertEqual(len(result["linked"]), 1)
+                    self.assertEqual(result["linked"][0]["stable_key"], g.evidence["api"].stable)
+                    self.assertEqual(result["linked"][0]["as_of"], T1.replace("Z", ".000000Z"))
+                    self.assertEqual(result["linked"][0]["time_basis"], "first_observed_at")
+
+    def test_renamed_handle_capture_is_one_event_but_recycling_is_not(self):
+        add(self.g, "a", "first.bsky.social", when=T1)
+        add(self.g, "b", "second.bsky.social", when=T2)
+        rows = [evt("common", when=T1, proof="a"),
+                evt("common", handle="second.bsky.social", when=T2, proof="b", queue="WEB")]
+        good = self.g.project_events(rows)
+        self.assertEqual(len(good["linked"]), 1)
+        self.assertFalse(good["unresolved"])
+        add(self.g, "c", "first.bsky.social", sid=D2, when=T3)
+        recycled = self.g.project_events(rows + [evt("common", when=T3, proof="c", queue="MOBILE")])
+        self.assertFalse(recycled["linked"])
+        self.assertEqual(recycled["unresolved"][0]["reason"], "event_identity_conflict")
+        self.assertEqual(recycled, self.g.project_events(list(reversed(rows + [evt(
+            "common", when=T3, proof="c", queue="MOBILE")]))))
+
+    def test_explicit_event_time_and_late_capture_do_not_backfill(self):
+        add(self.g, "a", "first.bsky.social", when=T1)
+        add(self.g, "b", "second.bsky.social", when=T2)
+        captured_late = evt("historical", when=T3, proof="a")
+        captured_late["occurred_at"] = T1
+        projected = self.g.project_events([captured_late])
+        self.assertEqual(projected["linked"][0]["as_of"], T1.replace("Z", ".000000Z"))
+        self.assertEqual(projected["linked"][0]["time_basis"], "occurred_at")
+        captured_late["occurred_at"] = T3
+        self.assertEqual(self.g.project_events([captured_late])["unresolved"][0]["reason"],
+                         "alias_no_longer_owned_or_conflicted")
+        add(self.g, "later-proof", "another.bsky.social", sid=D2, when=T3)
+        late = evt("old", handle="another.bsky.social", when=T3, proof="later-proof")
+        late["occurred_at"] = T1
+        self.assertEqual(self.g.project_events([late])["unresolved"][0]["reason"],
+                         "proof_is_newer_than_event")
+
+    def test_conflicting_event_times_and_impossible_order_are_rejected(self):
+        add(self.g, "a", "first.bsky.social")
+        one, two = evt("e", proof="a", when=T3), evt("e", proof="a", when=T3)
+        one["occurred_at"], two["occurred_at"] = T1, T2
+        self.assertEqual(self.g.project_events([one, two])["unresolved"][0]["reason"],
+                         "event_time_conflict")
+        one["observed_at"] = T1
+        one["occurred_at"] = T2
+        with self.assertRaisesRegex(AliasError, "event_occurs_after_observation"):
+            self.g.project_events([one])
+
+    def test_replay_and_revoke_recheck_all_duplicate_versions(self):
+        add(self.g, "a", "first.bsky.social", when=T1)
+        add(self.g, "b", "first.bsky.social", when=T2, queue="WEB")
+        rows = [evt("p", when=T1, proof="a"),
+                evt("p", when=T2, proof="b", queue="WEB")]
+        self.assertEqual(len(self.g.project_events(rows)["linked"]), 1)
+        replay = AliasTimeline.from_document(json.loads(json.dumps(self.g.to_document())))
+        self.assertEqual(replay.project_events(rows), self.g.project_events(rows))
+        replay.revoke("b", reason="disputed")
+        self.assertFalse(replay.project_events(rows)["linked"])
+        self.assertEqual(replay.project_events(rows)["unresolved"][0]["reason"],
+                         "event_observation_conflict")
+
     def test_unknown_and_wrong_account_proof_do_not_attribute(self):
         add(self.g, "a", "first.bsky.social")
         result = self.g.project_events([evt("1", proof=None),

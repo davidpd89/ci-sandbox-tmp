@@ -61,14 +61,20 @@ def build_from_pool(db, n, exclude_handles=frozenset(), mark_planned=True, max_c
     import random
     import facebook_pool as fpool
     import x_replies
+    import facebook_source_quality as quality
     rng = rng or random
     used = set(used_phrases)
     plan, comments = [], 0
     for row in fpool.pick(db, n * 4, exclude_handles=exclude_handles):
-        text = f"{row['handle']} {row['text']}"
-        if row["niche"] < POOL_MIN_NICHE or OFF_TOPIC.search(text) or INSTITUTIONAL.search(text) or SPAM.search(text) or sc.is_political(text):
+        if not quality.page_post_url_shape(row["permalink"], source=row.get("source")):
+            # No origin confirmed for group URLs or ambiguous /photo shares.
             continue
-        item = {"kind": "like_external", "permalink": row["permalink"], "autor": row["handle"], "post_text": (row.get("text") or "")[:500], "motivo": f"reserva:{row['source']}:score={row['score']}"}
+        text = f"{row['handle']} {row['text']}"
+        if (row["niche"] < POOL_MIN_NICHE or OFF_TOPIC.search(text) or INSTITUTIONAL.search(text)
+                or SPAM.search(text) or quality.hard_exclusion_reason(text) or sc.is_political(text)):
+            continue
+        item = {"kind": "like_external", "permalink": row["permalink"], "autor": row["handle"],
+                "post_created_at": row.get("created_at") or "", "post_text": (row.get("text") or "")[:500], "motivo": f"reserva:{row['source']}:score={row['score']}"}
         intent = x_replies.classify(row["text"]) if comments < max_comments and (allow is None or allow(row["handle"])) else None
         phrase = x_replies.choose_phrase(intent, used, rng) if intent else None
         if phrase:
@@ -84,18 +90,22 @@ def build_from_pool(db, n, exclude_handles=frozenset(), mark_planned=True, max_c
 
 
 def build(candidates, max_likes=12):
+    import facebook_source_quality as quality
     plan, seen = [], set()
     for item in candidates:
         autor = (item.get("autor") or "").strip()
         text = item.get("text") or ""
-        if not autor or autor.casefold() in seen or not item.get("permalink"):
+        if not autor or autor.casefold() in seen or not quality.page_post_url_shape(item.get("permalink"), source=item.get("source") or item.get("tag")):
             continue
-        if INSTITUTIONAL.search(autor) or INSTITUTIONAL.search(text) or SPAM.search(text) or OFF_TOPIC.search(f"{autor} {text}") or sc.is_political(f"{autor} {text}"):
+        if (INSTITUTIONAL.search(autor) or INSTITUTIONAL.search(text) or SPAM.search(text)
+                or quality.hard_exclusion_reason(f"{autor} {text}")
+                or OFF_TOPIC.search(f"{autor} {text}") or sc.is_political(f"{autor} {text}")):
             continue
         if not NICHE.search(f"{autor} {text}"):
             continue
         seen.add(autor.casefold())
         plan.append({"kind": "like_external", "permalink": item["permalink"], "autor": autor,
+                     "post_created_at": item.get("created_at") or item.get("created_time") or "",
                      "post_text": text[:500], "motivo": f"hashtag {item.get('tag', '')}"})
         if len(plan) >= max_likes:
             break

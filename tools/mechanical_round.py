@@ -188,6 +188,9 @@ PIPELINES["tiktok"]["runs_per_day"] = 6      # 07/10 (David): 4 rondas hoy para 
 CONFIRMED = re.compile(r"^confirmado\s+(\w+)", re.MULTILINE)
 SKIPPED = re.compile(r"^(saltado\w*|OMITIDO)", re.MULTILINE)
 FAILED = re.compile(r"^(FALLO[^\n]*|PARADA[^\n]*)", re.MULTILINE)
+SAFE_SKIPPED = re.compile(r"^saltado_preflight_([a-z_]+)\s+", re.MULTILINE)
+SAFE_SKIP_REASONS = frozenset(("texto_publicado", "texto_repetido_lote",
+    "objetivo_repetido_lote", "relacion_repetida_lote", "microtexto_publicado", "post_antiguo"))
 
 
 def summarize(output):
@@ -195,10 +198,16 @@ def summarize(output):
     kinds = {}
     for kind in CONFIRMED.findall(output):
         kinds[kind] = kinds.get(kind, 0) + 1
+    skipped = {}
+    for reason in SAFE_SKIPPED.findall(output):
+        if reason in SAFE_SKIP_REASONS:
+            skipped[reason] = skipped.get(reason, 0) + 1
     return {
         "confirmadas": kinds,
         "saltadas": len(SKIPPED.findall(output)),
         "fallos": [line[:160] for line in FAILED.findall(output)][:5],
+        "fallos_total": len(FAILED.findall(output)),
+        "elementos_omitidos_por_motivo": skipped,
     }
 
 
@@ -269,7 +278,10 @@ def _pre_failure_kind(cmd):
 def _record_plan_failure(network, stage, log_path, cause="error"):
     """Persistencia mínima de aviso local, sin contenido de terceros."""
     import plan_failure_events
-    return plan_failure_events.record(ROOT, network, stage, log_path, cause=cause)
+    # Errores del ejecutor clasificados como locales conservan fase interna
+    # en "cause"; no falsificar que su origen fue la API.
+    safe_stage = stage if stage in plan_failure_events.STAGES else "plan"
+    return plan_failure_events.record(ROOT, network, safe_stage, log_path, cause=cause)
 
 
 def run(network, *, dry=False, runner=default_runner, today=None, out=print,
@@ -313,10 +325,11 @@ def run(network, *, dry=False, runner=default_runner, today=None, out=print,
                     out(f"[{network}] cortacircuitos ABIERTO, no se actua: {why} (reset: python tools/circuit_breaker.py {network} reset)")
                     return {"ok": True, "skipped": True, "log": None}
             signals = []
+            retry_afters = []
             try:
                 result = _run(network, dry=dry, runner=runner, today=today,
                               out=out, daily=daily, shape=shape, rng=rng,
-                              signals=signals)
+                              signals=signals, retry_afters=retry_afters)
             except al.RoundBusy:
                 raise
             except Exception as exc:
@@ -328,10 +341,23 @@ def run(network, *, dry=False, runner=default_runner, today=None, out=print,
                 result = {"ok": False, "stage": "plan", "failure_kind": "plan",
                           "error_reason": cause, "log": None}
             if not dry:
-                signal = cb.worst(signals)
+                signal = cb.worst([*signals, result.get("signal")])
+                if result.get("error_reason") in cb.MANUAL_HOLD_REASONS:
+                    # Un fallo sin ACK NO queda resuelto tras el jitter del scheduler.
+                    # Bloqueo persistente solo para esta red, aunque hubo 0 confirms.
+                    cb.hold_for_review(directory, result["error_reason"])
+                    saved = _record_plan_failure(network, "plan", result.get("log"),
+                                                 cause=result["error_reason"])
+                    out(f"[{network}] ACK incierto: revisión manual obligatoria; "
+                        + ("evento local registrado" if saved else "EVENTO_NO_PERSISTIDO"))
                 # Una ronda omitida (móvil ocupado, sin acciones) no demuestra
                 # recuperación de la red y NO debe resetear fallos antiguos.
                 if result.get("skipped") and signal is None:
+                    return result
+                if result.get("partial") and signal is None:
+                    # Un lote con errores por item no prueba que la red se haya
+                    # recuperado, pero un 403 de un post no abre el breaker.
+                    out(f"[{network}] ronda parcial: revisar fallos de items; breaker sin reset")
                     return result
                 kind = result.get("failure_kind")
                 if not result.get("ok") and kind not in ("plan", "execute"):
@@ -343,8 +369,13 @@ def run(network, *, dry=False, runner=default_runner, today=None, out=print,
                 if result.get("ok", False) or signal is not None or kind == "execute":
                     # Un fallo del ejecutor (exit != 0) puede indicar Edge/API
                     # rota aun sin regex 429/auth; no excluirlo del breaker.
+                    # El Retry-After sólo se interpreta si el mismo proceso registró 429.
+                    retry_header = (max(retry_afters, key=lambda value:
+                                    cb.parse_retry_after(value) or 0)
+                                    if signal == "rate" and retry_afters else None)
                     state = cb.record(directory, result.get("ok", False), signal=signal,
-                                      reason=result.get("stage", kind or ""))
+                                      reason=result.get("stage", kind or ""),
+                                      retry_after=retry_header)
                     if state.get("open_until"):
                         out(f"[{network}] cortacircuitos ABIERTO hasta {state['open_until'][:16]} ({state.get('reason') or 'fallos seguidos'})")
                 else:
@@ -391,8 +422,17 @@ def _time_runner(runner, cmd):
     return code, str(text or ""), started, ended, elapsed
 
 
+def _tiktok_follow_pause_only():
+    """True si TikTok tiene una pausa activa de ambito `follow` y like/comment pueden escribir (solo lee el fichero de descanso)."""
+    try:
+        import tiktok_safety as safety
+        return bool(safety.follow_paused()) and not safety.remaining_minutes(kind="like")
+    except Exception:       # estado ilegible: no es "solo follows"; el bulk decidira (falla cerrado)
+        return False
+
+
 def _run(network, *, dry=False, runner=default_runner, today=None, out=print,
-         daily=None, shape=True, rng=None, signals=None):
+         daily=None, shape=True, rng=None, signals=None, retry_afters=None):
     import volume_shape as vs
     rng = rng or random.Random()
     cfg = PIPELINES[network]
@@ -410,7 +450,12 @@ def _run(network, *, dry=False, runner=default_runner, today=None, out=print,
         timing = (f"[TIEMPO_ETAPA] phase={phase} script={script} "
                   f"inicio={started} fin={ended} segundos={elapsed:.2f} exit={code}")
         if signals is not None:
-            signals.append(cb.detect(text))
+            signal = cb.detect(text)
+            signals.append(signal)
+            if signal == "rate" and retry_afters is not None:
+                header = cb.retry_after_from_output(text)
+                if header is not None:
+                    retry_afters.append(header)
         transcript.append(f"===== {label} (exit {code}) =====\n{timing}\n{text}")
         out(f"[{network}] {timing}")
         with open(log_path, "w", encoding="utf-8") as stream:
@@ -453,6 +498,11 @@ def _run(network, *, dry=False, runner=default_runner, today=None, out=print,
             cmd[cmd.index("--max-pool-follows") + 1] = str(pool_follows)
         if dry and ("--like" in cmd or os.path.basename(cmd[1]) == "tiktok_bulk_follow.py"):
             continue  # no dar likes ni follows en --dry
+        if os.path.basename(cmd[1]) == "tiktok_bulk_follow.py" and _tiktok_follow_pause_only():
+            # 09/10: limite de seguir de TikTok = pausa SOLO de follows. El seguimiento masivo se omite y la ronda sigue con likes/comentarios
+            # (antes `restricted` cortaba la ronda entera y el movil se quedaba sin hacer nada).
+            out(f"[{network}] pausa de follows activa: se omite el seguimiento masivo; la ronda sigue con likes y comentarios")
+            continue
         code, text = step(os.path.basename(cmd[1]) + " " + " ".join(cmd[2:3]), cmd)
         # No seguir preparando ni hacer nuevas acciones tras 429/auth.
         # La señal ya está registrada para cb.record en run().
@@ -461,7 +511,35 @@ def _run(network, *, dry=False, runner=default_runner, today=None, out=print,
                     "exit_code": code, "log": log_path}
         if "tiktok_bulk_follow" in cmd[1]:
             pre_confirmed.append(text or "")       # los follows del seguimiento masivo cuentan en el resumen de la ronda
-        if "MobileSessionBusy" in (text or ""):          # 09/10: tiktok_bulk_follow sale con codigo 0 al encontrar el movil ocupado; exigir code != 0 dejaba seguir la ronda contra el movil ocupado
+        # Contrato exclusivo del paso bulk. No confundir error local/ocupación con una
+        # caída de la plataforma; tampoco continuar después de una parada de seguridad.
+        bulk_status = None
+        if "tiktok_bulk_follow" in cmd[1]:
+            statuses = re.findall(r"(?m)^TIKTOK_STEP_STATUS=(\w+)\s*$", text or "")
+            if not statuses and "MobileSessionBusy" in (text or ""):
+                out(f"[{network}] móvil ocupado (CLI legacy): ronda omitida")
+                return {"ok": True, "skipped": True, "log": log_path}
+            if len(statuses) != 1 or statuses[0] not in (
+                "completed", "no_budget", "busy", "restricted", "local_error", "uncertain"
+            ):
+                out(f"[{network}] bulk sin estado estructurado inequívoco (exit {code}): parada local")
+                return {"ok": False, "stage": "bulk", "failure_kind": "plan",
+                        "error_reason": "bulk_status_invalid", "exit_code": code, "log": log_path}
+            bulk_status = statuses[0]
+            if bulk_status in ("restricted", "local_error", "uncertain"):
+                out(f"[{network}] bulk detenido ({bulk_status}); no se ejecutan otras etapas")
+                return {"ok": False, "stage": "bulk",
+                        "failure_kind": "execute" if bulk_status == "restricted" else "plan",
+                        "signal": "auth" if bulk_status == "restricted" else None,
+                        "error_reason": f"bulk_{bulk_status}", "exit_code": code, "log": log_path}
+            if bulk_status == "busy":
+                out(f"[{network}] móvil ocupado: ronda omitida sin cortacircuitos")
+                return {"ok": True, "skipped": True, "log": log_path}
+            if code != 0:
+                out(f"[{network}] bulk incoherente: {bulk_status} con exit={code}")
+                return {"ok": False, "stage": "bulk", "failure_kind": "plan",
+                        "error_reason": "bulk_exit_inconsistent", "exit_code": code, "log": log_path}
+        if "MobileSessionBusy" in (text or ""):          # compatibilidad con otros scripts heredados
             # el movil lo usa otra sesion (la de TikTok trabaja con el mismo telefono): no es un fallo de la red ni debe abrir el cortacircuitos; se omite la ronda
             out(f"[{network}] movil ocupado por otra sesion: ronda omitida (se reintenta en la siguiente franja)")
             return {"ok": True, "skipped": True, "log": log_path}
@@ -568,18 +646,64 @@ def _run(network, *, dry=False, runner=default_runner, today=None, out=print,
         return {"ok": True, "dry": True, "log": log_path}
 
     code, text = step("execute", cfg["execute"])
-    if "VIGILANTE:" in text and cfg.get("browser") and not cb.detect(text):
-        # 06/10: un Edge colgado (el vigilante aborto el ejecutor tras 5 min sin actividad): se reanudan los workers (receta de AGENTS.md) y se reintenta UNA vez; lo ya hecho se
-        # salta solo (like «ya dado», follow «ya seguido») y el registro va accion a accion, asi que no se pierde ni se duplica nada.
-        out(f"[{network}] aviso: el navegador se colgo; se reanudan los workers y se reintenta el plan una vez")
-        step("cdp_resume_workers", [PY, "tools/cdp_resume_workers.py"])
-        retry_code, retry_text = step("execute (reintento tras vigilante)", cfg["execute"])
-        code, text = retry_code, text + chr(10) + retry_text
+    if re.search(r"(?m)^VIGILANTE:", text) and cfg.get("browser"):
+        # Una señal HTTP crítica no resuelve por sí sola el ACK de acciones anteriores.
+        # El click/POST anterior puede haber llegado al servidor sin ACK.
+        # No repetir automáticamente el plan, aunque el ledger sea idempotente
+        # localmente: hay escrituras cuya confirmación remota se desconoce.
+        out(f"[{network}] ACK incierto tras watchdog Edge: sin reintento ni etapas post")
+        # La confirmación explícita previa al watchdog no se descarta:
+        # round_queue necesita el resumen para etiquetar 'parcial' y
+        # no repetir una ronda con operaciones ya reconocidas.
+        summary = summarize(text)
+        summary["fallos_total"] += 1
+        summary["fallos"].append("FALLO_LOCAL: edge_ack_uncertain")
+        done = sum(summary["confirmadas"].values())
+        out(f"[{network}] {done} confirmadas {summary['confirmadas']}, "
+            f"{summary['saltadas']} saltadas, {summary['fallos_total']} fallos; "
+            f"elementos_omitidos_por_motivo={summary['elementos_omitidos_por_motivo']}")
+        return {"ok": False, "stage": "execute", "failure_kind": "plan",
+                "partial": done > 0, "summary": summary,
+                "error_reason": "edge_ack_uncertain", "exit_code": code, "log": log_path}
+    if network == "tiktok" and os.path.basename(cfg["execute"][1]) == "tiktok_growth_flow.py":
+        # El ejecutor nativo tiene estado tipado, igual que bulk. Un fallo
+        # local/ocupación no demuestra restricción de la cuenta ni resetea
+        # el breaker de otras redes. No iniciar POST si hubo parada.
+        states = re.findall(r"(?m)^TIKTOK_STEP_STATUS=(\w+)\s*$", text or "")
+        if len(states) != 1:
+            if "FALLO DE PREFLIGHT" in (text or ""):
+                return {"ok": False, "stage": "preflight", "failure_kind": "plan",
+                        "error_reason": "tiktok_preflight", "exit_code": code, "log": log_path}
+            return {"ok": False, "stage": "execute", "failure_kind": "plan",
+                    "error_reason": "tiktok_native_status_invalid", "exit_code": code, "log": log_path}
+        native_status = states[0]
+        if native_status == "busy":
+            out("[tiktok] móvil ocupado durante la ejecución; ronda omitida")
+            return {"ok": True, "skipped": True, "log": log_path}
+        if native_status in ("local_error", "uncertain"):
+            # No borrar una señal 429/auth real que el ejecutor haya emitido.
+            out(f"[tiktok] ejecución nativa detenida ({native_status}), sin post ni reintentos")
+            return {"ok": False, "stage": "execute", "failure_kind": "plan",
+                    "error_reason": f"tiktok_native_{native_status}", "exit_code": code, "log": log_path}
+        if native_status == "restricted":
+            out("[tiktok] restricción de plataforma/cuenta; ninguna etapa posterior")
+            return {"ok": False, "stage": "execute", "failure_kind": "execute",
+                    "signal": "auth", "error_reason": "tiktok_native_restricted",
+                    "exit_code": code, "log": log_path}
+        if native_status not in ("completed", "no_budget") or code != 0:
+            return {"ok": False, "stage": "execute", "failure_kind": "plan",
+                    "error_reason": "tiktok_native_exit_invalid", "exit_code": code, "log": log_path}
     summary = summarize(text)
+    preflight_failed = "FALLO DE PREFLIGHT" in text
+    # El ejecutor ya ha exigido PARADA TOTAL. Ni una sola acción post debe
+    # arrancar después (aunque su salida antigua tenga exit=0 y no incluya 429).
+    hard_stop = bool(re.search(r"^PARADA TOTAL:", text, re.MULTILINE))
+    if hard_stop:
+        out(f"[{network}] parada total del ejecutor: cadena post cancelada")
     for bulk_text in pre_confirmed:
         for kind, n in summarize(bulk_text)["confirmadas"].items():
             summary["confirmadas"][kind] = summary["confirmadas"].get(kind, 0) + n
-    for extra in ([] if cb.detect(text) else cfg.get("post", [])):  # no actuar después de rate/auth
+    for extra in ([] if code != 0 or hard_stop or preflight_failed or cb.detect(text) else cfg.get("post", [])):  # ni preflight fallido ni salida no segura
         extra_code, extra_text = step("post " + os.path.basename(extra[1]) + " " + " ".join(extra[2:3]), extra)
         if cb.detect(extra_text):
             # El paso puede haber confirmado acciones ANTES de recibir 429:
@@ -595,19 +719,24 @@ def _run(network, *, dry=False, runner=default_runner, today=None, out=print,
             summary["confirmadas"][kind] = summary["confirmadas"].get(kind, 0) + n
     done = sum(summary["confirmadas"].values())
     out(f"[{network}] {done} confirmadas {summary['confirmadas']}, "
-        f"{summary['saltadas']} saltadas, {len(summary['fallos'])} fallos")
+        f"{summary['saltadas']} saltadas, {summary['fallos_total']} fallos; "
+        f"elementos_omitidos_por_motivo={summary['elementos_omitidos_por_motivo']}")
     for line in summary["fallos"]:
         out(f"   ! {line}")
     metrics = re.findall(r"Metricas finales:.*", text)
     if metrics:
         out(f"[{network}] {metrics[-1]}")
-    preflight_failed = "FALLO DE PREFLIGHT" in text
     if preflight_failed:
         out(f"[{network}] el preflight del plan fallo: no se ejecuto nada")
-    return {"ok": code == 0 and not preflight_failed and cb.worst(signals or []) is None,
+    return {"ok": code == 0 and not preflight_failed and not hard_stop and cb.worst(signals or []) is None,
             "failure_kind": "plan" if preflight_failed else "execute",
             "stage": "preflight" if preflight_failed else "execute",
-            "exit_code": code, "summary": summary, "log": log_path}
+            "exit_code": code, "summary": summary,
+            # Un exit != 0 o PARADA TOTAL no es un fallo aislado por item:
+            # deben atravesar el camino normal de errores del breaker.
+            "partial": code == 0 and not preflight_failed and not hard_stop
+                       and bool(summary["fallos_total"]),
+            "log": log_path}
 
 
 def _done_today(network, cfg, today):

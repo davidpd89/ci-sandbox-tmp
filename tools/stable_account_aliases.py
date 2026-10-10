@@ -235,12 +235,19 @@ class AliasTimeline:
                 if r.stable == stable]
 
     def project_events(self, events: list[Mapping]) -> dict:
-        """Strict join, deduplicated across WEB/API/MOBILE on (network, kind, event_id)."""
+        """Join independently verified observations of remote events.
+
+        observed_at is the capture time. Optional occurred_at is the remote
+        event time; do not confuse a late screenshot with an old event.
+        Repeated WEB/API/MOBILE captures can differ in time, handle and proof
+        only when EVERY version independently resolves to the same stable ID.
+        """
         prepared: dict[tuple[str, str, str], list[dict]] = {}
         for raw in events:
             if not isinstance(raw, Mapping):
                 raise AliasError("event_invalid")
-            network, kind, event_id, handle, at = (raw.get(x) for x in ("network", "kind", "event_id", "handle", "observed_at"))
+            network, kind, event_id, handle, at = (
+                raw.get(x) for x in ("network", "kind", "event_id", "handle", "observed_at"))
             account = self.key_builder(network, handle)
             if not isinstance(kind, str) or not kind.strip() or len(kind) > 100:
                 raise AliasError("event_kind_invalid")
@@ -249,35 +256,59 @@ class AliasTimeline:
             if raw.get("queue") not in QUEUES:
                 raise AliasError("queue_invalid")
             at = _stamp(_when(at))
+            occurred = raw.get("occurred_at")
+            occurred = _stamp(_when(occurred)) if occurred is not None else None
+            if occurred is not None and occurred > at:
+                raise AliasError("event_occurs_after_observation")
             proof_id = raw.get("evidence_id")
             if proof_id is not None and not isinstance(proof_id, str):
                 raise AliasError("event_proof_invalid")
             key = (network, kind, event_id)
-            prepared.setdefault(key, []).append({"account": account, "at": at, "proof": proof_id})
+            prepared.setdefault(key, []).append({
+                "account": account, "at": at, "occurred": occurred, "proof": proof_id})
         linked, unresolved = [], []
         for (network, kind, event_id), versions in sorted(prepared.items()):
-            shapes = {(row["account"], row["at"], row["proof"]) for row in versions}
-            if len(shapes) > 1:
-                unresolved.append({"network": network, "kind": kind, "event_id": event_id,
-                                   "reason": "event_observation_conflict"})
+            common = {"network": network, "kind": kind, "event_id": event_id}
+            event_times = {row["occurred"] for row in versions if row["occurred"] is not None}
+            if len(event_times) > 1:
+                unresolved.append({**common, "reason": "event_time_conflict"})
                 continue
-            account, at, proof_id = next(iter(shapes))
-            proof = self.evidence.get(proof_id) if proof_id else None
-            if proof is None or proof_id in self._inactive or proof.account != account:
-                unresolved.append({"network": network, "kind": kind, "event_id": event_id,
-                                   "reason": "missing_verified_proof"})
+            event_time = next(iter(event_times)) if event_times else None
+            identities, failures = set(), []
+            for row in versions:
+                account, proof_id = row["account"], row["proof"]
+                proof = self.evidence.get(proof_id) if proof_id else None
+                if proof is None or proof_id in self._inactive or proof.account != account:
+                    failures.append("missing_verified_proof")
+                    continue
+                when = event_time or row["at"]
+                if when > row["at"]:
+                    failures.append("event_observation_conflict")
+                    continue
+                if when < proof.observed_at:
+                    failures.append("proof_is_newer_than_event")
+                    continue
+                current = self.resolve(*account.split("|", 1), as_of=when)
+                if (current["stable_key"] != proof.stable
+                        or current["status"] not in {"verified_at_observation", "inferred_interval"}):
+                    failures.append("alias_no_longer_owned_or_conflicted")
+                    continue
+                identities.add(proof.stable)
+            if failures:
+                # A partially verified duplicate is not silently promoted from
+                # its good copy: that could merge a recycled handle's history.
+                reason = failures[0] if len(versions) == 1 else "event_observation_conflict"
+                unresolved.append({**common, "reason": reason})
                 continue
-            if _when(at) < _when(proof.observed_at):
-                unresolved.append({"network": network, "kind": kind, "event_id": event_id,
-                                   "reason": "proof_is_newer_than_event"})
+            if len(identities) != 1:
+                unresolved.append({**common, "reason": "event_identity_conflict"})
                 continue
-            current = self.resolve(*account.split("|", 1), as_of=at)
-            if current["stable_key"] != proof.stable or current["status"] not in {"verified_at_observation", "inferred_interval"}:
-                unresolved.append({"network": network, "kind": kind, "event_id": event_id,
-                                   "reason": "alias_no_longer_owned_or_conflicted"})
-                continue
-            linked.append({"network": network, "kind": kind, "event_id": event_id, "account": account,
-                           "stable_key": proof.stable, "as_of": at})
+            earliest = min(versions, key=lambda row: (row["at"], row["account"]))
+            linked.append({
+                **common, "account": earliest["account"],
+                "stable_key": next(iter(identities)),
+                "as_of": event_time or earliest["at"],
+                "time_basis": "occurred_at" if event_time else "first_observed_at"})
         return {"linked": linked, "unresolved": unresolved}
 
     def to_document(self) -> dict:

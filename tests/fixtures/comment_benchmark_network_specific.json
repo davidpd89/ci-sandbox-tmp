@@ -1,0 +1,801 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "description": "Casos inventados propios de cada red, sin atribución a usuarios ni métricas reales.",
+  "cases": [
+    {
+      "id": "x_red_literatura",
+      "network": "x",
+      "kind": "literatura",
+      "post": "He subrayado el capítulo del reloj detenido: cambia cómo lees todo el misterio.",
+      "anchors": [
+        "reloj"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "x_red_noticia",
+      "network": "x",
+      "kind": "noticia",
+      "post": "La biblioteca del barrio abrirá una sección de fantasía traducida en noviembre.",
+      "anchors": [
+        "biblioteca"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "x_red_premio",
+      "network": "x",
+      "kind": "premio",
+      "post": "Un microrrelato sobre una estación abandonada ha ganado el certamen escolar.",
+      "anchors": [
+        "estación"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "x_red_conversacion",
+      "network": "x",
+      "kind": "conversacion",
+      "post": "¿Preferís saber el nombre del villano pronto o descubrirlo en la última escena?",
+      "anchors": [
+        "villano"
+      ],
+      "thread": "Conversación de ejemplo inventada para evaluar el contexto del hilo.",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "threads_red_literatura",
+      "network": "threads",
+      "kind": "literatura",
+      "post": "Estoy preparando un club de lectura para comparar dos narradores de una misma saga.",
+      "anchors": [
+        "narradores"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "threads_red_noticia",
+      "network": "threads",
+      "kind": "noticia",
+      "post": "Una editorial pequeña anuncia una antología de dragones domésticos.",
+      "anchors": [
+        "dragones"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "threads_red_premio",
+      "network": "threads",
+      "kind": "premio",
+      "post": "Mi relato sobre un ascensor que viaja al pasado ha quedado finalista.",
+      "anchors": [
+        "ascensor"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "threads_red_conversacion",
+      "network": "threads",
+      "kind": "conversacion",
+      "post": "Una lectora dice que abandonó la trilogía por el segundo tomo; otra recomienda seguir.",
+      "anchors": [
+        "trilogía"
+      ],
+      "thread": "Conversación de ejemplo inventada para evaluar el contexto del hilo.",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "facebook_red_literatura",
+      "network": "facebook",
+      "kind": "literatura",
+      "post": "En el club del centro cultural leímos una novela epistolar de brujas.",
+      "anchors": [
+        "epistolar"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "facebook_red_noticia",
+      "network": "facebook",
+      "kind": "noticia",
+      "post": "La feria local incorpora un encuentro de narradores de literatura fantástica.",
+      "anchors": [
+        "feria"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "facebook_red_premio",
+      "network": "facebook",
+      "kind": "premio",
+      "post": "La asociación del barrio premia una historia ambientada en un puente viejo.",
+      "anchors": [
+        "puente"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "facebook_red_conversacion",
+      "network": "facebook",
+      "kind": "conversacion",
+      "post": "Debatimos si es mejor prestar un libro anotado o uno sin marcas.",
+      "anchors": [
+        "anotado"
+      ],
+      "thread": "Conversación de ejemplo inventada para evaluar el contexto del hilo.",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "pinterest_red_literatura",
+      "network": "pinterest",
+      "kind": "literatura",
+      "post": "He ordenado mi tablero de referencias de castillos por colores y materiales.",
+      "anchors": [
+        "castillos"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "pinterest_red_noticia",
+      "network": "pinterest",
+      "kind": "noticia",
+      "post": "La biblioteca publica un catálogo visual de cubiertas fantásticas antiguas.",
+      "anchors": [
+        "cubiertas"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "pinterest_red_premio",
+      "network": "pinterest",
+      "kind": "premio",
+      "post": "Un diseño de marcapáginas de constelaciones gana un concurso local.",
+      "anchors": [
+        "marcapáginas"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "pinterest_red_conversacion",
+      "network": "pinterest",
+      "kind": "conversacion",
+      "post": "Estoy comparando dos mapas dibujados para un mundo de islas flotantes.",
+      "anchors": [
+        "islas"
+      ],
+      "thread": "Conversación de ejemplo inventada para evaluar el contexto del hilo.",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "reddit_red_literatura",
+      "network": "reddit",
+      "kind": "literatura",
+      "post": "Busco una novela autoconclusiva con protagonista mayor y magia de bajo perfil.",
+      "anchors": [
+        "autoconclusiva"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "reddit_red_noticia",
+      "network": "reddit",
+      "kind": "noticia",
+      "post": "La universidad ha publicado un archivo abierto de revistas de ciencia ficción antiguas.",
+      "anchors": [
+        "revistas"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "reddit_red_premio",
+      "network": "reddit",
+      "kind": "premio",
+      "post": "Un relato de terror suave narrado desde una librería gana el premio del festival.",
+      "anchors": [
+        "librería"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "reddit_red_conversacion",
+      "network": "reddit",
+      "kind": "conversacion",
+      "post": "Debate largo: ¿qué hace convincente un sistema mágico con consecuencias?",
+      "anchors": [
+        "consecuencias"
+      ],
+      "thread": "Conversación de ejemplo inventada para evaluar el contexto del hilo.",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "bluesky_red_literatura",
+      "network": "bluesky",
+      "kind": "literatura",
+      "post": "Me he quedado pensando en un cuento donde las sombras escriben poemas.",
+      "anchors": [
+        "sombras"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "bluesky_red_noticia",
+      "network": "bluesky",
+      "kind": "noticia",
+      "post": "Hoy anuncian una jornada de lectura en voz alta de relatos fantásticos.",
+      "anchors": [
+        "lectura"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "bluesky_red_premio",
+      "network": "bluesky",
+      "kind": "premio",
+      "post": "Una historia sobre espejos empañados gana el certamen juvenil.",
+      "anchors": [
+        "espejos"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "bluesky_red_conversacion",
+      "network": "bluesky",
+      "kind": "conversacion",
+      "post": "¿Os molesta cuando un narrador oculta información que conoce desde el inicio?",
+      "anchors": [
+        "narrador"
+      ],
+      "thread": "Conversación de ejemplo inventada para evaluar el contexto del hilo.",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "mastodon_red_literatura",
+      "network": "mastodon",
+      "kind": "literatura",
+      "post": "En un círculo de lectura hemos discutido una fantasía sin reyes ni palacios.",
+      "anchors": [
+        "palacios"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "mastodon_red_noticia",
+      "network": "mastodon",
+      "kind": "noticia",
+      "post": "El archivo comunitario rescata entrevistas de ilustradoras de portadas.",
+      "anchors": [
+        "portadas"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "mastodon_red_premio",
+      "network": "mastodon",
+      "kind": "premio",
+      "post": "Una fábula sobre una ciudad sumergida recibe un premio de relato corto.",
+      "anchors": [
+        "sumergida"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "mastodon_red_conversacion",
+      "network": "mastodon",
+      "kind": "conversacion",
+      "post": "Alguien pregunta por novelas sin romance y otra persona comparte cuatro opciones.",
+      "anchors": [
+        "romance"
+      ],
+      "thread": "Conversación de ejemplo inventada para evaluar el contexto del hilo.",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "tiktok_red_literatura",
+      "network": "tiktok",
+      "kind": "literatura",
+      "post": "Vídeo rápido enseñando las notas adhesivas del último capítulo de una saga.",
+      "anchors": [
+        "notas"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "tiktok_red_noticia",
+      "network": "tiktok",
+      "kind": "noticia",
+      "post": "Un vídeo anuncia sesiones de cuentacuentos de fantasía en la biblioteca.",
+      "anchors": [
+        "cuentacuentos"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "tiktok_red_premio",
+      "network": "tiktok",
+      "kind": "premio",
+      "post": "Una creadora celebra el premio a su cuento sobre puertas que hablan.",
+      "anchors": [
+        "puertas"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "tiktok_red_conversacion",
+      "network": "tiktok",
+      "kind": "conversacion",
+      "post": "En comentarios preguntan si compensa releer el primer tomo antes del estreno.",
+      "anchors": [
+        "releer"
+      ],
+      "thread": "Conversación de ejemplo inventada para evaluar el contexto del hilo.",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "instagram_red_literatura",
+      "network": "instagram",
+      "kind": "literatura",
+      "post": "Carrusel con seis fotografías de rincones donde leer mientras llueve.",
+      "anchors": [
+        "rincones"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "instagram_red_noticia",
+      "network": "instagram",
+      "kind": "noticia",
+      "post": "Una librería anuncia una exposición de portadas ilustradas de los noventa.",
+      "anchors": [
+        "portadas"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "instagram_red_premio",
+      "network": "instagram",
+      "kind": "premio",
+      "post": "Fotografía de la medalla de un concurso de cuentos de aventuras.",
+      "anchors": [
+        "medalla"
+      ],
+      "thread": "",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    },
+    {
+      "id": "instagram_red_conversacion",
+      "network": "instagram",
+      "kind": "conversacion",
+      "post": "En una publicación preguntan cómo evitar spoilers al comentar finales.",
+      "anchors": [
+        "spoilers"
+      ],
+      "thread": "Conversación de ejemplo inventada para evaluar el contexto del hilo.",
+      "published_at": "2026-10-09T18:30:00+02:00",
+      "as_of": "2026-10-10T07:00:00+02:00"
+    }
+  ],
+  "candidates": [
+    {
+      "case_id": "x_red_literatura",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "x_red_literatura",
+      "strategy": "contextual",
+      "reply": "¿El reloj detenido aparece ya al principio?"
+    },
+    {
+      "case_id": "x_red_noticia",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "x_red_noticia",
+      "strategy": "contextual",
+      "reply": "¿La biblioteca incluirá también autoras españolas?"
+    },
+    {
+      "case_id": "x_red_premio",
+      "strategy": "baseline_generic",
+      "reply": "¡Enhorabuena, qué bien!"
+    },
+    {
+      "case_id": "x_red_premio",
+      "strategy": "contextual",
+      "reply": "¿La estación abandonada era el escenario principal?"
+    },
+    {
+      "case_id": "x_red_conversacion",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "x_red_conversacion",
+      "strategy": "contextual",
+      "reply": "¿El villano deja pistas antes del desenlace?"
+    },
+    {
+      "case_id": "threads_red_literatura",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "threads_red_literatura",
+      "strategy": "contextual",
+      "reply": "¿Los narradores cuentan el mismo acontecimiento?"
+    },
+    {
+      "case_id": "threads_red_noticia",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "threads_red_noticia",
+      "strategy": "contextual",
+      "reply": "¿Los dragones aparecen en relatos independientes?"
+    },
+    {
+      "case_id": "threads_red_premio",
+      "strategy": "baseline_generic",
+      "reply": "¡Enhorabuena, qué bien!"
+    },
+    {
+      "case_id": "threads_red_premio",
+      "strategy": "contextual",
+      "reply": "¿El ascensor viaja a una época fija?"
+    },
+    {
+      "case_id": "threads_red_conversacion",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "threads_red_conversacion",
+      "strategy": "contextual",
+      "reply": "¿La trilogía cambia de ritmo en el tercero?"
+    },
+    {
+      "case_id": "facebook_red_literatura",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "facebook_red_literatura",
+      "strategy": "contextual",
+      "reply": "¿Las cartas revelan secretos distintos a cada personaje?"
+    },
+    {
+      "case_id": "facebook_red_noticia",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "facebook_red_noticia",
+      "strategy": "contextual",
+      "reply": "¿La feria tendrá una mesa sobre fantasía juvenil?"
+    },
+    {
+      "case_id": "facebook_red_premio",
+      "strategy": "baseline_generic",
+      "reply": "¡Enhorabuena, qué bien!"
+    },
+    {
+      "case_id": "facebook_red_premio",
+      "strategy": "contextual",
+      "reply": "¿El puente viejo aparece desde el inicio?"
+    },
+    {
+      "case_id": "facebook_red_conversacion",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "facebook_red_conversacion",
+      "strategy": "contextual",
+      "reply": "¿El libro anotado cambia vuestra manera de leerlo?"
+    },
+    {
+      "case_id": "pinterest_red_literatura",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "pinterest_red_literatura",
+      "strategy": "contextual",
+      "reply": "¿Los castillos de piedra se agrupan por época?"
+    },
+    {
+      "case_id": "pinterest_red_noticia",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "pinterest_red_noticia",
+      "strategy": "contextual",
+      "reply": "¿Las cubiertas incluyen ediciones españolas?"
+    },
+    {
+      "case_id": "pinterest_red_premio",
+      "strategy": "baseline_generic",
+      "reply": "¡Enhorabuena, qué bien!"
+    },
+    {
+      "case_id": "pinterest_red_premio",
+      "strategy": "contextual",
+      "reply": "¿El marcapáginas utiliza constelaciones reales?"
+    },
+    {
+      "case_id": "pinterest_red_conversacion",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "pinterest_red_conversacion",
+      "strategy": "contextual",
+      "reply": "¿Las islas flotantes mantienen siempre su posición?"
+    },
+    {
+      "case_id": "reddit_red_literatura",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "reddit_red_literatura",
+      "strategy": "contextual",
+      "reply": "¿Te interesa que la magia tenga reglas estrictas?"
+    },
+    {
+      "case_id": "reddit_red_noticia",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "reddit_red_noticia",
+      "strategy": "contextual",
+      "reply": "¿Las revistas incluyen números digitalizados completos?"
+    },
+    {
+      "case_id": "reddit_red_premio",
+      "strategy": "baseline_generic",
+      "reply": "¡Enhorabuena, qué bien!"
+    },
+    {
+      "case_id": "reddit_red_premio",
+      "strategy": "contextual",
+      "reply": "¿La librería es también la voz narradora?"
+    },
+    {
+      "case_id": "reddit_red_conversacion",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "reddit_red_conversacion",
+      "strategy": "contextual",
+      "reply": "¿Las consecuencias afectan también a personajes secundarios?"
+    },
+    {
+      "case_id": "bluesky_red_literatura",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "bluesky_red_literatura",
+      "strategy": "contextual",
+      "reply": "¿Las sombras escriben para alguien concreto?"
+    },
+    {
+      "case_id": "bluesky_red_noticia",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "bluesky_red_noticia",
+      "strategy": "contextual",
+      "reply": "¿La lectura incluirá cuentos breves de autoras nuevas?"
+    },
+    {
+      "case_id": "bluesky_red_premio",
+      "strategy": "baseline_generic",
+      "reply": "¡Enhorabuena, qué bien!"
+    },
+    {
+      "case_id": "bluesky_red_premio",
+      "strategy": "contextual",
+      "reply": "¿Los espejos esconden alguna pista del final?"
+    },
+    {
+      "case_id": "bluesky_red_conversacion",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "bluesky_red_conversacion",
+      "strategy": "contextual",
+      "reply": "¿El narrador justifica al final ese silencio?"
+    },
+    {
+      "case_id": "mastodon_red_literatura",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "mastodon_red_literatura",
+      "strategy": "contextual",
+      "reply": "¿La historia mantiene el conflicto sin palacios?"
+    },
+    {
+      "case_id": "mastodon_red_noticia",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "mastodon_red_noticia",
+      "strategy": "contextual",
+      "reply": "¿Las portadas pertenecen a la misma década?"
+    },
+    {
+      "case_id": "mastodon_red_premio",
+      "strategy": "baseline_generic",
+      "reply": "¡Enhorabuena, qué bien!"
+    },
+    {
+      "case_id": "mastodon_red_premio",
+      "strategy": "contextual",
+      "reply": "¿La ciudad sumergida conserva habitantes?"
+    },
+    {
+      "case_id": "mastodon_red_conversacion",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "mastodon_red_conversacion",
+      "strategy": "contextual",
+      "reply": "¿Buscáis evitar el romance del todo o solo como trama central?"
+    },
+    {
+      "case_id": "tiktok_red_literatura",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "tiktok_red_literatura",
+      "strategy": "contextual",
+      "reply": "¿Las notas marcan giros o frases favoritas?"
+    },
+    {
+      "case_id": "tiktok_red_noticia",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "tiktok_red_noticia",
+      "strategy": "contextual",
+      "reply": "¿El cuentacuentos será para jóvenes?"
+    },
+    {
+      "case_id": "tiktok_red_premio",
+      "strategy": "baseline_generic",
+      "reply": "¡Enhorabuena, qué bien!"
+    },
+    {
+      "case_id": "tiktok_red_premio",
+      "strategy": "contextual",
+      "reply": "¿Las puertas se contradicen entre ellas?"
+    },
+    {
+      "case_id": "tiktok_red_conversacion",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "tiktok_red_conversacion",
+      "strategy": "contextual",
+      "reply": "¿Cuánto tiempo pasó desde la primera lectura?"
+    },
+    {
+      "case_id": "instagram_red_literatura",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "instagram_red_literatura",
+      "strategy": "contextual",
+      "reply": "¿El rincón de la ventana es el más silencioso?"
+    },
+    {
+      "case_id": "instagram_red_noticia",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "instagram_red_noticia",
+      "strategy": "contextual",
+      "reply": "¿La exposición incluye bocetos de las portadas?"
+    },
+    {
+      "case_id": "instagram_red_premio",
+      "strategy": "baseline_generic",
+      "reply": "¡Enhorabuena, qué bien!"
+    },
+    {
+      "case_id": "instagram_red_premio",
+      "strategy": "contextual",
+      "reply": "¿La medalla lleva grabado el título del cuento?"
+    },
+    {
+      "case_id": "instagram_red_conversacion",
+      "strategy": "baseline_generic",
+      "reply": "Me parece muy interesante"
+    },
+    {
+      "case_id": "instagram_red_conversacion",
+      "strategy": "contextual",
+      "reply": "¿Preferís avisar antes de mencionar cualquier detalle?"
+    }
+  ]
+}

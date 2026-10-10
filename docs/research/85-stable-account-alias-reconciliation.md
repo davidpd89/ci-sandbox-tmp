@@ -91,3 +91,29 @@ Pruebas locales de diseño en Linux/Python: **24 casos** (incluidos casos adicio
 La suite `tests/test_native_alias_observations.py` añade cinco pruebas, incluida matriz sintética de 9 redes × 3 colas (27 entradas), ausencia de pruebas, colisión de identificadores, replay idempotente, diagnóstico y no mutación. Pruebas totales publicadas: 23 del resolver + 6 de adaptadores = **29 casos**; el banco inicial de diseño del resolver se validó localmente por separado (24 casos).
 
 **Optimización adversarial adicional:** el resolver inicialmente recorría todo el histórico por evento. Se incorporó índice temporal lazy por cuenta y por ID estable con invalidación explícita al añadir/revocar/restaurar evidencia; prueba de observaciones fuera de orden y cache invalidada. Nunca se usan índices o proyecciones como estado transaccional de acciones sociales.
+
+## Corrección de revisión del controlador: proyección de duplicados (10/10/2026)
+
+`project_events` ya no exige que todos los observadores WEB/API/MOBILE
+tengan idénticos `observed_at` (hora de captura), `evidence_id` o handle.
+Cada versión debe acreditar por separado un ID persistente activo, válido en
+su instante de atribución; todas deben coincidir en el mismo `stable_key`.
+Cualquier versión no demostrada impide incorporar el evento completo. Un
+`event_id` reciclado hacia otro ID devuelve `event_identity_conflict` y
+las horas reales incompatibles `event_time_conflict`.
+
+Campo opcional `occurred_at`: fecha del suceso remoto (ISO con huso).
+Sin él, se usa la fecha de captura de cada versión para la atribución; el
+`as_of` resultante solo es el *primer momento observado*, **no** la hora
+probada del suceso. La proyección incluye `time_basis` para distinguir
+`occurred_at` de `first_observed_at`. Con `occurred_at` no se acepta
+prueba obtenida después del suceso ni una captura anterior al suceso.
+El esquema de `AliasTimeline.to_document` no cambia y no hay migración de
+ledger/CRM ni transferencia de acciones operativas.
+
+**Limitación intencionada:** Sin timestamp remoto, una observación tardía no
+demuestra retrospectivamente cuándo ocurrió el evento. Se exige identidad
+coherente en cada captura y no se reescribe el pasado. Sigue pendiente el
+acoplamiento con colectores reales, #85 (cerrada sin merge), y el manifiesto
+de campaña padre; la matriz de adaptadores no equivale a nueve verificadores
+nativos operativos.

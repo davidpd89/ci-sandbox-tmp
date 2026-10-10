@@ -1,6 +1,6 @@
 """Respuestas con CONTEXTO, escritas por ChatGPT (07/10/2026, David): los bancos de frases fallaban (preguntar «¿lo recomendarías?» a quien pide recomendaciones, «¿es de los que se
 recomiendan a ciegas?» a quien no recomendaba nada, siempre la misma pregunta). Ahora, tras construir el plan de una ronda, este paso toma los posts a los que se va a responder,
-abre ChatGPT (Edge 9223, proyecto «MCP - RRSS Autora Demo», `chatgpt_consult.consult`) UNA vez con todos y le pide respuestas humanas, cortas y que encajen; solo se aplican las que
+abre ChatGPT (Edge 9223, proyecto «MCP - RRSS David Porto», `chatgpt_consult.consult`) UNA vez con todos y le pide respuestas humanas, cortas y que encajen; solo se aplican las que
 pasan las validaciones (longitud, ortografia, sin enlaces ni menciones, sin repetir arranques recientes). Lo que ChatGPT no responda o no valide se queda en un «me gusta»: nunca se publica
 una frase de banco a ciegas. Un fallo de ChatGPT nunca tumba la ronda (siempre sale con codigo 0).
 
@@ -22,7 +22,7 @@ PLAN_FILES = {"x": "SISTEMA_DIARIO_X/x_plan.json", "threads": "SISTEMA_DIARIO_TH
 REPLY_KINDS = ("reply", "comment_external")
 MAX_CHARS = {"reddit_micro": 62, "pinterest": 110, "x": 200, "threads": 230, "facebook": 230, "bluesky": 200, "mastodon": 230, "tiktok": 90, "reddit": 170}
 MAX_WORDS = {"reddit_micro": 9, "pinterest": 16, "x": 32, "threads": 36, "facebook": 36, "bluesky": 32, "mastodon": 36, "tiktok": 14, "reddit": 28}
-BANNED = re.compile(r"(como (una )?ia\b|modelo de lenguaje|soy un (asistente|bot)|https?://|www\.|@\w|#\w|\bautora derto\b|samuel entre mundos|manecillas del recuerdo|"
+BANNED = re.compile(r"(como (una )?ia\b|modelo de lenguaje|soy un (asistente|bot)|https?://|www\.|@\w|#\w|\bdavid porto\b|samuel entre mundos|manecillas del recuerdo|"
                     r"s[ií]gueme|siguenos|sigueme|mi (novela|libro|canal|perfil|web)|te recomiendo mi|\bgran pregunta\b|qu[eé] buena pregunta|sin duda|qu[eé] gran (reflexi[oó]n|post)|me encanta c[oó]mo)", re.I)
 STYLE = re.compile(r"[;]|—|–| - ")           # sin punto y coma ni guiones largos: no se habla asi en una red social
 
@@ -85,19 +85,39 @@ MEMORIA_PATH = os.path.join(ROOT, "00_OPERATIVO", "respuestas_memoria.json")
 AUTHOR_COOLDOWN_DAYS = 30        # a quien ya le hemos comentado no se le vuelve a comentar de nuestra iniciativa (David, 07/10: «ahi no se comenta mas»)
 
 
-def memoria_texto(recent=(), path=None):
-    """Bloque «memoria» del prompt: ejemplos que David aprobo, errores que no deben repetirse y lo ultimo que publicamos (para variar). Asi cada consulta empieza con lo aprendido, sin depender de un chat largo."""
+def memoria_texto(recent=(), path=None, *, items=None, network=None):
+    """Memoria editorial por post para lotes GPT; legacy sin items conserva su API."""
     try:
-        data = json.load(open(path or MEMORIA_PATH, encoding="utf-8"))
+        with open(path or MEMORIA_PATH, encoding="utf-8") as stream:
+            data = json.load(stream)
+        if not isinstance(data, dict):
+            data = {}
     except (OSError, ValueError):
         data = {}
     parts = []
-    good = data.get("buenas") or []
-    if good:
-        parts.append("RESPUESTAS QUE YA FUNCIONARON (aprobadas; mismo tono, no las copies):\n" + "\n".join(f"- «{g['post'][:90]}» -> «{g['respuesta']}»" for g in good[-10:]))
-    bad = data.get("malas") or []
-    if bad:
-        parts.append("ERRORES QUE NO SE PUEDEN REPETIR:\n" + "\n".join(f"- «{b['post'][:90]}» -> «{b['respuesta']}» ({b['motivo']})" for b in bad[-8:]))
+    if items is not None:
+        # Importación offline sin datos de red, archivo de estado ni escrituras.
+        # Los ejemplos de otros posts son estilo, nunca contexto factual.
+        import reply_context_memory as rcm
+        contextual = rcm.render_for_batch(items, data, default_network=network)
+        if contextual:
+            parts.append(contextual)
+    else:
+        # Compatibilidad con consumidores legados que llaman memoria_texto().
+        good = data.get("buenas") or []
+        if isinstance(good, list) and good:
+            valid = [g for g in good if isinstance(g, dict) and
+                     isinstance(g.get("post"), str) and isinstance(g.get("respuesta"), str)]
+            if valid:
+                parts.append("RESPUESTAS QUE YA FUNCIONARON (aprobadas; mismo tono, no las copies):\n" +
+                             "\n".join(f"- «{g['post'][:90]}» -> «{g['respuesta']}»" for g in valid[-10:]))
+        bad = data.get("malas") or []
+        if isinstance(bad, list) and bad:
+            valid = [b for b in bad if isinstance(b, dict) and all(
+                isinstance(b.get(k), str) for k in ("post", "respuesta", "motivo"))]
+            if valid:
+                parts.append("ERRORES QUE NO SE PUEDEN REPETIR:\n" +
+                             "\n".join(f"- «{b['post'][:90]}» -> «{b['respuesta']}» ({b['motivo']})" for b in valid[-8:]))
     last = [t for t in list(recent)[-40:] if t and len(re.findall(r"[^\W_]+", t)) >= 7][-14:]      # sin las frases cortas de banco antiguas (no son modelo a seguir)
     if last:
         parts.append("LO ÚLTIMO QUE HEMOS PUBLICADO (varía: no repitas arranques, ideas ni forma):\n" + "\n".join(f"- {t[:110]}" for t in last))
@@ -107,10 +127,15 @@ def memoria_texto(recent=(), path=None):
 def estilo_red_texto(networks, path=None):
     """Como se suele contestar en cada red (solo las que aparecen en la tanda): se afina con lo que vayamos viendo, en `estilo_por_red` de la memoria."""
     try:
-        data = json.load(open(path or MEMORIA_PATH, encoding="utf-8")).get("estilo_por_red") or {}
+        with open(path or MEMORIA_PATH, encoding="utf-8") as stream:
+            saved = json.load(stream)
+        data = saved.get("estilo_por_red", {}) if isinstance(saved, dict) else {}
+        if not isinstance(data, dict):
+            return ""
     except (OSError, ValueError):
         return ""
-    lines = [f"- {net}: {data[net]}" for net in sorted(set(networks)) if data.get(net)]
+    lines = [f"- {net}: {data[net]}" for net in sorted(set(networks))
+             if isinstance(data.get(net), str) and data[net].strip()]
     return ("CÓMO SE SUELE CONTESTAR EN CADA RED (adapta el registro a la red de cada publicación):\n" + "\n".join(lines) + "\n\n") if lines else ""
 
 
@@ -169,62 +194,40 @@ TEXT_KINDS = ("reply", "comment", "comment_external", "comentario", "respuesta",
 GPT_TEXTS = os.environ.get("RRSS_GPT_TEXTS_PATH") or os.path.join(ROOT, "00_OPERATIVO", "_cola_respuestas", "gpt_texts.json")      # los tests lo redirigen (conftest)
 
 
-def _text_key(text):
-    import hashlib
-    return hashlib.sha1(_fold(" ".join(str(text or "").split())).encode("utf-8")).hexdigest()[:20]
+def mark_gpt(text, path=None, *, network="", source=None, prompt_hash=None):
+    """El hash global de frase antigua no concede permiso de publicación."""
+    import reply_provenance as provenance
+    return provenance.record(network, source, text, path=path, prompt_hash=prompt_hash)
 
 
-def mark_gpt(text, path=None):
-    """Registra que `text` lo ha escrito y validado ChatGPT (se conserva 10 dias)."""
-    path = path or GPT_TEXTS
-    try:
-        with open(path, encoding="utf-8") as stream:
-            data = json.load(stream)
-    except (OSError, ValueError):
-        data = {}
-    now = datetime.datetime.now()
-    data = {k: v for k, v in data.items() if (now - datetime.datetime.fromisoformat(v)).days < 10}
-    data[_text_key(text)] = now.isoformat(timespec="seconds")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = f"{path}.{os.getpid()}.tmp"
-    with open(tmp, "w", encoding="utf-8") as stream:
-        json.dump(data, stream)
-    os.replace(tmp, path)
-
-
-def is_gpt(text, path=None):
-    try:
-        with open(path or GPT_TEXTS, encoding="utf-8") as stream:
-            return _text_key(text) in json.load(stream)
-    except (OSError, ValueError):
-        return False
+def is_gpt(text, path=None, *, network="", action=None):
+    import reply_provenance as provenance
+    return provenance.verify(action, network, path=path) if action else False
 
 
 def require_gpt(plan, network="", log=print, path=None):
-    """Guardia común para textos externos: inválidos o sin procedencia se omiten.
-
-    Un texto ausente/blank antes escapaba al `if item.get("text")` y hacía que
-    el preflight del ejecutor rechazase el lote entero. Las acciones sanas siguen.
-    La excepción `authored=manual` no permite publicar un texto vacío.
-    """
-    if os.environ.get("RRSS_ALLOW_UNMARKED_TEXT") == "1":
-        return list(plan)  # Exclusivamente tests offline existentes.
-    kept, dropped_empty, dropped_provenance = [], 0, 0
-    for index, item in enumerate(plan, start=1):
+    """Último salto: sin prueba específica se omite solo el texto afectado."""
+    import reply_provenance as provenance
+    # El interruptor legado se limita al proceso de pytest, nunca a producción.
+    if (os.environ.get("RRSS_ALLOW_UNMARKED_TEXT") == "1"
+            and os.environ.get("PYTEST_CURRENT_TEST")):
+        return list(plan)
+    kept, empty, unproved = [], 0, 0
+    for item in plan:
+        if not isinstance(item, dict):
+            continue
         if item.get("kind") in TEXT_KINDS:
-            text = item.get("text")
-            if not isinstance(text, str) or not text.strip():
-                dropped_empty += 1
-                log(f"[{network or 'ejecutor'}] GUARDIA_TEXTO elemento {index}: texto_vacio; se omite solo este elemento")
+            if not isinstance(item.get("text"), str) or not item["text"].strip():
+                empty += 1
                 continue
-            if item.get("authored") != "manual" and not is_gpt(text, path):
-                dropped_provenance += 1
+            # authored=manual no puede autoautorizar una publicación.
+            if not provenance.verify(item, network, path=path):
+                unproved += 1
                 continue
         kept.append(item)
-    if dropped_provenance:
-        log(f"[{network or 'ejecutor'}] {dropped_provenance} comentarios/respuestas SIN texto de ChatGPT quitados del plan (nunca se publica texto de banco)")
-    if dropped_empty:
-        log(f"[{network or 'ejecutor'}] {dropped_empty} comentarios/respuestas sin texto omitidos, resto del lote conservado")
+    if unproved or empty:
+        log(f"[{network or 'ejecutor'}] GUARDIA_PROCEDENCIA: sin_prueba={unproved}; "
+            f"vacios={empty}; conservados={len(kept)}")
     return kept
 
 
@@ -281,15 +284,27 @@ def valid_reply(text, network, recent=(), *, allow_question=True):
 
 def parse_answer(answer):
     """Lista de {id, reply} del texto de ChatGPT (con o sin bloque de codigo); [] si no hay JSON valido."""
-    text = (answer or "").strip()
+    # El proveedor puede devolver None, dict, lista u objeto erróneo.
+    # Sin texto JSON verificable no existe ningún ID confirmado.
+    if not isinstance(answer, str):
+        return []
+    text = answer.strip()
     fenced = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", text, re.S)
     candidate = fenced.group(1) if fenced else None
     if not candidate:
         start, end = text.find("["), text.rfind("]")
         candidate = text[start:end + 1] if start != -1 and end > start else ""
+    def unique_fields(pairs):
+        obj = {}
+        for field, value in pairs:
+            if field in obj:
+                raise ValueError("campo JSON repetido")
+            obj[field] = value
+        return obj
+
     try:
-        data = json.loads(candidate)
-    except ValueError:
+        data = json.loads(candidate, object_pairs_hook=unique_fields)
+    except (ValueError, TypeError):
         return []
     return [d for d in data if isinstance(d, dict) and d.get("id")] if isinstance(data, list) else []
 
@@ -299,9 +314,15 @@ def build_prompt(items, network, recent=None, memoria=None):
     for item in items:
         extra = " (es un comentario que esta persona nos ha hecho a nosotros)" if item.get("reply_to_us") else ""
         context = f" Contexto: {item['context']}{extra}." if item.get("context") else (f" Contexto:{extra}." if extra else "")
+        # #62: la cola conserva conversation_context y la procedencia lo
+        # incluye, pero antes el prompt omitía el hilo al consultar GPT.
+        history = item.get("conversation_context")
+        if isinstance(history, str) and history.strip():
+            context += f" Historial previo del hilo: «{history.strip()[:2400]}»."
         red = item.get("network") or network
         lines.append(f'{item["id"]} [red: {red}] Autor: {item.get("author", "")}.{context} Publicación: «{" ".join(str(item["text"]).split())[:600]}»')
-    block = memoria if memoria is not None else memoria_texto(recent if recent is not None else recent_reply_texts(14))
+    block = memoria if memoria is not None else memoria_texto(recent if recent is not None else recent_reply_texts(14),
+                                                             items=items, network=network)
     estilo = estilo_red_texto([i.get("network") or network for i in items])
     return PROMPT.format(n=len(items), items="\n".join(lines), memoria=block, estilo_red=estilo)
 
@@ -317,26 +338,74 @@ def write_replies(items, network, *, wait_min=10, consult=None, recent=None, log
         if consult is None:
             from chatgpt_consult import consult as _consult
             consult = _consult
-        answer, _url = consult(build_prompt(items, network, recent=recent), (), wait_min)
+        # La huella captura el prompt EFECTIVO: posts, estilo por red y memoria.
+        actual_prompt = build_prompt(items, network, recent=recent)
+        answer, _url = consult(actual_prompt, (), wait_min)
         if status is not None:
             status["consulted"] = True
     except Exception as exc:
-        log(f"[reply_writer] ChatGPT no respondio ({type(exc).__name__}: {str(exc)[:100]}): las replies pasan a «me gusta»")
+        # Una excepción externa puede incluir la URL de sesión o datos del
+        # prompt. Log de clase, sin copiar el mensaje del proveedor.
+        log(f"[reply_writer] ChatGPT no respondio ({type(exc).__name__}): texto no disponible")
         return {}
     recent = list(recent if recent is not None else recent_reply_texts())
     out = {}
-    for entry in parse_answer(answer):
-        item_id, reply = entry.get("id"), entry.get("reply")
-        if not isinstance(reply, str) or item_id in out:
+    # Contrato de entrega de lote (#62): consulted significa que hubo
+    # respuesta de transporte, NO que todos los ID estén resueltos.
+    # Los ausentes, JSON incompleto y falta de proof siguen pendientes.
+    outcomes = {}
+    expected = {item["id"]: item for item in items}
+    parsed = parse_answer(answer)
+    # Un modelo puede repetir q1 con null y texto diferente. No elegir el
+    # primero ni el último: es ambiguo y debe permanecer sin confirmación.
+    counts = {}
+    for entry in parsed:
+        item_id = entry.get("id")
+        if isinstance(item_id, str) and item_id in expected:
+            counts[item_id] = counts.get(item_id, 0) + 1
+    for entry in parsed:
+        item_id = entry.get("id")
+        if (not isinstance(item_id, str) or item_id not in expected
+                or counts[item_id] != 1 or "reply" not in entry):
             continue
-        net = next((i.get("network") for i in items if i["id"] == item_id), None) or network
+        reply = entry["reply"]
+        if reply is None:
+            outcomes[item_id] = "null"  # abstención explícita del modelo
+            continue
+        if not isinstance(reply, str):
+            outcomes[item_id] = "rejected"
+            continue
+        origin = expected[item_id]
+        net = origin.get("network") or network
         ok, why = valid_reply(reply, net, recent)
-        if ok:
-            out[item_id] = " ".join(reply.split())
-            recent.append(out[item_id])
-            mark_gpt(out[item_id])
-        else:
-            log(f"[reply_writer] {item_id} descartada ({why}): {reply[:70]!r}")
+        if not ok:
+            outcomes[item_id] = "rejected"
+            log(f"[reply_writer] {item_id} descartada ({why})")
+            continue
+        written = " ".join(reply.split())
+        import hashlib
+        fingerprint = hashlib.sha256(actual_prompt.encode("utf-8")).hexdigest()
+        if not mark_gpt(written, network=net, source=origin, prompt_hash=fingerprint):
+            outcomes[item_id] = "unproved"
+            log("[reply_writer] prueba_no_emitida: destino o almacenamiento no verificable")
+            # Compatibilidad de fixtures antiguos, nunca de una ronda real.
+            if not (os.environ.get("RRSS_ALLOW_UNMARKED_TEXT") == "1"
+                    and os.environ.get("PYTEST_CURRENT_TEST")):
+                continue
+        out[item_id] = written
+        outcomes[item_id] = "written"
+        recent.append(written)
+        # Diagnostico editorial (pieza #79): no altera ni autoriza textos.
+        try:
+            from spanish_voice_quality import advisory
+            qa_net = "reddit" if net == "reddit_micro" else net
+            advisory(written, network=qa_net, queue=origin.get("queue"),
+                     log=log, label="[reply_writer] revision_es_" + qa_net)
+        except Exception as exc:
+            log("[reply_writer] auditor_es_no_disponible: " + type(exc).__name__)
+    if status is not None:
+        # Solo identificadores efímeros qN, nunca texto, autor o URL.
+        status["outcomes"] = outcomes
     return out
 
 
@@ -350,16 +419,23 @@ def rewrite_plan(network, *, consult=None, log=print):
     targets = [(i, item) for i, item in enumerate(plan) if item.get("kind") in REPLY_KINDS and item.get("bank") and item.get("post_text")]
     if not targets:
         return 0, 0
-    items = [{"id": f"p{n + 1}", "author": item.get("handle") or item.get("autor") or "", "text": item["post_text"]} for n, (_, item) in enumerate(targets)]
+    items = [{"id": f"p{n + 1}", "author": item.get("handle") or item.get("autor") or "",
+              "text": item["post_text"], "context": item.get("context") or "",
+              "url": item.get("url"), "permalink": item.get("permalink"),
+              "post_uri": item.get("post_uri"), "status_id": item.get("status_id")}
+             for n, (_, item) in enumerate(targets)]
     written = write_replies(items, network, consult=consult, log=log)
     rewritten = converted = 0
     for n, (index, item) in enumerate(targets):
         text = written.get(f"p{n + 1}")
         if text:
-            item.update({"text": text, "bank": False, "motivo": f"{item.get('motivo', '')}:gpt"})
-            item.pop("post_text", None)
-            rewritten += 1
-            continue
+            import reply_provenance as proof
+            action = proof.attach({**item, "text": text}, items[n], network)
+            if action:
+                item.update(action)
+                item.update({"bank": False, "motivo": f"{item.get('motivo', '')}:gpt"})
+                rewritten += 1
+                continue
         plan[index] = _as_like(network, item)
         converted += 1
     with open(path, "w", encoding="utf-8") as stream:

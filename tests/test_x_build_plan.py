@@ -16,7 +16,6 @@ class BuildPlanTests(unittest.TestCase):
         plan, pending = bp.build(candidates)
         self.assertEqual(plan, [
             {"kind": "follow", "handle": "autora1"},
-            {"kind": "like", "url": "https://x.com/ed1/status/1"},
         ])
         self.assertEqual(pending, [])
 
@@ -25,7 +24,7 @@ class BuildPlanTests(unittest.TestCase):
         plan, _ = bp.build(cands)
         kinds = [a["kind"] for a in plan]
         self.assertEqual(kinds.count("follow"), 12)
-        self.assertEqual(kinds.count("like"), 50)
+        self.assertEqual(kinds.count("like"), 0)      # sin auto-like en X
 
     def test_reposts_come_only_from_curated_lists_without_politics_and_are_capped(self):
         long_text = "Nueva novela de fantasía editorial con mapa y glosario incluidos ya en librerías"
@@ -41,7 +40,7 @@ class BuildPlanTests(unittest.TestCase):
         self.assertTrue(all("lista" not in a.get("url", "") for a in plan))
         self.assertNotIn("https://x.com/a/status/90", [a["url"] for a in reposts])
         self.assertNotIn("https://x.com/a/status/91", [a["url"] for a in reposts])
-        self.assertEqual(sum(1 for a in plan if a["kind"] == "like"), 5)
+        self.assertEqual(sum(1 for a in plan if a["kind"] == "like"), 0)
 
     def test_reply_never_enters_plan_automatically(self):
         candidates = [
@@ -71,7 +70,7 @@ class BuildPlanTests(unittest.TestCase):
             {"kind": "like", "handle": None, "url": "https://x.com/ed1/status/1"},
         ]
         plan, _ = bp.build(candidates)
-        self.assertEqual(len(plan), 2)
+        self.assertEqual(len(plan), 1)      # el like duplicado ya no entra
 
     def test_missing_handle_or_url_is_skipped_not_crashed(self):
         candidates = [
