@@ -167,9 +167,18 @@ class EvidenceTest(unittest.TestCase):
         self.assertEqual({x["outcome"] for x in s.items.values()}, {"present"})
         snap["snapshot_id"] = "s2"
         snap["coverage"]["all_pages"] = True
+        snap["account_id"] = "cuenta-propia"
+        snap["coverage"].update({
+            "account_id": "cuenta-propia", "snapshot_id": "s2", "producer": b.producer,
+            "pages": [{"account_id": "cuenta-propia", "snapshot_id": "s2",
+                       "identity_stable": True, "cursor_in": None,
+                       "cursor_out": None, "followers": ["one"]}],
+        })
         self.assertEqual(bridge_snapshot(s, b, snap)["unknown"], 0)
         self.assertEqual({x["outcome"] for x in s.items.values()}, {"present", "absent"})
         snap["snapshot_id"] = "s3"
+        snap["coverage"]["snapshot_id"] = "s3"
+        snap["coverage"]["pages"][0]["snapshot_id"] = "s3"
         snap["tracked"] = ("one", "two")
         self.assertEqual(bridge_snapshot(s, b, snap)["unknown"], 0)
         self.assertEqual(bridge_snapshot(Sink(), b, {"tracked": None})["unknown"], 0)
@@ -188,6 +197,74 @@ class EvidenceTest(unittest.TestCase):
         snapshot["snapshot_id"] = "part/id"
         bridge_snapshot(s, b2, snapshot)
         self.assertEqual(len(s.items), 2)
+
+
+    def test_unverified_paginated_capture_never_creates_absent(self):
+        import copy
+        batch = Batch("x", "WEB", "x_execute.run_plan", "export")
+        snap = {
+            "snapshot_id": "snap", "account_id": "my-account",
+            "observed_at": "2026-10-10T09:00:00Z",
+            "tracked": ["one", "two"], "followers": ["one"],
+            "coverage": {
+                "identity_stable": True, "complete": True, "all_pages": True,
+                "account_scope": "self", "account_id": "my-account",
+                "snapshot_id": "snap", "producer": batch.producer,
+                "pages": [{"account_id": "my-account", "snapshot_id": "snap",
+                           "identity_stable": True, "cursor_in": None,
+                           "cursor_out": None, "followers": ["one"]}],
+            },
+        }
+        mutations = [
+            lambda x: x["coverage"].update(account_id="other"),
+            lambda x: x["coverage"].update(producer="different-producer"),
+            lambda x: x["coverage"].update(account_scope="other"),
+            lambda x: x["coverage"]["pages"][0].update(account_id="other"),
+            lambda x: x["coverage"]["pages"][0].update(snapshot_id="other"),
+            lambda x: x["coverage"]["pages"][0].update(identity_stable=False),
+            lambda x: x["coverage"]["pages"][0].update(cursor_out="unfetched"),
+            lambda x: x["coverage"]["pages"][0].update(followers=["another"]),
+            lambda x: x["coverage"].update(pages=[]),
+            lambda x: x["coverage"].update(pages=[
+                dict(account_id="my-account", snapshot_id="snap",
+                     identity_stable=True, cursor_in=None, cursor_out="next",
+                     followers=["one"]),
+                dict(account_id="my-account", snapshot_id="snap",
+                     identity_stable=True, cursor_in="wrong", cursor_out=None,
+                     followers=[])]),
+        ]
+        for mutate in mutations:
+            sample = copy.deepcopy(snap)
+            mutate(sample)
+            sink = Sink()
+            result = bridge_snapshot(sink, batch, sample)
+            self.assertEqual((result["unknown"], result["inserted"]), (1, 1))
+            self.assertEqual({v["outcome"] for v in sink.items.values()}, {"present"})
+        good = Sink()
+        self.assertEqual(bridge_snapshot(good, batch, snap)["unknown"], 0)
+        self.assertEqual({v["outcome"] for v in good.items.values()}, {"present", "absent"})
+
+    def test_uninstrumented_native_results_all_nine_unknown(self):
+        # Los productores actuales suelen devolver {**item, resultado},
+        # sin IDs de registro, tiempo ni ACK correlacionado.
+        cases = [
+            ("x", "WEB", "x_execute.run_plan", {"kind": "follow", "handle": "@lectora"}),
+            ("threads", "WEB", "threads_execute.run_plan", {"kind": "reply", "permalink": "https://threads.net/p/demo"}),
+            ("facebook", "WEB", "facebook_execute.run_plan", {"kind": "comment", "url": "https://facebook.com/p/demo"}),
+            ("pinterest", "WEB", "pinterest_growth.cmd_run", {"kind": "react", "url": "https://pinterest.com/pin/12"}),
+            ("reddit", "WEB", "reddit_execute.run_plan", {"kind": "vote", "url": "https://reddit.com/r/books/comments/12/"}),
+            ("bluesky", "API", "bluesky_execute.run_plan", {"kind": "follow", "handle": "@reader.bsky.social"}),
+            ("mastodon", "API", "mastodon_execute.run_plan", {"kind": "follow", "handle": "@reader@example.org"}),
+            ("tiktok", "MOBILE", "tiktok_mobile_execute.run_plan", {"kind": "follow", "handle": "@lectora"}),
+            ("instagram", "WEB", "instagram_execute.run_plan", {"kind": "follow", "handle": "@lectora"}),
+        ]
+        for network, queue, producer, row_data in cases:
+            sink = Sink()
+            result = bridge_results(sink, Batch(network, queue, producer, "raw"),
+                                    [{**row_data, "resultado": "confirmado"}])
+            self.assertEqual((result["inserted"], result["unknown"]), (0, 1),
+                             network)
+            self.assertFalse(sink.items)
 
 if __name__ == "__main__":
     unittest.main()
