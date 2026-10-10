@@ -1,0 +1,3 @@
+bash
+# https://github.com/getsentry/responses#integration-with-unit-test-frameworks
+pip install pytest-responses
