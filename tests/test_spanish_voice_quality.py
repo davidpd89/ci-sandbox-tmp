@@ -51,6 +51,18 @@ class TestSpanishVoice(unittest.TestCase):
         self.assertIn("unicode_normalization",
                       {v["code"] for v in self.check("cafe\u0301")["findings"]})
 
+
+    def test_markdown_images_and_fenced_code_are_not_exclamations(self):
+        source = "![portada](https://example.org/book.png) " + chr(96)*3 + "python\\nchecar?\\n" + chr(96)*3 + "\\nchecar?"
+        source = source.replace("\\n", "\n")
+        output = self.check(source)["findings"]
+        self.assertEqual([(f["code"], source[f["start"]:f["end"]]) for f in output],
+                         [("locale_variant", "checar"), ("question_opening", "?")])
+
+    def test_multiline_fence_tilde(self):
+        text = "~~~text\nChecar?\n~~~\n¡Buen título!"
+        self.assertEqual(self.check(text)["findings"], [])
+
     def test_reuse_existing_accent_checker(self):
         with mock.patch("spanish_voice_quality._accent_checker",
                         return_value=lambda text: [("capitulo", "capítulo")]):
@@ -83,6 +95,30 @@ class TestBlind(unittest.TestCase):
         for item in a["items"]:
             item["preference"] = key["after_side"][item["id"]]
         self.assertEqual(score(a, key)["preferences"]["after"], 9)
+
+
+    def test_blind_pair_content_integrity_is_checked(self):
+        from copy import deepcopy
+        doc, key = pack(self.pairs, seed="review")
+        for candidate in ("network", "context", "left", "right"):
+            changed = deepcopy(doc)
+            changed["items"][0][candidate] = "alterado"
+            changed["items"][0]["preference"] = "tie"
+            with self.assertRaises(ValueError):
+                score(changed, key)
+
+    def test_invalid_unhashable_network_is_validation_error(self):
+        pairs = [dict(self.pairs[0], network=["x"])]
+        with self.assertRaises(ValueError):
+            pack(pairs, seed="review")
+
+    def test_two_samples_same_network_are_aggregated(self):
+        twice = [dict(self.pairs[0]), dict(self.pairs[0], id="second")]
+        measured = compare(twice)
+        self.assertEqual(measured["synthetic_pairs"], 2)
+        self.assertEqual(measured["rule_findings"], {"before": 2, "after": 0})
+        self.assertEqual(measured["by_network"][self.pairs[0]["network"]],
+                         {"before": 2, "after": 0, "cases": 2})
 
     def test_duplicate_pair_or_missing_key_is_error(self):
         with self.assertRaises(ValueError):
