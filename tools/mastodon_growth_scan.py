@@ -425,7 +425,12 @@ def _query_selection(c):
                     break
         if not added:
             break
-    return selected
+    import hashtag_query_consumers as hqc
+    return hqc.reserve_fresh(
+        selected,
+        [("lexical_expansion", q) for q in c.config.get("lexical_queries", [])],
+        budget=count, tick=c.today.toordinal(),
+    )
 
 
 def _tag_selection(c, discovered=()):
@@ -448,7 +453,11 @@ def _tag_selection(c, discovered=()):
     selected = emerging[:emerging_slots]
     selected_set = {tag.casefold() for tag in selected}
     selected.extend(tag for tag in ranked if tag.casefold() not in selected_set)
-    return selected[:limit]
+    import hashtag_query_consumers as hqc
+    return hqc.reserve_fresh(
+        selected[:limit], c.config.get("lexical_tags") or [],
+        budget=limit, tick=c.today.toordinal(),
+    )
 
 
 def _is_fresh(c, acct):
