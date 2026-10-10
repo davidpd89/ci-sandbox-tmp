@@ -1,11 +1,20 @@
 # PR #120 — trayectorias relacionales verificables (10/10/2026)
 
-## Decisión y diferencia funcional
+Fuente primaria: https://github.com/retentioneering/retentioneering-tools
+Fecha de consulta: 2026-10-10
+Licencia SPDX: Apache-2.0
+Referencia inmutable: https://github.com/retentioneering/retentioneering-tools/tree/fda32f26fc11119dc950ef6ad720eb5aeefe86a1
+
+## Problema
 El sistema oficial (`integracion/crecimiento-2026-10`) ya tiene `relationship_policy.py`, `reciprocity.py`, `loyalty.py`, `loyalty_events.py` y `action_ledger.py`. No crear otro CRM, otra puntuación ni sustituir la norma actual de follow/segundo intento/comentarios. En el mirror ya están en desarrollo **#60** (estados), **#69** (fidelización entrante), **#71 / #103** (priorización + puentes), **#84 / #108** (ledger y evidencia nativa), **#85 / #110** (identidad); las PR #57-59 y #65 abarcan reciprocidad. La cobertura nativa no está acreditada en todas las redes.
+
+## Decisión
 
 **Hueco independiente implementado aquí:** reproducir trayectorias y observaciones de followback a partir de la fuente de eventos confirmados de #84, de modo completamente offline, sin alterar sus escrituras, sin atribuir ausencia de observación a rechazo y sin recrear la lógica operativa. `tools/relationship_journey.py` implementa un lector SQLite en modo read-only, normaliza nueve redes, crea transiciones estrictamente ordenadas, calcula un límite inferior de followbacks observados en cohortes D+7/D+30 (sin interpretarlo como tasa global de conversión), y permite exportar CSV para análisis exploratorio. El orden de eventos con solo precisión de día **no** se inventa; se excluyen de secuencias.
 
-## Fuentes comprobadas y decisión de reutilización
+## Alternativas
+
+## Licencias y procedencia
 | Proyecto | Evidencia al 10/10/2026 | Decisión |
 |---|---|---|
 | [Retentioneering](https://github.com/retentioneering/retentioneering-tools/tree/fda32f26fc11119dc950ef6ad720eb5aeefe86a1) | Apache-2.0, `pyproject.toml` v5.2.4, `requires-python >=3.10`, clasificadores Windows/OS independiente + Python 3.11; commit **fda32f26fc11119dc950ef6ad720eb5aeefe86a1** 07/10/2026 | **Reutilización directa y opcional**: `to_eventstream()` instancia `retentioneering.Eventstream` desde `pandas.DataFrame`, según API del proyecto. No se copia código. Dependencia pesada (pandas, DuckDB, pyarrow, sklearn, widget, MCP...), fuera de `requirements-ci.txt` y del proceso operativo. Windows declarado, ejecución real de la librería en Windows **no verificada**. |
@@ -18,7 +27,7 @@ El sistema oficial (`integracion/crecimiento-2026-10`) ya tiene `relationship_po
 
 **Atribución:** el código nuevo de `relationship_journey.py` es implementación original de un *adaptador* que consume la API documentada de Retentioneering. No incluye archivos modificados de Retentioneering, PingCRM ni otros proyectos. La reutilización ejecutable (`to_eventstream`) necesita que la persona encargada del análisis instale la dependencia opcional; no se afirma que esté instalada ni que se hayan ejecutado sus visualizaciones.
 
-## Contrato y pruebas
+## Pruebas
 - Nueve redes: X, Threads, Facebook, Pinterest, Reddit, Bluesky, Mastodon, TikTok e Instagram. Un único `read_ledger()`; los adaptadores nativos alimentan #84 a través de #108, **no de este módulo**.
 - Lee **solo** la tabla `relationship_events` del esquema #84 v1 con SQLite URI `mode=ro`; no modifica ActionLedger ni ejecuta acciones. Rechaza bases incompatibles y timestamps sin zona; cierra explícitamente conexiones en Windows.
 - Usa `network+subject` como trayectoria *por cuenta/red*; no inventa identidad interplataforma. No infiere que los replies confirmados hayan sido *recibidos* (el ledger actual carece de dirección inequívoca).
@@ -35,7 +44,7 @@ python -m pytest tests/test_relationship_journey.py -q
 
 En un **entorno analítico separado**, si se decide instalar `retentioneering==5.2.4`, se puede invocar `to_eventstream(rows).transition_graph()`. No activar automáticamente ni añadirlo a los workers. Ejemplo solo para desarrollo offline, nunca para las bases de producción.
 
-## Integración y rollback
+## Retirada
 **Precondición:** verificar versión y consistencia de #84 y los puentes #108; si cambia el esquema, detener este lector en vez de adaptar silenciosamente. Mantener este módulo desconectado de `mechanical_round`, `loyalty`, ejecutores y cualquier recontacto. La PR complementa #60/#69/#71 y no pretende reemplazarlas.
 
 **Rollback:** retirar `tools/relationship_journey.py`, sus tests y esta documentación; ningún estado operativo ha sido migrado ni modificado. El CSV exportado es un artefacto analítico opcional. Revisar privacidad antes de compartirlo, porque `user_id` incluye identificadores de cuenta.
