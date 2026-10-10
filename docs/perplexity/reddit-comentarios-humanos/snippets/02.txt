@@ -1,0 +1,27 @@
+python
+# Fuente: https://github.com/sunnweiwei/spanish-reddit-dialogues-corpus/blob/main/filter_by_subreddit.py
+# Adaptación: filtra el corpus por subreddits útiles para fantasía, lectura y escritura.
+
+import json
+from pathlib import Path
+
+ALLOWED = {
+    "fantasy", "books", "suggestmeabook", "yAlit", "printsf",
+    "fantasywriters", "writing", "selfpublish", "espanol",
+    "libros", "lectura", "fantasia", "escribir",
+}
+
+def filter_subreddits(input_path: str, output_path: str) -> int:
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    kept = 0
+
+    with open(input_path, encoding="utf-8") as src, open(output_path, "w", encoding="utf-8") as dst:
+        for line in src:
+            row = json.loads(line)
+            subreddit = (row.get("subreddit") or "").strip().lower()
+
+            if subreddit in ALLOWED:
+                dst.write(json.dumps(row, ensure_ascii=False) + "\n")
+                kept += 1
+
+    return kept
