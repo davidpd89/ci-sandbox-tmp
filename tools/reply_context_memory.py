@@ -57,7 +57,7 @@ def _records(memory: object, kind: str):
         reply = _short(raw.get("respuesta"), 160)
         reason = _short(raw.get("motivo"), 120)
         network = raw.get("network")
-        if network is not None and network not in NETWORKS:
+        if network is not None and (not isinstance(network, str) or network not in NETWORKS):
             continue
         if not post or not tokens(post):
             continue
@@ -79,7 +79,7 @@ def select_for_item(item: object, memory: object, *, per_kind: int = 1,\n       
         return []
     query = tokens(item.get("text"))
     network = item.get("network") or default_network
-    if network not in NETWORKS or len(query) < 2:
+    if not isinstance(network, str) or network not in NETWORKS or len(query) < 2:
         return []
     selected = []
     for kind in ("buenas", "malas"):
@@ -117,7 +117,7 @@ def render_for_batch(items: object, memory: object, *,\n                     def
         if not isinstance(item, Mapping):
             continue
         item_id = item.get("id")
-        if not isinstance(item_id, str) or not item_id or item_id in seen:
+        if (not isinstance(item_id, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,80}", item_id)\n                or item_id in seen):
             continue
         seen.add(item_id)
         memories = select_for_item(item, memory, default_network=default_network)
