@@ -73,9 +73,9 @@ def make_praw_readonly_client(*, client_id: str, client_secret: str, user_agent:
         import praw  # optional dependency; does not load on module import
     except ImportError as exc:
         raise RuntimeError("Install optional requirements-reddit-opportunities.txt") from exc
-    client = praw.Reddit(
-        client_id=client_id, client_secret=client_secret, user_agent=user_agent
-    )
+    credentials = {"client_id": client_id, "client_secret": client_secret,
+                   "user_agent": user_agent}
+    client = praw.Reddit(**credentials)
     if not client.read_only:
         raise RuntimeError("Expected a read-only Reddit client")
     return client
