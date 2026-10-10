@@ -41,22 +41,42 @@ class ConfigCapabilityAuditTests(unittest.TestCase):
                            cleanup_adapters=cleanup_adapters if cleanup_adapters is not None else {},
                            harvesters=harvesters if harvesters is not None else {})
 
-    def test_actual_mirror_configs_and_pipeline_inventory_offline(self):
+    def test_actual_checkout_configs_and_pipeline_inventory_offline(self):
+        """Mismo test en mirror y repo oficial: no asumir que falta TikTok."""
         root = Path(__file__).resolve().parents[1]
         report = audit.audit(root)
         self.assertEqual(set(report["capabilities"]), set(audit.cap.NETWORKS))
         self.assertEqual(report["errors"], 0, report["findings"])
         self.assertEqual(report["pipelines"]["instagram"]["primary_lane"], "WEB")
         self.assertEqual(report["pipelines"]["tiktok"]["primary_lane"], "MOBILE")
-        self.assertEqual(report["configurations"]["bluesky"]["status"], "valid")
-        self.assertEqual(report["configurations"]["mastodon"]["status"], "valid")
-        self.assertEqual(report["configurations"]["tiktok"]["status"], "missing_in_checkout")
-        self.assertEqual(
-            report["configurations"]["bluesky"]["effective_common_policy"]["acquisition_age"]["value"], 21
-        )
-        self.assertEqual(
-            report["configurations"]["mastodon"]["effective_common_policy"]["community_age"]["value"], 45
-        )
+        for network in audit.CONFIG_PATHS:
+            with self.subTest(network=network):
+                path = root / audit.CONFIG_PATHS[network]
+                expected = "valid" if path.is_file() else "missing_in_checkout"
+                self.assertEqual(report["configurations"][network]["status"], expected)
+                if network in audit.POLICY_CONSUMERS and expected == "valid":
+                    cfg = audit._read_config(path)
+                    observed = report["configurations"][network]["effective_common_policy"]
+                    self.assertEqual(
+                        observed["acquisition_age"]["value"],
+                        audit.gp.max_post_age_days(cfg, "acquisition"),
+                    )
+                    self.assertEqual(
+                        observed["community_age"]["value"],
+                        audit.gp.max_post_age_days(cfg, "community"),
+                    )
+                    self.assertEqual(
+                        observed["follow_max_followers"]["value"],
+                        audit.gp.follow_max_followers(cfg),
+                    )
+
+    def test_tiktok_config_presence_and_absence_are_both_supported(self):
+        missing = self.report()["configurations"]["tiktok"]
+        self.assertEqual(missing["status"], "missing_in_checkout")
+        self.write_config("tiktok", config())
+        present = self.report()["configurations"]["tiktok"]
+        self.assertEqual(present["status"], "valid")
+        self.assertNotIn("effective_common_policy", present)
 
     def test_nine_networks_and_no_live_actions(self):
         result = self.report()
