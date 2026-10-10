@@ -29,7 +29,7 @@ VIDEO_EXTENSIONS = frozenset({".mp4", ".mov", ".m4v", ".webm", ".mkv"})
 IMAGE_FORMATS = frozenset({"JPEG", "PNG"})
 # Un unico limite verificado a nivel de protocolo; los limites no confirmados
 # permanecen configurables, no se convierten en bloqueos arbitrarios.
-IMAGE_BYTE_LIMITS = {"bluesky": 1_000_000}
+IMAGE_BYTE_LIMITS = {"bluesky": 2_000_000}
 # Relaciones sugeridas para el diseño (orientativas, NUNCA bloqueantes).
 PREFERRED_RATIOS = {
     "instagram": (4 / 5, 1.0), "pinterest": (2 / 3,),
@@ -131,6 +131,9 @@ def inspect_asset(
         try:
             with Image.open(file) as source:
                 fmt = source.format
+                declared = "JPEG" if suffix in {".jpg", ".jpeg"} else "PNG" if suffix == ".png" else None
+                if declared is not None and fmt != declared:
+                    add("image_extension", "La extension no coincide con los bytes de imagen")
                 if fmt not in IMAGE_FORMATS:
                     add("image_format", f"Formato {fmt} requiere preparar JPEG/PNG")
                 if getattr(source, "n_frames", 1) > 1:
