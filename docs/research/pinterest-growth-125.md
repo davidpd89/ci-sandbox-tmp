@@ -1,5 +1,10 @@
 # PR #125 — Pinterest: descubrimiento e insights orgánicos verificables
 
+Fuente primaria: https://github.com/pinterest/api-quickstart/blob/592b4bacd85e5bb483bef2e2145aa841ae37ac5a/python/src/pin.py
+Fecha de consulta: 2026-10-10
+Licencia SPDX: Apache-2.0
+Referencia inmutable: https://github.com/pinterest/api-quickstart/tree/592b4bacd85e5bb483bef2e2145aa841ae37ac5a
+
 Fecha: 10/10/2026. Base `research/public-reuse-parent`. No merge, tokens, acceso a cuentas, publicación ni interacciones en redes.
 
 ## Diagnóstico contra integración oficial
@@ -41,3 +46,21 @@ Revisión adversarial en varias pasadas: se corrigió el primer commit que inser
 ## Pendiente exclusivamente para Claude / equipo titular
 
 Confirmar HEAD en CI y en Windows nativo, correr suite completa de `rrss-davidporto-CODE`, evaluar concurrencia y divergencias del espejo respecto a integración privada, verificar DOM real Edge/9223 y Android solo si se cambia una ruta de ejecución (no modificada aquí), comprobar esquema real de Pinterest API si algún día se dispone de credenciales y autorización y ensayar `--api-read` en entorno aprobado. **No se ha accedido a ninguna red social** ni emitido llamadas autenticadas.
+
+## Problema
+El escáner Pinterest aceptaba términos genéricos, pero no consultaba suficientes tropos de romantasy; el filtro `NICHE` no reconocía `romantasy` como concepto. Había metadatos `pin_metrics` legibles pero ningún comparador puro con evidencias numéricas y ventanas separadas.
+
+## Alternativas
+Sustituir el escáner por Playwright de terceros, incorporar SDK oficial completo o aprovechar el escáner existente con semillas y un informe offline. Se eligió la tercera opción por reducir conflictos con turnos Edge, colas existentes y dependencia de endpoints privados.
+
+## Licencias y procedencia
+La única rutina adaptada de código público es la selección de máxima resolución de `Pin.max_resolution_image_url` de Pinterest Quickstart, Apache-2.0, commit fijado arriba; conserva cita y explica modificaciones. El contrato `pin_metrics` procede del esquema MIT `pinterest/api-description@51aca009f10a90283ccdf3956d509fc995ebac23`. El resto es implementación original; no se distribuye navegador, assets ni SDK.
+
+## Decisión
+Conservar `pinterest_growth.py` como ejecutor existente y conectar semillas adicionales deduplicadas; añadir un reporte offline que separa origen sintético, JSON sin verificar y datos API leídos con autenticación; las métricas no ordenan acciones de engagement. Adaptadores equivalentes para otras redes son responsabilidad de los contratos comunes abiertos (#100/#116/#134).
+
+## Pruebas
+`python -m pytest tests/test_pinterest_research_125.py tests/test_pinterest_growth.py tests/test_pinterest_api_audit.py -q` y `python -m compileall -q tools tests`. Evidencia definitiva: workflow `validate-social-tools.yml` del HEAD (Python 3.11 Ubuntu + Windows). Se corrigieron dos problemas durante autorrevisión, incluidos saltos de línea y la variable del ratio visual; no adjudicar resultados de CI de commits anteriores.
+
+## Retirada
+Revertir las adiciones a `pinterest_growth.py` y retirar `tools/pinterest_niche.py`, `tools/pinterest_organic_insights.py` y su test. No requiere migración SQLite/CSV, acciones en red ni borrado de datos reales. Si el API no suministra métricas comparables, el informe devuelve `unranked` y nunca introduce una puntuación estimada.
