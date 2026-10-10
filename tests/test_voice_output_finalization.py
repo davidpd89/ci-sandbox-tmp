@@ -331,6 +331,42 @@ class NativeDispatchBoundaryTests(unittest.TestCase):
         s = (ROOT / "tools" / "bluesky_execute.py").read_text(encoding="utf-8")
         self.assertIn("else _voice_quote(", s)
 
+    def test_instagram_web_mobile_queue_before_comment(self):
+        cb = types.ModuleType("circuit_breaker")
+        cb.write_preflight = lambda _: (True, "ok")
+        ctp = types.ModuleType("conversation_turn_policy")
+        ctp.check_execution = lambda *args: (True, "ok")
+        item = {"kind": "comment", "handle": "demo",
+                "permalink": "https://example.org/p/1", "text": SAMPLE}
+        for backend, queue in (("web", "WEB"), ("mobile", "MOBILE")):
+            with self.subTest(backend=backend):
+                sent, seen = [], []
+                ig = types.SimpleNamespace(
+                    _refuse_if_paused=lambda: None,
+                    comment=lambda url, text: sent.append(text) or "created",
+                    BotWarningDetected=type("BotWarningDetected", (Exception,), {}),
+                    AlreadyCommented=type("AlreadyCommented", (Exception,), {}),
+                )
+                fn = IsolatedActionBoundaryTests.extract(
+                    "instagram_execute.py", "run_plan", {"ig": ig, "BACKEND": backend})
+                with mock.patch.dict(sys.modules, {
+                    "circuit_breaker": cb, "conversation_turn_policy": ctp
+                }), mock.patch.object(voice, "inspect",
+                    side_effect=lambda text, *, network, queue: seen.append(
+                        (text, network, queue))):
+                    result = fn([item], prevalidated=True)
+                self.assertEqual(result[0]["resultado"], "confirmado")
+                self.assertEqual(seen, [(SAMPLE, "instagram", queue)])
+                self.assertEqual(sent, [SAMPLE])
+                sent.clear()
+                with mock.patch.dict(sys.modules, {
+                    "circuit_breaker": cb, "conversation_turn_policy": ctp
+                }), mock.patch.object(voice, "inspect",
+                    side_effect=voice.VoicePreflightUnavailable("fake")):
+                    failure = fn([item], prevalidated=True)
+                self.assertEqual(sent, [])
+                self.assertTrue(failure[0]["resultado"].startswith("fallo:"))
+
     def test_mastodon_reply_failure_cannot_send(self):
         sent = []
         fn = IsolatedActionBoundaryTests.extract("mastodon_execute.py", "_do", {
