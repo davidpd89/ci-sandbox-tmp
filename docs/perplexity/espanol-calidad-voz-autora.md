@@ -38,7 +38,7 @@ martiansideofthemoon/style-transfer-paraphrase
 	Revisar licencia y datos en el repo	Código y datos para reformular transferencia de estilo como generación de paráfrasis	Base conceptual para un flujo “borrador → paráfrasis controlada → validación de voz”	Investigación de 2020; requiere adaptación fuerte y modelos en inglés; no prioritario frente a TinyStyler
 Detección de IA, enfoque GLTR	
 luciayn/AI-generated-Text-Detection-with-GLTR-based-approach
-	MIT	Implementación GLTR evaluada también en español dentro de IberLEF-AuTexTification 2023	Señal de predictibilidad por token: detectar prosa excesivamente predecible, repetitiva o “plana”	GLTR original se apoya en GPT-2; requiere calibración con textos humanos del nicho
+	MIT	Implementación GLTR evaluada también en español dentro de IberLEF-AuTexTification 2023	Señal de predictibilidad por token — detectar prosa excesivamente predecible, repetitiva o “plana”	GLTR original se apoya en GPT-2; requiere calibración con textos humanos del nicho
 Detección de IA zero-shot	
 ahans30/Binoculars
 	BSD-3-Clause	Método sin entrenamiento, basado en perplejidad cruzada de dos modelos	Puntuar borradores antes de publicar; marcar solo outliers para revisión humana	Los autores advierten expresamente contra uso sin supervisión humana; rendimiento multilingüe debe validarse con corpus español propio
