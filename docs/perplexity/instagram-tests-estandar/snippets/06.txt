@@ -1,0 +1,28 @@
+python
+# Adaptado de:
+# https://github.com/kiwicom/pytest-recording#usage
+# y https://github.com/kiwicom/pytest-recording#configuration
+import pytest
+import requests
+
+
+@pytest.fixture(scope="module")
+def vcr_config():
+    return {
+        "filter_headers": ["authorization"],
+        "filter_query_parameters": ["access_token"],
+    }
+
+
+@pytest.mark.vcr("tests/fixtures/instagram/cassettes/media_read.yaml")
+def test_instagram_media_read_replay():
+    response = requests.get(
+        "https://graph.facebook.com/v21.0/17895695668004550",
+        params={
+            "fields": "id,media_type,permalink,timestamp,username",
+            "access_token": "REDACTED",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["id"] == "17895695668004550"
