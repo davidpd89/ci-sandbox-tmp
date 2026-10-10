@@ -14,7 +14,7 @@ from collections import defaultdict
 NETWORKS = ("bluesky", "mastodon", "x", "threads", "facebook",
             "instagram", "pinterest", "reddit", "tiktok")
 CHANNELS = {"bluesky": "API", "mastodon": "API", "x": "WEB",
-            "threads": "WEB", "facebook": "WEB", "instagram": "MOBILE",
+            "threads": "WEB", "facebook": "WEB", "instagram": "WEB",
             "pinterest": "WEB", "reddit": "WEB", "tiktok": "MOBILE"}
 # Fuentes comprobadas en el mirror de 10/10/2026, no capacidades supuestas.
 FOLLOWBACK_SOURCES = {
