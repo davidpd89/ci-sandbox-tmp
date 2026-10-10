@@ -1,0 +1,33 @@
+python
+# Fuente de datos: https://github.com/sunnweiwei/spanish-reddit-dialogues-corpus
+# Adaptación: selecciona ejemplos variados por longitud y presencia de pregunta.
+
+import json
+import random
+from pathlib import Path
+
+def load_examples(path: str = "data/reddit_style_examples_es.jsonl") -> list[dict]:
+    with open(path, encoding="utf-8") as f:
+        return [json.loads(line) for line in f if line.strip()]
+
+def pick_examples(examples: list[dict], k: int = 4, seed: int | None = None) -> list[dict]:
+    rng = random.Random(seed)
+
+    short = [e for e in examples if e["response_chars"] <= 180]
+    medium = [e for e in examples if 180 < e["response_chars"] <= 420]
+    long = [e for e in examples if e["response_chars"] > 420]
+    questions = [e for e in examples if "?" in e["response"]]
+
+    buckets = [short, medium, long, questions]
+    chosen: list[dict] = []
+
+    for bucket in buckets:
+        if bucket and len(chosen) < k:
+            chosen.append(rng.choice(bucket))
+
+    while len(chosen) < k and examples:
+        candidate = rng.choice(examples)
+        if candidate not in chosen:
+            chosen.append(candidate)
+
+    return chosen[:k]
