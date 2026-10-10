@@ -1,0 +1,68 @@
+python
+# Fuente base: https://github.com/bluesky-social/jetstream
+# Documentación: https://bsky.network/docs/jetstream/
+# Objetivo: sustituir/completar tools/bluesky_jetstream_collect.py
+# con cursor persistente, filtrado y deduplicación.
+
+import json
+import sqlite3
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from websockets.sync.client import connect
+
+JETSTREAM_URL = "wss://jetstream2.us-east.bsky.network/subscribe"
+COLLECTIONS = ["app.bsky.feed.post", "app.bsky.feed.like", "app.bsky.graph.follow"]
+
+@dataclass
+class Cursor:
+    did: str
+    rkey: str
+    time_us: int
+
+class JetstreamCollector:
+    def __init__(self, db_path: Path):
+        self.db = sqlite3.connect(db_path)
+        self.db.execute("""
+            CREATE TABLE IF NOT EXISTS jetstream_events (
+                did TEXT, rkey TEXT, collection TEXT, time_us INTEGER,
+                payload TEXT, PRIMARY KEY (did, rkey, collection)
+            )
+        """)
+        self.db.execute("""
+            CREATE TABLE IF NOT EXISTS jetstream_cursor (
+                id INTEGER PRIMARY KEY CHECK (id = 1), time_us INTEGER
+            )
+        """)
+
+    def last_cursor(self) -> int | None:
+        row = self.db.execute("SELECT time_us FROM jetstream_cursor WHERE id = 1").fetchone()
+        return row[0] if row else None
+
+    def save_event(self, event: dict) -> bool:
+        commit = event.get("commit")
+        if not commit or commit.get("collection") not in COLLECTIONS:
+            return False
+        try:
+            self.db.execute(
+                "INSERT INTO jetstream_events VALUES (?, ?, ?, ?, ?)",
+                (commit["did"], commit["rkey"], commit["collection"],
+                 commit["timestamp_us"], json.dumps(event, ensure_ascii=False)),
+            )
+            self.db.execute(
+                "INSERT INTO jetstream_cursor VALUES (1, ?) "
+                "ON CONFLICT(id) DO UPDATE SET time_us = excluded.time_us",
+                (commit["timestamp_us"],),
+            )
+            self.db.commit()
+            return True
+        except sqlite3.IntegrityError:
+            return False
+
+    def stream(self):
+        params = f"?wantedCollections={';'.join(COLLECTIONS)}"
+        cursor = self.last_cursor()
+        if cursor:
+            params += f"&cursor={cursor}"
+        with connect(JETSTREAM_URL + params) as ws:
+            while True:
+                yield self.save_event(json.loads(ws.recv()))
