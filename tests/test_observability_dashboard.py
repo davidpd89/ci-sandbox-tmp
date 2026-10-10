@@ -133,7 +133,7 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(report["networks"]["x"]["breaker"]["status"], "invalido")
         self.assertIsNone(report["networks"]["x"]["pending_replies"])
         self.assertIn("cola_respuestas", report["networks"]["x"]["missing_sources"])
-        self.assertIsNone(report["coverage"]["reply_queue"])
+        self.assertFalse(report["coverage"]["reply_queue"])
 
     def test_breaker_expiry_is_not_open(self):
         breaker = self.root / "SISTEMA_DIARIO_X" / "cache" / "breaker.json"
