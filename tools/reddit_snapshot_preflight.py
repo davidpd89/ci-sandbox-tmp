@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 
 MAX_SNAPSHOT_AGE = timedelta(minutes=5)
 MAX_RULE_AGE = timedelta(days=7)
-MAX_THREAD_AGE = timedelta(days=7)  # Política editorial, no límite de Reddit.
+MAX_THREAD_AGE = timedelta(days=3)  # Comentario raíz externo: política común de edad (3 días); follow-up separado.
 THREAD_PATH = re.compile(r"/r/([A-Za-z0-9_]+)/comments/([a-z0-9]+)(?:/[^/]+)?/?", re.I)
 
 
