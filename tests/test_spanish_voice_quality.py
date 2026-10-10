@@ -98,5 +98,53 @@ class TestBlind(unittest.TestCase):
         self.assertIn("NO demuestra", outcome["warning"])
 
 
+class TestIntegration(unittest.TestCase):
+    def test_shared_writer_reports_without_blocking_or_writing(self):
+        import reply_writer as writer
+        import spanish_voice_quality as quality
+        events = []
+        fake_answer = lambda prompt, attachments, wait: (
+            '[{"id": "synthetic-id", "reply": "Voy a checar el carro."}]', "offline")
+        with (mock.patch.object(writer, "new_authors_only", side_effect=lambda items, net, log: items),
+              mock.patch.object(writer, "valid_reply", return_value=(True, "")),
+              mock.patch.object(writer, "mark_gpt"),
+              mock.patch.object(quality, "audit", return_value={"findings": [
+                  {"code": "locale_variant", "severity": "hint"}]})):
+            actual = writer.write_replies(
+                [{"id": "synthetic-id", "author": "lectora-ficticia",
+                  "text": "Una publicación inventada para una prueba.",
+                  "network": "tiktok"}],
+                "tiktok", recent=[], consult=fake_answer, log=events.append)
+        self.assertEqual(actual, {"synthetic-id": "Voy a checar el carro."})
+        self.assertIn("locale_variant", " ".join(events))
+
+    def test_auditor_failure_does_not_discard_reply(self):
+        import reply_writer as writer
+        import spanish_voice_quality as quality
+        events = []
+        fake_answer = lambda prompt, attachments, wait: (
+            '[{"id": "synthetic-id", "reply": "Muy buen hallazgo."}]', "offline")
+        with (mock.patch.object(writer, "new_authors_only", side_effect=lambda items, net, log: items),
+              mock.patch.object(writer, "valid_reply", return_value=(True, "")),
+              mock.patch.object(writer, "mark_gpt"),
+              mock.patch.object(quality, "audit", side_effect=RuntimeError("fallo simulado"))):
+            actual = writer.write_replies(
+                [{"id": "synthetic-id", "author": "lectora-ficticia",
+                  "text": "Un libro imaginario sobre dragones.",
+                  "network": "reddit_micro"}],
+                "reddit_micro", recent=[], consult=fake_answer, log=events.append)
+        self.assertEqual(actual, {"synthetic-id": "Muy buen hallazgo."})
+        self.assertIn("auditor_es_no_disponible", " ".join(events))
+
+    def test_common_publication_preflight_is_advisory(self):
+        import content_publisher as publisher
+        messages = []
+        issues = publisher._voice_diagnostics(
+            "instagram", "Me gusta este carro?", messages.append)
+        self.assertTrue(issues)
+        self.assertTrue(any("revision_es:" in item for item in messages))
+        self.assertEqual(publisher._voice_diagnostics("other", "sin red", messages.append), [])
+
+
 if __name__ == "__main__":
     unittest.main()
