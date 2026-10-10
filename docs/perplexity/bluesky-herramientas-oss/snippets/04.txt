@@ -1,0 +1,24 @@
+python
+# Fuente base: https://github.com/VladUZH/harken
+# Objetivo: adoptar su modelo de menciones, sentimiento y temas
+# para detectar conversaciones de fantasía/romantasy en varias redes.
+
+from dataclasses import dataclass
+from datetime import datetime
+
+@dataclass
+class Mention:
+    network: str
+    external_id: str
+    author_handle: str
+    text: str
+    url: str
+    created_at: datetime
+    sentiment: float
+    themes: list[str]
+    matched_terms: list[str]
+
+def is_actionable(mention: Mention, min_score: float = 0.55) -> bool:
+    relevant = any(t in {"fantasia", "romantasy", "lectura", "escritura"} for t in mention.themes)
+    positive_or_neutral = mention.sentiment >= -0.15
+    return relevant and positive_or_neutral and len(mention.matched_terms) >= 1
