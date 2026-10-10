@@ -1,0 +1,32 @@
+python
+# tests/contracts/error_mapping.py
+# Mapa de errores propuesto; las cabeceras provienen de la documentación oficial:
+# https://bsky.network/docs/rate-limits/
+from tests.contracts.social_adapter_contract import ErrorClass
+
+STATUS_TO_ERROR = {
+    400: "invalid_target",
+    401: "auth",
+    403: "forbidden",
+    404: "not_found",
+    429: "rate_limit",
+}
+
+
+def classify(status_code: int, payload: dict | None = None) -> str:
+    if status_code in STATUS_TO_ERROR:
+        return STATUS_TO_ERROR[status_code]
+    if 500 <= status_code <= 599:
+        return "upstream"
+    if payload and payload.get("error") == "RateLimitExceeded":
+        return "rate_limit"
+    return "contract_violation"
+
+
+def retryable(error_class: str) -> bool:
+    return error_class in {"rate_limit", "network", "upstream"}
+
+
+def retry_after(headers: dict[str, str]) -> int | None:
+    value = headers.get("Retry-After") or headers.get("retry-after")
+    return int(value) if value and value.isdigit() else None
