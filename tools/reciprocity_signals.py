@@ -21,11 +21,11 @@ POST_MAX_AGE_DAYS = 7
 _RULES = {
     "follow_exchange": (
         r"\b(?:sigo de vuelta|sigo a (?:todos|quien(?:es)? me sig(?:a|an|ue|uen))|"
-        r"si(?:gueme|guenos) y te sigo|sigueme y te sigo|"
+        r"sigueme y te sigo|siguenos y te seguimos|siguenos y te sigo|"
         r"te sigo si me sigues|seguimos a quien nos sigue|"
         r"follow[\s-]?back|follow[\s-]?for[\s-]?follow|follow4follow|"
         r"f4f|sdv|fb100|fb\s?100|devuelvo (?:el )?follow|"
-        r"devuelvo (?:los )?seguidores)\b",
+        r"devuelvo (?:los )?seguidores|sigo de regreso)\b",
     ),
     "comment_exchange": (
         r"\b(?:comentario por comentario|comenta y te comento|"
