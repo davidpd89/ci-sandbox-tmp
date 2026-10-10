@@ -143,6 +143,18 @@ class AudienceTests(unittest.TestCase):
                 post_key="p1", observed_at=NOW, post_created_at=POST)
         self.assertNotEqual(a.account_key, b.account_key)
 
+    def test_mastodon_local_post_ids_are_instance_scoped(self):
+        obs = []
+        for domain in ("mastodon.example", "other.example"):
+            row = {"actor": {"id": "7", "acct": "lectora@" + domain},
+                   "instance": domain, "event_id": "99"}
+            obs.append(ad.normalize("mastodon", "comment", row,
+                surface="own_post", post_key="42", observed_at=NOW,
+                post_created_at=POST))
+        self.assertNotEqual(obs[0].event_key, obs[1].event_key)
+        self.ingest(obs, network="mastodon")
+        self.assertEqual(len(self.store.ranked("mastodon")), 2)
+
     def test_mastodon_without_instance_is_provisional(self):
         raw = {"actor": actor("mastodon"), "event_id": "e"}
         obs = ad.normalize("mastodon", "comment", raw, surface="own_post",
