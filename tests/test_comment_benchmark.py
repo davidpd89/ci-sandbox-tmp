@@ -294,7 +294,7 @@ class BenchmarkTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "exactamente"):
                 b.evaluate(self.cases, self.candidates, str(extra), key_path=key_path)
             broken = Path(directory) / "broken.csv"
-            broken.write_text(",".join(b.COLUMNS) + "\\n" + "cut-off\\n", encoding="utf-8")
+            broken.write_text(",".join(b.COLUMNS) + "\n" + "cut-off\n", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "incompleta"):
                 b.evaluate(self.cases, self.candidates, str(broken), key_path=key_path)
 
