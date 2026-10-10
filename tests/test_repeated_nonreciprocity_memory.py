@@ -53,6 +53,13 @@ class HistoricalMemoryTests(unittest.TestCase):
         self.assertEqual(mem.decision(mem.events_from_rows(orphans, "x"),
                                       "x", "b", today=TODAY)["failures"], 1)
 
+    def test_legacy_orphans_from_distinct_dates_remain_three_attempts(self):
+        # Históricos anteriores sólo guardaban el unfollow, sin follow previo.
+        rows = [row("a", "unfollow", day, notes="no devuelve")
+                for day in ("2026-07-01", "2026-08-01", "2026-09-01")]
+        state = mem.decisions_from_rows(rows, "x", today=TODAY)["a"]
+        self.assertEqual((state["failures"], state["status"]), (3, "exhausted"))
+
     def test_reciprocity_requires_verified_event_and_permanent_survives(self):
         rows = cycle("a", "2026-08-01", "2026-08-02") + [row("a", "followback", "2026-09-01")]
         self.assertEqual(mem.decisions_from_rows(rows, "facebook", today=TODAY)["a"]["failures"], 1)
