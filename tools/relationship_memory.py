@@ -210,7 +210,11 @@ class RelationshipMemory:
     def import_csv(self, network, csv_path, *, source=None):
         source = source or Path(csv_path).name
         with open(csv_path, encoding="utf-8-sig", newline="") as fh:
-            rows = list(csv.DictReader(fh))
+            reader = csv.DictReader(fh)
+            required = {"fecha", "cuenta", "tipo", "notas", "resultado"}
+            if not required.issubset(set(reader.fieldnames or ())):
+                raise ValueError("registro CSV incompleto; no se sustituye la memoria")
+            rows = list(reader)
         events = events_from_rows(rows, network, source=source)
         return self.replace_source(network, source, events)
 
