@@ -20,7 +20,7 @@ import growth_attribution as ga
 ROOT = ga.ROOT
 
 
-def review(rows, followers, today, days=30):
+def review(rows, followers, today, days=30, *, network=None):
     """Devuelve lista de dicts {account, since, age_days, actions} de follows
     confirmados con >= `days` dias que NO estan en `followers`."""
     followed = {}
@@ -47,7 +47,7 @@ def review(rows, followers, today, days=30):
     out = []
     for account, since in followed.items():
         age = (today - since).days
-        if age < days or any(ga._same(account, f) for f in followers):
+        if age < days or any((account == f if network == "mastodon" else ga._same(account, f)) for f in followers):
             continue
         out.append({"account": account, "since": since.isoformat(), "age_days": age,
                     "actions": ga.combo(actions[account])})
