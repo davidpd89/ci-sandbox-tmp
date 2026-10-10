@@ -1619,6 +1619,8 @@ class GrowthScanTests(unittest.TestCase):
              "displayName": "Club de lectura", "likeCount": 10},
             {"uri": "at://did:plc:weak/app.bsky.feed.generator/d",
              "displayName": "Fantasía", "likeCount": 1},
+            {"uri": "at://did:plc:badcount/app.bsky.feed.generator/e",
+             "displayName": "Fantasía", "likeCount": "sin-dato"},
         ]
 
         def fake_get(base, path, params, auth):
