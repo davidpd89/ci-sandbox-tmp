@@ -1,0 +1,4 @@
+python
+# https://github.com/nathaniel-ortiz/redditswapbot/blob/79f8bbdc991177922ab72821adc28b156566a5da/flair.py
+age = (datetime.utcnow() - datetime.utcfromtimestamp(item.author.created_utc)).days
+karma = item.author.link_karma + item.author.comment_karma
