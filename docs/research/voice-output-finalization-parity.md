@@ -32,7 +32,7 @@ sin enviar. El código original de esta rama puede ejecutarse sin él mientras n
 | Bluesky | no aplicable verificado a publicaciones | **conectado** replies/citas y fichas #79 | no aplicable verificado | `bluesky_execute.run_plan` + `content_publisher.run` |
 | Mastodon | no aplicable verificado a publicaciones | **conectado** replies y fichas #79 | no aplicable verificado | `mastodon_execute._do` + `content_publisher.run` |
 | TikTok | no aplicable en ruta móvil actual | pendiente (sin publicación API acreditada) | **conectado** comentarios | `TikTokMobileAdapter.comment` antes de abrir destino; constructor `reply_writer` separado |
-| Instagram | **conectado** comentarios y fichas #79 | pendiente (salidas nativas API sin trazar) | pendiente (salida humana sin ejecutor) | `instagram_execute.run_plan`, `content_publisher.run` + informe manual |
+| Instagram | **conectado** comentarios WEB y fichas #79 | pendiente (salidas nativas API sin trazar) | **conectado** comentarios con `RRSS_INSTAGRAM_BACKEND=mobile`; pendiente publicación humana sin ejecutor | `instagram_execute.run_plan` (cola según backend), `content_publisher.run` + informe manual |
 
 Toda ficha que se muestra como **pendiente manual** en `content_queue_alert.main` se revisa por
 `inspect_fields(..., queue=None)`: se desconoce su transporte final, y por tanto **no** se
