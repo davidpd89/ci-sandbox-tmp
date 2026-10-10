@@ -129,6 +129,21 @@ def main(argv=None):
     verify = "--no-verify" not in argv
     now = datetime.datetime.now(ZoneInfo("Europe/Madrid")).replace(tzinfo=None)
     results = {red: classify(red, now, verify) for red in cq.RED_FOLDERS}
+    # Revisión editorial de fichas manuales: cola desconocida, sin publicación.
+    import voice_output_finalization as voice
+    for red, res in results.items():
+        for item in res["due"] + res["today"]:
+            fields = {"texto": item.get("texto") or ""}
+            if red in ("reddit", "pinterest"):
+                fields["titulo"] = item.get("titulo") or ""
+            if item.get("alt"):
+                fields["alt"] = item["alt"]
+            try:
+                voice.inspect_fields(fields, network=red, queue=None)
+            except voice.VoicePreflightUnavailable:
+                # No bloquear el recordatorio si falta el QA; no hay envío remoto.
+                print(f"[{red}] auditor_es_no_disponible; se conserva el informe manual")
+                break
     lines = [f"# Publicaciones pendientes ({now:%d/%m/%Y %H:%M})", "",
              "Generado por `tools/content_queue_alert.py` en cada ronda. No publica nada: avisa de lo vencido y de lo de hoy. Las de Bluesky, Mastodon y Threads se comprueban en la red y las "
              "ya publicadas se marcan solas; en el resto, «sin verificar» significa que hay que mirar a mano si ya salio.", ""]
