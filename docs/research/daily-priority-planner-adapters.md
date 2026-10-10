@@ -109,3 +109,10 @@ python tools/validate_open_source_campaign.py --live --child-number 103
 ```
 
 En Windows nativo ejecutar los mismos comandos con `py -3.11 -m unittest...` / `py -3.11 -m pytest...`. Edge, CDP y Android deben usar pruebas supervisadas locales del repo oficial; no se han conectado cuentas ni realizado acciones sociales en esta PR.
+
+## Auditoría final incremental — 10/10/2026
+
+- **Registros outbound con celdas atípicas:** `_confirmed_outbound` ignora los estados de tipo no textual sin abortar el lote completo y normaliza espacios/mayúsculas de `resultado`, `red` y `tipo`. Un `Block` confirmado en cualquiera de las nueve redes ya no desaparece por espacios del CSV; regresión con nueve subcasos.
+- **CSV inválido:** se mantiene la barrera conservadora preexistente: si se declaró un fichero outbound pero no puede leerse/validarse, esa fuente se descarta por completo porque el registro puede contener bloqueos o follows anteriores. El diagnóstico añade `outbound_read_errors` sin nombres de cuentas, y `outbound_coverage` sigue incompleto. Una alternativa que reactivaba follows sin ese CSV se descartó en la segunda revisión para no debilitar el ledger.
+- **Pruebas:** 24 métodos de regresión offline en `tests/test_relationship_planner_adapters.py`. Conservan modo seco, deduplicación, política de edad, los vetos y el scorador común de la base.
+- **Sin certificado de merge:** no hay nueve exportadores/consumidores conectados, ni prueba verificable de completitud, ni reconciliación histórica de renombres. El gate live del manifiesto padre requiere registrar #103 en `docs/open-source-scouting/children.json` y en el índice del protocolo. La PR permanece sin fusionar.
