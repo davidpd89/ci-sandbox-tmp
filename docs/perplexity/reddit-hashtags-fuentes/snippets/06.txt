@@ -1,0 +1,82 @@
+text
+# config/reddit_discovery.yaml
+version: 1
+language_priority: ["es", "en"]
+
+subreddits:
+  - name: libros
+    weight: 1.0
+    language: es
+  - name: es_bookclub
+    weight: 1.0
+    language: es
+  - name: Fantasy
+    weight: 0.9
+    language: en
+  - name: fantasybooks
+    weight: 0.9
+    language: en
+  - name: Romantasy
+    weight: 0.9
+    language: en
+  - name: romancebooks
+    weight: 0.8
+    language: en
+  - name: suggestmeabook
+    weight: 0.8
+    language: en
+  - name: YAlit
+    weight: 0.7
+    language: en
+  - name: books
+    weight: 0.6
+    language: en
+  - name: bookclub
+    weight: 0.6
+    language: en
+
+queries_es:
+  - "fantasía en español"
+  - "fantasía española"
+  - "autores españoles fantasía"
+  - "romantasy español"
+  - "romantasy en español"
+  - "fantasía romántica"
+  - "fantasía juvenil español"
+  - "libros fantasía recomendación"
+  - "lectura actual fantasía"
+  - "fantasía latinoamericana"
+
+queries_en:
+  - "romantasy"
+  - "fantasy romance recommendation"
+  - "YA fantasy romance"
+  - "Spanish fantasy author"
+  - "translated fantasy"
+  - "Latin American fantasy"
+  - "enemies to lovers fantasy"
+
+search:
+  global_sort: ["new", "top"]
+  subreddit_sort: ["new", "top"]
+  time_filter: ["day", "week"]
+  limit: 50
+  fetch_comments: false
+  download_media: false
+  delay_seconds: 3.0
+
+relevance:
+  required_any_es:
+    - "fantas"
+    - "romantasy"
+    - "romance"
+    - "libro"
+    - "lectura"
+    - "recomendación"
+  required_any_en:
+    - "fantasy"
+    - "romantasy"
+    - "romance"
+    - "book"
+    - "reading"
+    - "recommendation"
