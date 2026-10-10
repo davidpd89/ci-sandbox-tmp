@@ -135,6 +135,38 @@ class AgeDistributionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             age.classify("x", {}, now=dt.datetime(2026, 10, 10))
 
+    def test_profile_actions_do_not_inflate_post_unknowns_across_networks(self):
+        # Los planes reales mezclan follows a perfiles y acciones sobre posts.
+        rows = [
+            {"kind": "follow"},
+            {"kind": "follow_external", "post_created_at": iso(1)},
+            {"kind": "followback"},
+            {"kind": "unfollow"},
+            {"kind": "reply", "post_created_at": iso(3)},
+            {"kind": "like"},  # Post destino sin fecha: unknown autentico.
+        ]
+        for net in age.NETWORKS:
+            with self.subTest(net=net):
+                report = age.distribution(net, rows, now=NOW)
+                self.assertEqual(report["total"], 2)
+                self.assertEqual(report["acciones_perfil_excluidas"], 4)
+                self.assertEqual(report["hasta_24h"], 1)
+                self.assertEqual(report["rangos"]["unknown"], 1)
+                self.assertEqual(sum(report["rangos"].values()), report["total"])
+
+    def test_instagram_follow_only_plan_has_no_post_target(self):
+        with tempfile.TemporaryDirectory() as root:
+            path = pathlib.Path(root) / "SISTEMA_DIARIO_INSTAGRAM" / "instagram_plan.json"
+            path.parent.mkdir(parents=True)
+            path.write_text(json.dumps([{"kind": "follow", "handle": "ejemplo"}]), encoding="utf-8")
+            os.utime(path, (NOW.timestamp(), NOW.timestamp()))
+            record = age.audit_recent_plans(root, now=NOW)["instagram"]
+            self.assertEqual(record["estado"], "ok")
+            self.assertEqual(record["total"], 0)
+            self.assertEqual(record["acciones_perfil_excluidas"], 1)
+            self.assertEqual(record["rangos"]["unknown"], 0)
+            self.assertIn("1 acciones de perfil excluidas", "\n".join(age.daily_lines(root, now=NOW)))
+
     def test_readonly_snapshot_windows_and_missing_routes(self):
         with tempfile.TemporaryDirectory() as root:
             path = pathlib.Path(root) / "SISTEMA_DIARIO_THREADS" / "threads_plan.json"
