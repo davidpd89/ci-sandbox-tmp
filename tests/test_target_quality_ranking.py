@@ -265,7 +265,32 @@ class RankingTests(unittest.TestCase):
     def test_evaluation_unknown_labels_excluded(self):
         result = r.evaluate_orders(["unknown", "known"], [], {"known": {"traffic": 1}}, k=10)
         self.assertEqual(result["traffic"]["candidate"]["observed"], 1)
+        self.assertEqual(result["traffic"]["candidate"]["unjudged"], 1)
+        self.assertIsNone(result["traffic"]["candidate"]["precision"])
+        self.assertIsNone(result["traffic"]["candidate"]["ndcg"])
         self.assertIsNone(result["traffic"]["baseline"]["precision"])
+
+    def test_evaluation_topk_does_not_replace_unjudged_slots_with_later_labels(self):
+        labels = {
+            "good": {"response": 1}, "bad": {"response": 0},
+            "later": {"response": 1},
+        }
+        got = r.evaluate_orders(["unknown", "bad", "good", "later"],
+                                ["good", "bad"], labels, k=2)["response"]
+        self.assertEqual(got["candidate"]["exposed"], 2)
+        self.assertEqual(got["candidate"]["observed"], 1)
+        self.assertIsNone(got["candidate"]["precision"])
+        self.assertIsNone(got["candidate"]["ndcg"])
+        self.assertEqual(got["baseline"]["precision"], .5)
+
+    def test_evaluation_ideal_ndcg_includes_relevant_beyond_topk(self):
+        labels = {key: {"followback": value} for key, value in
+                  (("one", 1), ("zero", 0), ("two", 1), ("three", 1))}
+        result = r.evaluate_orders(["zero", "one", "two", "three"],
+                                   ["one", "two", "zero", "three"],
+                                   labels, k=2)["followback"]
+        self.assertLess(result["candidate"]["ndcg"], 0.4)
+        self.assertEqual(result["baseline"]["ndcg"], 1.)
 
     def test_post_age_timezone_offsets_equivalent(self):
         p1 = post(created_at="2026-10-10T09:00:00+02:00")

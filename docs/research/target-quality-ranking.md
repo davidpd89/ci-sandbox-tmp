@@ -93,7 +93,11 @@ explicable e independiente de credenciales.
 ausente se muestra como `missing_input`, nunca como "0 candidatos".
 `evaluate_orders(new_ids, old_ids, heldout, k)` calcula P@k y nDCG@k
 por `followback`, `response`, `conversation`, `traffic`;
-los no observados **no** se convierten en resultados negativos.
+los no observados **no** se convierten en resultados negativos: si hay
+etiquetas no observadas entre los k puestos expuestos, se informa
+`observed/exposed/unjudged`, pero precisión y nDCG quedan `null`.
+La referencia ideal de nDCG considera todos los positivos conocidos del
+universo evaluado, no únicamente los recuperados en top-k.
 
 - Cuentas: `topic` 34 %, diversidad de fuentes 12 %, actividad 14 %,
   español 9 %, tamaño de audiencia 10 %, reciprocidad 9 % e histórico observado
@@ -186,6 +190,8 @@ Pasadas adversariales:
 3. Necroposting, fecha sin zona, fecha futura, límite comunidad vs adquisición,
    publicaciones duplicadas, ordinal del scan sin ID real.
 4. Cohortes pequeñas/inmaduras o inverificadas: no elevar tasas de éxito.
+   Evaluación con etiquetas parciales: sin compactar slots desconocidos
+   hacia puestos más altos ni ideal nDCG autorreferencial.
 5. Sin auto-like X, sin ampliar permisos de acciones observadas, sin acceso
    a autenticación y sin mutaciones.
 6. Replay con baseline hostil y etiquetas independientes sintéticas.

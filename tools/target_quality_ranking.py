@@ -342,25 +342,38 @@ def evaluate_orders(ranked_ids, baseline_ids, heldout, *, k=10):
     if not all(isinstance(v, Mapping) for v in heldout.values()):
         raise ValueError("invalid heldout data")
     metrics = ("followback", "response", "conversation", "traffic")
+
+    def label_value(label):
+        if type(label) is bool:
+            return int(label)
+        if type(label) is int and label in (0, 1):
+            return label
+        return None
+
     def one(order, metric):
-        seen, values = set(), []
+        # Top-k means actual exposed positions, not the first k *judged*
+        # candidates after silently removing unobserved entries.
+        seen, exposure = set(), []
         for key in order:
             if key in seen:
                 continue
             seen.add(key)
-            label = heldout.get(key, {}).get(metric)
-            if type(label) is bool:
-                values.append(int(label))
-            elif label in (0, 1) and type(label) is int:
-                values.append(label)
-            if len(values) >= k:
+            exposure.append(key)
+            if len(exposure) >= k:
                 break
-        if not values:
-            return {"observed": 0, "precision": None, "ndcg": None}
+        values = [label_value(heldout.get(key, {}).get(metric)) for key in exposure]
+        observed = sum(v is not None for v in values)
+        unjudged = len(exposure) - observed
+        if not exposure or unjudged:
+            return {"observed": observed, "exposed": len(exposure),
+                    "unjudged": unjudged, "precision": None, "ndcg": None}
+        positives = sum(label_value(row.get(metric)) == 1 for row in heldout.values())
+        ideal = sum(1 / math.log2(i + 2) for i in range(min(k, positives)))
         dcg = sum(v / math.log2(i + 2) for i, v in enumerate(values))
-        ideal = sum(1 / math.log2(i + 2) for i in range(sum(values)))
-        return {"observed": len(values), "precision": round(sum(values) / len(values), 4),
+        return {"observed": observed, "exposed": len(exposure), "unjudged": 0,
+                "precision": round(sum(values) / len(exposure), 4),
                 "ndcg": round(dcg / ideal, 4) if ideal else 0.}
+
     if (not isinstance(ranked_ids, (list, tuple)) or
         not isinstance(baseline_ids, (list, tuple))):
         raise ValueError("orders must be sequences")
