@@ -39,8 +39,8 @@ class SignalTests(unittest.TestCase):
         result = rs.evaluate(data["rows"], as_of=TODAY)
         for network, counters in result.items():
             with self.subTest(network=network):
-                self.assertEqual(counters["tp"], 5)
-                self.assertEqual(counters["tn"], 7)
+                self.assertEqual(counters["tp"], 2)
+                self.assertEqual(counters["tn"], 10)
                 self.assertEqual(counters["fp"], 0)
                 self.assertEqual(counters["fn"], 0)
                 self.assertEqual(counters["precision"], 1.0)
@@ -86,7 +86,8 @@ class SignalTests(unittest.TestCase):
                          [("follow_exchange", "mention"), ("reading_chain", "explicit")])
         positive = rs.assess_candidate(
             {"network": "threads", "surface": "bio",
-             "text": "No hago f4f; pero sí hago intercambio de reseñas de fantasía"},
+             "text": "No hago f4f; pero sí hago intercambio de reseñas de fantasía",
+             "actor_id": "test-actor", "source_id": "test-source"},
             as_of=TODAY)
         self.assertEqual(positive["status"], "eligible")
 
@@ -128,12 +129,14 @@ class SignalTests(unittest.TestCase):
         self.assertEqual(value["status"], "review")
         self.assertEqual(value["reason"], "niche_unverified")
         verified = rs.assess_candidate({"network": "x", "surface": "bio",
-                                         "text": "f4f", "niche_verified": True}, as_of=TODAY)
+                                         "text": "f4f", "niche_verified": True,
+                                          "actor_id": "test-actor", "source_id": "test-source"}, as_of=TODAY)
         self.assertEqual(verified["status"], "eligible")
 
     def test_post_freshness_enforced_even_when_declared(self):
         candidate = {"network": "tiktok", "surface": "post",
-                     "text": "Comenta y te comento, libros"}
+                     "text": "Comenta y te comento, libros",
+                     "actor_id": "test-actor", "source_id": "test-source"}
         self.assertEqual(rs.assess_candidate(candidate, as_of=TODAY)["reason"], "post_age_unknown")
         candidate["created_on"] = "2026-10-02"
         self.assertEqual(rs.assess_candidate(candidate, as_of=TODAY)["reason"], "stale_post")
@@ -222,6 +225,33 @@ class SignalTests(unittest.TestCase):
         report = rs.outcome_report(records, as_of=TODAY)
         self.assertEqual(report["x/follow_exchange"]["relation_active"]["confirmed"], 1)
         self.assertEqual(report["mastodon/follow_exchange"]["relation_active"]["confirmed"], 0)
+
+    def test_source_only_is_not_a_person_on_any_network(self):
+        for net in sorted(rs.NETWORKS):
+            for surface, text in (
+                ("hashtag", "#Bookstagram #F4F"),
+                ("group", "Grupo de apoyo mutuo escritores de fantasía"),
+                ("list", "Cadena de lectura para lectores de novelas"),
+            ):
+                with self.subTest(net=net, surface=surface):
+                    row = {"network": net, "surface": surface, "text": text,
+                           "actor_id": "synthetic-actor", "source_id": "synthetic-source"}
+                    outcome = rs.assess_candidate(row, as_of=TODAY)
+                    self.assertEqual(outcome["status"], "source_only")
+
+    def test_candidate_requires_real_actor_and_source_fields(self):
+        for net in sorted(rs.NETWORKS):
+            row = {"network": net, "surface": "bio",
+                   "text": "Fantasía, sígueme y te sigo"}
+            for fields in ({}, {"actor_id": "a"}, {"source_id": "s"},
+                           {"actor_id": " ", "source_id": "s"}):
+                with self.subTest(net=net, fields=fields):
+                    outcome = rs.assess_candidate({**row, **fields}, as_of=TODAY)
+                    self.assertEqual(outcome["reason"], "actor_or_source_unverified")
+                    self.assertEqual(outcome["status"], "review")
+            self.assertEqual(rs.assess_candidate(
+                {**row, "actor_id": "a", "source_id": "s"}, as_of=TODAY)["status"],
+                "eligible")
 
     def test_invalid_input_is_not_silently_actionable(self):
         self.assertEqual(rs.assess_candidate({"network": "other", "surface": "post",

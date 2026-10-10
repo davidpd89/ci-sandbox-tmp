@@ -20,9 +20,11 @@ Conservar re y normalización Unicode de la biblioteca estándar, ampliar la sem
 ## Pruebas
 python -m unittest discover -s tests -p test_reciprocity_signals.py -v
 
-19 pruebas y 108 casos por nueve redes; workflow Windows/Ubuntu Python 3.11. Datos exclusivamente sintéticos; las métricas de producción y los canarios Edge/Android requieren comprobación posterior.
+21 pruebas y 108 casos por nueve redes; workflow Windows/Ubuntu Python 3.11. Datos exclusivamente sintéticos; las métricas de producción y los canarios Edge/Android requieren comprobación posterior.
 
 ## Retirada
 Revertir la integración de reciprocity.py y discovery_terms.py y retirar el nuevo módulo, tests, fixture y workflow. Sin migración de estado. No se han realizado acciones sociales.
 
 Revisión adversarial final: se impidió que una negación en una cláusula suprimiese otra oferta distinta; se conservaron los patrones heredados «sigo de regreso», «síguenos y te seguimos» y «sigo a mis seguidores». Se corrigieron además negaciones «no sigo de vuelta», intenciones opuestas separadas por coma y la deduplicación multiseñal de resultados. Regresiones específicas añadidas. El detector sigue siendo heurístico y no sustituye comprobaciones de plataforma.
+
+Revisión adicional 10/10/2026: `source_only` para hashtags/grupos/listas. Las bios/posts requieren IDs de persona y procedencia; matriz sintética 18 positivos y 90 no elegibles, ninguna observación real.

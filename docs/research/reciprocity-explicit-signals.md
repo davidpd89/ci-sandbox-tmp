@@ -12,13 +12,13 @@ Código oficial consultado **solo en lectura**, rama integracion/crecimiento-202
 
 - classify_text(text): listas de indicios de follow_exchange, comment_exchange, reading_chain, support_group. Cada uno conserva clase, coincidencia normalizada, intención explicit/mention y confianza **heurística** (NO calibración estadística).
 - search_terms(network, kind): consultas y hashtags por plataforma, con normalización y dedupe a través de discovery_terms. No crea cuentas ni grupos falsos.
-- assess_candidate(row, as_of): eligibility explicable por red/superficie, nicho verificado o textual y antigüedad <=7 días para un post. Sin fecha => review, caducado => rejected. Bio/group/list sin fecha de post solo sirve para descubrimiento, nunca autoriza comentar contenido viejo.
+- assess_candidate(row, as_of): eligibility explicable por red/superficie, nicho verificado o textual y antigüedad <=7 días para un post. Sin fecha => review, caducado => rejected. Hashtags, grupos y listas son source_only, no candidatos; bio/post necesitan actor_id y source_id válidos, de lo contrario review.
 - evaluate(rows, as_of): matriz de confusión por red, separa aciertos y fallos etiquetados.
 - outcome_report(rows, as_of): tasas descriptivas por red/señal de relation_active, comments y visits cuando el resultado está **verificado y maduro**. Unknown != false. Observaciones no son incrementos causales y se deduplican por origen+actor+red+familia de señal; en caso de varias fuentes el grupo no representa actores únicos entre fuentes.
 
 Datos de evaluación: tests/fixtures/reciprocity_signals_synthetic.json (108 casos etiquetados, 12 por plataforma; nueve redes: X, Threads, Facebook, Pinterest, Reddit, Bluesky, Mastodon, TikTok e Instagram). Todos los textos son sintéticos. Las clases representan biografía, publicación reciente/caducada, hashtag, lista y grupo. Tienen ejemplos positivos y negativos, menciones casuales, contraejemplos, casos sin nicho, ausencia de fecha, comillas y negaciones. Los escenarios se repiten entre redes para comprobar paridad técnica: NO reflejan prevalencias ni rendimiento real de cada comunidad.
 
-**Medición de esta fixture (simulación, no canario):** 5 TP + 7 TN por red; 45 TP, 63 TN, 0 FP y 0 FN sobre los 108 ejemplos diseñados. Precisión y recall 1,00 **solo dentro de la fixture, no promesa de producción**. Regresión específica sobre negación: el bonus heredado habría puntuado la frase «No hago followback»; el adaptador nuevo puntúa 0. Las familias complementarias no estaban cubiertas por la regex histórica.
+**Medición de esta fixture (simulación, no canario):** 2 TP + 10 TN por red; 18 TP, 90 TN, 0 FP y 0 FN sobre los 108 ejemplos diseñados. Precisión y recall 1,00 **solo dentro de la fixture, no promesa de producción**. Regresión específica sobre negación: el bonus heredado habría puntuado la frase «No hago followback»; el adaptador nuevo puntúa 0. Las familias complementarias no estaban cubiertas por la regex histórica.
 
 ## Reutilización pública contrastada (GitHub consultado 10/10/2026)
 
@@ -52,3 +52,6 @@ Workflow nuevo .github/workflows/reciprocity-signals-offline.yml, matriz ubuntu-
 1. Conectar assess_candidate a las observaciones reales de cada escáner por adaptador (sin saltarse filtros de idioma, nicho, identidad, consentimiento de lectura y edad). Guardar **señal, superficie, timestamp, origen, actor canónico** para atribución; priorizar uso de esquema de source keys de PR #23/#48 y el ranking validado del oficial.
 2. A/B por red entre conjunto sin señales y conjunto con señales; antes/después en la misma ventana: candidatos nuevos por lectura, relevancia humana muestreada, relaciones activas a 7/14 días, comentarios de vuelta y visitas verificadas. No contar exposición como resultado. Separar muestra de exploración y controles.
 3. Distinguir resultados de pruebas simuladas (ya incluidos) y canario en Edge/Android real (pendiente Claude). Esta rama no modifica los ejecutores ni crea follow/reply/like.
+
+## Control de elegibilidad adicional (10/10/2026)
+Se corrigió la confusión entre una etiqueta/grupo/lista de exploración y una persona verificable. 27 casos de fuentes se reetiquetaron como no elegibles; los 18 casos positivos de bio/post ahora llevan actor_id y source_id sintéticos. Hay 21 pruebas offline, sin integración real de los nueve colectores ni métricas observadas.

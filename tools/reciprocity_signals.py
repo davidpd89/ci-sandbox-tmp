@@ -169,6 +169,16 @@ def assess_candidate(row: Mapping, *, as_of: dt.date,
             return {"status": "review", "reason": "post_age_unknown", "signals": signals}
         if (as_of - created).days > max_post_age_days:
             return {"status": "rejected", "reason": "stale_post", "signals": signals}
+    # Las fuentes de exploración no prueban intención individual.
+    if surface in ("hashtag", "group", "list"):
+        return {"status": "source_only", "reason": "discovery_surface",
+                "signals": signals}
+    for field in ("actor_id", "source_id"):
+        identifier = row.get(field)
+        if (not isinstance(identifier, str) or not 0 < len(identifier.strip()) <= 256
+                or any(ord(ch) < 32 for ch in identifier)):
+            return {"status": "review", "reason": "actor_or_source_unverified",
+                    "signals": signals}
     return {"status": "eligible", "reason": "explicit_relevant",
             "signals": signals}
 
