@@ -95,19 +95,19 @@ def analyze(payload):
         if when > now:
             raise ValueError("exposición futura")
         utm = _utm(row.get("utm"))
-        token = row.get("tracking_id")
-        if token is not None:
-            _id(token, "tracking_id")
-        if utm and (not token or utm["source"] != net or utm["campaign"] != row["campaign"]):
+        tracking_marker = row.get("tracking_id")
+        if tracking_marker is not None:
+            _id(tracking_marker, "tracking_id")
+        if utm and (not tracking_marker or utm["source"] != net or utm["campaign"] != row["campaign"]):
             raise ValueError("UTM no verificable")
-        if cohort == "control" and (utm or token):
+        if cohort == "control" and (utm or tracking_marker):
             raise ValueError("control contaminado por tracking")
         unit_key = (net, row["campaign"], row["subject"])
         arms[unit_key].add(cohort)
-        if token:
-            if token in tokens and tokens[token] != unit_key:
+        if tracking_marker:
+            if tracking_marker in tokens and tokens[tracking_marker] != unit_key:
                 raise ValueError("tracking_id reutilizado")
-            tokens[token] = unit_key
+            tokens[tracking_marker] = unit_key
         if status in ("failed", "uncertain"):
             unconfirmed += 1
             continue

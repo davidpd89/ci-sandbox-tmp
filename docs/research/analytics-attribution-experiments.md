@@ -1,5 +1,34 @@
 # PR #23 — Analítica, atribución y experimentos (10-10-2026)
 
+## Problema
+
+El espejo disponía de atribución parcial sin informe reproducible de ausencia, controles y madurez.
+
+## Alternativas
+
+Se compararon GrowthBook, statsmodels, SciPy, Matomo y continuidad del cálculo existente (detalle y SHAs más abajo).
+
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/statsmodels/statsmodels
+Fecha de consulta: 2026-10-10
+Licencia SPDX: NOASSERTION
+Referencia inmutable: https://github.com/davidpd89/rrss-davidporto-CODE/blob/d3bc39a12ec3bf87d3998979be70da8dce9fbaa8/tools/experiment_uplift.py
+
+La etiqueta NOASSERTION se refiere exclusivamente al módulo propio extraído del repositorio privado del usuario; la tabla inferior identifica las licencias SPDX de cada alternativa externa, sin incorporar código de terceros.
+
+## Decisión
+
+Implementación mínima offline sobre la biblioteca estándar, módulo estadístico propio y Wilson ya disponible.
+
+## Pruebas
+
+Pruebas deterministas de evidencia, control, deduplicación, ventanas, métricas y compatibilidad de nueve redes/tres colas. La CI verifica el contrato en Ubuntu/Windows y la suite de pruebas debe ejecutarse expresamente en Python 3.11.
+
+## Retirada
+
+Revertir el commit de esta PR. No hay nuevas dependencias, secretos, credenciales ni migraciones persistentes.
+
 ## Decisión y alcance
 
 Se integra un **informe offline, descriptivo, por evidencia confirmada**, separado de los ejecutores y de la asignación experimental. No se añade servicio, credencial, conexión de red, nueva dependencia ni acción social. El objetivo real no es maximizar contadores, sino distinguir **observado / desconocido / inmaduro / duplicado** sin fabricar tráfico, ventas, lecturas o causalidad.
