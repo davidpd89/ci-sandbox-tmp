@@ -280,6 +280,25 @@ class BenchmarkTests(unittest.TestCase):
                        if x["network"] == network and x["strategy"] == "baseline_generic")
             self.assertEqual(row["duplicate_texts"], 0)
 
+    def test_network_specific_fixture_has_distinct_contexts_and_full_parity(self):
+        dataset = ROOT / "tests" / "fixtures" / "comment_benchmark_network_specific.json"
+        cases, candidates = b.load_dataset(dataset)
+        self.assertEqual(len(cases), 36)
+        self.assertEqual(len(candidates), 72)
+        self.assertEqual({c["network"] for c in cases}, set(b.NETWORKS))
+        self.assertEqual(len({c["post"] for c in cases}), 36)
+        for network in b.NETWORKS:
+            subset = [c for c in cases if c["network"] == network]
+            self.assertEqual({c["kind"] for c in subset}, set(b.KINDS))
+            self.assertTrue(any(c["thread"] for c in subset if c["kind"] == "conversacion"))
+            for case in subset:
+                self.assertEqual({x["strategy"] for x in candidates
+                                  if x["case_id"] == case["id"]},
+                                 {"baseline_generic", "contextual"})
+        report = b.evaluate(cases, candidates)
+        self.assertEqual(report["human"]["winners"], [])
+        self.assertEqual(len(report["summary"]), 18)
+
     def test_prepare_cli_separates_private_key_from_review(self):
         with tempfile.TemporaryDirectory() as directory:
             same_dir = Path(directory) / "same.csv"
