@@ -1,0 +1,5 @@
+python
+idempotency_key = (
+    f"{network}:{action}:{canonical_target_ref}:"
+    f"{intent_id}:{author_did_or_account_id}"
+)
