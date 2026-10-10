@@ -23,7 +23,7 @@ Normalización read-only compartida con especializaciones por red, separada de l
 
 ## Pruebas
 
-Suite sintética unittest Python 3.11 en Ubuntu/Windows, no es un canario operativo.
+Suite sintética unittest Python 3.11 en Ubuntu/Windows, no es un canario operativo; 17 tests tras la tercera pasada, revalidar en el HEAD.
 
 ## Retirada
 
@@ -62,7 +62,7 @@ Se leyó la rama oficial `davidpd89/rrss-davidporto-CODE:integracion/crecimiento
 
 - Deduplicación por `(network,post_id)`. IDs homónimos entre redes no colisionan. Mastodon exige URL global de post y de autor para no mezclar servidores. Cuando dos versiones del mismo post discrepan en texto, autor o fecha, se excluye la identidad conflictiva entera; las fuentes idénticas se acumulan sin doble sumar el post.
 - Fechas necesariamente conscientes de zona, pasado conocido y antigüedad **máxima de 14 días**. Se omiten futuras, sin fecha, ambiguas o antiguas. Esto filtra **observaciones para el ranking**, no sustituye el control más estricto de edad antes de responder o dar like a un destino. No añade acciones en redes; en X tampoco auto-like.
-- Tamaño máximo: 10.000 filas por llamada y 10.000 caracteres por texto. Ninguna lista de observaciones se persiste por el módulo; metadatos agregados y contadores no contienen IDs/texto.
+- Tamaño máximo: 10.000 filas por llamada, 10.000 caracteres por texto y 50.000 posts únicos por instancia (configurable entre 1 y 200.000). Superado el cupo, se cuentan los posts omitidos en `capacity_skipped`, pero se permite añadir nuevas procedencias de posts ya vistos. Ninguna lista de observaciones se persiste por el módulo; metadatos agregados y contadores no contienen IDs/texto.
 - Feedback requiere `event_id` estable, `window` con zona, etiqueta y los cuatro enteros no negativos **explícitos** (incluido `eligible`). `engaged <= eligible`; eventos repetidos en distintas colas cuentan una vez; valores contradictorios invalidan toda la identidad, sin orden arbitrario. Sin denominador o con resultados y cero elegibles se rechaza, nunca se imputan seguidores o respuestas.
 - El exportable `feedback_aggregates()` solo contiene por red/etiqueta los cuatro números aceptados; ni evento, ni ID de publicación, ni ventana, ni credencial. **No ofrece atribución causal**: el productor debe determinar y verificar previamente qué evento corresponde a qué hashtag; este puente jamás infiere éxito desde un like.
 - La salida `to_engine_rows()` es delicada y debe permanecer en memoria durante el procesamiento. No imprimirla, no volcar a un fichero, no adjuntarla a CI. `aggregate_report()` expone cobertura por red/cola y causas de descarte sin perfiles ni mensajes.
@@ -106,7 +106,8 @@ Workflow: `.github/workflows/hashtag-observation-adapters.yml` (Ubuntu y Windows
 2. **Descubrimiento:** un feedback con `eligible=0` y `replies>0` era aceptado, pese a no tener denominador atribuible; ahora se excluye y tiene regresión.
 3. **Descubrimiento:** `record.facets[].features` con estructura distinta de lista invalidaba el post completo; ahora se ignora la lista inválida y conserva la observación principal.
 4. **Contención:** dos versiones discordantes de un post y de un evento de feedback no se resuelven por orden de llegada, sino descartando el elemento ambiguo y contando conflictos.
-5. **No alcance:** no se conectaron colectores al flujo de operación real ni se ha medido conversión. Falta el ensayo de integración de #63/#99, no un parche en el ranking.
+5. **Tercera pasada:** el parser HTML de Mastodon partía palabras delimitadas por marcas inline (p. ej., `fantas<b>ía</b>`); ahora mantiene el texto continuo, separa bloques y verifica el resultado con un fixture. Asimismo, la memoria solo estaba acotada por llamada, no por ronda; incorporado límite global configurable y contador explícito de descartes, sin perder deduplicación de posts ya vistos.
+6. **No alcance:** no se conectaron colectores al flujo de operación real ni se ha medido conversión. Falta el ensayo de integración de #63/#99, no un parche en el ranking.
 
 ### Plan de integración, canario y retirada
 
