@@ -1,0 +1,50 @@
+[
+  {
+    "fingerprint": "0c89d53146f3a26d",
+    "networks": ["instagram", "threads"],
+    "occurrences": [
+      {"file": "instagram_interact.py", "function": "_profile_follow_button_state", "line": 719, "network": "instagram"},
+      {"file": "threads_interact.py", "function": "_profile_follow_button_state", "line": 1110, "network": "threads"}
+    ]
+  },
+  {
+    "fingerprint": "510f0d98b9cd751f",
+    "networks": ["instagram", "tiktok"],
+    "occurrences": [
+      {"file": "instagram_execute.py", "function": "_apply_warmup_gate", "line": 92, "network": "instagram"},
+      {"file": "tiktok_execute.py", "function": "_apply_warmup_gate", "line": 110, "network": "tiktok"}
+    ]
+  },
+  {
+    "fingerprint": "62e6d4fbef5d4034",
+    "networks": ["instagram", "tiktok"],
+    "occurrences": [
+      {"file": "instagram_execute.py", "function": "_ultima_fila_metricas", "line": 78, "network": "instagram"},
+      {"file": "tiktok_execute.py", "function": "_ultima_fila_metricas", "line": 67, "network": "tiktok"}
+    ]
+  },
+  {
+    "fingerprint": "6763791aef31f02b",
+    "networks": ["instagram", "threads"],
+    "occurrences": [
+      {"file": "instagram_interact.py", "function": "_top_profile_follow_button", "line": 697, "network": "instagram"},
+      {"file": "threads_interact.py", "function": "_top_profile_follow_button", "line": 1088, "network": "threads"}
+    ]
+  },
+  {
+    "fingerprint": "88b0c36ca2208db3",
+    "networks": ["bluesky", "mastodon"],
+    "occurrences": [
+      {"file": "bluesky_interact.py", "function": "_prefetched", "line": 722, "network": "bluesky"},
+      {"file": "mastodon_interact.py", "function": "_prefetched", "line": 896, "network": "mastodon"}
+    ]
+  },
+  {
+    "fingerprint": "a8556256971c838f",
+    "networks": ["bluesky", "tiktok"],
+    "occurrences": [
+      {"file": "bluesky_growth_scan.py", "function": "_norm", "line": 151, "network": "bluesky"},
+      {"file": "tiktok_growth_scan.py", "function": "_norm", "line": 38, "network": "tiktok"}
+    ]
+  }
+]
