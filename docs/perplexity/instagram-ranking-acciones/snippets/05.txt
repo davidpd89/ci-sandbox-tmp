@@ -1,0 +1,12 @@
+python
+# https://github.com/zafercavdar/fasttext-langdetect — README
+from ftlangdetect import detect
+
+text = "The quick brown fox. Le chat dort sur le canapé."
+results = detect(text=text, low_memory=False, k=3)
+print(results)
+# [
+#   {'lang': 'fr', 'score': 0.71},
+#   {'lang': 'en', 'score': 0.27},
+#   {'lang': 'de', 'score': 0.005},
+# ]
