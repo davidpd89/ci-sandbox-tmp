@@ -85,8 +85,14 @@ def comments_pending(token, page_id, posts_limit=10):
                 continue
             # Si Graph omite comment_count, tampoco se asume que no hay respuestas.
             if comment.get("comment_count") != 0:
-                if any((reply.get("from") or {}).get("id") == page_id
-                       for reply in _paged_rows(token, f"{cid}/comments", fields="id,from", limit=50, budget=budget)):
+                answered = False
+                for reply in _paged_rows(token, f"{cid}/comments", fields="id,from", limit=50, budget=budget):
+                    reply_author = reply.get("from")
+                    if not isinstance(reply_author, dict) or not reply_author.get("id"):
+                        raise FacebookPaginationError("Graph omitio la identidad de una respuesta")
+                    if reply_author["id"] == page_id:
+                        answered = True
+                if answered:
                     continue
             pending.append({"id": cid, "text": comment.get("message", ""),
                             "username": author.get("name", ""),

@@ -52,5 +52,33 @@ class FacebookAdversarialReadTests(unittest.TestCase):
         self.assertIn("c-1/comments", paths)
 
 
+    def test_hidden_reply_identity_never_becomes_false_pending(self):
+        for hidden in (None, {}, {"name": "Oculto"}, "anonimo"):
+            with self.subTest(hidden=hidden):
+                def fake_get(base, path, token, **params):
+                    if path.endswith("/posts"):
+                        return {"data": [{"id": "post-1", "message": "Novela"}]}
+                    if path == "post-1/comments":
+                        return {"data": [{"id": "c-1", "message": "¿Dónde lo compro?",
+                                         "from": {"id": "reader-1"}, "comment_count": 1}]}
+                    if path == "c-1/comments":
+                        return {"data": [{"id": "r-1", "from": hidden}]}
+                    raise AssertionError(path)
+                with mock.patch.object(fb.mc, "graph_get", side_effect=fake_get):
+                    with self.assertRaisesRegex(fb.FacebookPaginationError, "identidad"):
+                        fb.comments_pending("synthetic", "page-1")
+
+    def test_known_external_reply_does_not_hide_unanswered_question(self):
+        def fake_get(base, path, token, **params):
+            if path.endswith("/posts"):
+                return {"data": [{"id": "post-1", "message": "Novela"}]}
+            if path == "post-1/comments":
+                return {"data": [{"id": "c-1", "message": "¿Hay edición de bolsillo?",
+                                 "from": {"id": "reader-1"}, "comment_count": 1}]}
+            return {"data": [{"id": "r-1", "from": {"id": "reader-2"}}]}
+        with mock.patch.object(fb.mc, "graph_get", side_effect=fake_get):
+            self.assertEqual([x["id"] for x in fb.comments_pending("synthetic", "page-1")], ["c-1"])
+
+
 if __name__ == "__main__":
     unittest.main()
