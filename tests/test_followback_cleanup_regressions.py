@@ -31,7 +31,7 @@ class CleanupCandidateRegressionTests(unittest.TestCase):
         self.assertEqual(result, [])
 
     def test_federated_names_not_confused_between_servers(self):
-        one, two = "ana@uno.example", "ana@dos.example"
+        one, two = "ana@example.com", "ana@example.org"
         with mock.patch.object(uc, "protected_accounts", return_value=set()):
             picked = uc.candidates([event("@" + one)], [two], NOW,
                                    following={one: ""}, network="mastodon")
@@ -44,8 +44,8 @@ class CleanupCandidateRegressionTests(unittest.TestCase):
 
     def test_mastodon_exact_positive_prevents_cleanup(self):
         with mock.patch.object(uc, "protected_accounts", return_value=set()):
-            out = uc.candidates([event("@ana@uno.example")], ["ana@uno.example"],
-                                NOW, following={"ana@uno.example": ""},
+            out = uc.candidates([event("@ana@example.com")], ["ana@example.com"],
+                                NOW, following={"ana@example.com": ""},
                                 network="mastodon")
         self.assertEqual(out, [])
 
