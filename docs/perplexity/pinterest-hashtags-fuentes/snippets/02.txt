@@ -1,0 +1,10 @@
+python
+# URL exacta del archivo de origen:
+# https://github.com/EhsanShahbazii/Pinterest-Scraper/blob/main/src/pinterest_scraper/dedupe.py
+# Reutilizar la implementación original; aquí sólo se define el contrato que debe cumplir nuestro adaptador.
+
+def is_new_candidate(pin_id: str, seen_store) -> bool:
+    return not seen_store.contains(pin_id)
+
+def mark_seen(pin_id: str, seen_store) -> None:
+    seen_store.add(pin_id)
