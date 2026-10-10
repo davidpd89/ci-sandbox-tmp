@@ -299,3 +299,37 @@ Regresiones: orden directo/inverso, tercera observación repetida, score real
 con señales desconocidas y caso positivo de duplicados consistentes. El
 normalizador continúa sin conectarse a ejecutores ni inferir datos ausentes.
 No modifica protección de edad, ledger, certificados, POST→ACK→TTL o X.
+
+## Sexta pasada adversarial: duplicados de publicación (10/10/2026)
+
+Revisión del normalizador frente al ranker real del padre y del oficial
+(`tools/target_quality_ranking.py` SHA blob `587d6964`).
+Se detectó un sesgo reproducible no cubierto por los tests anteriores:
+dos lecturas del mismo ID remoto podían producir un resultado diferente
+al cambiar el orden de captura. Una etiqueta explícita `en` podía ser
+descartada antes de invalidar una lectura anterior `es`, manteniendo así
+una oportunidad de respuesta. También se elegían texto y estadísticas
+de una de las lecturas y permisos de post según su posición.
+
+Solución en commits `850993c` y `7f0e1c0`: la lengua extranjera
+contradictoria invalida el post del lote y crea un tombstone de
+conflicto; no puede reaparecer en una tercera lectura. Los permisos
+verificados de duplicados se intersectan, no se suman. Dos textos
+explícitos distintos neutralizan señal temática y dos métricas
+incompatibles neutralizan engagement, con diagnósticos y sin
+rehabilitación posterior. Una URL X/Threads válida de un post
+renombrado se elige determinísticamente sin cambiar su ID remoto.
+Se mantiene el enriquecimiento desde campos previamente desconocidos,
+sin inventar información ausente.
+
+Tres tests nuevos verifican permutaciones, terceras observaciones
+y oportunidades/scores con `target_quality_ranking.rank_network`
+real. [CI sobre `7f0e1c0`](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38052072907):
+**60/60 adaptador + 39/39 ranker en Ubuntu y Windows, Python 3.11**,
+compilación correcta. [Gate de campaña](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38052072953):
+Windows verde y Ubuntu falla exclusivamente el paso LIVE por
+`FAIL: #100: child absent from parent manifest`; 30 tests y
+validaciones offline correctos. El manifiesto y el índice del padre
+siguen sin registrar #100. No se alteró el padre ni el repositorio
+oficial; sin cambios en ejecutores, certificados, ledger ni
+POST→ACK→TTL. La cobertura real de capturas continúa pendiente.
