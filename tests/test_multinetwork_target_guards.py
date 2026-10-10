@@ -206,11 +206,16 @@ class TargetGuardTests(unittest.TestCase):
             ["_validated_facebook_permalink"],
             {"urlsplit": urllib.parse.urlsplit, "re": re},
         )
-        valid = "https://www.facebook.com/photo/?fbid=123"
+        import sys, pathlib
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools"))
+        valid = "https://www.facebook.com/editorialpage/posts/123"
         self.assertEqual(
             env["_validated_facebook_permalink"](valid),
             valid,
         )
+        # PR55: photo/story pueden venir de grupos y no se aceptan como destino de accion.
+        with self.assertRaises(ValueError):
+            env["_validated_facebook_permalink"]("https://www.facebook.com/photo/?fbid=123")
         pfbid = "https://www.facebook.com/editorialpage/posts/pfbidABC123"
         self.assertEqual(env["_validated_facebook_permalink"](pfbid), pfbid)
         for bad in (
@@ -232,8 +237,8 @@ class TargetGuardTests(unittest.TestCase):
             {
                 "urllib": urllib,
                 "_check_bot_warning": lambda pg: None,
-                "_active_handle": lambda pg: "autorademodiaz",
-                "MY_HANDLE": "autorademodiaz",
+                "_active_handle": lambda pg: "davidportodiaz",
+                "MY_HANDLE": "davidportodiaz",
             },
         )
 

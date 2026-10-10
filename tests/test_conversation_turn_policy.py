@@ -4,12 +4,15 @@ Casos basados en intercambio real de Bluesky, sin datos identificativos.
 """
 from __future__ import annotations
 
+import datetime as dt
 import pathlib
 import sys
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools"))
 import conversation_turn_policy as cp
+
+RECENT = dt.datetime.now(dt.timezone.utc).isoformat()
 
 
 class ConversationTurnsTests(unittest.TestCase):
@@ -38,12 +41,12 @@ class ConversationTurnsTests(unittest.TestCase):
                     "facebook", "pinterest", "reddit", "tiktok"):
             with self.subTest(network=net):
                 self.assertTrue(cp.check_execution(net, {
-                    "kind": "reply", "reply_to_us": True,
+                    "kind": "reply", "post_created_at": RECENT, "reply_to_us": True,
                     "post_text": "Me ha encantado tu reseña",
                     "context_quality": "partial",
                 })[0])
                 self.assertFalse(cp.check_execution(net, {
-                    "kind": "reply", "reply_to_us": True,
+                    "kind": "reply", "post_created_at": RECENT, "reply_to_us": True,
                     "post_text": "Gracias, compañero",
                 })[0])
 
@@ -111,7 +114,7 @@ class ConversationTurnsTests(unittest.TestCase):
                         "facebook", "pinterest", "reddit", "tiktok"):
             with self.subTest(network=network):
                 allowed, reason = cp.check_execution(network, {
-                    "kind": "reply", "reply_to_us": True,
+                    "kind": "reply", "post_created_at": RECENT, "reply_to_us": True,
                     "motivo": "fidelizacion:contestar_a_su_comentario",
                     "text": "Gracias, compañero.",
                     "thread_turns": [],
@@ -121,7 +124,7 @@ class ConversationTurnsTests(unittest.TestCase):
 
     def test_old_followup_plan_cannot_post_gracias_even_with_valid_target(self):
         plan = {
-            "kind": "reply", "motivo": "followup:F01:respuesta a nuestra reply",
+            "kind": "reply", "post_created_at": RECENT, "motivo": "followup:F01:respuesta a nuestra reply",
             "_target_uri": "at://reply", "thread_turns": [
                 {"role": "theirs", "text": "Busco modelos", "post_id": "at://root"},
                 {"role": "ours", "text": "Ojalá salga bien", "post_id": "at://ours"},
@@ -138,7 +141,7 @@ class ConversationTurnsTests(unittest.TestCase):
 
     def test_threads_api_followup_tag_is_also_protected(self):
         allowed, reason = cp.check_execution("threads", {
-            "kind": "reply", "motivo": "followup API Threads",
+            "kind": "reply", "post_created_at": RECENT, "motivo": "followup API Threads",
             "reply_to_id": "98765", "text": "Gracias, compañero",
         })
         self.assertEqual((allowed, reason), (False, "falta_texto_de_la_persona"))
@@ -147,7 +150,7 @@ class ConversationTurnsTests(unittest.TestCase):
         for network in ("bluesky", "mastodon", "x", "threads", "facebook",
                         "pinterest", "reddit", "tiktok"):
             self.assertTrue(cp.check_execution(network, {
-                "kind": "reply", "motivo": "primer_comentario_a_un_autor"
+                "kind": "reply", "post_created_at": RECENT, "motivo": "primer_comentario_a_un_autor"
             })[0])
 
     def test_normalized_thread_excludes_missing_or_tampered_turns(self):

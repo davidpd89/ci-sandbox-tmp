@@ -70,6 +70,10 @@ class RunTests(unittest.TestCase):
         self.old_root = uc.ROOT
         uc.ROOT = self.tmp.name
         uc.ga.ROOT = self.tmp.name
+        import circuit_breaker                      # la red de pruebas «fake» no esta en la lista cerrada del cortacircuitos (#154)
+        saved = circuit_breaker.write_preflight
+        circuit_breaker.write_preflight = lambda network, **kw: (True, "")
+        self.addCleanup(setattr, circuit_breaker, "write_preflight", saved)
 
     def tearDown(self):
         uc.ROOT = self.old_root

@@ -1,0 +1,211 @@
+{
+  "notice": "SINTÉTICO. Entradas y no salidas GPT; no es evaluación A/B ni evidencia de mejora. La PR #90 contiene el evaluador ciego.",
+  "cases": [
+    {
+      "case_id": "74_bluesky_01",
+      "network": "bluesky",
+      "interaction_type": "reply_to_us",
+      "text": "Gracias por contestar, ¡un abrazo!",
+      "post": "Gracias por contestar, ¡un abrazo!",
+      "author": "perfil_ficticio",
+      "context_status": "complete",
+      "visual_verified": false,
+      "reply_to_us": true,
+      "source_permission": "synthetic",
+      "conversation_context": [
+        "David: Ese capítulo deja alguna pregunta.",
+        "Otra persona: Gracias por contestar, ¡un abrazo!"
+      ]
+    },
+    {
+      "case_id": "74_bluesky_02",
+      "network": "bluesky",
+      "interaction_type": "humor",
+      "text": "Tengo tres libros empezados y ninguno sabe que existe el otro.",
+      "post": "Tengo tres libros empezados y ninguno sabe que existe el otro.",
+      "author": "perfil_ficticio",
+      "context_status": "complete",
+      "visual_verified": false,
+      "reply_to_us": false,
+      "source_permission": "synthetic"
+    },
+    {
+      "case_id": "74_mastodon_01",
+      "network": "mastodon",
+      "interaction_type": "question",
+      "text": "¿Qué recomendaríais para leer fantasía juvenil sin escenas demasiado violentas?",
+      "post": "¿Qué recomendaríais para leer fantasía juvenil sin escenas demasiado violentas?",
+      "author": "perfil_ficticio",
+      "context_status": "complete",
+      "visual_verified": false,
+      "reply_to_us": false,
+      "source_permission": "synthetic"
+    },
+    {
+      "case_id": "74_mastodon_02",
+      "network": "mastodon",
+      "interaction_type": "other",
+      "text": "Aviso: la biblioteca cierra mañana por obras, no por vacaciones.",
+      "post": "Aviso: la biblioteca cierra mañana por obras, no por vacaciones.",
+      "author": "perfil_ficticio",
+      "context_status": "complete",
+      "visual_verified": false,
+      "reply_to_us": false,
+      "source_permission": "synthetic"
+    },
+    {
+      "case_id": "74_x_01",
+      "network": "x",
+      "interaction_type": "new_post",
+      "text": "Acabo de comprar otros cuatro libros después de prometerme una semana sin compras.",
+      "post": "Acabo de comprar otros cuatro libros después de prometerme una semana sin compras.",
+      "author": "perfil_ficticio",
+      "context_status": "complete",
+      "visual_verified": false,
+      "reply_to_us": false,
+      "source_permission": "synthetic"
+    },
+    {
+      "case_id": "74_x_02",
+      "network": "x",
+      "interaction_type": "sensitive",
+      "text": "Mi mensaje de hoy es un anuncio con descuento y enlace comercial.",
+      "post": "Mi mensaje de hoy es un anuncio con descuento y enlace comercial.",
+      "author": "perfil_ficticio",
+      "context_status": "complete",
+      "visual_verified": false,
+      "reply_to_us": false,
+      "source_permission": "synthetic"
+    },
+    {
+      "case_id": "74_threads_01",
+      "network": "threads",
+      "interaction_type": "new_post",
+      "text": "Terminé por fin el borrador de mi primera novela después de seis meses.",
+      "post": "Terminé por fin el borrador de mi primera novela después de seis meses.",
+      "author": "perfil_ficticio",
+      "context_status": "complete",
+      "visual_verified": false,
+      "reply_to_us": false,
+      "source_permission": "synthetic"
+    },
+    {
+      "case_id": "74_threads_02",
+      "network": "threads",
+      "interaction_type": "question",
+      "text": "¿Qué hacéis cuando el segundo capítulo queda mucho más largo que el primero?",
+      "post": "¿Qué hacéis cuando el segundo capítulo queda mucho más largo que el primero?",
+      "author": "perfil_ficticio",
+      "context_status": "complete",
+      "visual_verified": false,
+      "reply_to_us": false,
+      "source_permission": "synthetic"
+    },
+    {
+      "case_id": "74_facebook_01",
+      "network": "facebook",
+      "interaction_type": "feedback",
+      "text": "Os comparto el inicio de mi relato: ¿funciona este diálogo?",
+      "post": "Os comparto el inicio de mi relato: ¿funciona este diálogo?",
+      "author": "perfil_ficticio",
+      "context_status": "partial",
+      "visual_verified": false,
+      "reply_to_us": false,
+      "source_permission": "synthetic",
+      "context": "No se adjunta el relato en texto legible."
+    },
+    {
+      "case_id": "74_facebook_02",
+      "network": "facebook",
+      "interaction_type": "other",
+      "text": "El club de lectura cambia la reunión del jueves al sábado.",
+      "post": "El club de lectura cambia la reunión del jueves al sábado.",
+      "author": "perfil_ficticio",
+      "context_status": "complete",
+      "visual_verified": false,
+      "reply_to_us": false,
+      "source_permission": "synthetic"
+    },
+    {
+      "case_id": "74_pinterest_01",
+      "network": "pinterest",
+      "interaction_type": "visual",
+      "text": "Así queda la portada que diseñé.",
+      "post": "Así queda la portada que diseñé.",
+      "author": "perfil_ficticio",
+      "context_status": "visual_unverified",
+      "visual_verified": false,
+      "reply_to_us": false,
+      "source_permission": "synthetic",
+      "media_context": "Un castillo de cristal con dragones",
+      "has_media": true
+    },
+    {
+      "case_id": "74_pinterest_02",
+      "network": "pinterest",
+      "interaction_type": "new_post",
+      "text": "Tres ideas para ordenar libros pequeños sin doblar las cubiertas.",
+      "post": "Tres ideas para ordenar libros pequeños sin doblar las cubiertas.",
+      "author": "perfil_ficticio",
+      "context_status": "complete",
+      "visual_verified": false,
+      "reply_to_us": false,
+      "source_permission": "synthetic"
+    },
+    {
+      "case_id": "74_reddit_01",
+      "network": "reddit",
+      "interaction_type": "question",
+      "text": "Audiolibros",
+      "post": "Audiolibros",
+      "author": "perfil_ficticio",
+      "context_status": "complete",
+      "visual_verified": false,
+      "reply_to_us": false,
+      "source_permission": "synthetic",
+      "post_body": "Busco audiolibros de fantasía en español con narración sobria. Me molestan las voces infantiles de personajes adultos."
+    },
+    {
+      "case_id": "74_reddit_02",
+      "network": "reddit",
+      "interaction_type": "reply_to_us",
+      "text": "¿Y en papel cuál es más cómodo?",
+      "post": "¿Y en papel cuál es más cómodo?",
+      "author": "perfil_ficticio",
+      "context_status": "partial",
+      "visual_verified": false,
+      "reply_to_us": true,
+      "source_permission": "synthetic",
+      "conversation_context": [
+        "Otra persona: ¿Y en papel cuál es más cómodo?"
+      ]
+    },
+    {
+      "case_id": "74_tiktok_01",
+      "network": "tiktok",
+      "interaction_type": "humor",
+      "text": "Dije que solo iba a mirar una estantería y acabé colocando toda la biblioteca.",
+      "post": "Dije que solo iba a mirar una estantería y acabé colocando toda la biblioteca.",
+      "author": "perfil_ficticio",
+      "context_status": "partial",
+      "visual_verified": false,
+      "reply_to_us": false,
+      "source_permission": "synthetic",
+      "has_media": true
+    },
+    {
+      "case_id": "74_tiktok_02",
+      "network": "tiktok",
+      "interaction_type": "visual",
+      "text": "Mira esto",
+      "post": "Mira esto",
+      "author": "perfil_ficticio",
+      "context_status": "visual_unverified",
+      "visual_verified": false,
+      "reply_to_us": false,
+      "source_permission": "synthetic",
+      "has_media": true,
+      "media_context": "Hay una dedicatoria manuscrita que dice gracias."
+    }
+  ]
+}

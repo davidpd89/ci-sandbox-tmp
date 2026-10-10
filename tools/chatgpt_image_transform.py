@@ -1,6 +1,6 @@
 """
 Transforma imagenes de referencia usando ChatGPT + DALL-E.
-Usa el proyecto "MCP - RRSS Autora Demo" (no crea chats nuevos en el root).
+Usa el proyecto "MCP - RRSS David Porto" (no crea chats nuevos en el root).
 
 Flujo por imagen:
   1. Navegar al proyecto y abrir conversacion nueva
@@ -17,6 +17,7 @@ Uso:
 import sys
 import time
 import base64
+import contextlib
 import threading
 import queue
 from pathlib import Path
@@ -25,7 +26,7 @@ from playwright.sync_api import sync_playwright
 sys.stdout.reconfigure(encoding="utf-8")
 
 CDP_URL = "http://127.0.0.1:9223"
-IMAGES_DIR = Path(r"C:\GIT\RRSS_AutoraDemo\nuevo_flujo\Imagenes david")
+IMAGES_DIR = Path(r"C:\GIT\RRSS_DavidPorto\nuevo_flujo\Imagenes david")
 PROJECT_ID = "g-p-6a3bc1e919148191a7b1f1faf854f6d1"
 PROJECT_URL = f"https://chatgpt.com/g/{PROJECT_ID}/project"
 
@@ -81,17 +82,17 @@ IMAGE_DOMAINS = [
 
 
 def find_chatgpt_page(b):
-    pages = [pg for c in b.contexts for pg in c.pages]
-    gpt = next((pg for pg in pages if "chatgpt.com" in pg.url), None)
-    if gpt is None:
-        raise RuntimeError("No hay pestana de ChatGPT en Edge (puerto 9223)")
-    return gpt
+    """Crea una pestaña propia: ninguna conversación preexistente demuestra propiedad."""
+    import browser_common as bc
+    return bc.new_owned_page(b, lean=False)
 
 
 def navigate_to_new_project_chat(gpt):
     """Navega al proyecto y arranca una nueva conversacion dentro de el."""
     gpt.goto(PROJECT_URL)
     gpt.wait_for_timeout(4000)
+    from chatgpt_consult import assert_expected_project
+    assert_expected_project(gpt.url)  # No escribir ni subir imágenes si se redirigió de proyecto.
     # La pagina del proyecto ya tiene un composer activo para nueva conversacion
     # Si hay un boton explicito de nuevo chat dentro del proyecto, lo usamos
     new_btn = gpt.locator(f'a[href*="{PROJECT_ID}"][aria-label*="Nuevo"]')
@@ -141,13 +142,10 @@ def wait_for_new_message(gpt, before, timeout_s=180):
 
 def send_text(gpt, ctx, text):
     """Pega y envia un mensaje de texto en el composer activo."""
-    ctx.grant_permissions(["clipboard-read", "clipboard-write"])
     box = gpt.locator(
         '#prompt-textarea, div[contenteditable="true"][aria-label*="chat"], div[contenteditable="true"]'
     ).first
-    box.click()
-    gpt.evaluate("(t) => navigator.clipboard.writeText(t)", text)
-    gpt.keyboard.press("Control+V")
+    box.fill(text)  # No conceder permisos al contexto ni modificar el portapapeles.
     gpt.wait_for_timeout(1200)
     send_btn = gpt.locator('button[data-testid="send-button"]')
     if send_btn.count() > 0:
@@ -390,14 +388,16 @@ def main():
         print("Nada que procesar.")
         return
 
-    print(f"Procesando {len(to_process)} imagen(es) en proyecto MCP - RRSS Autora Demo...\n", flush=True)
+    print(f"Procesando {len(to_process)} imagen(es) en proyecto MCP - RRSS David Porto...\n", flush=True)
 
-    with sync_playwright() as playwright:
-        b = playwright.chromium.connect_over_cdp(CDP_URL, timeout=15000)
+    import browser_common as bc
+    with sync_playwright() as playwright, contextlib.ExitStack() as owned:
+        b = bc.connect_cdp(playwright.chromium, CDP_URL, timeout=15000)
+        if not b.contexts:
+            raise RuntimeError("CDP sin contexto: no cambiar perfil")
         ctx = b.contexts[0]
-        ctx.grant_permissions(["clipboard-read", "clipboard-write"])
         gpt = find_chatgpt_page(b)
-        gpt.bring_to_front()
+        owned.callback(gpt.close)  # Solo cerrar esta pestaña, también si hay error.
 
         for img_path in to_process:
             out_path = img_path.parent / f"{img_path.stem}_v3.png"

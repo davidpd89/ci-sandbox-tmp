@@ -3,7 +3,7 @@
   "canvas": [1080, 1350],
   "disclosure_cover": "EDICIÓN IMAGINARIA",
   "disclosure_back": "NO EXISTE. DE MOMENTO.",
-  "brand_line": "ARCHIVO DE PROBLEMAS DE LECTORES · AUTORA DEMO DÍAZ",
+  "brand_line": "ARCHIVO DE PROBLEMAS DE LECTORES · DAVID PORTO DÍAZ",
   "episodes": [
     {"id":"ig14_01","palette":"F","symbol":"bookmark_corner","title":"EL LUNES\nTE LO DEVUELVO","subtitle":"Historias de terror para gente que presta libros","back":"El libro vuelve.\nLa confianza ya veremos.","includes":["una esquina doblada","una mancha que «ya estaba»","cuatro lunes posibles"]},
     {"id":"ig14_02","palette":"B","symbol":"character_map","title":"¿QUIÉN ERA\nVAREK?","subtitle":"Diccionario de personajes que aparecieron cuatro páginas antes","back":"Lo has visto.\nEso no significa que lo recuerdes.","includes":["generales con nombres parecidos","dos familias que empiezan por Ar-","vuelta gratis a la página 4"]},
