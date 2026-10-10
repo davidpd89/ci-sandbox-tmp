@@ -1,0 +1,11 @@
+python
+# https://mastodonpy.readthedocs.io/en/v2.1.2/07_timelines.html
+from mastodon import Mastodon
+
+mastodon = Mastodon(api_base_url="https://bookstodon.es")
+
+statuses = mastodon.timeline_hashtag(
+    hashtag="romantasy",
+    local=False,
+    limit=40
+)
