@@ -4,7 +4,9 @@ Investigación y prototipo offline, **10/10/2026**. Base: `research/public-reuse
 No se ejecutan acciones en redes. No se copiaron bytes/código ajenos; se consume la
 dependencia pública Pillow ya instalada. El mecanismo no sustituye QA editorial.
 
-## Hueco observado en código real
+## Problema
+
+### Hueco observado en código real
 
 - En `tools/content_queue.py`, `_parse_media_entries` extrae ruta/ALT y solo
   comprueba `os.path.isfile`; `pending_parse_issues` no decodifica medios.
@@ -23,7 +25,9 @@ dependencia pública Pillow ya instalada. El mecanismo no sustituye QA editorial
   aplica a `blockers_of` y al API standalone; no convierte el informe en
   publicador ni modifica colas WEB/API/MOBILE.
 
-## Evaluación de opciones públicas verificadas
+## Alternativas
+
+### Evaluación de opciones públicas verificadas
 
 Los SHAs fijan exactamente la revisión consultada. Licencias según archivos
 de proyecto (cuando la clasificación automática aparece `NOASSERTION`,
@@ -36,12 +40,21 @@ se consulta `LICENSE`/`pyproject.toml`).
 | [imageio-ffmpeg @ae47d80](https://github.com/imageio/imageio-ffmpeg/tree/ae47d8028c237ca5507ceef1b843ee427b442887) | BSD-2-Clause, commit 16/01/2025 | Windows/Linux y 3.11, distribuye binarios grandes FFmpeg | No incluir binarios en preflight; `ffprobe` instalado en host es suficiente para inspección local |
 | [pymediainfo @daf3596](https://github.com/sbraz/pymediainfo/tree/daf3596e33686c17639d4bd1a4f560983f24ea35) | Revisar LICENSE antes de vendorización; GitHub no resuelve SPDX automáticamente; último commit 12/02/2025 | Windows/Linux 3.11; rueda con librería nativa | No adoptar: incorporación nativa innecesaria para lectura básica de tracks |
 
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/python-pillow/Pillow/blob/8796d5676b67dce5332a32a2e876f6b361358fbe/LICENSE
+Fecha de consulta: 2026-10-10
+Licencia SPDX: MIT-CMU
+Referencia inmutable: https://github.com/python-pillow/Pillow/tree/8796d5676b67dce5332a32a2e876f6b361358fbe
+
 **Licencias:** ninguna fuente se ha copiado al repositorio. Pillow MIT-CMU
 puede reutilizarse como dependencia con sus avisos mantenidos en su paquete.
 El código propio no es un trasplante de ImageHash ni FFmpeg. No añadir una
 segunda librería por un control que ya cubre Pillow.
 
-## Contrato implantado
+## Decisión
+
+### Contrato implantado
 
 `tools/media_preflight.py`: `inspect_asset(path, network, alt, root, max_bytes)`
 devuelve `{network, filename, kind, errors, warnings, metadata}`.
@@ -79,7 +92,9 @@ propone duplicados por SHA-256 y dHash; son **avisos**, nunca borrados ni
 decisiones automáticas de creatividad. dHash no distingue bien imágenes
 uniformes y su distancia no prueba igualdad semántica.
 
-## Ejecución reproducible — offline
+## Pruebas
+
+### Ejecución reproducible — offline
 
 ```powershell
 py -3.11 -m pip install -r requirements-ci.txt
@@ -122,7 +137,9 @@ pruebas sintéticas no certifican códecs, endpoints, Android ni Edge en vivo.
 5. Los duplicados perceptuales no implican misma foto ni copy: solo reportan
    candidatos, nunca eliminan.
 
-## Integración, mantenimiento y reversibilidad
+## Retirada
+
+### Integración, mantenimiento y reversibilidad
 
 Para retirar: revertir import y `reasons.extend(...inspect_item...)` en
 `tools/content_publisher.py`; eliminar módulo y tests. No hay migraciones,
