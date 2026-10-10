@@ -13,7 +13,7 @@ from email.utils import parsedate_to_datetime
 from html.parser import HTMLParser
 import re
 import unicodedata
-from typing import Mapping
+from typing import Mapping, Any
 
 NETWORKS = frozenset(("x", "threads", "facebook", "pinterest", "reddit",
                       "bluesky", "mastodon", "tiktok", "instagram"))
@@ -139,7 +139,7 @@ class _PlainText(HTMLParser):
 def _text(raw, network):
     if isinstance(raw, Mapping) and network == "instagram":
         raw = raw.get("text")
-    if not isinstance(raw, str) or len(raw) > MAX_TEXT:
+    if isinstance(raw, bool) or not isinstance(raw, str) or len(raw) > MAX_TEXT:
         raise ValueError("text missing or too long")
     if network == "mastodon" and "<" in raw:
         parser = _PlainText()
@@ -173,14 +173,18 @@ def _tags(network, row):
     if network == "bluesky":
         for parent in ("record.facets", "post.record.facets"):
             facets = _path(row, parent)
-            if not isinstance(facets, list):
+            if not isinstance(facets, (list, tuple)):
                 continue
             for facet in facets[:100]:
                 if not isinstance(facet, Mapping):
                     continue
-                for feature in (facet.get("features") if isinstance(facet.get("features"), list) else [])[:10]:
+                features = facet.get("features")
+                if not isinstance(features, (list, tuple)):
+                    continue
+                for feature in features[:10]:
                     if (isinstance(feature, Mapping)
-                            and feature.get("$type") == "app.bsky.richtext.facet#tag"):
+                            and feature.get("$type") == "app.bsky.richtext.facet#tag"
+                            and isinstance(feature.get("tag"), str)):
                         raw.append(feature.get("tag"))
     return sorted({x for v in raw if (x := _tag(v))})
 
@@ -217,18 +221,35 @@ class ObservationCollector:
     Call add_posts separately per read-only producer; to_engine_rows returns
     transient identity-bearing rows for #63 and must NEVER be persisted.
     """
-    def __init__(self, *, now, max_age_days=14, max_unique_posts=50000):
+    def __init__(self, *, now, max_age_days=14, max_unique_posts=50000,
+                 max_conflicts=50000, max_feedback=50000,
+                 max_feedback_conflicts=50000, max_sources_per_post=100):
         self.now = _time(now)
         if not isinstance(max_age_days, int) or isinstance(max_age_days, bool) or not 1 <= max_age_days <= 14:
             raise ValueError("backfill must remain within 14 days")
         if (type(max_unique_posts) is not int
                 or not 1 <= max_unique_posts <= 200000):
             raise ValueError("invalid in-memory post budget")
+        if (type(max_conflicts) is not int or not 100 <= max_conflicts <= 200000):
+            raise ValueError("invalid conflicts budget")
+        if (type(max_feedback) is not int or not 100 <= max_feedback <= 200000):
+            raise ValueError("invalid feedback budget")
+        if (type(max_feedback_conflicts) is not int or not 100 <= max_feedback_conflicts <= 200000):
+            raise ValueError("invalid feedback conflicts budget")
+        if (type(max_sources_per_post) is not int or not 1 <= max_sources_per_post <= 1000):
+            raise ValueError("invalid max sources budget")
+
         self.max_age_days = max_age_days
         self.max_unique_posts = max_unique_posts
+        self.max_conflicts = max_conflicts
+        self.max_feedback = max_feedback
+        self.max_feedback_conflicts = max_feedback_conflicts
+        self.max_sources_per_post = max_sources_per_post
+
         self._posts = {}
         self._conflicts = set()
         self._feedback = {}
+        self._feedback_events = {}
         self._feedback_conflicts = set()
         self.counts = Counter()
         self.by_network_queue = Counter()
@@ -265,11 +286,13 @@ class ObservationCollector:
                 # Keep only genuinely identical readings, independent of source.
                 if any(existing[k] != item[k] for k in ("author_id", "created_at", "text")):
                     self._posts.pop(key)
-                    self._conflicts.add(key)
+                    if len(self._conflicts) < self.max_conflicts:
+                        self._conflicts.add(key)
                     self.counts["conflicts"] += 1
                     continue
                 existing["tags"] = sorted(set(existing["tags"]) | set(item["tags"]))
-                existing["sources"].add(origin)
+                if len(existing["sources"]) < self.max_sources_per_post:
+                    existing["sources"].add(origin)
                 self.counts["duplicates"] += 1
             else:
                 if len(self._posts) >= self.max_unique_posts:
@@ -292,7 +315,7 @@ class ObservationCollector:
         return rows
 
     def add_feedback(self, network, queue, source, rows):
-        """Idempotent by (network, tag, window, event_id), even across queues.
+        """Idempotent by (network, tag, event_id), even across queues and windows.
 
         No denominator => no feedback. Do not derive engaged from likes/views.
         Calls represent explicit confirmed attribution from upstream.
@@ -315,18 +338,32 @@ class ObservationCollector:
             except (ValueError, KeyError, TypeError, OverflowError):
                 self.counts["feedback_invalid"] += 1
                 continue
+
+            event_key = (network, label, event)
             key = (network, label, window.isoformat(), event)
-            if key in self._feedback_conflicts:
+
+            if event_key in self._feedback_conflicts:
                 self.counts["feedback_conflicts"] += 1
-            elif key in self._feedback:
-                if self._feedback[key] != vals:
-                    self._feedback.pop(key)
-                    self._feedback_conflicts.add(key)
-                    self.counts["feedback_conflicts"] += 1
-                else:
+                continue
+
+            if event_key in self._feedback_events:
+                prev_window, prev_vals = self._feedback_events[event_key]
+                if prev_window == window.isoformat() and prev_vals == vals:
                     self.counts["feedback_duplicates"] += 1
+                else:
+                    # Conflict across windows or values for same event_id
+                    prev_key = (network, label, prev_window, event)
+                    self._feedback.pop(prev_key, None)
+                    self._feedback_events.pop(event_key, None)
+                    if len(self._feedback_conflicts) < self.max_feedback_conflicts:
+                        self._feedback_conflicts.add(event_key)
+                    self.counts["feedback_conflicts"] += 1
             else:
+                if len(self._feedback) >= self.max_feedback:
+                    self.counts["capacity_skipped"] += 1
+                    continue
                 self._feedback[key] = vals
+                self._feedback_events[event_key] = (window.isoformat(), vals)
 
     def feedback_aggregates(self):
         """Safe to export: no event identifiers, source or per-post payload."""
@@ -352,3 +389,23 @@ class ObservationCollector:
                      "future": self.by_network_queue[(network, queue, "future")],
                      "capacity_skipped": self.by_network_queue[(network, queue, "capacity_skipped")]}
                     for network in sorted(NETWORKS) for queue in sorted(QUEUES)]}
+
+
+def ingest_collector_payload(collector: ObservationCollector, network: str,
+                            queue: str, source: str, raw_rows: list[dict]) -> int:
+    """Convenience helper to ingest posts from read-only scanner into a collector.
+
+    Returns the count of accepted posts for this batch.
+    """
+    before = collector.aggregate_report()["unique_posts"]
+    collector.add_posts(network, queue, source, raw_rows)
+    after = collector.aggregate_report()["unique_posts"]
+    return max(0, after - before)
+
+
+def to_snapshot_kwargs(collector: ObservationCollector) -> dict[str, Any]:
+    """Prepares kwargs for PR #63 build_snapshot(rows=..., feedback=...)."""
+    return {
+        "rows": collector.to_engine_rows(),
+        "feedback": collector.feedback_aggregates(),
+    }

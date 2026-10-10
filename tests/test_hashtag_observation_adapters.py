@@ -11,7 +11,9 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools"))
 from hashtag_observation_adapters import (FIELDS, NETWORKS, QUEUES,
-                                          ObservationCollector)
+                                          ObservationCollector,
+                                          ingest_collector_payload,
+                                          to_snapshot_kwargs)
 
 NOW = "2026-10-10T10:00:00+00:00"
 STAMP = "2026-10-09T10:00:00+00:00"
@@ -322,7 +324,92 @@ class ObservationTests(unittest.TestCase):
             c.add_feedback("x", "API", "f", [{}] * 10001)
         self.assertEqual(c.aggregate_report()["unique_posts"], 0)
         self.assertEqual(c.feedback_aggregates(), [])
-        # rollback: discard object; no external storage has ever been changed.
+
+    def test_bounded_conflicts_and_feedback_budgets(self):
+        c = ObservationCollector(
+            now=NOW,
+            max_conflicts=100,
+            max_feedback=100,
+            max_feedback_conflicts=100,
+            max_sources_per_post=2,
+        )
+        # Test max_sources_per_post
+        s = sample("x")
+        for i in range(5):
+            c.add_posts("x", "API", f"source_{i}", [s])
+        rows = c.to_engine_rows()
+        # Should only contain 2 sources
+        self.assertEqual(len(rows), 2)
+
+        # Test invalid constructor parameters
+        with self.assertRaises(ValueError):
+            ObservationCollector(now=NOW, max_conflicts=10)
+        with self.assertRaises(ValueError):
+            ObservationCollector(now=NOW, max_feedback=50)
+        with self.assertRaises(ValueError):
+            ObservationCollector(now=NOW, max_sources_per_post=0)
+
+    def test_feedback_event_deduplication_and_window_conflicts(self):
+        c = ObservationCollector(now=NOW)
+        event1 = {"event_id": "ev-100", "window": STAMP, "tag": "romantasy",
+                  "eligible": 10, "engaged": 2, "replies": 1, "followers": 0}
+        c.add_feedback("bluesky", "API", "s1", [event1])
+        c.add_feedback("bluesky", "WEB", "s2", [event1])  # exact duplicate
+        self.assertEqual(c.counts["feedback_duplicates"], 1)
+
+        # Same event_id, different window -> conflict!
+        event1_alt_window = dict(event1, window="2026-10-08T10:00:00+00:00")
+        c.add_feedback("bluesky", "MOBILE", "s3", [event1_alt_window])
+        self.assertEqual(c.counts["feedback_conflicts"], 1)
+        self.assertEqual(c.feedback_aggregates(), [])  # conflict purged record
+
+    def test_collector_helpers_ingest_and_snapshot_kwargs(self):
+        c = ObservationCollector(now=NOW)
+        p1 = sample("x", post="p1")
+        p2 = sample("x", post="p2")
+        added = ingest_collector_payload(c, "x", "API", "reader", [p1, p2])
+        self.assertEqual(added, 2)
+
+        kwargs = to_snapshot_kwargs(c)
+        self.assertIn("rows", kwargs)
+        self.assertIn("feedback", kwargs)
+        self.assertEqual(len(kwargs["rows"]), 2)
+
+    def test_spanish_niche_tags_normalization(self):
+        c = ObservationCollector(now=NOW)
+        bsky = sample("bluesky")
+        bsky["record"]["facets"] = [{
+            "features": [
+                {"$type": "app.bsky.richtext.facet#tag", "tag": "Fantasía"},
+                {"$type": "app.bsky.richtext.facet#tag", "tag": "Romantasy"},
+                {"$type": "app.bsky.richtext.facet#tag", "tag": "BookTokES"},
+                {"$type": "app.bsky.richtext.facet#tag", "tag": "LecturaRecomendada"},
+            ]
+        }]
+        c.add_posts("bluesky", "API", "niche", [bsky])
+        row = c.to_engine_rows()[0]
+        self.assertIn("fantasía", row["tags"])
+        self.assertIn("romantasy", row["tags"])
+        self.assertIn("booktokes", row["tags"])
+        self.assertIn("lecturarecomendada", row["tags"])
+
+    def test_extended_field_edge_cases(self):
+        c = ObservationCollector(now=NOW)
+
+        # TikTok with non-dict items in challenges and textExtra
+        tt = sample("tiktok")
+        tt["textExtra"] = ["not_a_dict", {"hashtagName": 12345}, {"hashtagName": "Lectura"}]
+        tt["challenges"] = [None, {"title": "Fantasía"}]
+        c.add_posts("tiktok", "MOBILE", "tok", [tt])
+        tags = c.to_engine_rows()[0]["tags"]
+        self.assertIn("lectura", tags)
+        self.assertIn("fantasía", tags)
+
+        # Bluesky with features as string
+        bsky = sample("bluesky", post="bsky-str")
+        bsky["record"]["facets"] = [{"features": "not_a_list"}]
+        c.add_posts("bluesky", "API", "str_facets", [bsky])
+        self.assertEqual(len(c.to_engine_rows()), 2)
 
 
 if __name__ == "__main__":

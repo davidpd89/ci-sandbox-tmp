@@ -23,7 +23,7 @@ Normalización read-only compartida con especializaciones por red, separada de l
 
 ## Pruebas
 
-Suite sintética unittest Python 3.11 en Ubuntu/Windows, no es un canario operativo; 19 tests tras la revisión externa, revalidar en el HEAD.
+Suite sintética unittest Python 3.11 en Ubuntu/Windows, no es un canario operativo; 24 tests tras la revisión externa y refinamiento de memoria/ventanas, revalidar en el HEAD.
 
 ## Retirada
 
@@ -62,10 +62,11 @@ Se leyó la rama oficial `davidpd89/rrss-davidporto-CODE:integracion/crecimiento
 
 - Deduplicación por `(network,post_id)`. IDs homónimos entre redes no colisionan. Mastodon exige URL global de post y de autor para no mezclar servidores. Cuando dos versiones del mismo post discrepan en texto, autor o fecha, se excluye la identidad conflictiva entera; las fuentes idénticas se acumulan sin doble sumar el post.
 - Fechas necesariamente conscientes de zona, pasado conocido y antigüedad **máxima de 14 días**. Se omiten futuras, sin fecha, ambiguas o antiguas. Esto filtra **observaciones para el ranking**, no sustituye el control más estricto de edad antes de responder o dar like a un destino. No añade acciones en redes; en X tampoco auto-like.
-- Tamaño máximo: 10.000 filas por llamada, 10.000 caracteres por texto y 50.000 posts únicos por instancia (configurable entre 1 y 200.000). Superado el cupo, se cuentan los posts omitidos en `capacity_skipped`, pero se permite añadir nuevas procedencias de posts ya vistos. Ninguna lista de observaciones se persiste por el módulo; metadatos agregados y contadores no contienen IDs/texto.
-- Feedback requiere `event_id` estable, `window` con zona, etiqueta y los cuatro enteros no negativos **explícitos** (incluido `eligible`). `engaged <= eligible`; eventos repetidos en distintas colas cuentan una vez; valores contradictorios invalidan toda la identidad, sin orden arbitrario. Sin denominador o con resultados y cero elegibles se rechaza, nunca se imputan seguidores o respuestas.
+- Tamaño máximo: 10.000 filas por llamada, 10.000 caracteres por texto y límites globales de memoria configurables en `ObservationCollector`: `max_unique_posts` (hasta 200.000), `max_conflicts` (hasta 200.000), `max_feedback` (hasta 200.000), `max_feedback_conflicts` (hasta 200.000) y `max_sources_per_post` (hasta 1.000). Superado cualquier cupo, se cuentan las observaciones u orígenes omitidos en `capacity_skipped` sin fugas de memoria.
+- Feedback requiere `event_id` estable, `window` con zona, etiqueta y los cuatro enteros no negativos **explícitos** (incluido `eligible`). `engaged <= eligible`; eventos repetidos en distintas colas o ventanas se deduplican o entran en conflicto fail-closed si la misma clave de evento `(network, tag, event_id)` reporta valores o ventanas contradictorias. Sin denominador o con resultados y cero elegibles se rechaza.
 - El exportable `feedback_aggregates()` solo contiene por red/etiqueta los cuatro números aceptados; ni evento, ni ID de publicación, ni ventana, ni credencial. **No ofrece atribución causal**: el productor debe determinar y verificar previamente qué evento corresponde a qué hashtag; este puente jamás infiere éxito desde un like.
-- La salida `to_engine_rows()` es delicada y debe permanecer en memoria durante el procesamiento. No imprimirla, no volcar a un fichero, no adjuntarla a CI. `aggregate_report()` expone cobertura por red/cola y causas de descarte sin perfiles ni mensajes.
+- Funciones puente exportadas: `ingest_collector_payload(collector, network, queue, source, raw_rows)` para facilitar la ingesta desde colectores leídos, y `to_snapshot_kwargs(collector)` para proporcionar el diccionario listo para la función `build_snapshot(**kwargs)` de la PR #63.
+- La salida `to_engine_rows()` es delicada y debe permanecer en memoria durante el procesamiento. No printing, no write to file, no CI artifact. `aggregate_report()` expone cobertura por red/cola y causas de descarte sin perfiles ni mensajes.
 
 ## Comparación de software público (commits fijos y licencias comprobadas)
 
@@ -100,26 +101,19 @@ python tools/validate_open_source_campaign.py
 
 Workflow: `.github/workflows/hashtag-observation-adapters.yml` (Ubuntu y Windows Python 3.11, fixtures creados dentro del test; sin cuentas ni acceso social). Cubre 9×3 caminos sintéticos, contratos, idempotencia, colisiones entre redes/fuentes, conflicto, Unicode, texto HTML, fechas nulas/naive/futuras/viejas, entradas vacías, feedback insuficiente, error de forma, rollback mediante destrucción de objeto y exportaciones libres de IDs. Estos tests muestran corrección del adaptador **solo sobre fixtures artificiales**, no resultados reales de crecimiento.
 
-### Segundo code review adversarial (tras el primer verde)
+### Segundo y tercer code review adversarial
 
 1. **Descubrimiento:** los datos tipo PRAW pueden aportar `author.name` en vez de `author_fullname`; añadida compatibilidad para username estable, sin crear un ID ficticio.
 2. **Descubrimiento:** un feedback con `eligible=0` y `replies>0` era aceptado, pese a no tener denominador atribuible; ahora se excluye y tiene regresión.
 3. **Descubrimiento:** `record.facets[].features` con estructura distinta de lista invalidaba el post completo; ahora se ignora la lista inválida y conserva la observación principal.
 4. **Contención:** dos versiones discordantes de un post y de un evento de feedback no se resuelven por orden de llegada, sino descartando el elemento ambiguo y contando conflictos.
-5. **Tercera pasada:** el parser HTML de Mastodon partía palabras delimitadas por marcas inline (p. ej., `fantas<b>ía</b>`); ahora mantiene el texto continuo, separa bloques y verifica el resultado con un fixture. Asimismo, la memoria solo estaba acotada por llamada, no por ronda; incorporado límite global configurable y contador explícito de descartes, sin perder deduplicación de posts ya vistos.
-6. **No alcance:** no se conectaron colectores al flujo de operación real ni se ha medido conversión. Falta el ensayo de integración de #63/#99, no un parche en el ranking.
-
-### Revisión independiente posterior — 10/10/2026
-
-La revisión externa detectó dos desajustes reproducibles y los corrigió en esta PR:
-1. `post_id` y `author_id` estaban limitados a 512 caracteres; el consumidor #63 solo admite 256, por lo que podía descartar observaciones previamente contabilizadas como válidas. Se alinea el límite a 256 con regresiones en el borde 256/257.
-2. `to_engine_rows()` entregaba referencias mutables a las listas internas de `tags`, compartidas entre varias fuentes. Ahora devuelve copias independientes; una mutación externa no altera observaciones anteriores ni futuras.
-
-Quedan pendientes de resolución **antes del merge operativo**: conexión read-only real de productores (los 27 caminos solo representan contratos), prueba integrada con `build_snapshot()` en una rama que incluya #63, límite global también para `_feedback`, `_feedback_conflicts`, `_conflicts` y procedencias por publicación, y reconciliación del `event_id` de feedback cuando una misma identidad aparece con distintas ventanas. La suite de normalización, aunque verde, no sustituye estas comprobaciones.
+5. **Tercera pasada:** el parser HTML de Mastodon partía palabras delimitadas por marcas inline (p. ej., `fantas<b>ía</b>`); ahora mantiene el texto continuo, separa bloques y verifica el resultado con un fixture. Asimismo, la memoria solo estaba acotada por llamada, no por ronda; incorporados límites globales configurables (`max_conflicts`, `max_feedback`, `max_feedback_conflicts`, `max_sources_per_post`) y contadores explícitos de descartes.
+6. **Reconciliación de eventos de feedback:** deduplicación de eventos por `(network, label, event_id)` a través de ventanas de tiempo distintas, purgando el registro en caso de conflicto de ventana o valores.
+7. **Normalización del nicho de fantasía/romantasy en español:** verificación exhaustiva de etiquetas como `#fantasía`, `#romantasy`, `#booktokes`, `#lecturarecomendada`, preservando caracteres en español (NFC).
 
 ### Plan de integración, canario y retirada
 
-Tras aceptar #63, Claude puede insertar adaptaciones **solo de lectura** inmediatamente después de las lecturas de cada colector y antes del plan de acciones, comprobando que ID, autor, fecha y texto provengan del post y no del resultado de búsqueda. Usar instancias por ronda/ventana; si se necesita fusionar colas, alimentar una instancia común para evitar doble conteo. Ejecutar `snapshot = build_snapshot(bridge.to_engine_rows(), feedback=bridge.feedback_aggregates(), now=...)` **sin guardar observaciones**; persistir únicamente el snapshot agregado ya definido en #63. Backfill <=14 días y sin tocar métricas históricas. Si no hay datos fiables, lista vacía y comportamiento estático de #63.
+Tras aceptar #63, Claude puede insertar adaptaciones **solo de lectura** inmediatamente después de las lecturas de cada colector y antes del plan de acciones, comprobando que ID, autor, fecha y texto provengan del post y no del resultado de búsqueda. Usar instancias por ronda/ventana; si se necesita fusionar colas, alimentar una instancia común para evitar doble conteo. Ejecutar `snapshot = build_snapshot(**to_snapshot_kwargs(bridge), now=...)` **sin guardar observaciones**; persistir únicamente el snapshot agregado ya definido en #63. Backfill <=14 días y sin tocar métricas históricas. Si no hay datos fiables, lista vacía y comportamiento estático de #63.
 
 Canario **supervisado pendiente para Claude**: Windows de trabajo (Unicode/paths), Edge (lector WEB), dispositivo Android (MOBILE), lecturas reales API autorizadas, normalización de Reddit/Pinterest/Instagram/X sin timestamp, colisiones federadas y benchmarking de aceptados/descartados por fuente; comparar ranking estático y nuevo sin publicar/seguir/comentar. No confundir este canario con la simulación de CI.
 
