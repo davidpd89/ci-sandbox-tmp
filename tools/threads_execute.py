@@ -104,7 +104,7 @@ def _preflight_plan(plan):
             # solo un permalink canonico de Threads del MISMO autor sirve para actuar; cualquier otra cosa se descarta y se usa el fragmento (nunca se navega a una URL ajena)
             ok = (isinstance(permalink, str) and permalink.startswith("https://www.threads.com/@") and "/post/" in permalink
                   and permalink[len("https://www.threads.com/@"):].split("/")[0].casefold() == item["handle"].casefold())
-            if ok and kind == "like":
+            if ok and kind in {"like", "reply"}:
                 item["permalink"] = permalink.rstrip("/")
             else:
                 item.pop("permalink", None)
@@ -246,8 +246,15 @@ def run_plan(plan, *, prevalidated=False, on_result=None):
                     # duplico (la comprobacion del navegador falla con hilos de varias partes "1/2").
                     results.append({**item, "resultado": "saltado_ya_comentado"})
                     continue
+                permalink = item.get("permalink")
+                if not permalink:
+                    # La fecha aprobada pertenece a un post concreto, no al primer
+                    # fragmento coincidente en el feed. No entrar al navegador.
+                    results.append({**item, "resultado": "saltado_destino_no_verificado"})
+                    continue
                 profile_url = f"https://www.threads.com/@{handle}"
-                outcome = t.reply_to(item.get("text_fragment", ""), item["text"], profile_url)
+                outcome = t.reply_to(item.get("text_fragment", ""), item["text"],
+                                     profile_url, permalink=permalink)
                 if outcome == "unverified":
                     # la interfaz no siempre muestra la respuesta al instante: la API oficial es la fuente fiable
                     if _verified_via_api(item["text"]):
