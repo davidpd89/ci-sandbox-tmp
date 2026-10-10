@@ -226,10 +226,13 @@ def _ratings(path: str | Path, expected: dict[str, dict]) -> dict[str, dict[str,
     grouped = defaultdict(list)
     with Path(path).open(encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
-        if not reader.fieldnames or not set(COLUMNS).issubset(reader.fieldnames):
-            raise ValueError("Columnas de evaluación ausentes")
+        if (not reader.fieldnames or len(reader.fieldnames) != len(COLUMNS)
+                or set(reader.fieldnames) != set(COLUMNS)):
+            raise ValueError("Las columnas de evaluación deben ser exactamente las del CSV ciego")
         seen = set()
         for row in reader:
+            if any(row.get(field) is None for field in COLUMNS) or None in row:
+                raise ValueError("Fila de evaluación incompleta o con columnas extra")
             token, judge = row["token"], row["judge"].strip()
             if token not in expected or not judge:
                 raise ValueError("Token desconocido o evaluador vacío")
