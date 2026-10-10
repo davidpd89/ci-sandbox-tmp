@@ -1,0 +1,14 @@
+python
+# tests/contracts/test_action_idempotency.py
+# Contrato común: un reintento tras una respuesta perdida no repite la acción.
+from tests.contracts.social_adapter_contract import ActionResult
+
+
+def test_retry_does_not_duplicate_action(adapter, recorded_action):
+    first = adapter.execute(recorded_action)
+    second = adapter.execute(recorded_action)
+
+    assert first.status in {"succeeded", "duplicate"}
+    assert second.status == "duplicate"
+    assert first.external_id == second.external_id
+    assert adapter.count_external_writes(recorded_action.intent_id) == 1
