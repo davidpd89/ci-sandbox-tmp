@@ -38,8 +38,10 @@ def fold(text):
 
 
 def tag(value):
-    value = str(value).strip().lstrip("#")
-    return fold(value) if VALID.fullmatch(value) else ""
+    # La identidad de una etiqueta no debe confundir año/ano o niño/nino.
+    # NFC une las representaciones Unicode equivalentes sin borrar tildes.
+    value = unicodedata.normalize("NFC", str(value).strip().lstrip("#"))
+    return value.casefold() if VALID.fullmatch(value) else ""
 
 
 def instant(value):
@@ -52,6 +54,7 @@ def instant(value):
 
 
 def extract(text, declared=None):
+    text = unicodedata.normalize("NFC", text)
     found = {tag(m.group(1)) for m in TAG_RE.finditer(text)}
     if declared is not None:
         if not isinstance(declared, list):
