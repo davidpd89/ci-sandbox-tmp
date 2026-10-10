@@ -223,6 +223,47 @@ class PersistenceTests(unittest.TestCase):
                 self.store.apply(bad)
 
 
+    def test_event_history_row_tamper_detected_even_if_projection_is_valid(self):
+        self.apply_path()
+        with sqlite3.connect(self.path) as db:
+            db.execute("UPDATE relation_events SET after_state='cerrado' "
+                       "WHERE network='bluesky' AND version=2")
+        self.assertFalse(self.store.verify_replay("bluesky", "anon"))
+
+    def test_in_memory_database_requires_real_file_for_restart(self):
+        with self.assertRaises(ValueError):
+            rm.RelationshipStore(":memory:")
+
+
+class ProducerAdapterTests(unittest.TestCase):
+    def test_all_networks_and_lanes_only_confirmed_outcomes(self):
+        for network in rm.NETWORKS:
+            for lane in rm.LANES:
+                with self.subTest(net=network, lane=lane):
+                    self.assertIsNone(rm.settled_action_event(
+                        network=network, account="fake", event_id="demo",
+                        action="follow", outcome="fallido", lane=lane,
+                        occurred_at=BASE.isoformat()))
+                    event = rm.settled_action_event(
+                        network=network, account="fake", event_id="demo",
+                        action="follow", outcome="confirmado", lane=lane,
+                        occurred_at=BASE.isoformat())
+                    self.assertEqual(event.kind, "follow_confirmed")
+                    self.assertEqual(event.lane, lane)
+
+    def test_observations_require_independent_verification(self):
+        kwargs = dict(network="bluesky", account="fake", event_id="x",
+                      action="followback", outcome="verified", lane="API",
+                      occurred_at=BASE.isoformat())
+        with self.assertRaises(rm.TransitionError):
+            rm.settled_action_event(**kwargs)
+        self.assertEqual(
+            rm.settled_action_event(**kwargs, independently_verified=True).kind,
+            "followback_confirmed")
+        with self.assertRaises(ValueError):
+            rm.settled_action_event(**{**kwargs, "action": "not_a_real_action"})
+
+
 class LegacyContractTests(unittest.TestCase):
     def test_confirmed_legacy_follows_only_no_inferred_reciprocity(self):
         rows = [
@@ -245,6 +286,17 @@ class LegacyContractTests(unittest.TestCase):
         self.assertEqual(result["verified"], 0)
         self.assertEqual([x["row"] for x in result["anomalies"]], [1, 2])
         self.assertEqual(result["states"], {})
+
+    def test_legacy_uses_existing_normalization_across_handle_aliases(self):
+        rows = [
+            {"fecha": "2026-10-01", "cuenta": "@ANA", "tipo": "follow",
+             "resultado": "confirmado"},
+            {"fecha": "2026-10-02", "cuenta": "ana", "tipo": "unfollow",
+             "resultado": "confirmado"},
+        ]
+        result = rm.audit_legacy_rows("instagram", rows)
+        self.assertEqual(result["states"], {"ana": "inactivo"})
+        self.assertEqual(result["anomalies"], [])
 
     def test_diagnose_duplicate_and_stale_producer(self):
         result = rm.audit_legacy_rows("x", [
