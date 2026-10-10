@@ -1,0 +1,22 @@
+python
+# URL exacta del archivo de origen:
+# https://github.com/EhsanShahbazii/Pinterest-Scraper/blob/main/src/pinterest_scraper/scraper.py
+# Copiar desde el archivo original; este bloque es una guía de integración, no una reproducción verificada.
+
+from dataclasses import dataclass
+
+@dataclass
+class PinterestCandidate:
+    pin_id: str
+    pin_url: str
+    title: str | None
+    description: str | None
+    creator_username: str | None
+    creator_url: str | None
+    board_name: str | None
+    board_url: str | None
+    saves: int | None
+    image_url: str | None
+    source_query: str
+    source_type: str  # search | board | idea | profile
+    discovered_at: str
