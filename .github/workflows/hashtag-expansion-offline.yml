@@ -1,0 +1,36 @@
+name: hashtag-expansion-offline
+
+on:
+  pull_request:
+    paths:
+      - "tools/hashtag_expansion.py"
+      - "tools/discovery_terms.py"
+      - "tests/test_hashtag_expansion.py"
+      - ".github/workflows/hashtag-expansion-offline.yml"
+  push:
+    branches: ["research/53-hashtag-source-expansion"]
+    paths:
+      - "tools/hashtag_expansion.py"
+      - "tools/discovery_terms.py"
+      - "tests/test_hashtag_expansion.py"
+      - ".github/workflows/hashtag-expansion-offline.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile
+        run: python -m compileall -q tools/hashtag_expansion.py tools/discovery_terms.py
+      - name: Synthetic tests
+        run: python -m unittest discover -s tests -p test_hashtag_expansion.py -v
