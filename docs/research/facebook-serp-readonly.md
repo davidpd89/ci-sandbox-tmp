@@ -2,6 +2,21 @@
 
 Fecha: 2026-10-10. Objetivo: convertir el informe de Facebook en un importador **real y offline** para revisar candidatos encontrados en búsquedas ya autorizadas. No crea listas inventadas de grupos ni altera ejecutores en las nueve redes.
 
+## Problema
+
+Falta un puente local de resultados SERP hacia una revisión de candidatos sin tratar esos snippets como hechos ni convertirlos en acciones. La base privada ya tiene ejecución y filtrado nativos.
+
+## Alternativas
+
+Comparadas: mantener solo pools internos, añadir un segundo SDK Graph, desplegar Postiz, ejecutar HasData con pago/LLM o adaptar solo el formato de resultados y deduplicación. La última opción conserva dependencias y rutas productivas intactas.
+
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/HasData/social-listening-tool
+Fecha de consulta: 2026-10-10
+Licencia SPDX: MIT
+Referencia inmutable: https://github.com/HasData/social-listening-tool/commit/086ddc5894c6c3c8b48841496f1dc339db299899
+
 ## Comparación con el código oficial
 
 Rama privada inspeccionada: integracion/crecimiento-2026-10. Ya existen herramientas Facebook Graph v26 para Página propia (facebook_api.py, meta_common.py), facebook_scan.py, facebook_pool.py, facebook_source_quality.py (filtro de grupos y URL ambigua antes de acciones), discovery_terms.py y discovery_ranking.py. Las PR oficiales #55, #158 y #161 ya abordan filtros y medición de Facebook; la PR espejo #15 cubre reutilización de Facebook y #99–#101 incluyen términos y hashtags. Por tanto no se duplica cliente Graph, ranking ponderado ni escaneo.
@@ -40,3 +55,15 @@ No subir revision-local.json a GitHub si contiene enlaces de terceros. Sin secre
 - Revisión adversarial adicional: enlaces con parámetros de token/código/contraseña no pasan al informe; al deduplicar se prefiere un resultado cuya red declarada coincida con su URL. Dos regresiones añadidas.
 - Riesgos: resultados SERP obsoletos, heurística léxica aproximada, instancias Mastodon mal declaradas; todos quedan en revisión, no ejecución.
 - Retirada reversible: eliminar exclusivamente importador, prueba y documentación. Escáneres/colas/ledger permanecen intactos.
+
+## Decisión
+
+Mantener el cliente Graph del original y exponer un importador **offline** de SERP con nueve adaptadores y revisión humana. El código de producción no se toca.
+
+## Pruebas
+
+Suite dedicada de 17 regresiones y compileall local. CI de campaña, suite Windows/privada y comprobación de proveedores son puertas independientes.
+
+## Retirada
+
+Basta con retirar el importador, su test y esta nota; ningún estado productivo se ha modificado.
