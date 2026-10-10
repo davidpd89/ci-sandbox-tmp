@@ -1,0 +1,7 @@
+text
+# https://github.com/python-jsonschema/check-jsonschema#readme
+- repo: https://github.com/python-jsonschema/check-jsonschema
+  rev: 0.38.2
+  hooks:
+  - id: check-github-workflows
+    args: ["--verbose"]
