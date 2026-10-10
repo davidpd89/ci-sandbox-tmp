@@ -1,0 +1,11 @@
+python
+# Pieza nueva para tools/growth_signals_schema.py
+from datetime import datetime, timezone
+from typing import Any
+
+def post_age_hours(post: dict[str, Any], now: datetime | None = None) -> float:
+    """Calcula la antigüedad de un post en horas usando taken_at y collected_at."""
+    now = now or datetime.now(timezone.utc)
+    taken_at = datetime.fromisoformat(post["taken_at"]).astimezone(timezone.utc)
+    collected_at = datetime.fromisoformat(post["collected_at"]).astimezone(timezone.utc)
+    return max(0.0, (collected_at - taken_at).total_seconds() / 3600)
