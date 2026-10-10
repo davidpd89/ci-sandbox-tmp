@@ -97,6 +97,19 @@ class ConfigCapabilityAuditTests(unittest.TestCase):
         self.assertEqual(result["configurations"]["bluesky"]["status"], "invalid")
         self.assertNotIn("NO_LOG_THIS_DATA", json.dumps(result))
 
+    def test_nonobject_json_root_is_reported_not_crash(self):
+        path = self.write_config("bluesky", config())
+        path.write_text('["not an object"]', encoding="utf-8")
+        result = self.report()
+        self.assertEqual(result["errors"], 1)
+        self.assertEqual(result["configurations"]["bluesky"]["status"], "invalid")
+
+    def test_large_integer_does_not_overflow_validator(self):
+        cfg = config()
+        cfg["budgets"]["max_candidates"] = 10 ** 350
+        self.write_config("bluesky", cfg)
+        self.assertEqual(self.report()["errors"], 0)
+
     def test_nonstandard_nan_and_infinity_rejected(self):
         path = self.write_config("bluesky", config())
         for number in ("NaN", "Infinity", "-Infinity"):
