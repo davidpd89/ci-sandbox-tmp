@@ -142,3 +142,7 @@ La base `research/public-reuse-parent` (commit `737fc011`) ya contiene el motor 
 ## Auditoría de contratos y saneamiento — 10/10/2026
 
 Se rechazan identificadores estables y fuentes que contengan caracteres de control Unicode (`Cc`) antes de entregarlos al ranking o usarlos en procedencia. Una regresión nueva ejerce el control en las nueve redes y en las tres familias de entrada. No cambia las reglas de acciones, fechas, certificados, ledger ni persistencia. Es una corrección de validación, no un puente nativo de producción.
+
+### Cobertura vigente frente a aceptaciones históricas
+
+El informe agregado diferencia `coverage[].accepted` (ingestas inicialmente aceptadas, contador histórico) de `coverage[].retained_posts` (publicaciones únicas que **siguen válidas** por red y cola tras conflictos, descontando varias fuentes de la misma cola). Una observación invalidada por contradicción no debe figurar como cobertura operativa aunque permanezca el contador histórico. `unique_posts` continúa midiendo publicaciones únicas globales; todos los diagnósticos omiten identidades y texto. Regresión: `test_retained_posts_reflect_live_coverage_after_conflicts`. El campo añadido es compatible con el esquema agregado existente.
