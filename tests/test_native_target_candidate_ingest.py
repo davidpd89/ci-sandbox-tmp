@@ -488,7 +488,7 @@ class TestContracts(unittest.TestCase):
                 self.assertEqual(len(out["shortlist"]), 2)
                 self.assertTrue(all(not row["posts"] for row in out["shortlist"]))
                 self.assertIn("cross_account_post_collision",
-                              [d["reason"] for d in out["diagnostics"])
+                              [d["reason"] for d in out["diagnostics"]])
 
     def test_x_handle_change_conflicting_post_dates_rejects_both(self):
         first = dict(SAMPLES["x"], handle="lectora_old",
