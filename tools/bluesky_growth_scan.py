@@ -1658,15 +1658,18 @@ def _search_popular_feeds(c):
             hits = _hits(label)
             if not hits or sc.is_political(label):
                 continue
-            relevant.append((-hits, -(int(feed.get("likeCount") or 0)),
-                             str(feed["uri"]), index, feed))
+            try:
+                likes = max(0, int(feed.get("likeCount") or 0))
+            except (TypeError, ValueError):
+                likes = 0
+            relevant.append((-hits, -likes, str(feed["uri"]), index, feed))
         seen_feeds = set()
         for _, _, uri, _, feed in sorted(relevant):
+            if len(seen_feeds) >= 2:
+                break
             if uri in seen_feeds:
                 continue
             seen_feeds.add(uri)
-            if len(seen_feeds) > 2:
-                break
             _run_source(
                 c,
                 "popular_feed_search",
