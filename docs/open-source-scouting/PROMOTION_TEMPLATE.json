@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "mirror_repository": "davidpd89/ci-sandbox-tmp",
+  "source_pr": null,
+  "source_head_sha": null,
+  "component": "PENDING_HUMAN_REVIEW",
+  "private_target_repository": "davidpd89/rrss-davidporto-CODE",
+  "target_branch": null,
+  "files_to_promote": [],
+  "files_to_remove_on_rollback": [],
+  "upstream": {
+    "repository_url": null,
+    "tag_or_commit": null,
+    "permalink": null,
+    "spdx_license": null,
+    "license_compatible": false,
+    "notices_reviewed": false,
+    "dependencies_reviewed": false,
+    "advisories_reviewed_at": null
+  },
+  "validation": {
+    "mirror_gate": false,
+    "official_gate": false,
+    "privacy_classification_approved": false,
+    "synthetic_fixtures_only": false,
+    "tests_offline": [],
+    "tests_private": [],
+    "human_reviewer": null,
+    "human_approved": false
+  },
+  "operation": {
+    "feature_flag": null,
+    "default_enabled": false,
+    "dry_run": true,
+    "migration": null,
+    "rollback_command": null,
+    "reconciliation_step": null
+  },
+  "status": "blocked"
+}

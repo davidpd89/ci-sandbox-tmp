@@ -13,7 +13,7 @@ import re
 import urllib.request
 from pathlib import Path
 
-UA = "rrss-autorademo-production-kit/2.0 (+https://autorademodiaz.com)"
+UA = "rrss-davidporto-production-kit/2.0 (+https://davidportodiaz.com)"
 
 
 def fetch_text(url: str) -> str:

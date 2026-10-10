@@ -11,9 +11,9 @@ import pinterest_publish as pp
 from playwright.sync_api import sync_playwright
 
 PAGES = (
-    ("perfil", "https://es.pinterest.com/autorademodiaz/"),
-    ("creados", "https://es.pinterest.com/autorademodiaz/_created/"),
-    ("guardados", "https://es.pinterest.com/autorademodiaz/_saved/"),
+    ("perfil", "https://es.pinterest.com/davidportodiaz/"),
+    ("creados", "https://es.pinterest.com/davidportodiaz/_created/"),
+    ("guardados", "https://es.pinterest.com/davidportodiaz/_saved/"),
     ("editar_perfil", "https://es.pinterest.com/settings/profile/"),
     ("cuenta", "https://es.pinterest.com/settings/account-settings/"),
 )
