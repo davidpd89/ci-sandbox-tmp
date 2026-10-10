@@ -12,18 +12,35 @@ PATH = os.path.join(os.path.dirname(__file__), "..", "00_OPERATIVO", "descubrimi
 
 
 def terms(network, kind="busquedas", suffix="", skip=()):
-    """Lista de terminos (sin duplicados ni los de `skip`), con `suffix` opcional (p. ej. ' lang:es' en X). [] si falta el fichero."""
+    """Mezcla catálogo estático y expansión local no vencida, sin escribir."""
+    import unicodedata
+    def norm(value):
+        folded = unicodedata.normalize("NFKD", str(value).strip().lstrip("#").casefold())
+        return "".join(c for c in folded if not unicodedata.combining(c))
+
     try:
         with open(PATH, encoding="utf-8") as stream:
             data = json.load(stream)
     except (OSError, ValueError):
-        return []
-    skip_keys = {str(s).casefold() for s in skip}
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    static = (data.get(network) or {}).get(kind) or []
+    if not isinstance(static, list):
+        static = []
+
+    # Import interno: escáneres siguen funcionando cuando no hay caché.
+    from hashtag_expansion import snapshot_terms
+    observed = snapshot_terms(network, kind)
+
+    skip_keys = {norm(item) for item in skip}
     out, seen = [], set()
-    for term in (data.get(network) or {}).get(kind) or []:
-        text = str(term).strip().lstrip("#") if kind == "hashtags" else str(term).strip()
-        key = text.casefold()
-        if text and key not in seen and key not in skip_keys:
+    for item in static + observed:
+        if not isinstance(item, str):
+            continue
+        value = item.strip().lstrip("#") if kind == "hashtags" else item.strip()
+        key = norm(value)
+        if value and key not in seen and key not in skip_keys:
             seen.add(key)
-            out.append(text + suffix)
+            out.append(value + suffix)
     return out
