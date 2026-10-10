@@ -1,0 +1,39 @@
+python
+# tools/threads_profile_enrich.py
+# Nuevo adaptador: no sustituye a tools/threads_scan.py ni a tools/threads_api.py.
+# Referencia externa: https://github.com/noahclark556/threads_api
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+def normalize_profile(raw: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": str(raw.get("id") or raw.get("pk") or ""),
+        "username": (raw.get("username") or "").strip(),
+        "full_name": (raw.get("full_name") or "").strip(),
+        "bio": (raw.get("biography") or raw.get("bio") or "").strip(),
+        "website": (raw.get("website") or raw.get("external_url") or "").strip(),
+        "followers": int(raw.get("follower_count") or 0),
+        "is_verified": bool(raw.get("is_verified", False)),
+        "niche_signals": [],
+    }
+
+def enrich_file(path: Path, out_path: Path) -> int:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    rows = data if isinstance(data, list) else data.get("candidates", [])
+    enriched = []
+    for row in rows:
+        profile = normalize_profile(row.get("profile", row))
+        text = " ".join([profile["username"], profile["full_name"], profile["bio"]]).lower()
+        profile["niche_signals"] = [
+            term for term in ("fantasia", "fantasy", "romantasy", "booktok", "lectura", "libros")
+            if term in text
+        ]
+        enriched.append({**row, "profile_enriched": profile})
+    out_path.write_text(
+        json.dumps({"candidates": enriched}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return len(enriched)
