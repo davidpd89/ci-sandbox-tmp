@@ -25,6 +25,7 @@ import time
 import unicodedata
 from urllib.parse import urlencode, urlparse
 import urllib.request
+import urllib.error
 
 sys.path.insert(0, os.path.dirname(__file__))
 import scan_common as sc
@@ -439,13 +440,17 @@ def _next_retry_delay(delay):
     return min(60.0, max(1.0, float(delay) * 2.0))
 
 
-def _default_fetch_archive(endpoint, start_seq):
+def _default_fetch_archive(endpoint, start_seq, auth_token=None):
     """Proveedor REST/HTTP por defecto para descargar eventos archive de Jetstream."""
     parsed = urlparse(endpoint)
     scheme = "https" if parsed.scheme in {"wss", "https"} else "http"
     http_url = f"{scheme}://{parsed.netloc}/xrpc/network.bsky.jetstream.subscribeEvents?cursor={start_seq}&wantedCollections=app.bsky.feed.post"
+    headers = {"User-Agent": "JetstreamArchiveCollector/2.0"}
+    if auth_token:
+        headers["Authorization"] = f"Bearer {auth_token}"
+
     try:
-        req = urllib.request.Request(http_url, headers={"User-Agent": "JetstreamArchiveCollector/2.0"})
+        req = urllib.request.Request(http_url, headers=headers)
         with urllib.request.urlopen(req, timeout=10) as resp:
             lines = resp.read().decode("utf-8").splitlines()
             events = []
@@ -456,11 +461,13 @@ def _default_fetch_archive(endpoint, start_seq):
                     except json.JSONDecodeError:
                         continue
             return [{"events": events}]
-    except Exception:
-        return []
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(f"archive_http_error:{exc.code}") from exc
+    except Exception as exc:
+        raise RuntimeError(f"archive_connection_error:{type(exc).__name__}") from exc
 
 
-def recover_archive_gap(db, endpoint, terms, *, fetch_archive_fn=None, sealed_tip=None):
+def recover_archive_gap(db, endpoint, terms, *, fetch_archive_fn=None, sealed_tip=None, auth_token=None):
     """Recuperación paginada de brecha mediante archive/backfill y reconciliación de estado.
 
     Si las páginas no alcanzan la punta sellada (`sealed_tip`) o contienen un hueco
@@ -479,12 +486,12 @@ def recover_archive_gap(db, endpoint, terms, *, fetch_archive_fn=None, sealed_ti
     page_count = 0
     has_internal_gap = False
 
-    fetch_fn = fetch_archive_fn if fetch_archive_fn is not None else lambda s: _default_fetch_archive(endpoint, s)
+    fetch_fn = fetch_archive_fn if fetch_archive_fn is not None else lambda s: _default_fetch_archive(endpoint, s, auth_token=auth_token)
 
     try:
         pages = fetch_fn(start_seq)
     except Exception as exc:
-        err = f"archive_fetch_error:{type(exc).__name__}"
+        err = f"archive_fetch_error:{type(exc).__name__}:{str(exc)[:100]}"
         set_state(db, "last_error", err)
         set_state(db, "recovery_stats", json.dumps({
             "pages": 0,
@@ -592,6 +599,7 @@ async def collect(
     initial_lookback_minutes=30,
     fetch_archive_fn=None,
     sealed_tip=None,
+    auth_token=None,
 ):
     try:
         import websockets
@@ -718,11 +726,11 @@ async def collect(
                 connection_errors += 1
                 status_code = getattr(getattr(exc, 'response', None), 'status_code', None)
                 last_error = f"InvalidStatus: {status_code}"
-                if status_code == 400 or "CursorTooOld" in str(exc):
+                if status_code in {400, 401, 429} or "CursorTooOld" in str(exc):
                     set_state(db, "gap_detected", "true")
                     set_state(db, "recovery_pending", "true")
                     db.commit()
-                    rec_res = recover_archive_gap(db, endpoint, terms, fetch_archive_fn=fetch_archive_fn, sealed_tip=sealed_tip)
+                    rec_res = recover_archive_gap(db, endpoint, terms, fetch_archive_fn=fetch_archive_fn, sealed_tip=sealed_tip, auth_token=auth_token)
                     if not rec_res.get("complete"):
                         last_error = rec_res.get("error", "incomplete_recovery")
                     cursor = get_state(db, "last_seq")
@@ -733,11 +741,11 @@ async def collect(
             except Exception as exc:
                 connection_errors += 1
                 last_error = f"{type(exc).__name__}: {str(exc)[:200]}"
-                if "CursorTooOld" in str(exc) or "400" in str(exc):
+                if "CursorTooOld" in str(exc) or "400" in str(exc) or "401" in str(exc) or "429" in str(exc):
                     set_state(db, "gap_detected", "true")
                     set_state(db, "recovery_pending", "true")
                     db.commit()
-                    rec_res = recover_archive_gap(db, endpoint, terms, fetch_archive_fn=fetch_archive_fn, sealed_tip=sealed_tip)
+                    rec_res = recover_archive_gap(db, endpoint, terms, fetch_archive_fn=fetch_archive_fn, sealed_tip=sealed_tip, auth_token=auth_token)
                     if not rec_res.get("complete"):
                         last_error = rec_res.get("error", "incomplete_recovery")
                     cursor = get_state(db, "last_seq")
