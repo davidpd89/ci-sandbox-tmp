@@ -30,8 +30,13 @@ def status_id(url):
     """Devuelve ID canónico solo para permalinks de posts X verificables."""
     if not isinstance(url, str):
         return None
+    raw = url.strip()
+    # El ejecutor admite IDs decimales y los convierte a /i/web/status/<id>.
+    # La deduplicación debe reconocer la misma identidad en ambas rutas.
+    if re.fullmatch(r"[0-9]+", raw):
+        return raw.lstrip("0") or "0"
     try:
-        parts = urlsplit(url.strip())
+        parts = urlsplit(raw)
         if (parts.scheme != "https"
                 or parts.hostname not in {"x.com", "www.x.com", "twitter.com", "www.twitter.com"}
                 or parts.username or parts.password or parts.port):
@@ -39,6 +44,9 @@ def status_id(url):
     except ValueError:
         return None
     path = parts.path.strip("/").split("/")
+    if (len(path) == 4 and path[:3] == ["i", "web", "status"]
+            and re.fullmatch(r"[0-9]+", path[3])):
+        return path[3].lstrip("0") or "0"
     if (len(path) != 3 or path[1] != "status"
             or not re.fullmatch(r"[A-Za-z0-9_]{1,15}", path[0])
             or not re.fullmatch(r"[0-9]+", path[2])):

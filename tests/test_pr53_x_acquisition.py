@@ -46,10 +46,38 @@ class AcquisitionTests(unittest.TestCase):
     def test_status_id_rejects_unrelated_or_ambiguous_targets(self):
         for url in ("https://notx.com/u/status/1", "http://x.com/u/status/1",
                     "https://evil@x.com/u/status/1", "https://x.com/u/status/no",
-                    "https://x.com/i/web/status/1", "https://x.com/u/status/1/other",
+                    "https://x.com/i/web/status/1/other", "https://x.com/i/web/status/no",
+                    "https://x.com/u/status/1/other",
                     "https://x.com:999/u/status/1", "", None):
             with self.subTest(url=url):
                 self.assertIsNone(xa.status_id(url))
+
+    def test_i_web_and_decimal_aliases_are_same_post(self):
+        aliases = ("123", "000123", "https://x.com/i/web/status/000123",
+                   "https://twitter.com/i/web/status/123?s=20",
+                   "https://x.com/Lector/status/123",
+                   "https://www.x.com/lector/status/000123/")
+        for alias in aliases:
+            with self.subTest(alias=alias):
+                self.assertEqual(xa.status_id(alias), "123")
+
+    def test_history_blocks_same_post_across_i_web_alias_and_numeric_id(self):
+        history = self._history([
+            ("2026-10-10", "@Lectora", "reply", "https://x.com/Lectora/status/000123",
+             "texto", "pendiente_verificacion", ""),
+            ("2026-10-10", "@Otra", "quote", "https://x.com/i/web/status/000456",
+             "texto", "publicado", ""),
+        ])
+        follows, posts = xa.read_history(history)
+        kept, counts = xa.filter_known_plan([
+            {"kind": "reply", "url": "https://x.com/i/web/status/123"},
+            {"kind": "repost", "url": "https://twitter.com/Otra/status/456"},
+            {"kind": "repost", "url": "456"},
+            {"kind": "reply", "url": "https://x.com/Nueva/status/789"},
+        ], follows, posts)
+        self.assertEqual([item["url"] for item in kept],
+                         ["https://x.com/Nueva/status/789"])
+        self.assertEqual(counts["sin_fuente"]["descartadas_registro"], 3)
 
     def test_new_vs_known_is_registry_scope_not_remote_relationship(self):
         summary = xa.candidate_summary([
