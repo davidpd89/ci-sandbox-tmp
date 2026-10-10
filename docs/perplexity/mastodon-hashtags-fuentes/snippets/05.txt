@@ -1,0 +1,81 @@
+python
+# Nuevo módulo: tools/mastodon/discover_mastodon.py
+import json
+import time
+from pathlib import Path
+
+import requests
+
+INSTANCES = [
+    "https://bookstodon.es",
+    "https://mast.lat",
+    "https://mastodon.social",
+]
+
+HASHTAGS = [
+    "romantasy", "fantasia", "fantasía", "fantasiaepica",
+    "novelafantastica", "libros", "lectura", "bookstodon",
+]
+
+SPANISH_HINTS = (
+    "libro", "lectura", "leo", "novela", "autor", "escritor",
+    "fantasía", "fantasia", "romantasy", "recomiendo", "reseña"
+)
+
+
+def fetch_hashtag(instance: str, hashtag: str, limit: int = 40):
+    url = f"{instance}/api/v1/timelines/tag/{hashtag}"
+    response = requests.get(url, params={"limit": limit}, timeout=20)
+    response.raise_for_status()
+    return response.json()
+
+
+def normalize_status(instance: str, status: dict, hashtag: str) -> dict | None:
+    if status.get("visibility") != "public":
+        return None
+
+    account = status.get("account") or {}
+    content = status.get("content", "")
+    text = content.lower()
+
+    if not any(hint in text for hint in SPANISH_HINTS):
+        return None
+
+    return {
+        "source_instance": instance,
+        "hashtag": hashtag,
+        "status_id": status.get("id"),
+        "uri": status.get("uri"),
+        "created_at": status.get("created_at"),
+        "language": status.get("language"),
+        "author_acct": account.get("acct"),
+        "author_url": account.get("url"),
+        "content": content,
+        "tags": [tag.get("name") for tag in status.get("tags", [])],
+        "replies_count": status.get("replies_count", 0),
+        "reblogs_count": status.get("reblogs_count", 0),
+        "favourites_count": status.get("favourites_count", 0),
+    }
+
+
+def discover(output_path: str = "output/mastodon_discovery.jsonl"):
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    seen = set()
+
+    with open(output_path, "w", encoding="utf-8") as out:
+        for instance in INSTANCES:
+            for hashtag in HASHTAGS:
+                try:
+                    statuses = fetch_hashtag(instance, hashtag)
+                except requests.RequestException:
+                    continue
+
+                for status in statuses:
+                    item = normalize_status(instance, status, hashtag)
+                    if not item or item["uri"] in seen:
+                        continue
+
+                    seen.add(item["uri"])
+                    out.write(json.dumps(item, ensure_ascii=False) + "\n")
+
+                time.sleep(0.4)
