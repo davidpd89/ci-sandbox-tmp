@@ -5,6 +5,7 @@ Pruebas unitarias y diferenciales para los adaptadores nativos de evidencia cont
 import unittest
 from tools.native_context_adapters import (
     adapt_native_observation,
+    strip_html_tags,
     ContextPacket,
     SUPPORTED_NETWORKS,
     SUPPORTED_QUEUES,
@@ -28,7 +29,7 @@ class TestNativeContextAdapters(unittest.TestCase):
             "mastodon": {
                 "id": "1122334455",
                 "account": {"acct": "lectora_fantasía@fediverse.org", "display_name": "Lectora Fantasía"},
-                "content": "<p>¿Qué opináis de las sagas largas de fantasía épica? #LecturaEspañol</p>",
+                "content": "<p>¿Qué opináis de las sagas largas de fantasía épica? #LecturaEspañol &amp; romantasy</p>",
                 "created_at": "2026-10-09T15:00:00.000Z",
                 "url": "https://fediverse.org/@lectora_fantasia/1122334455",
                 "in_reply_to_id": "1122334000",
@@ -108,7 +109,6 @@ class TestNativeContextAdapters(unittest.TestCase):
                 self.assertEqual(packet.missing_fields, [])
 
     def test_explicit_missing_fields_when_data_absent(self):
-        # Payload lacking timestamp and author
         incomplete_payload = {
             "uri": "at://did:plc:1234/app.bsky.feed.post/incomplete123",
             "record": {
@@ -124,7 +124,6 @@ class TestNativeContextAdapters(unittest.TestCase):
         self.assertLess(packet.completeness_score, 0.7)
 
     def test_visual_only_media_without_inventing_descriptions(self):
-        # Video payload on TikTok without explicit caption/text
         visual_payload = {
             "id": "7300000000000000001",
             "author": {"unique_id": "solo_visual_creator"},
@@ -135,7 +134,6 @@ class TestNativeContextAdapters(unittest.TestCase):
 
         self.assertIn("text", packet.missing_fields)
         self.assertEqual(len(packet.media), 1)
-        # Provenance exists but no invented alt/description
         self.assertIsNone(packet.media[0]["alt"])
         self.assertEqual(packet.media[0]["provenance"], "https://tiktok.com/cover/visual.jpg")
 
@@ -143,12 +141,40 @@ class TestNativeContextAdapters(unittest.TestCase):
         payload = {
             "id": "12345",
             "account": {"acct": "lector_fantasia_ñ"},
-            "content": "<p>Texto con acentos y caracteres especiales: Ramón Díaz, fantasía & romantasy ✨</p>",
+            "content": "<p>Texto con acentos y caracteres especiales: Ramón Díaz, fantasía &amp; romantasy ✨</p>",
             "created_at": "2026-10-09 20:15:30"
         }
         packet = adapt_native_observation("mastodon", "web", payload)
         self.assertIn("fantasía & romantasy", packet.text)
         self.assertEqual(packet.published_at_iso, "2026-10-09T20:15:30Z")
+
+    def test_non_dict_payload_raises_type_error(self):
+        with self.assertRaises(TypeError):
+            adapt_native_observation("x", "api", None)
+
+        with self.assertRaises(TypeError):
+            adapt_native_observation("mastodon", "web", ["invalid_list"])
+
+    def test_html_stripping_and_unescaping(self):
+        raw = "<div>Hola &amp; bienvenido a <b>Fantasía</b><br>¿Qué lees?</div>"
+        clean = strip_html_tags(raw)
+        self.assertEqual(clean, "Hola & bienvenido a Fantasía ¿Qué lees?")
+
+    def test_instagram_carousel_media_support(self):
+        payload = {
+            "id": "carousel_123",
+            "user": {"username": "lectora_carousel"},
+            "caption": {"text": "Carrusel de lecturas"},
+            "taken_at": 1791576000,
+            "carousel_media": [
+                {"display_url": "https://instagram.com/p/c1.jpg", "media_type": 1},
+                {"display_url": "https://instagram.com/p/c2.mp4", "media_type": 2}
+            ]
+        }
+        packet = adapt_native_observation("instagram", "api", payload)
+        self.assertEqual(len(packet.media), 2)
+        self.assertEqual(packet.media[0]["type"], "image")
+        self.assertEqual(packet.media[1]["type"], "video")
 
 
 if __name__ == "__main__":

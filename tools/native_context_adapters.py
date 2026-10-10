@@ -16,6 +16,8 @@ Proporciona el paquete unificado ContextPacket preservando:
 
 from dataclasses import dataclass, field, asdict
 import hashlib
+import html
+from html.parser import HTMLParser
 import json
 import re
 from datetime import datetime, timezone
@@ -29,41 +31,71 @@ SUPPORTED_NETWORKS = {
 SUPPORTED_QUEUES = {"web", "api", "mobile"}
 
 
-def _normalize_iso_timestamp(ts_str: Optional[Any]) -> Optional[str]:
-    if not ts_str:
+class _HTMLTextExtractor(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.result = []
+
+    def handle_data(self, data):
+        self.result.append(data)
+
+    def handle_starttag(self, tag, attrs):
+        if tag in ("p", "br", "div", "li"):
+            self.result.append(" ")
+
+    def get_text(self):
+        raw = "".join(self.result)
+        return re.sub(r"\s+", " ", raw).strip()
+
+
+def strip_html_tags(raw_html: str) -> str:
+    if not raw_html or not isinstance(raw_html, str):
+        return ""
+    parser = _HTMLTextExtractor()
+    try:
+        parser.feed(raw_html)
+        text = parser.get_text()
+    except Exception:
+        text = re.sub(r"<[^>]+>", "", raw_html)
+    return html.unescape(text).strip()
+
+
+def _normalize_iso_timestamp(ts_val: Optional[Any]) -> Optional[str]:
+    if ts_val is None or ts_val == "":
         return None
-    if isinstance(ts_str, (int, float)):
-        # Epoch timestamp in seconds or millis
+
+    if isinstance(ts_val, (int, float)):
         try:
-            val = float(ts_str)
-            if val > 1e11:  # millis
+            val = float(ts_val)
+            if val > 1e11 or val < -1e11:  # millis
                 val /= 1000.0
             dt = datetime.fromtimestamp(val, tz=timezone.utc)
             return dt.isoformat().replace("+00:00", "Z")
         except (ValueError, OverflowError, OSError):
             return None
-    if not isinstance(ts_str, str):
+
+    if not isinstance(ts_val, str):
         return None
 
-    ts_str = ts_str.strip()
+    ts_str = ts_val.strip()
     if not ts_str:
         return None
 
     # Try email/Twitter header format: Fri Oct 09 16:00:00 +0000 2026
     try:
         dt = datetime.strptime(ts_str, "%a %b %d %H:%M:%S %z %Y")
-        dt = dt.astimezone(timezone.utc)
-        return dt.isoformat().replace("+00:00", "Z")
+        return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     except ValueError:
         pass
 
-    # Common formats
+    # Standard formats
     for fmt in (
         "%Y-%m-%dT%H:%M:%SZ",
         "%Y-%m-%dT%H:%M:%S.%fZ",
         "%Y-%m-%dT%H:%M:%S%z",
         "%Y-%m-%dT%H:%M:%S.%f%z",
         "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M:%S%z",
         "%Y-%m-%d",
     ):
         try:
@@ -78,7 +110,8 @@ def _normalize_iso_timestamp(ts_str: Optional[Any]) -> Optional[str]:
 
     # Try ISO fromisoformat if available
     try:
-        dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+        clean_ts = ts_str.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(clean_ts)
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         else:
@@ -116,7 +149,6 @@ def calculate_completeness(
     text: Optional[str],
     missing_fields: List[str]
 ) -> float:
-    # 5 key dimensions: remote_id, timestamp, author, text/body, completeness of extra fields
     weights = {
         "remote_id": 0.25,
         "published_at_iso": 0.25,
@@ -125,26 +157,35 @@ def calculate_completeness(
         "no_critical_missing": 0.10
     }
     score = 0.0
-    if remote_id:
+    if remote_id and str(remote_id).strip():
         score += weights["remote_id"]
     if published_at_iso:
         score += weights["published_at_iso"]
-    if author_handle:
+    if author_handle and str(author_handle).strip():
         score += weights["author_handle"]
-    if text and text.strip():
+    if text and str(text).strip():
         score += weights["text"]
     if "published_at_iso" not in missing_fields and "remote_id" not in missing_fields:
         score += weights["no_critical_missing"]
     return round(score, 4)
 
 
-def adapt_native_observation(network: str, queue: str, raw_payload: Dict[str, Any]) -> ContextPacket:
+def adapt_native_observation(network: str, queue: str, raw_payload: Any) -> ContextPacket:
+    if not isinstance(network, str) or not network.strip():
+        raise ValueError("Network name must be a non-empty string")
+    if not isinstance(queue, str) or not queue.strip():
+        raise ValueError("Queue name must be a non-empty string")
+
     net = network.lower().strip()
     q = queue.lower().strip()
+
     if net not in SUPPORTED_NETWORKS:
         raise ValueError(f"Red no soportada: {network}")
     if q not in SUPPORTED_QUEUES:
         raise ValueError(f"Cola no soportada: {queue}")
+
+    if raw_payload is None or not isinstance(raw_payload, dict):
+        raise TypeError(f"raw_payload must be a non-null dictionary, got {type(raw_payload).__name__}")
 
     raw_str = json.dumps(raw_payload, sort_keys=True, default=str)
     raw_hash = hashlib.sha256(raw_str.encode("utf-8")).hexdigest()[:16]
@@ -161,8 +202,7 @@ def adapt_native_observation(network: str, queue: str, raw_payload: Dict[str, An
 
 def _adapt_bluesky(queue: str, payload: Dict[str, Any], raw_hash: str) -> ContextPacket:
     missing = []
-    # Extract fields from ATProto payload (API, WEB or MOBILE)
-    remote_id = payload.get("uri") or payload.get("cid") or payload.get("id") or ""
+    remote_id = payload.get("uri") or payload.get("cid") or payload.get("id") or payload.get("post_id") or ""
     if not remote_id:
         missing.append("remote_id")
 
@@ -174,7 +214,7 @@ def _adapt_bluesky(queue: str, payload: Dict[str, Any], raw_hash: str) -> Contex
 
     record = payload.get("record") or payload.get("value") or payload
     text = record.get("text") or payload.get("text") or ""
-    if not text:
+    if not text or not str(text).strip():
         missing.append("text")
 
     raw_date = record.get("createdAt") or payload.get("createdAt") or payload.get("indexedAt")
@@ -184,38 +224,46 @@ def _adapt_bluesky(queue: str, payload: Dict[str, Any], raw_hash: str) -> Contex
 
     permalink = payload.get("permalink")
     if not permalink and author_handle and remote_id:
-        # ATProto record URI or web URL
-        if "app.bsky.feed.post" in remote_id:
-            rkey = remote_id.split("/")[-1]
+        if "app.bsky.feed.post" in str(remote_id):
+            rkey = str(remote_id).split("/")[-1]
             permalink = f"https://bsky.app/profile/{author_handle}/post/{rkey}"
-        elif remote_id.startswith("http"):
-            permalink = remote_id
+        elif str(remote_id).startswith("http"):
+            permalink = str(remote_id)
 
-    # Parents / thread context
     parents = []
     reply_parent = payload.get("reply") or payload.get("parent")
-    if reply_parent:
-        if isinstance(reply_parent, dict):
-            parent_item = reply_parent.get("parent") or reply_parent
-            parent_uri = parent_item.get("uri") or parent_item.get("cid") or ""
-            parent_author = parent_item.get("author", {}).get("handle") if isinstance(parent_item.get("author"), dict) else ""
-            parent_text = parent_item.get("record", {}).get("text") if isinstance(parent_item.get("record"), dict) else ""
+    if reply_parent and isinstance(reply_parent, dict):
+        parent_item = reply_parent.get("parent") or reply_parent
+        if isinstance(parent_item, dict):
+            parent_uri = parent_item.get("uri") or parent_item.get("cid") or parent_item.get("id") or ""
+            p_author = parent_item.get("author")
+            parent_author = p_author.get("handle") if isinstance(p_author, dict) else (str(p_author) if p_author else "")
+            p_record = parent_item.get("record")
+            parent_text = p_record.get("text") if isinstance(p_record, dict) else (parent_item.get("text") or "")
             if parent_uri:
-                parents.append({"remote_id": parent_uri, "author": parent_author or "", "text": parent_text or ""})
+                parents.append({"remote_id": str(parent_uri), "author": parent_author or "", "text": parent_text or ""})
 
-    # Media / embeds
     media = []
-    embed = record.get("embed") or payload.get("embed")
-    if embed:
+    embed = record.get("embed") or payload.get("embed") or {}
+    if isinstance(embed, dict):
         images = embed.get("images") or []
         for img in images:
-            alt = img.get("alt") or ""
-            thumb = img.get("thumb") or img.get("fullsize") or ""
+            if isinstance(img, dict):
+                alt = img.get("alt") or ""
+                thumb = img.get("thumb") or img.get("fullsize") or ""
+                media.append({
+                    "type": "image",
+                    "origin": "bluesky_embed",
+                    "provenance": thumb or "embed_image",
+                    "alt": alt or None
+                })
+        ext = embed.get("external")
+        if isinstance(ext, dict):
             media.append({
-                "type": "image",
-                "origin": "bluesky_embed",
-                "provenance": thumb or "embed_image",
-                "alt": alt or None
+                "type": "external",
+                "origin": "bluesky_external_embed",
+                "provenance": ext.get("uri") or "external_embed",
+                "alt": ext.get("title") or None
             })
 
     completeness = calculate_completeness(remote_id, pub_date, author_handle, text, missing)
@@ -250,10 +298,9 @@ def _adapt_mastodon(queue: str, payload: Dict[str, Any], raw_hash: str) -> Conte
     if not author_handle:
         missing.append("author_handle")
 
-    # Content HTML -> strip simple HTML tags if present for text
     raw_content = payload.get("content") or payload.get("text") or ""
-    clean_text = re.sub(r"<[^>]+>", "", raw_content).strip() if raw_content else ""
-    if not clean_text:
+    clean_text = strip_html_tags(raw_content) if raw_content else ""
+    if not clean_text or not clean_text.strip():
         missing.append("text")
 
     raw_date = payload.get("created_at") or payload.get("createdAt")
@@ -272,12 +319,13 @@ def _adapt_mastodon(queue: str, payload: Dict[str, Any], raw_hash: str) -> Conte
     media = []
     attachments = payload.get("media_attachments") or []
     for att in attachments:
-        media.append({
-            "type": att.get("type", "image"),
-            "origin": "mastodon_attachment",
-            "provenance": att.get("url") or att.get("preview_url") or "attachment",
-            "alt": att.get("description") or None
-        })
+        if isinstance(att, dict):
+            media.append({
+                "type": att.get("type", "image"),
+                "origin": "mastodon_attachment",
+                "provenance": att.get("url") or att.get("preview_url") or "attachment",
+                "alt": att.get("description") or None
+            })
 
     completeness = calculate_completeness(remote_id, pub_date, author_handle, clean_text, missing)
 
@@ -290,7 +338,7 @@ def _adapt_mastodon(queue: str, payload: Dict[str, Any], raw_hash: str) -> Conte
         author_name=author_name or None,
         published_at_iso=pub_date,
         text=clean_text or None,
-        body=raw_content if "<" in raw_content else None,
+        body=raw_content if ("<" in raw_content or "&" in raw_content) else None,
         parents=parents,
         media=media,
         missing_fields=missing,
@@ -311,8 +359,8 @@ def _adapt_x(queue: str, payload: Dict[str, Any], raw_hash: str) -> ContextPacke
     if not author_handle:
         missing.append("author_handle")
 
-    text = payload.get("full_text") or payload.get("text") or ""
-    if not text:
+    text = payload.get("full_text") or payload.get("text") or payload.get("note_tweet", {}).get("note_tweet_results", {}).get("result", {}).get("text") or ""
+    if not text or not str(text).strip():
         missing.append("text")
 
     raw_date = payload.get("created_at") or payload.get("createdAt")
@@ -328,17 +376,18 @@ def _adapt_x(queue: str, payload: Dict[str, Any], raw_hash: str) -> ContextPacke
     in_reply_to_status_id = payload.get("in_reply_to_status_id_str") or payload.get("in_reply_to_status_id")
     if in_reply_to_status_id:
         in_reply_user = payload.get("in_reply_to_screen_name") or ""
-        parents.append({"remote_id": str(in_reply_to_status_id), "author": in_reply_user, "text": ""})
+        parents.append({"remote_id": str(in_reply_to_status_id), "author": str(in_reply_user), "text": ""})
 
     media = []
     entities_media = payload.get("extended_entities", {}).get("media") or payload.get("entities", {}).get("media") or []
     for m in entities_media:
-        media.append({
-            "type": m.get("type", "photo"),
-            "origin": "x_media_entity",
-            "provenance": m.get("media_url_https") or m.get("media_url") or "media_entity",
-            "alt": m.get("alt_text") or None
-        })
+        if isinstance(m, dict):
+            media.append({
+                "type": m.get("type", "photo"),
+                "origin": "x_media_entity",
+                "provenance": m.get("media_url_https") or m.get("media_url") or "media_entity",
+                "alt": m.get("alt_text") or None
+            })
 
     completeness = calculate_completeness(remote_id, pub_date, author_handle, text, missing)
 
@@ -377,8 +426,8 @@ def _adapt_threads(queue: str, payload: Dict[str, Any], raw_hash: str) -> Contex
         missing.append("author_handle")
 
     caption = payload.get("caption") or {}
-    text = caption.get("text") if isinstance(caption, dict) else payload.get("text") or payload.get("caption") or ""
-    if not text:
+    text = caption.get("text") if isinstance(caption, dict) else (payload.get("text") or payload.get("caption") or "")
+    if not text or not str(text).strip():
         missing.append("text")
 
     raw_date = payload.get("taken_at") or payload.get("created_at") or payload.get("timestamp")
@@ -390,13 +439,13 @@ def _adapt_threads(queue: str, payload: Dict[str, Any], raw_hash: str) -> Contex
     permalink = payload.get("permalink") or (f"https://www.threads.net/@{author_handle}/post/{code}" if code and author_handle else None)
 
     parents = []
-    reply_to = payload.get("reply_to") or payload.get("parent_post_id")
+    reply_to = payload.get("reply_to") or payload.get("text_post_app_info", {}).get("reply_to", {}).get("target_post_id") or payload.get("parent_post_id")
     if reply_to:
         parents.append({"remote_id": str(reply_to), "author": "", "text": ""})
 
     media = []
     images = payload.get("image_versions2", {}).get("candidates") or []
-    if images:
+    if images and isinstance(images, list):
         first_img = images[0].get("url") if isinstance(images[0], dict) else ""
         media.append({
             "type": "image",
@@ -442,7 +491,7 @@ def _adapt_facebook(queue: str, payload: Dict[str, Any], raw_hash: str) -> Conte
         missing.append("author_handle")
 
     message = payload.get("message") or payload.get("story") or payload.get("text") or ""
-    if not message:
+    if not message or not str(message).strip():
         missing.append("text")
 
     raw_date = payload.get("created_time") or payload.get("created_at") or payload.get("timestamp")
@@ -460,12 +509,13 @@ def _adapt_facebook(queue: str, payload: Dict[str, Any], raw_hash: str) -> Conte
     media = []
     attachments = payload.get("attachments", {}).get("data") or []
     for att in attachments:
-        media.append({
-            "type": att.get("type", "photo"),
-            "origin": "facebook_attachment",
-            "provenance": att.get("url") or att.get("target", {}).get("url") or "attachment",
-            "alt": att.get("title") or None
-        })
+        if isinstance(att, dict):
+            media.append({
+                "type": att.get("type", "photo"),
+                "origin": "facebook_attachment",
+                "provenance": att.get("url") or att.get("target", {}).get("url") or "attachment",
+                "alt": None
+            })
 
     completeness = calculate_completeness(remote_id, pub_date, author_handle, message, missing)
 
@@ -506,7 +556,7 @@ def _adapt_pinterest(queue: str, payload: Dict[str, Any], raw_hash: str) -> Cont
     title = payload.get("title") or ""
     description = payload.get("description") or payload.get("note") or ""
     combined_text = title if not description else f"{title}\n{description}".strip()
-    if not combined_text:
+    if not combined_text or not combined_text.strip():
         missing.append("text")
 
     raw_date = payload.get("created_at") or payload.get("createdAt")
@@ -518,7 +568,7 @@ def _adapt_pinterest(queue: str, payload: Dict[str, Any], raw_hash: str) -> Cont
 
     media = []
     media_images = payload.get("media", {}).get("images") or payload.get("images") or {}
-    if media_images:
+    if isinstance(media_images, dict) and media_images:
         orig = media_images.get("originals") or media_images.get("600x") or media_images.get("original") or {}
         img_url = orig.get("url") if isinstance(orig, dict) else ""
         if img_url:
@@ -562,7 +612,7 @@ def _adapt_reddit(queue: str, payload: Dict[str, Any], raw_hash: str) -> Context
     title = payload.get("title") or ""
     selftext = payload.get("selftext") or payload.get("body") or ""
     combined_text = title or selftext
-    if not combined_text:
+    if not combined_text or not str(combined_text).strip():
         missing.append("text")
 
     raw_date = payload.get("created_utc") or payload.get("created")
@@ -571,7 +621,7 @@ def _adapt_reddit(queue: str, payload: Dict[str, Any], raw_hash: str) -> Context
         missing.append("published_at_iso")
 
     permalink = payload.get("permalink")
-    if permalink and not permalink.startswith("http"):
+    if permalink and not str(permalink).startswith("http"):
         permalink = f"https://www.reddit.com{permalink}"
 
     parents = []
@@ -587,7 +637,7 @@ def _adapt_reddit(queue: str, payload: Dict[str, Any], raw_hash: str) -> Context
             "provenance": payload.get("media", {}).get("reddit_video", {}).get("fallback_url") or "reddit_video",
             "alt": None
         })
-    elif payload.get("url") and any(payload.get("url").endswith(ext) for ext in (".jpg", ".png", ".gif", ".webp")):
+    elif payload.get("url") and any(str(payload.get("url")).endswith(ext) for ext in (".jpg", ".png", ".gif", ".webp")):
         media.append({
             "type": "image",
             "origin": "reddit_post_image",
@@ -632,7 +682,7 @@ def _adapt_tiktok(queue: str, payload: Dict[str, Any], raw_hash: str) -> Context
         missing.append("author_handle")
 
     desc = payload.get("desc") or payload.get("title") or payload.get("text") or ""
-    if not desc:
+    if not desc or not str(desc).strip():
         missing.append("text")
 
     raw_date = payload.get("create_time") or payload.get("createTime") or payload.get("created_at")
@@ -643,7 +693,6 @@ def _adapt_tiktok(queue: str, payload: Dict[str, Any], raw_hash: str) -> Context
     permalink = payload.get("share_url") or (f"https://www.tiktok.com/@{author_handle}/video/{remote_id}" if author_handle and remote_id else None)
 
     media = []
-    # Video details without visual hallucination
     video = payload.get("video") or {}
     cover_url = video.get("cover") or video.get("dynamic_cover") or ""
     if cover_url or remote_id:
@@ -691,8 +740,8 @@ def _adapt_instagram(queue: str, payload: Dict[str, Any], raw_hash: str) -> Cont
         missing.append("author_handle")
 
     caption = payload.get("caption") or {}
-    text = caption.get("text") if isinstance(caption, dict) else payload.get("text") or payload.get("caption") or ""
-    if not text:
+    text = caption.get("text") if isinstance(caption, dict) else (payload.get("text") or payload.get("caption") or "")
+    if not text or not str(text).strip():
         missing.append("text")
 
     raw_date = payload.get("taken_at") or payload.get("timestamp") or payload.get("created_at")
@@ -709,13 +758,25 @@ def _adapt_instagram(queue: str, payload: Dict[str, Any], raw_hash: str) -> Cont
         parents.append({"remote_id": str(parent_comment_id), "author": "", "text": ""})
 
     media = []
-    media_type = payload.get("media_type") or ("video" if payload.get("is_video") else "image")
-    media.append({
-        "type": "video" if str(media_type) in ("2", "video") else "image",
-        "origin": "instagram_media",
-        "provenance": payload.get("display_url") or payload.get("image_url") or "media_url",
-        "alt": payload.get("accessibility_caption") or None
-    })
+    carousel = payload.get("carousel_media")
+    if carousel and isinstance(carousel, list):
+        for item in carousel:
+            if isinstance(item, dict):
+                m_type = "video" if item.get("media_type") in (2, "video") or item.get("is_video") else "image"
+                media.append({
+                    "type": m_type,
+                    "origin": "instagram_carousel_media",
+                    "provenance": item.get("display_url") or item.get("image_url") or "carousel_item",
+                    "alt": item.get("accessibility_caption") or None
+                })
+    else:
+        media_type = payload.get("media_type") or ("video" if payload.get("is_video") else "image")
+        media.append({
+            "type": "video" if str(media_type) in ("2", "video") else "image",
+            "origin": "instagram_media",
+            "provenance": payload.get("display_url") or payload.get("image_url") or "media_url",
+            "alt": payload.get("accessibility_caption") or None
+        })
 
     completeness = calculate_completeness(remote_id, pub_date, author_handle, text, missing)
 
