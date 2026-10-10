@@ -4,12 +4,8 @@ on:
   # Valida toda PR del mirror, incluso si solo cambia configuración.
   pull_request:
   push:
+    # Detectar cualquier ruta operativa aunque no cambien tools/tests.
     branches: [main]
-    paths:
-      - 'tools/**'
-      - 'tests/**'
-      - '.github/workflows/validate-social-tools.yml'
-      - 'requirements-ci.txt'
   # Dispatch valida únicamente la suite offline; no inventa rangos Git.
   workflow_dispatch:
 
