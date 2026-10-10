@@ -1,0 +1,73 @@
+python
+# Referencia de integración: https://github.com/davidpd89/ci-sandbox-tmp/blob/main/tools/relationship_policy.py
+# Archivo nuevo propuesto: tools/threads_profile_score.py
+from __future__ import annotations
+
+from datetime import datetime, timezone
+
+from tools.threads_signal_schema import ThreadsProfileSignal
+
+WEIGHTS = {
+    "activity": 0.25,
+    "reciprocity": 0.20,
+    "topic": 0.20,
+    "interaction": 0.15,
+    "language": 0.15,
+    "identity": 0.05,
+}
+
+
+def _activity_score(last_post_at: datetime | None) -> float:
+    if not last_post_at:
+        return 0.0
+    days = (datetime.now(timezone.utc) - last_post_at).days
+    if days <= 7:
+        return 1.0
+    if days <= 30:
+        return 0.8
+    if days <= 60:
+        return 0.4
+    return 0.0
+
+
+def _reciprocity_score(followers: int, following: int) -> float:
+    if following <= 0:
+        return 0.5 if followers > 0 else 0.0
+    ratio = followers / following
+    if ratio < 0.2:
+        return 0.1
+    if ratio < 1.0:
+        return 0.6
+    if ratio <= 10.0:
+        return 1.0
+    if ratio <= 50.0:
+        return 0.7
+    return 0.4
+
+
+def _identity_score(bio: str, post_count: int) -> float:
+    score = 0.0
+    if len(bio.strip()) >= 20:
+        score += 0.6
+    if post_count >= 10:
+        score += 0.4
+    return score
+
+
+def score_profile(signal: ThreadsProfileSignal) -> float:
+    interaction = min(
+        1.0,
+        (signal.reply_count_30d / 10.0) * 0.7
+        + (signal.like_count_30d / 50.0) * 0.3,
+    )
+    language = 1.0 if signal.lang == "es" and signal.lang_confidence >= 0.7 else 0.0
+
+    return round(
+        WEIGHTS["activity"] * _activity_score(signal.last_post_at)
+        + WEIGHTS["reciprocity"] * _reciprocity_score(signal.followers, signal.following)
+        + WEIGHTS["topic"] * max(0.0, min(1.0, signal.topic_score))
+        + WEIGHTS["interaction"] * interaction
+        + WEIGHTS["language"] * language
+        + WEIGHTS["identity"] * _identity_score(signal.bio, signal.post_count),
+        4,
+    )
