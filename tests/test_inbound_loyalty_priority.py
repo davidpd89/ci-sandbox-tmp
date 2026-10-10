@@ -344,6 +344,21 @@ class InboundLoyaltyTests(unittest.TestCase):
         weak = {k: v for k, v in post.items() if k != "actor_id"} | {"handle": "ana"}
         self.assertEqual(self.build(rows, posts=[weak])["queued_contacts"], 0)
 
+    def test_non_native_sources_do_not_break_generic_nine_network_contract(self):
+        # La extensión nativa X/Threads no debe invalidar fuentes existentes
+        # de otros productores que ya transportaban el campo source.
+        for net in ("bluesky", "mastodon", "facebook", "pinterest", "reddit",
+                    "tiktok", "instagram"):
+            with self.subTest(network=net):
+                row = obs(network=net, source="importer:synthetic",
+                          kind="reply", target_ref="ref1")
+                self.assertEqual(self.build([row])["queued_contacts"], 0)
+                answer = self.build([row | {"answered": False}])
+                lane = loyalty.LANES.get(net, "UNASSIGNED")
+                self.assertEqual(answer["queues"][lane][0]["proposals"][0]["kind"],
+                                 "context_review")
+
+
 
 if __name__ == "__main__":
     unittest.main()
