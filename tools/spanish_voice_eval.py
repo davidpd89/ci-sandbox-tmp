@@ -36,7 +36,8 @@ def main():
     parser.add_argument("--blind-prefix", type=Path)
     parser.add_argument("--blind-key-dir", type=Path,
                         help="directorio PRIVADO diferente al de revisión")
-    parser.add_argument("--seed", default="independent-reviewer")
+    parser.add_argument("--seed", default=None,
+                        help="SOLO pruebas sintéticas: omitir en evaluación humana")
     parser.add_argument("--score-review", type=Path)
     parser.add_argument("--score-key", type=Path)
     args = parser.parse_args()
