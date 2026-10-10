@@ -1,0 +1,3 @@
+python
+# Fuente exacta: https://github.com/RomySaputraSihananda/tiktok-comment-scrapper/blob/master/README.md
+python main.py --aweme_id=https://www.tiktok.com/@usuario/video/1234567890 --size=50 --output=data
