@@ -57,6 +57,16 @@ class NativeAliasAdapters(unittest.TestCase):
         after = ingest_observations("bluesky", [b], timeline=r["timeline"])
         self.assertEqual(after["diagnostics"][0]["reason"], "evidence_id_collision")
 
+    def test_future_85_key_builder_errors_are_redacted(self):
+        def external_validator(net, handle):
+            raise ValueError("sensitive input from upstream")
+        timeline = AliasTimeline(key_builder=external_validator)
+        r = ingest_observations("bluesky", [self.fixture("bluesky", "API")],
+                                timeline=timeline)
+        self.assertFalse(r["accepted"])
+        self.assertEqual(r["diagnostics"][0]["reason"], "invalid_identity_fields")
+        self.assertNotIn("sensitive input", str(r["diagnostics"]))
+
     def test_failure_does_not_echo_proof_or_mutate(self):
         a = self.fixture("threads", "MOBILE")
         a["proof"] = "opaque-sensitive-synthetic-string"
