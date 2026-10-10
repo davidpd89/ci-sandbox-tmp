@@ -70,7 +70,7 @@ class EntrypointTests(unittest.TestCase):
         def colliding(network, kind):
             return ["año"] if kind == "hashtags" else ["#año", "lectura ñ"]
         with patch.dict(sys.modules, {"hashtag_query_consumers": hqc}):
-            with patch.object(hqc, "_read", side_effect=colliding):
+            with patch.object(hqc, "_read", side_effect=lambda n, k, reader=None: colliding(n, k)):
                 x = isolate("x_scan.py", "_lexical_queries",
                             datetime=datetime,
                             SEARCH_POOL=["lectores lang:es", "#año lang:es"])
