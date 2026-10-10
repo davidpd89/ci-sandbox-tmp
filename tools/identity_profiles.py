@@ -15,6 +15,9 @@ DOMAINS = {
     "bluesky": {"bsky.app"}, "tiktok": {"tiktok.com", "www.tiktok.com"},
     "instagram": {"instagram.com", "www.instagram.com"},
 }
+# Only known platform hosts may have the optional www alias removed.
+# A www prefix on a Mastodon instance or an arbitrary website is NOT equivalent.
+PLATFORM_DOMAINS = frozenset(domain for domains in DOMAINS.values() for domain in domains)
 
 class IdentityError(ValueError):
     pass
@@ -31,6 +34,8 @@ def canonical_url(value: str) -> str:
                 or any(c.isspace() for c in value)):
             raise IdentityError("url_invalid")
         host = host.encode("idna").decode("ascii").lower()
+        if host.startswith("www.") and host[4:] in PLATFORM_DOMAINS:
+            host = host[4:]
     except (ValueError, UnicodeError) as exc:
         raise IdentityError("url_invalid") from exc
     return urlunsplit(("https", host, u.path.rstrip("/"), "", ""))
