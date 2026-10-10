@@ -30,6 +30,8 @@ sesiones ni publicadores. El flujo real permanece intacto.
 | [promptfoo](https://github.com/promptfoo/promptfoo/tree/37cfe7146f7abe770867659ad7b01ff57b723033) | matrices de prompts/modelos, assertions y CI | Node >=22.22 según `package.json` consultado; un segundo runtime no necesario para un test offline pequeño en Python 3.11 | patrón de pruebas declarativas y resultados comparables; **no** integrar runtime |
 | [DeepEval](https://github.com/confident-ai/deepeval/tree/4598fe8eb7be713637fbc803b9f127b5b83de69a) | métricas personalizadas, jueces LLM G-Eval | juez externo, coste y variabilidad de evaluación; dependencias nuevas para tareas sin secretos | posible segunda fase supervisada, **no** sustituye juicio humano |
 | [Argilla](https://github.com/argilla-io/argilla/tree/5338519accb13ae422f8bf9c0642651c249c49af) | etiquetado y datasets de evaluación humana | infraestructura de anotación adicional para solo 72 respuestas | inspira CSV ciego; no instalar |
+| [Hugging Face Transformers](https://github.com/huggingface/transformers/tree/536ecc007387a50e77603bb5d92100e9b07514cc) | generadores locales, modelos y prompts configurables desde Python | instalar modelos y comparar latencia/memoria/calidad por hardware y licencia del peso | candidato futuro; no introducir modelo no medido |
+| [llama.cpp](https://github.com/ggml-org/llama.cpp/tree/10a60cf303566e10d6a7a2774c17d2085503d87b) | inferencia local con modelos cuantizados, también posible en Windows | binarios, recursos, licencia del modelo independiente del motor; benchmarking de hardware ausente | no integrar sin resultados de calidad y capacidad |
 | **Herramientas existentes + stdlib Python** | `valid_reply`, tipología común de respuestas, compatible con tres colas | no estima significado de forma automática | **seleccionada** para evitar divergencia por red |
 
 Repositorios y licencias consultados en GitHub el **10/10/2026**.
@@ -55,6 +57,8 @@ con múltiples modelos y juicio humano independiente.
 - **promptfoo**: MIT, [licencia](https://github.com/promptfoo/promptfoo/blob/37cfe7146f7abe770867659ad7b01ff57b723033/LICENSE).
 - **DeepEval**: Apache-2.0, [licencia](https://github.com/confident-ai/deepeval/blob/4598fe8eb7be713637fbc803b9f127b5b83de69a/LICENSE.md).
 - **Argilla**: Apache-2.0, [licencia](https://github.com/argilla-io/argilla/blob/5338519accb13ae422f8bf9c0642651c249c49af/LICENSE).
+- **Transformers**: Apache-2.0, [licencia](https://github.com/huggingface/transformers/blob/536ecc007387a50e77603bb5d92100e9b07514cc/LICENSE).
+- **llama.cpp**: MIT, [licencia](https://github.com/ggml-org/llama.cpp/blob/10a60cf303566e10d6a7a2774c17d2085503d87b/LICENSE).
 - No se traen dependencias, datos personales, imágenes, transcripciones
   auténticas ni código externo al mirror. Si en el futuro se importa
   código, conservar licencia y avisos atribuidos.
