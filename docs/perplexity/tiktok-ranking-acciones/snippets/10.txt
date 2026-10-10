@@ -1,0 +1,6 @@
+python
+# Adaptación: frescura antes que afinidad cuando ambas son comparables
+sorted(
+    item["posts"],
+    key=lambda p: (-p["score"], p.get("post_age_hours") or 10**9),
+)[:2]
