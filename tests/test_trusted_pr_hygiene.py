@@ -132,6 +132,24 @@ class TrustedPRHygieneTests(unittest.TestCase):
         with self.assertRaisesRegex(gate.HygieneError, "changed|mismatch"):
             self.verify([item("README.md")], mutate=True)
 
+    def test_fails_closed_if_base_moves_mid_scan(self):
+        class MovingBase(Reader):
+            def get(self, repo, path):
+                result = super().get(repo, path)
+                if path == "pulls/92" and self.snapshots == 2:
+                    result["base"]["sha"] = "c" * 40
+                return result
+
+        with self.assertRaisesRegex(gate.HygieneError, "changed|mismatch"):
+            gate.check_pr(MovingBase([item("README.md")]), REPO, 92, HEAD, BASE)
+
+    def test_trusted_policy_includes_merged_base_hardening(self):
+        # A nominal .env template is only allowed as a file, never a directory.
+        self.assertEqual(
+            self.verify([item(".env.example/config.txt"), item("docs/readme.md")]),
+            (2, [".env.example/config.txt"]),
+        )
+
     def test_rejects_unknown_file_status_or_records(self):
         for bad in ([{"filename": "safe.md", "status": "mystery"}],
                     [{"filename": "", "status": "added"}],
