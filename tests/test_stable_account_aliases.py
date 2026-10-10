@@ -60,7 +60,8 @@ class StableAliasTests(unittest.TestCase):
         self.assertEqual(self.g.evidence["a"].stable,
                          "mastodon|https://example.org/users/a")
         for sid in ("http://example.org/users/a", "https://example.org:443/users/a",
-                    "https://example.org", "https://user:pass@example.org/users/a"):
+                    "https://example.org", "https://example.org/",
+                    "https://example.org////", "https://user:pass@example.org/users/a"):
             with self.subTest(sid=sid), self.assertRaises(AliasError):
                 add(self.g, "bad", "a@example.org", sid, net="mastodon")
 
