@@ -1,4 +1,34 @@
 # PR #99 — Puentes offline de observaciones de hashtags
+
+Fuente primaria: https://github.com/MarshalX/atproto/blob/4c17895c97f6d42ecb9c41dc5c2fb450ab9c6ac8/LICENSE
+Fecha de consulta: 2026-10-10
+Licencia SPDX: MIT
+Referencia inmutable: https://github.com/MarshalX/atproto/tree/4c17895c97f6d42ecb9c41dc5c2fb450ab9c6ac8
+
+## Problema
+
+Ausencia de puente común entre los lectores heterogéneos y el contrato offline #63.
+
+## Alternativas
+
+SDKs ATProto, Mastodon.py y PRAW contrastados frente a adaptadores stdlib sin dependencia nueva; tabla y evidencia detallada más abajo.
+
+## Licencias y procedencia
+
+MIT, MIT y BSD-2-Clause verificados contra commits inmutables (véase tabla). No se ha copiado código externo.
+
+## Decisión
+
+Normalización read-only compartida con especializaciones por red, separada de la lectura y el motor de ranking.
+
+## Pruebas
+
+Suite sintética unittest Python 3.11 en Ubuntu/Windows, no es un canario operativo.
+
+## Retirada
+
+Quitar las llamadas de integración propuestas y descartar la instancia en memoria; ninguna migración.
+
 Fecha de contraste: **2026-10-10**. Rama `research/hashtag-observation-adapters`.
 SPDX del código propio nuevo: **MIT**. No se han copiado líneas de terceros.
 
