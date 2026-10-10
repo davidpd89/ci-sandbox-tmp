@@ -1,0 +1,5 @@
+# Optional, read-only X API source; never installed by requirements-ci.txt.
+# Tweepy 4.17.0, MIT, Python >=3.9, py3-none-any (Windows/Python 3.11 metadata compatible).
+# Upstream release commit: c1978d643ecce491929084e4290b35f57e4921ad
+# https://github.com/tweepy/tweepy/blob/c1978d643ecce491929084e4290b35f57e4921ad/LICENSE
+tweepy==4.17.0
