@@ -180,6 +180,31 @@ class IsolatedActionBoundaryTests(unittest.TestCase):
         exec(compile(isolated, path, "exec"), ns)
         return ns[name]
 
+    def test_manual_report_survives_missing_auditor(self):
+        import io
+        import tempfile
+        import content_queue_alert as alert
+        with tempfile.TemporaryDirectory() as tmp:
+            report = Path(tmp) / "pending.md"
+            now = alert.datetime.datetime.now().replace(microsecond=0)
+            item = {"texto": SAMPLE, "titulo": "Título sintético",
+                    "fecha_hora": now, "md_path": str(Path(tmp) / "post.md")}
+            statuses = {"due": [item], "today": [], "verified": [],
+                        "unverifiable": True}
+            mock_sys = types.SimpleNamespace(
+                argv=[], stdout=types.SimpleNamespace(reconfigure=lambda **_: None))
+            output = io.StringIO()
+            with mock.patch.object(alert, "sys", mock_sys), \
+                 mock.patch.object(alert, "classify", return_value=statuses), \
+                 mock.patch.object(alert.cq, "RED_FOLDERS", {"reddit": "sintético"}), \
+                 mock.patch.object(alert, "OUT_MD", str(report)), \
+                 mock.patch.object(voice, "inspect_fields",
+                                   side_effect=voice.VoicePreflightUnavailable("synthetic")), \
+                 contextlib.redirect_stdout(output):
+                self.assertEqual(alert.main(["reddit", "--no-verify"]), 0)
+            self.assertIn("VENCIDA", report.read_text(encoding="utf-8"))
+            self.assertIn("auditor_es_no_disponible", output.getvalue())
+
     def test_reddit_root_comment_failure_cannot_connect(self):
         calls = []
         fn = self.extract("reddit_interact.py", "comment", {
@@ -331,8 +356,9 @@ class StaticLastBoundaryTests(unittest.TestCase):
     def test_pinterest_direct_before_playwright_and_no_second_caption(self):
         self.assert_before("pinterest_publish.py", "voice.inspect_fields(fields,",
                            "p = sync_playwright().start()", "publish_pin")
-        self.assertIn("voice_checked=True", self.source("content_publisher.py"))
-        self.assertIn('if voice_checked else', self.source("pinterest_publish.py"))
+        self.assertNotIn("voice_checked", self.source("content_publisher.py"))
+        self.assertNotIn("voice_checked", self.source("pinterest_publish.py"))
+        self.assertIn('"descripcion": description', self.source("pinterest_publish.py"))
 
     def test_manual_pending_is_not_marked_web(self):
         self.assert_before("content_queue_alert.py", "voice.inspect_fields(fields,",
