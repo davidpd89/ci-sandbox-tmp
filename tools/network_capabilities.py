@@ -1,4 +1,4 @@
-"""Inventario verificable de capacidades reales por red (PR #47).
+"""Inventario verificable de capacidades observadas por red (PR #47 y #43).
 
 No ejecuta ninguna acción externa ni consulta cuentas. Lee únicamente las
 declaraciones de los orquestadores y los adaptadores Python existentes.
@@ -18,7 +18,7 @@ import json
 
 NETWORKS = (
     "bluesky", "mastodon", "x", "threads",
-    "facebook", "pinterest", "reddit", "tiktok",
+    "facebook", "instagram", "pinterest", "reddit", "tiktok",
 )
 FEATURES = (
     "pipeline", "unfollow_adapter", "unfollow_scheduled",
@@ -32,8 +32,8 @@ def _commands(steps):
             yield tuple(str(piece).replace("\\", "/") for piece in entry)
 
 
-def _scheduled(pipeline, filename, network=None):
-    for section in ("pre", "post"):
+def _scheduled(pipeline, filename, network=None, *, sections=("pre", "post")):
+    for section in sections:
         for argv in _commands(pipeline.get(section)):
             if any(v.endswith("/" + filename) or v == filename for v in argv):
                 if network is None or network in argv:
@@ -61,7 +61,7 @@ def build_matrix(*, pipelines=None, cleanup_adapters=None, harvesters=None):
         unfollow_job = _scheduled(pipe, "unfollow_cleanup.py", net)
         loyalty_job = _scheduled(pipe, "loyalty.py", net)
         writer_job = any(
-            _scheduled(pipe, filename)
+            _scheduled(pipe, filename, sections=("pre",))
             for filename in ("reply_writer.py", "api_comment_writer.py", "tiktok_comment_writer.py")
         )
         out[net] = {
