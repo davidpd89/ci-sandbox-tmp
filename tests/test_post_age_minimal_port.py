@@ -11,6 +11,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools"))
 
 import pinterest_growth
 import post_age_policy as age
+import threads_api
 
 NOW = dt.datetime(2026, 10, 10, 12, tzinfo=dt.timezone.utc)
 
@@ -85,6 +86,27 @@ class MinimalAgePortTests(unittest.TestCase):
         item["post_created_at"] = before(1)
         self.assertEqual(age.check("threads", item, now=NOW),
                          (True, "edad_ok"))
+
+    def test_threads_api_followup_carries_original_inbound_timestamp(self):
+        inbound = {"id": "99", "username": "lectora",
+                   "text": "¿Qué lectura recomiendas?",
+                   "timestamp": before(6),
+                   "permalink": "https://www.threads.com/@lectora/post/xyz"}
+        decisions = {"actions": [{"id": "99", "text": "Prueba la trilogía."}]}
+        action = threads_api.build_plan([inbound], decisions)[0]
+        self.assertEqual(action["post_created_at"], before(6))
+        self.assertEqual(age.check("threads", action, now=NOW),
+                         (True, "edad_ok"))
+
+        inbound["timestamp"] = before(8)
+        old = threads_api.build_plan([inbound], decisions)[0]
+        self.assertEqual(age.check("threads", old, now=NOW),
+                         (False, "post_antiguo"))
+
+        inbound.pop("timestamp")
+        unknown = threads_api.build_plan([inbound], decisions)[0]
+        self.assertEqual(age.check("threads", unknown, now=NOW),
+                         (False, "edad_desconocida"))
 
     def test_invalid_bluesky_tid_header_is_not_decoded(self):
         self.assertIsNone(age._tid_bluesky("k" + "2" * 12))
