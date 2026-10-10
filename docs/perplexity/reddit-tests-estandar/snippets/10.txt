@@ -1,0 +1,15 @@
+json
+{
+  "kind": "t1",
+  "data": {
+    "id": "c2def",
+    "name": "t1_c2def",
+    "author": "autor_ejemplo",
+    "body": "Gracias, intenté que el giro se sintiera inevitable.",
+    "score": 1,
+    "created_utc": 1760000300,
+    "permalink": "/r/Fantasy/comments/abc123/ejemplo/c2def/",
+    "link_id": "t3_abc123",
+    "parent_id": "t1_c1abc"
+  }
+}
