@@ -1,0 +1,53 @@
+python
+# tests/test_mastodon_adapter_contract.py
+import json
+from pathlib import Path
+
+import pytest
+
+from growth.adapters.mastodon import MastodonAdapter
+
+
+FIXTURES = Path(__file__).parents[1] / "fixtures" / "mastodon"
+
+
+@pytest.mark.parametrize(
+    "fixture_name",
+    [
+        "status_public_minimal.json",
+        "status_public_with_html.json",
+        "status_remote_author.json",
+        "status_boost.json",
+    ],
+)
+def test_status_fixture_matches_social_post_contract(fixture_name, adapter):
+    payload = json.loads((FIXTURES / fixture_name).read_text(encoding="utf-8"))
+    post = adapter.normalize_status(payload)
+
+    assert post.network == "mastodon"
+    assert isinstance(post.external_id, str)
+    assert post.author.external_id
+    assert post.author.handle
+    assert post.created_at.tzinfo is not None
+    assert post.url.startswith("https://")
+    assert post.visibility in {"public", "unlisted", "private", "direct"}
+
+
+def test_remote_author_preserves_instance(adapter):
+    payload = json.loads(
+        (FIXTURES / "status_remote_author.json").read_text(encoding="utf-8")
+    )
+    post = adapter.normalize_status(payload)
+
+    assert post.author.instance == "fosstodon.org"
+    assert post.author.handle == "autor@fosstodon.org"
+
+
+def test_boost_target_is_original_status(adapter):
+    payload = json.loads(
+        (FIXTURES / "status_boost.json").read_text(encoding="utf-8")
+    )
+    post = adapter.normalize_status(payload)
+
+    assert post.reblog_of_external_id == "109900000000000002"
+    assert post.external_id == "109900000000000003"
