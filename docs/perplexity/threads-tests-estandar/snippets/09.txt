@@ -1,0 +1,6 @@
+json
+// tests/fixtures/threads/container_ready.json
+{
+  "id": "threads_container_1",
+  "status": "FINISHED"
+}
