@@ -9,6 +9,7 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import date
 from math import isfinite
+from numbers import Real
 
 NETWORKS = frozenset((
     "bluesky", "mastodon", "x", "threads", "facebook", "pinterest",
@@ -158,6 +159,7 @@ def rank_candidates(candidates: list[Candidate], observations: list[Observation]
         networks.add(row.network)
     history: dict[str, list[tuple[Observation, float]]] = {net: [] for net in networks}
     seen_events = set()
+    event_signatures = {}
     for event in observations:
         if not isinstance(event, Observation):
             raise ValueError("observación inválida")
@@ -165,6 +167,11 @@ def rank_candidates(candidates: list[Candidate], observations: list[Observation]
         if key in seen_events:
             raise ValueError("event_id duplicado en la misma ventana")
         seen_events.add(key)
+        identity_key = (event.network, event.event_id)
+        signature = (event.action, event.performed_on, tuple(_features(event)))
+        if identity_key in event_signatures and event_signatures[identity_key] != signature:
+            raise ValueError("evento incompatible entre ventanas")
+        event_signatures[identity_key] = signature
         reward = validated_reward(event, as_of=as_of, allow_synthetic=allow_synthetic)
         if reward is not None and event.network in history:
             history[event.network].append((event, reward))
@@ -192,7 +199,7 @@ def rank_candidates(candidates: list[Candidate], observations: list[Observation]
             if isinstance(prediction, list):
                 prediction = prediction[0] if len(prediction) == 1 else {}
             learned = prediction.get(row.action) if isinstance(prediction, dict) else None
-            if type(learned) in (int, float) and isfinite(learned):
+            if isinstance(learned, Real) and not isinstance(learned, bool) and isfinite(learned):
                 score = 0.60 * score + 0.40 * max(0., min(1., learned))
                 policy = "mabwiser_linucb"
         output.append(Ranking(row, round(score, 6), policy, len(history[row.network])))
