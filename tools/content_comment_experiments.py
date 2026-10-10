@@ -14,6 +14,7 @@ from pathlib import Path
 import random
 import re
 import sqlite3
+from urllib.parse import quote
 
 NETWORKS = frozenset(("x", "threads", "facebook", "pinterest", "reddit",
                       "bluesky", "mastodon", "tiktok", "instagram"))
@@ -65,16 +66,26 @@ def _posterior(successes, complete, rng, draws):
 class ExperimentStore:
     """Abrir SIEMPRE sobre un fichero nuevo/de pruebas elegido por el llamador."""
 
-    def __init__(self, path):
+    def __init__(self, path, *, read_only=False):
         path = Path(path)
         if str(path) == ":memory:":
             raise ValueError("usar una ruta temporal explícita")
         if not path.parent.is_dir():
             raise ValueError("el directorio de experimentos no existe")
-        self.db = sqlite3.connect(str(path), timeout=10, isolation_level=None)
+        if read_only and not path.is_file():
+            raise ValueError("base de datos inexistente")
+        self.read_only = read_only
+        if read_only:
+            # URI quoting: compatible con espacios, '?' y rutas Windows.
+            uri = "file:" + quote(path.resolve().as_posix(), safe="/:") + "?mode=ro"
+            self.db = sqlite3.connect(uri, uri=True, timeout=10, isolation_level=None)
+        else:
+            self.db = sqlite3.connect(str(path), timeout=10, isolation_level=None)
         self.db.row_factory = sqlite3.Row
         self.db.execute("PRAGMA busy_timeout=10000")
         self.db.execute("PRAGMA foreign_keys=ON")
+        if read_only:
+            return
         self.db.executescript("""
             CREATE TABLE IF NOT EXISTS experiments(
                 name TEXT PRIMARY KEY, seed TEXT NOT NULL, definition TEXT NOT NULL
@@ -108,8 +119,13 @@ class ExperimentStore:
     def __exit__(self, *_):
         self.close()
 
+    def _writable(self):
+        if self.read_only:
+            raise ValueError("base abierta en modo solo lectura")
+
     def register(self, name, *, seed):
         """Congelar definición y semilla; nunca alterar brazos ya asignados."""
+        self._writable()
         if name not in INITIAL_EXPERIMENTS:
             raise ValueError("experimento desconocido")
         _identifier(seed)
@@ -134,6 +150,7 @@ class ExperimentStore:
 
     def assign(self, name, network, unit_id, queue):
         """Asignación estable por unidad+red; idempotente ante reintentos."""
+        self._writable()
         if network not in NETWORKS or queue not in QUEUES:
             raise ValueError("red o cola desconocida")
         _identifier(unit_id)
@@ -154,6 +171,7 @@ class ExperimentStore:
 
     def _record(self, *, event_id, name, network, unit_id, queue, kind,
                 occurred_at, value=None, source=None):
+        self._writable()
         _identifier(event_id)
         _identifier(unit_id)
         if network not in NETWORKS or queue not in QUEUES:
@@ -304,7 +322,7 @@ def main(argv=None):
     # La CLI lee una base existente, NUNCA crea una base vacía accidentalmente.
     if not args.db.is_file():
         parser.error("base de experimentos inexistente")
-    with ExperimentStore(args.db) as store:
+    with ExperimentStore(args.db, read_only=True) as store:
         result = store.report() if args.format == "json" else store.markdown()
     print(json.dumps(result, ensure_ascii=False, indent=2) if isinstance(result, dict) else result)
     return 0
