@@ -1,0 +1,34 @@
+python
+# Fuente: https://github.com/vladkens/twscrape/blob/main/twscrape/models.py
+# Licencia: MIT — https://github.com/vladkens/twscrape/blob/main/LICENSE
+
+@dataclass
+class Tweet(JSONTrait):
+    id: int
+    id_str: str
+    url: str
+    date: datetime
+
+    user: User
+    lang: str
+    rawContent: str
+    replyCount: int
+    retweetCount: int
+    likeCount: int
+    quoteCount: int
+    bookmarkedCount: int
+    conversationId: int
+    conversationIdStr: str
+    hashtags: list[str]
+    cashtags: list[str]
+    mentionedUsers: list[UserRef]
+    links: list[TextLink]
+    media: "Media"
+    viewCount: int | None = None
+    retweetedTweet: Optional["Tweet"] = None
+    quotedTweet: Optional["Tweet"] = None
+    place: Place | None = None
+    coordinates: Coordinates | None = None
+    inReplyToTweetId: int | None = None
+    inReplyToTweetIdStr: str | None = None
+    inReplyToUser: UserRef | None = None
