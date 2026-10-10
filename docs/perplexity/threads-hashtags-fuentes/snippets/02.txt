@@ -1,0 +1,23 @@
+text
+# Propuesta: config/discovery/threads.yaml
+keyword_queries:
+  priority:
+    - "romantasy recomendación"
+    - "fantasía juvenil libros"
+    - "libros de fantasía en español"
+    - "romance fantástico recomendación"
+    - "lectores de fantasía"
+    - "booktok español"
+    - "bookstagram español"
+    - "reseña fantasía"
+    - "autor independiente fantasía"
+    - "novela romantasy"
+  secondary:
+    - "lectura fantasía"
+    - "libros parecidos a"
+    - "TBR fantasía"
+    - "club de lectura fantasía"
+    - "escritora fantasía"
+    - "escritor independiente libros"
+    - "libros de romance juvenil"
+    - "recomiéndame un libro de fantasía"
