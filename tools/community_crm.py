@@ -87,6 +87,8 @@ def build(inbound: Path, registries_root: Path, *, inbox: Path | None = None,
     today = as_of or date.today()
     if not isinstance(today, date) or window_days < 1 or history_days < window_days:
         raise ValueError("Fechas o ventanas inválidas")
+    if not registries_root.is_dir():
+        raise FileNotFoundError(f"Raíz de registros inexistente: {registries_root}")
     cutoff = today - timedelta(days=window_days - 1)
     historic = today - timedelta(days=history_days - 1)
     people: dict[str, dict] = {}
@@ -112,8 +114,10 @@ def build(inbound: Path, registries_root: Path, *, inbox: Path | None = None,
             c["inbound"][kind] += 1
             active_days.setdefault(f"{net}:{handle}", set()).add(day)
 
+    registry_coverage: dict[str, str] = {}
     for net in NETWORKS:
         path = registries_root / f"SISTEMA_DIARIO_{net.upper()}" / "registro_interacciones.csv"
+        registry_coverage[net] = "present" if path.is_file() else "absent"
         for number, row in enumerate(_csv(path, {"fecha", "cuenta", "tipo", "resultado"}, missing_ok=True), 2):
             handle = _handle(row["cuenta"])
             kind = (row["tipo"] or "").strip().casefold()
@@ -213,6 +217,7 @@ def build(inbound: Path, registries_root: Path, *, inbox: Path | None = None,
     result.sort(key=lambda x: (-bool(x["pending"]), -x["score"], -(date.fromisoformat(x["last_inbound"]).toordinal() if x["last_inbound"] else 0), x["network"], x["handle"]))
     return {"schema": 1, "as_of": today.isoformat(), "window_days": window_days,
             "inbox_coverage": "absent" if inbox is None else "provided_completeness_unknown",
+            "registry_coverage": registry_coverage,
             "contacts": result, "pending_threads": sum(len(c["pending"]) for c in result),
             "by_lane": {lane: sum(len(c["pending"]) for c in result if c["lane"] == lane)
                         for lane in ("WEB", "API", "MOBILE", "UNASSIGNED")}}

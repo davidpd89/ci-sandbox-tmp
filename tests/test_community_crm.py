@@ -29,6 +29,7 @@ class CommunityCrmTests(unittest.TestCase):
         self.root = Path(self.tmp.name)
         self.inbound = self.root / "in.csv"
         self.outroot = self.root / "out"
+        self.outroot.mkdir()
         self.inbox = self.root / "inbox.json"
         self.tags = self.root / "tags.json"
         self.feed = [
@@ -201,6 +202,43 @@ class CommunityCrmTests(unittest.TestCase):
         self.assertEqual([r["date"] for r in ana["history"]], sorted(r["date"] for r in ana["history"]))
         self.assertTrue(all(set(r) == {"date", "direction", "kind"} for r in ana["history"]))
         self.assertEqual(ana["lane"], "API")
+
+    def test_missing_registry_root_fails_and_coverage_is_explicit(self):
+        data = self.build()
+        self.assertEqual(set(data["registry_coverage"]), set(cm.NETWORKS))
+        self.assertTrue(all(v == "absent" for v in data["registry_coverage"].values()))
+        path = self.outroot / "SISTEMA_DIARIO_X" / "registro_interacciones.csv"
+        write_csv(path, ["fecha", "cuenta", "tipo", "resultado"], [
+            {"fecha": "2026-10-09", "cuenta": "ana", "tipo": "follow", "resultado": "confirmado"},
+        ])
+        covered = self.build()["registry_coverage"]
+        self.assertEqual(covered["x"], "present")
+        self.assertEqual(covered["bluesky"], "absent")
+        with self.assertRaisesRegex(FileNotFoundError, "Raíz de registros"):
+            cm.build(self.inbound, self.root / "error-tipografico", as_of=TODAY)
+
+    def test_nine_networks_share_inbox_contract_without_cross_identity(self):
+        rows = [
+            {"network": net, "handle": "misma", "ref": f"ref-{net}",
+             "thread": f"hilo-{net}", "date": "2026-10-09",
+             "answered": False, "context_quality": "complete"}
+            for net in cm.NETWORKS
+        ]
+        self.inbox.write_text(json.dumps(rows), encoding="utf-8")
+        data = self.build()
+        contacts = {(c["network"], c["handle"]): c for c in data["contacts"]}
+        self.assertEqual(data["pending_threads"], len(cm.NETWORKS))
+        for net in cm.NETWORKS:
+            with self.subTest(network=net):
+                c = contacts[net, "misma"]
+                self.assertEqual(c["score"], 5)
+                self.assertEqual(c["pending"][0]["ref"], f"ref-{net}")
+                self.assertEqual(c["pending"][0]["status"], "review_reply")
+                self.assertEqual(c["lane"], cm.LANES.get(net, "UNASSIGNED"))
+        for lane in ("WEB", "API", "MOBILE", "UNASSIGNED"):
+            self.assertEqual(data["by_lane"][lane], sum(
+                cm.LANES.get(net, "UNASSIGNED") == lane for net in cm.NETWORKS
+            ))
 
     def test_invalid_csv_column_halts_projection(self):
         self.inbound.write_text("fecha,red,handle\n2026-10-09,x,ana\n", encoding="utf-8")
