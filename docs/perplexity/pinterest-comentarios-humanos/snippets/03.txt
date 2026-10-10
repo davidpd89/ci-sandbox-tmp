@@ -1,0 +1,28 @@
+python
+# Estrategia inspirada en investigación sobre diversidad en generación multilingüe:
+# https://aclanthology.org/2025.emnlp-main.324/
+import random
+from collections import Counter
+
+ESTILOS = {
+    "admiracion_visual": 0.30,
+    "inspiracion_guardado": 0.25,
+    "pregunta_lectora": 0.25,
+    "respuesta_conversacional": 0.10,
+    "reconocimiento_autor": 0.10,
+}
+
+def elegir_estilo(historial: list[str]) -> str:
+    recientes = Counter(historial[-20:])
+    candidatos = [
+        estilo for estilo, peso in ESTILOS.items()
+        if recientes[estilo] < max(1, int(20 * peso))
+    ]
+    if not candidatos:
+        candidatos = list(ESTILOS)
+
+    return random.choices(
+        candidatos,
+        weights=[ESTILOS[e] for e in candidatos],
+        k=1,
+    )[0]
