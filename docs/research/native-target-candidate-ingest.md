@@ -157,3 +157,43 @@ No existe llamada desde ejecutores, feature flag lógico default-off
 normalize_candidates/rank_with_66. Sin migración, estados, secretos ni
 side effects. Verificar tras revertir la suite previa de #66 y escáneres.
 Solo Claude integrará posteriormente #66 y luego #100, sin auto-merge.
+
+
+## Resultado de la segunda pasada y CI verificada
+
+La auditoría adversarial posterior al primer verde detectó y corrigió cuatro
+defectos en commits 030eb4b y fda2a40:
+
+1. El idioma del post se filtraba en el campo de idioma del perfil. Ahora la
+   cuenta usa solo profile_language o profile.language; la observación del
+   post no acredita idioma del autor.
+2. Dos lecturas del mismo permalink con fechas diferentes se fusionaban por
+   orden de aparición. Ahora se descarta ese permalink contradictorio y se
+   notifica conflicting_post_timestamps, incluso si hay terceras observaciones.
+3. Datos duplicados de seguidores diferentes sobrescribían valores sin
+   diagnóstico: se conserva el primero y se marca conflicto. Si una segunda
+   observación aporta idioma explícito al mismo post y no contradice su
+   fecha, se enriquece sin imputar.
+4. Epoch Unix descomunal podía provocar OverflowError; se rechaza sin
+   excepciones. Si created_at es null, se acepta timestamp explícito válido.
+   Para renombres X/Threads, autor y permalink distintos solo se concilian
+   con author_id igual al account_id contrastado.
+
+**CI funcional final de la pasada:** [workflow 38022307542](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38022307542)
+ejecutó **38/38 pruebas en Ubuntu y 38/38 en Windows**, Python 3.11,
+incluyendo compilación del módulo. Evidencia del código en HEAD
+fda2a40e8831e041503e167fe1cf0ba22094df7f; no es un canario.
+
+**Gate separado de campaña:** [workflow 38022307579](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38022307579).
+Los 30 tests de campaña y las validaciones offline fueron correctos,
+con 76 hijas y cero errores. La comprobación online de Ubuntu devolvió:
+FAIL: #100: child absent from parent manifest.
+El job de Windows terminó correcto, pero no elimina este bloqueo del
+paso online. Debe coordinarse con Claude la inclusión de #100 en
+children.json/índice de la **rama padre** research/public-reuse-parent
+y la repetición del gate. No se modifica esa rama desde esta PR #100.
+
+Todos los tests funcionales usan datos artificiales y lector inyectado;
+aún falta merge-preview real de #66 y ensayos supervisados de
+WEB/API/MOBILE, Edge/Windows y dispositivo móvil. No declarar aptitud
+de merge mientras el gate online y estas dependencias sigan abiertos.
