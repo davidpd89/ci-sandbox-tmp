@@ -182,3 +182,8 @@ no reciprocidad). No duplicar sus trabajos. No hubo merges, cambios en
 el repo privado ni actividad social. Las verificaciones Windows/Edge/móvil
 productivas quedan como canario supervisado posterior, no se presentan
 como pruebas realizadas.
+
+
+## Comprobación adicional adversarial (10/10/2026)
+
+La apertura de una base SQLite preexistente valida el esquema antes de escribir: nombres y orden de columnas, tipos, nulabilidad y claves primarias de ambas tablas. No realiza migraciones implícitas. Una base ajena/incompatible se rechaza con `ValueError`, en lugar de permitir una PK de idempotencia equivocada o fallar a mitad de una transacción. Incluye dos casos de regresión sintéticos para tabla de estado truncada y PK de eventos alterada. Sigue pendiente coordinar la autoridad del ledger de #84; este cambio **no** resuelve los bloqueos de procedencia, exclusión permanente ni seguidor entrante de la revisión previa.
