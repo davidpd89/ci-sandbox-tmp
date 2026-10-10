@@ -6,6 +6,7 @@ El productor entrega un export INMUTABLE con IDs de fila estables.
 from __future__ import annotations
 
 from collections.abc import Iterable
+from datetime import datetime
 import json
 from dataclasses import dataclass
 from typing import Protocol
@@ -61,6 +62,17 @@ def _id(value: object, name: str) -> str:
     return value.strip()
 
 
+def _valid_timestamp(value: object) -> bool:
+    """Check that result evidence has an ISO timestamp with timezone."""
+    if not isinstance(value, str):
+        return False
+    try:
+        instant = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return instant.tzinfo is not None and instant.utcoffset() is not None
+    except (ValueError, OverflowError):
+        return False
+
+
 def _target(item: dict, kind: str) -> tuple[str | None, str | None]:
     # Para acciones en posts se conserva la cuenta si se conoce. Si no,
     # la URI del destino es el sujeto; no se inventa una cuenta autora.
@@ -83,6 +95,11 @@ def _outcome(value: object) -> str | None:
         return "confirmed"
     if raw == "ya_hecho" or raw.startswith("saltado_ya_"):
         return "observed"
+    code = raw.split(":", 1)[0]
+    if code.startswith("saltado_api_") or code in (
+            "saltado_en_ledger", "saltado_sin_contexto",
+            "saltado_objetivo_no_resuelto"):
+        return "failed"
     if raw.startswith(("saltado_", "omitido", "no_intentado", "listo_para_")):
         return "skipped"
     if raw.startswith(("pendiente_", "incierto", "parada:", "parada_")):
@@ -121,13 +138,14 @@ def bridge_results(ledger: LedgerSink, batch: Batch, records: Iterable[dict]) ->
         if not isinstance(item, dict):
             reason = "not_mapping"
         else:
-            kind = KINDS.get(item.get("kind"))
+            raw_kind = item.get("kind")
+            kind = KINDS.get(raw_kind) if isinstance(raw_kind, str) else None
             outcome = _outcome(item.get("resultado"))
             subject, target = _target(item, kind) if kind else (None, None)
             try:
                 record_id = _id(item.get("record_id") or item.get("_intent_id"),
                                 "record_id")
-                if not isinstance(item.get("occurred_at"), str):
+                if not _valid_timestamp(item.get("occurred_at")):
                     raise ValueError("occurred_at")
             except (ValueError, TypeError):
                 record_id = None
@@ -145,7 +163,11 @@ def bridge_results(ledger: LedgerSink, batch: Batch, records: Iterable[dict]) ->
                     outcome, downgraded = "unverified", downgraded + 1
                 reservation = item.get("reservation_id")
                 if reservation is not None:
-                    reservation = _id(reservation, "reservation_id")
+                    try:
+                        reservation = _id(reservation, "reservation_id")
+                    except (TypeError, ValueError):
+                        unknown["invalid_reservation"] = unknown.get("invalid_reservation", 0) + 1
+                        continue
                 correlation = ("reserve:" + reservation if reservation else "")
                 if ack_id:
                     correlation += ("|" if correlation else "") + "ack:" + ack_id
@@ -176,23 +198,27 @@ def bridge_snapshot(ledger: LedgerSink, batch: Batch, snapshot: dict) -> dict:
         raise ValueError("snapshot inválido")
     coverage = snapshot.get("coverage")
     if not isinstance(coverage, dict) or coverage.get("identity_stable") is not True:
-        return {"inserted": 0, "replayed": 0, "unknown": len(snapshot.get("tracked", [])),
+        hint = snapshot.get("tracked")
+        count = len(hint) if isinstance(hint, (list, tuple)) else 0
+        return {"inserted": 0, "replayed": 0, "unknown": count,
                 "reason": "identity_unverified"}
     tracked, followers = snapshot.get("tracked"), snapshot.get("followers")
     if (not isinstance(tracked, (list, tuple)) or
             not isinstance(followers, (list, tuple)) or
-            any(not isinstance(x, str) or not x.strip() for x in tracked + followers)):
+            any(not isinstance(x, str) or not x.strip() for x in (*tracked, *followers))):
         raise ValueError("lista de identidades inválida")
     complete = (coverage.get("complete") is True and
                 coverage.get("all_pages") is True and
                 isinstance(coverage.get("account_scope"), str) and
                 bool(coverage["account_scope"].strip()))
     snapshot_id = _id(snapshot.get("snapshot_id"), "snapshot_id")
+    snapshot_key = json.dumps([batch.export_id, snapshot_id], ensure_ascii=False,
+                              separators=(",", ":"))
     observed_at = _id(snapshot.get("observed_at"), "observed_at")
     # Pasar complete=False a #84 conserva positivos verificables y UNKNOWN.
     return ledger.reconcile_followers(
         network=batch.network, queue=batch.queue,
-        snapshot_id=batch.export_id + "/" + snapshot_id,
+        snapshot_id=snapshot_key,
         observed_at=observed_at, tracked=tracked, followers=followers,
         complete=complete, source="native/" + batch.producer + "/snapshot",
     )
@@ -200,7 +226,12 @@ def bridge_snapshot(ledger: LedgerSink, batch: Batch, snapshot: dict) -> dict:
 
 def availability() -> list[dict]:
     """Matriz contractual; no declarar presencia en colas no auditadas."""
-    return [{"network": network, "queue": queue, "producer": producer,
-             "status": "source_identified_contract_only"}
-            for network, producers in NETWORK_QUEUES.items()
-            for producer, queues in producers.items() for queue in queues]
+    rows = []
+    for network, producers in NETWORK_QUEUES.items():
+        for queue in ("WEB", "API", "MOBILE"):
+            matches = [p for p, queues in producers.items() if queue in queues]
+            rows.append({"network": network, "queue": queue,
+                         "producer": matches[0] if matches else None,
+                         "status": ("source_identified_contract_only" if matches
+                                    else "unknown")})
+    return rows

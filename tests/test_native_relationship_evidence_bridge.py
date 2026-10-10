@@ -44,8 +44,12 @@ def ack(queue, **updates):
 class EvidenceTest(unittest.TestCase):
     def test_all_nine_producers_and_queues(self):
         self.assertEqual(len(NETWORK_QUEUES), 9)
+        self.assertEqual(len(availability()), 27)
         self.assertEqual({a["queue"] for a in availability()}, {"WEB", "API", "MOBILE"})
         for spec in availability():
+            if spec["status"] == "unknown":
+                self.assertIsNone(spec["producer"])
+                continue
             b = Batch(spec["network"], spec["queue"], spec["producer"], "exp")
             s = Sink()
             result = bridge_results(s, b, [row(ack=ack(b.queue), reservation_id="res1")])
@@ -107,6 +111,32 @@ class EvidenceTest(unittest.TestCase):
         self.assertEqual(bridge_results(s, right, [row(record_id="part/a")])["inserted"], 1)
         self.assertEqual(len(s.items), 2)
 
+    def test_operational_failure_states_match_ledger84(self):
+        b = Batch("mastodon", "API", "mastodon_execute.run_plan", "exp")
+        s = Sink()
+        labels = ["saltado_api_429", "saltado_en_ledger:already_in_plan",
+                  "saltado_sin_contexto", "saltado_objetivo_no_resuelto",
+                  "saltado_preflight", "saltado_ya_seguido"]
+        bridge_results(s, b, [row(record_id=str(i), resultado=x)
+                              for i, x in enumerate(labels)])
+        got = [next(x["outcome"] for x in s.items.values()
+                    if json.loads(x["source_id"])[1] == str(i))
+               for i in range(len(labels))]
+        self.assertEqual(got, ["failed"] * 4 + ["skipped", "observed"])
+
+    def test_bad_time_kind_and_reservation_do_not_abort_batch(self):
+        b = Batch("x", "WEB", "x_execute.run_plan", "exp")
+        s = Sink()
+        invalid = [row(record_id="a", occurred_at="2026-10-10T09:00:00"),
+                   row(record_id="b", occurred_at="nonsense"),
+                   row(record_id="c", kind=["follow"]),
+                   row(record_id="d", reservation_id=[])]
+        report = bridge_results(s, b, invalid + [row(record_id="valid")])
+        self.assertEqual(report["inserted"], 1)
+        self.assertEqual(report["unknown"], 4)
+        self.assertEqual(report["unknown_reasons"],
+                         {"provenance_or_time": 2, "kind": 1, "invalid_reservation": 1})
+
     def test_missing_source_unknown(self):
         s = Sink()
         b = Batch("reddit", "WEB", "reddit_execute.run_plan", "exp")
@@ -128,9 +158,25 @@ class EvidenceTest(unittest.TestCase):
         snap["coverage"]["all_pages"] = True
         self.assertEqual(bridge_snapshot(s, b, snap)["unknown"], 0)
         self.assertEqual({x["outcome"] for x in s.items.values()}, {"present", "absent"})
+        snap["snapshot_id"] = "s3"
+        snap["tracked"] = ("one", "two")
+        self.assertEqual(bridge_snapshot(s, b, snap)["unknown"], 0)
+        self.assertEqual(bridge_snapshot(Sink(), b, {"tracked": None})["unknown"], 0)
         p = Batch("pinterest", "API", "pinterest_loyalty_observations", "exp")
         self.assertEqual(bridge_snapshot(Sink(), p,
                          dict(tracked=["one"], followers_count=20))["unknown"], 1)
+
+    def test_snapshot_provenance_delimiters_do_not_collide(self):
+        b1 = Batch("tiktok", "MOBILE", "tiktok_mobile_execute.run_plan", "v1/part")
+        b2 = Batch("tiktok", "MOBILE", "tiktok_mobile_execute.run_plan", "v1")
+        snapshot = dict(snapshot_id="id", observed_at="2026-10-10T10:00:00Z",
+                        tracked=["one"], followers=["one"],
+                        coverage={"identity_stable": True})
+        s = Sink()
+        bridge_snapshot(s, b1, snapshot)
+        snapshot["snapshot_id"] = "part/id"
+        bridge_snapshot(s, b2, snapshot)
+        self.assertEqual(len(s.items), 2)
 
 if __name__ == "__main__":
     unittest.main()

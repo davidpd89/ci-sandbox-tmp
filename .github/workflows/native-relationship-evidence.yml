@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: davidpd89/ci-sandbox-tmp
-          ref: 8c2b289092d142574700563bc71b9b9a0d62e2a5
+          ref: bfdafe1240336379cd634ada9e63bc2bf4719bce
           path: ledger84
       - uses: actions/setup-python@v5
         with:

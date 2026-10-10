@@ -105,10 +105,11 @@ Prohibido inventar un `ack` a partir del `resultado`. Debe proceder de
 la confirmación real del productor y estar enlazado al target. Repetir el
 mismo export y fila es idempotente; para ACK posterior, se registra fase
 `ack`. Si un origen carece de reloj con zona horaria, no deducir DST:
-se reporta `unknown` o falla validación de #84. Mismo `export_id`
+se reporta `unknown` en resultados (sin abortar el lote) o falla validación de #84 para snapshots. Mismo `export_id`
 significa export inmutable: si se reordena o muta debe versionarse.
 
-Para snapshots: `tracked` y `followers` deben ser IDs explícitos;
+Para snapshots: `tracked` y `followers` deben ser IDs explícitos; los IDs de snapshot
+usan una tupla JSON de `export_id` y `snapshot_id` sin colisiones por `/`;
 `coverage.identity_stable=true` verifica la procedencia de identidades;
 la ausencia requiere además `coverage.complete=true`,
 `coverage.all_pages=true` y `account_scope` no vacío. Los parciales
@@ -133,7 +134,7 @@ con el almacén #84. Las licencias no sustituyen la evaluación de CI.
 - Pruebas: `python -m unittest discover -s tests -p test_native_relationship_evidence_bridge.py -v`.
 - Contrato SQLite real con checkout inmóvil de #84:
   `LEDGER84_PY=ledger84/tools/relationship_event_ledger.py python -m unittest discover -s tests -p test_native_ledger84_contract.py -v`.
-- CI: `.github/workflows/native-relationship-evidence.yml` sobre Ubuntu/Windows Python 3.11; no credenciales sociales.
+- CI: `.github/workflows/native-relationship-evidence.yml` sobre Ubuntu/Windows Python 3.11; no credenciales sociales. Ledger #84 fijado a `bfdafe1240336379cd634ada9e63bc2bf4719bce`.
 - Revisión adversarial: se detectó el nombre de productor Pinterest
   `run` incorrecto y se corrigió a `cmd_run`; se retiró el falso alias
   `save -> repost`; se incorporó `like_external` y el ID de origen pasó
@@ -148,3 +149,10 @@ con el almacén #84. Las licencias no sustituyen la evaluación de CI.
 Solo retirar consumidor/puente y, si se creó en pruebas, cerrar y retirar
 la DB secundaria del ledger #84. No se modifican reservas, CSV, SQLite
 operativo, credenciales ni estados de ninguna red. Sin migración destructiva.
+
+## Revisión independiente — REV 108
+
+- Matriz `availability()` explícita 9×3 con estado `unknown` donde falta fuente contrastada.
+- Estados `saltado_api_*` y `saltado_en_ledger` alineados con #84; fechas sin zona y filas malformadas cuentan `unknown` sin abortar el resto.
+- IDs de snapshots estructurados y regresión de colisiones, listas mixtas y reconciliación SQLite completa/parcial.
+- Sin acreditar todavía integración con productores privados: exportación estable de IDs, timestamps y ACK, canario supervisado y merge previo de #84 siguen pendientes.
