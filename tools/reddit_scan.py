@@ -44,6 +44,18 @@ REGISTRO_CSV = os.path.join(ROOT, "registro_interacciones.csv")
 # comentario (ver COMUNIDADES.md).
 SUBREDDITS = ["libros", "filosofia_en_espanol"]
 
+
+def _discovery_sources(today=None, reader=None):
+    """Dos lecturas por ronda; búsqueda léxica en la mitad de los turnos."""
+    import hashtag_query_consumers as hqc
+    today = today or datetime.date.today()
+    tick = today.toordinal()
+    _, terms = hqc.combine("reddit", "busquedas", [], reader=reader)
+    if not terms or tick % 2 == 0:
+        return [("subreddit", name) for name in SUBREDDITS]
+    return [("subreddit", SUBREDDITS[(tick // 2) % len(SUBREDDITS)]),
+            ("search", terms[(tick // 2) % len(terms)])]
+
 _QUESTION_STARTS = ("cual", "cuales", "que ", "quien", "quienes", "como ", "donde", "cuando",
                     "por que", "cuanto", "recomend", "alguien", "algun")
 
@@ -114,9 +126,12 @@ def scan():
             print("\nParando aqui - resolver esto antes de nada mas.")
             return
 
-        for name in SUBREDDITS:
+        for source, name in _discovery_sources():
             print(f"\n=== RECOLECTANDO CANDIDATOS (r/{name}) ===")
-            r._dump_subreddit(pg, name, "hot")
+            if source == "subreddit":
+                r._dump_subreddit(pg, name, "hot")
+            else:
+                r._dump_search(pg, name)
             for t in r._extract_threads(pg, limit=15):
                 if sc.is_political(t["title"]):
                     continue
