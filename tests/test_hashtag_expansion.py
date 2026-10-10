@@ -97,6 +97,36 @@ class HashtagExpansionTest(unittest.TestCase):
                   for x in result["networks"]["bluesky"]["candidates"]}
         self.assertGreater(scores["aventura"], scores["biblioteca"])
 
+    def test_feedback_event_window_idempotency_and_conflicts(self):
+        event = {"network": "bluesky", "tag": "Aventura",
+                 "eligible": 10, "engaged": 8, "replies": 2,
+                 "followers": 1, "event_id": "ev-1", "window": RECENT}
+        key = ("bluesky", "aventura")
+        once = h._feedback([event])[key]
+        self.assertEqual(once, [10, 8, 2, 1])
+        self.assertEqual(h._feedback([event, event])[key], once)
+        next_window = {**event, "window": "2026-10-08T12:00:00Z"}
+        self.assertEqual(h._feedback([event, next_window])[key], [20, 16, 4, 2])
+        conflict = {**event, "engaged": 1}
+        self.assertEqual(dict(h._feedback([event, conflict])), {})
+        # El contrato legado agregado elimina duplicados exactos por lote.
+        legacy = {k: v for k, v in event.items() if k not in ("event_id", "window")}
+        self.assertEqual(h._feedback([legacy, legacy])[key], once)
+        # Nunca aceptar un ID de evento sin su ventana.
+        self.assertEqual(dict(h._feedback([{k: v for k, v in event.items()
+                                             if k != "window"}])), {})
+        self.assertEqual(dict(h._feedback([{**event, "eligible": True}])), {})
+
+    def test_lexical_terms_keep_spanish_accent_distinctions(self):
+        with tempfile.TemporaryDirectory() as folder:
+            catalog = pathlib.Path(folder) / "catalog.json"
+            catalog.write_text('{"bluesky":{"busquedas":["año","niño"]}}',
+                               encoding="utf-8")
+            with patch.object(discovery_terms, "PATH", str(catalog)), \\
+                 patch.object(h, "snapshot_terms", return_value=["ano", "nino"]):
+                self.assertEqual(discovery_terms.terms("bluesky", "busquedas"),
+                                 ["año", "niño", "ano", "nino"])
+
     def test_topic_diversity_not_only_highest_frequency(self):
         rows = posts(tag="Magia", n=3) + posts(tag="Dragones", n=3)
         rows += posts(tag="Lectores", seed="lectura", n=3)
