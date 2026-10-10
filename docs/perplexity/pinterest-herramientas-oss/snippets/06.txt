@@ -1,0 +1,15 @@
+json
+// https://github.com/clugtu/pinterest-mcp
+{
+  "mcpServers": {
+    "pinterest": {
+      "command": "uvx",
+      "args": ["pinterest-mcp"],
+      "env": {
+        "PINTEREST_CLIENT_ID": "your_client_id",
+        "PINTEREST_CLIENT_SECRET": "your_client_secret",
+        "PINTEREST_ACCESS_TOKEN": "your_access_token"
+      }
+    }
+  }
+}
