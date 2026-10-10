@@ -34,8 +34,9 @@ No subir revision-local.json a GitHub si contiene enlaces de terceros. Sin secre
 
 - Situación anterior (dedup de HasData): los UTM generaban entradas distintas y un primer resultado vacío podía ocultar otro más contextual.
 - Tras la adaptación: claves de URL canonizadas, dedup por lote con preferencia contextual, rechazo explícito de URL no reconocidas o red declarada incorrecta y contadores verificables.
-- Primera ejecución local: 13/14 por error con «recomendáis». Corregido con regresión. Segunda ejecución local: **15/15** y compileall OK (Python/Linux).
+- Primera ejecución local: 13/14 por error con «recomendáis». Corregido con regresión. Tercera ejecución local tras revisión adversarial: **17/17** y compileall OK (Python/Linux).
 - Independiente de los ejecutores del espejo/oficial: no integrado con acciones reales ni con la reserva de producción; integrar requiere validación posterior de Claude.
 - QA pendiente en Windows Python 3.11, Edge/móvil, suite completa privada, compatibilidad de esquemas en producción, CI espejo y revisión humana. No se confunde «mergeable=true» con aptitud de merge.
+- Revisión adversarial adicional: enlaces con parámetros de token/código/contraseña no pasan al informe; al deduplicar se prefiere un resultado cuya red declarada coincida con su URL. Dos regresiones añadidas.
 - Riesgos: resultados SERP obsoletos, heurística léxica aproximada, instancias Mastodon mal declaradas; todos quedan en revisión, no ejecución.
 - Retirada reversible: eliminar exclusivamente importador, prueba y documentación. Escáneres/colas/ledger permanecen intactos.
