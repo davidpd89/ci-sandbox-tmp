@@ -311,6 +311,15 @@ class VersionedEvidenceTests(unittest.TestCase):
         mutation["experiment"]["id"] = "trial-C003"
         self.assertFalse(registry.approves(mutation, "mastodon"))
 
+    def test_evidence_ci_includes_wilson_dependency(self):
+        """La CI específica debe dispararse si se cambia el cálculo estadístico."""
+        workflow = (pathlib.Path(__file__).resolve().parents[1]
+                    / ".github/workflows/experiment-evidence-lineage.yml").read_text(encoding="utf-8")
+        push, pull_request = workflow.split("  pull_request:", 1)
+        for event_paths in (push, pull_request.split("  workflow_dispatch:", 1)[0]):
+            self.assertIn("      - 'tools/growth_attribution.py'", event_paths)
+        self.assertIn("tools/discovery_attribution.py tools/growth_attribution.py", workflow)
+
     def test_no_network_calls_or_user_identity_in_output(self):
         row = trial()
         row["internal_handle"] = "secret-pseudonym"
