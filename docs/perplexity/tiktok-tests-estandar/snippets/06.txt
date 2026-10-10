@@ -1,0 +1,9 @@
+python
+# https://github.com/pytest-dev/pytest-freezer#readme
+def test_freezer_methods(freezer):
+    freezer.move_to("2022-10-17")
+    assert datetime.now() == datetime(2022, 10, 17)
+    freezer.tick()
+    assert datetime.now() == datetime(2022, 10, 17, 0, 0, 1)
+    freezer.tick(delta=12)
+    assert datetime.now() == datetime(2022, 10, 17, 0, 0, 13)
