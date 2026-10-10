@@ -278,6 +278,8 @@ def collect(root, *, as_of, days=7):
             alerts.append("breaker_abierto")
         if breaker["status"] == "revision_manual":
             alerts.append("retencion_manual")
+        if breaker["status"] == "invalido":
+            alerts.append("breaker_invalido")
         if round_stats is not None and round_stats["states"]["error"]:
             alerts.append("rondas_con_error")
         if round_stats is not None and round_stats["states"]["parcial"]:
