@@ -310,7 +310,8 @@ def _load_config(path=CONFIG_PATH):
             data = volume_ramp.overlay(data)
         except Exception as exc:
             print(f"AVISO: no se aplico la rampa de volumen ({type(exc).__name__}: {exc}); se usa growth_config.json tal cual")
-    return data
+    import hashtag_query_consumers as hqc
+    return hqc.extend_native_config("bluesky", data)
 
 
 class ReviewReserveReached(gc.ReadBudgetExceeded):
