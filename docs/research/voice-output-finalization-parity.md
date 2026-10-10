@@ -70,7 +70,7 @@ saltos de línea. Se mantiene la procedencia es-ES de #79.
 | [barrust/pyspellchecker](https://github.com/barrust/pyspellchecker/commit/f72172c4ddb3d1c3464cf500cc2420a4831a2b55) | MIT | commit 23/07/2026; Python >=3.10, 3.11 compatible, sin Windows específico requerido; ya usado opcionalmente por #79 | Reutilización indirecta vía auditor, sin segundo motor |
 | [jxmorris12/language_tool_python](https://github.com/jxmorris12/language_tool_python/commit/6c935da8ef739b22d62c13cd682cb9a2922e4f98) | GPL-3.0-only | commit 03/10/2026, Python 3.11 en metadata; JVM/proceso externo para comprobación completa | No añadir JVM/red/latencia ni duplicar motor |
 | [codespell-project/codespell](https://github.com/codespell-project/codespell/commit/54cc31bc819f4af008b58a29ab16b5173dc1ff3b) | GPL-2.0-only | commit 09/10/2026; Windows y Python 3.11 declarados | Orientado a faltas comunes en ficheros/código, no a español conversacional con citas |
- 
+
 ## Licencias y procedencia
 
 Fuente primaria: https://github.com/barrust/pyspellchecker/commit/f72172c4ddb3d1c3464cf500cc2420a4831a2b55
