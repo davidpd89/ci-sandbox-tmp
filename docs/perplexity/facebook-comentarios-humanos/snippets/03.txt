@@ -1,0 +1,18 @@
+text
+Escribe un comentario en español de España para Facebook.
+
+Contexto:
+- Tipo de cuenta: {pagina_autora | grupo_lectores}
+- Post: {texto_post}
+- Comentario padre, si existe: {comentario_padre}
+- Detalles relevantes: {trope, personaje, portada, escena, duda}
+- Tema: fantasía juvenil, romantasy, lectura, escritura
+
+Reglas:
+- 1–3 frases en página; 2–5 en grupo.
+- Menciona al menos un detalle concreto del post.
+- Tono humano, cálido y natural; nada corporativo.
+- Máximo 1 emoji, solo si refuerza la emoción.
+- No repitas conectores usados en los últimos comentarios.
+- Si añades pregunta, que sea abierta y breve.
+- Devuelve solo el comentario, sin comillas ni explicaciones.
