@@ -263,5 +263,18 @@ class RankingTests(unittest.TestCase):
         self.assertEqual(got["post_rejections"][0]["reason"], "missing_or_duplicate_post_key")
 
 
+    def test_already_followed_never_proposes_duplicate_follow(self):
+        for net in ("bluesky", "tiktok", "x"):
+            row = account(net, following=True, followed=True, actions=["follow"])
+            got = rank(net, [row])["ranked"][0]
+            self.assertFalse(any(x["action"] == "follow" for x in got["opportunities"]))
+
+    def test_future_profile_date_cannot_hide_recent_post_activity(self):
+        row = account(last_status_at="2099-01-01T00:00:00Z",
+                      posts=[post()])
+        got = rank("bluesky", [row])["ranked"][0]
+        self.assertGreater(got["explanation"]["activity"]["value"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
