@@ -1,0 +1,26 @@
+python
+# tests/contracts/facebook_datetime_contract.py
+from datetime import datetime, timezone
+
+
+def parse_facebook_datetime(value):
+    """Normaliza created_time/updated_time de Facebook a UTC."""
+    if value in (None, ""):
+        return None
+
+    if isinstance(value, (int, float)):
+        return datetime.fromtimestamp(value, tz=timezone.utc)
+
+    text = str(value).strip()
+
+    # Facebook usa con frecuencia el offset sin dos puntos: +0000, +0200.
+    normalized = text
+    if len(text) >= 5 and text[-5] in "+-" and text[-3:].isdigit():
+        normalized = f"{text[:-2]}:{text[-2:]}"
+
+    parsed = datetime.fromisoformat(normalized)
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+
+    return parsed.astimezone(timezone.utc)
