@@ -193,6 +193,7 @@ def build_plan(items, decisions):
                   "reply_to_id": item["id"],
                   "url": item.get("permalink") or item.get("url"),
                   "post_text": item.get("text", ""),
+                  "post_created_at": item.get("timestamp") or "",
                   "reply_to_us": True, "motivo": "followup API Threads"}
         import reply_provenance as proof
         carried = proof.carry_decision_proof(
