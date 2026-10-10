@@ -68,8 +68,12 @@ class FakeReader:
         if name in self.missing and ref == HEAD:
             return {"path": name, "type": "file", "sha": None}
         if name in p.PROTECTED_TRUST:
-            return {"path": name, "type": "file",
-                    "sha": ("f" if ref == HEAD and name in self.changed else "e") * 40}
+            record = {"path": name, "type": "file",
+                      "sha": ("f" if ref == HEAD and name in self.changed else "e") * 40}
+            if ref == HEAD and name in self.data:
+                record.update({"encoding": "base64",
+                               "content": base64.b64encode(self.data[name].encode()).decode()})
+            return record
         assert ref == HEAD
         return {
             "type": "file", "path": name, "encoding": "base64",
