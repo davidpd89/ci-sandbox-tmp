@@ -1,0 +1,5 @@
+bash
+# https://github.com/instaloader/instaloader — README
+instaloader --fast-update profile [profile ...]
+
+instaloader --latest-stamps -- profile [profile ...]
