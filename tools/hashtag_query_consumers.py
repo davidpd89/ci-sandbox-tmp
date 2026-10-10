@@ -30,7 +30,7 @@ def _read(network: str, kind: str, reader: Reader | None) -> list[str]:
         reader = discovery_terms.terms
     try:
         result = reader(network, kind)
-    except (OSError, ValueError, TypeError, KeyError):
+    except (OSError, ValueError, TypeError, KeyError, AttributeError, UnicodeError):
         return []
     return result if isinstance(result, list) else []
 
@@ -140,28 +140,28 @@ def extend_native_config(network: str, config: dict, *,
         raise ValueError("red sin adaptador de config")
     data = deepcopy(config)
     if network in ("bluesky", "mastodon"):
-        families = data.get("query_families", [])
+        families = data.setdefault("query_families", [])
         old = [q for f in families for q in f.get("queries", [])]
         _, new_queries = combine(network, "busquedas", old, reader=reader)
         if new_queries:
             families.append({"name": "lexical_expansion", "queries": new_queries})
         if network == "bluesky":
-            tags = data.get("tag_queries", [])
+            tags = data.setdefault("tag_queries", [])
             old_tags = [row.get("tag", "") for row in tags]
             _, new_tags = combine(network, "hashtags", old_tags, reader=reader)
             tags.extend({"tag": tag[1:], "query": tag[1:]}
                         for tag in new_tags)
         else:
-            tags = data.get("hashtags", [])
+            tags = data.setdefault("hashtags", [])
             _, new_tags = combine(network, "hashtags", tags, reader=reader)
             tags.extend(tag[1:] for tag in new_tags)
     else:
         for field, kind in (("actor_queries", "busquedas"),
                             ("video_queries", "busquedas")):
-            original = data.get(field, [])
+            original = data.setdefault(field, [])
             _, fresh = combine(network, kind, original, reader=reader)
             original.extend(fresh)
-        original = data.get("video_queries", [])
+        original = data.setdefault("video_queries", [])
         _, fresh = combine(network, "hashtags", original, reader=reader)
         original.extend(fresh)
     return data
