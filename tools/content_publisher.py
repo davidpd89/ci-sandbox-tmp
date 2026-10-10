@@ -233,7 +233,8 @@ def _voice_diagnostics(red, text, out):
         import spanish_voice_quality as voice_qa
         if red not in voice_qa.NETWORKS:
             return []
-        issues = voice_qa.audit(text, network=red)["findings"]
+        issues = voice_qa.audit(text, network=red,
+                                queue="WEB" if red in BROWSER else "API")["findings"]
         if issues:
             out(f"[{red}] revision_es: " + ",".join(sorted({issue["code"] for issue in issues})))
         return issues
