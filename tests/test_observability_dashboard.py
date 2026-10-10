@@ -124,6 +124,14 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(report["networks"]["instagram"]["actions"]["confirmed_records"], 0)
         self.assertEqual(report["networks"]["instagram"]["actions"]["by_day"]["2026-10-10"], 0)
 
+    def test_historical_network_without_recent_rounds_is_observed_zero(self):
+        rounds = self.root / "00_OPERATIVO" / "tiempos_rondas.csv"
+        with rounds.open("a", encoding="utf-8") as f:
+            f.write("2026-09-01,tiktok,10:00,10:01,1,ok,{},0,0,0\n")
+        report = dash.collect(self.root, as_of=NOW)
+        self.assertEqual(report["networks"]["tiktok"]["rounds"]["total"], 0)
+        self.assertEqual(report["queues"]["MOBILE"]["rounds_observed"], 0)
+
     def test_invalid_breaker_and_corrupted_reply_queue_are_unknown(self):
         breaker = self.root / "SISTEMA_DIARIO_X" / "cache" / "breaker.json"
         breaker.write_text('{"fails": -1, "reason": "leak"}', encoding="utf-8")
