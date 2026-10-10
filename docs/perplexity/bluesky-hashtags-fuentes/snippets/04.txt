@@ -1,0 +1,3 @@
+bash
+# https://github.com/bluesky-social/atproto/discussions/2180
+curl --location 'https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=from%3A%40mm-twitter-archive.bsky.social&since=2023-08-23T00%3A00%3A00.000Z&until=2023-08-23T23%3A59%3A59.000Z'
