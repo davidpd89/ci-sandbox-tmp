@@ -66,6 +66,15 @@ class TestSpanishVoice(unittest.TestCase):
                          [("locale_variant", "checar"), ("question_opening", "?")])
         self.assertEqual(self.check("Me gusta <3")["findings"], [])
 
+
+    def test_multiline_mask_preserves_sentence_boundaries(self):
+        sample = "¿Pregunta abierta\n" + chr(96)*3 + "\nchecar?\n" + chr(96)*3 + "\nY después?"
+        self.assertEqual(len(_mask(sample)), len(sample))
+        self.assertEqual([i for i, x in enumerate(_mask(sample)) if x == "\n"],
+                         [i for i, x in enumerate(sample) if x == "\n"])
+        findings = self.check(sample)["findings"]
+        self.assertEqual([v["code"] for v in findings], ["question_opening"])
+
     def test_multiline_fence_tilde(self):
         text = "~~~text\nChecar?\n~~~\n¡Buen título!"
         self.assertEqual(self.check(text)["findings"], [])
