@@ -253,6 +253,96 @@ class InboundLoyaltyTests(unittest.TestCase):
             self.build(rows, posts=[{"network": "bluesky", "handle": "ana",
                                      "day": "2026-10-09", "ref": "post"}])
 
+    def test_native_x_and_threads_event_ids_are_reply_refs_not_own_targets(self):
+        rows = [
+            {"network": "x", "source": "api:users_mentions", "event_id": "111",
+             "author_id": "222", "target_id": "999", "handle": "Ana",
+             "kind": "comment", "day": "2026-10-09"},
+            {"network": "threads", "source": "api:own_post_replies",
+             "event_id": "333", "author_id": "", "target_id": "888",
+             "handle": "Bea", "kind": "comment", "day": "2026-10-09"},
+        ]
+        result = self.build(rows)
+        proposals = [p for row in result["queues"]["WEB"]
+                     for p in row["proposals"] if p["kind"] == "context_review"]
+        self.assertEqual({p["target_ref"] for p in proposals}, {"111", "333"})
+        self.assertNotIn("999", json.dumps(result))
+        self.assertNotIn("888", json.dumps(result))
+        self.assertEqual(result["queues"]["WEB"][0]["mode"] if
+                         "mode" in result["queues"]["WEB"][0] else result["mode"],
+                         "review_only")
+        self.assertIn("id:222", [r["identity"] for r in result["queues"]["WEB"]])
+
+    def test_native_schema_rejects_untrusted_source_or_wrong_identity(self):
+        native = {"network": "x", "source": "api:users_mentions", "event_id": "11",
+                  "author_id": "22", "target_id": "99", "handle": "ana",
+                  "kind": "comment", "day": "2026-10-09"}
+        for altered in ({"source": "browser:guessed"}, {"target_id": None},
+                        {"actor_id": "someone_else"}, {"target_ref": "99"},
+                        {"network": "threads"}, {"author_id": ""}):
+            with self.subTest(altered=altered), self.assertRaises(ValueError):
+                self.build([native | altered])
+
+    def test_native_enriched_answered_false_vs_true(self):
+        row = {"network": "x", "source": "api:users_mentions",
+               "event_id": "11", "author_id": "22", "target_id": "99",
+               "handle": "ana", "kind": "comment", "day": "2026-10-09",
+               "answered": False, "context_quality": "complete"}
+        self.assertEqual(self.build([row])["queues"]["WEB"][0]["proposals"],
+                         [{"kind": "reply_review", "target_ref": "11"}])
+        self.assertEqual(self.build([row | {"answered": True}])["queued_contacts"], 0)
+
+    def test_stable_identity_outbound_survives_alias_change(self):
+        rows = [obs(handle="nueva", actor_id="actor-A", kind="follow")]
+        stable = [{"network": "bluesky", "handle": "antigua", "actor_id": "actor-A",
+                   "action": "thank", "day": "2026-10-10", "confirmed": True}]
+        self.assertEqual(self.build(rows, outbound=stable)["queued_contacts"], 0)
+        # Una confirmación solo por alias no está acreditada para este ID.
+        weak = [{k: v for k, v in stable[0].items() if k != "actor_id"}
+                | {"handle": "nueva"}]
+        self.assertEqual(self.build(rows, outbound=weak)["queued_contacts"], 1)
+
+    def test_handle_recycling_never_suppresses_other_verified_id(self):
+        rows = [obs(handle="mismo", actor_id="persona-B", kind="follow")]
+        other = [{"network": "bluesky", "handle": "mismo", "actor_id": "persona-A",
+                  "action": "thank", "day": "2026-10-10", "confirmed": True}]
+        self.assertEqual(self.build(rows, outbound=other)["queued_contacts"], 1)
+
+    def test_pending_threads_keep_multiple_refs_and_close_individually(self):
+        rows = [obs(event_id=f"ev{i}", kind="reply", target_ref=f"t{i}",
+                    answered=False, context_quality="complete",
+                    day="2026-10-09") for i in range(5)]
+        result = self.build(rows)
+        self.assertEqual([p["target_ref"] for p in
+                          result["queues"]["API"][0]["proposals"]], 
+                         ["t4", "t3", "t2", "t1"])
+        done = [{"network": "bluesky", "handle": "ana", "action": "reply",
+                 "target_ref": "t4", "day": "2026-10-10", "confirmed": True}]
+        result = self.build(rows, outbound=done)
+        self.assertEqual([p["target_ref"] for p in
+                          result["queues"]["API"][0]["proposals"]],
+                         ["t3", "t2", "t1", "t0"])
+
+    def test_latest_answered_true_closes_only_that_ref(self):
+        rows = [obs(event_id="old", kind="reply", day="2026-10-08",
+                    target_ref="t1", answered=False),
+                obs(event_id="new", kind="reply", day="2026-10-09",
+                    target_ref="t1", answered=True),
+                obs(event_id="different", kind="reply", day="2026-10-09",
+                    target_ref="t2", answered=False)]
+        self.assertEqual([p["target_ref"] for p in
+                          self.build(rows)["queues"]["API"][0]["proposals"]],
+                         ["t2"])
+
+    def test_recent_posts_reconcile_by_stable_identity(self):
+        rows = [obs(actor_id="actor-A")]
+        post = {"network": "bluesky", "handle": "antigua", "actor_id": "actor-A",
+                "ref": "at://post", "day": "2026-10-09",
+                "verified": True, "original": True, "niche_es": True}
+        self.assertEqual(self.build(rows, posts=[post])["queued_contacts"], 1)
+        weak = {k: v for k, v in post.items() if k != "actor_id"} | {"handle": "ana"}
+        self.assertEqual(self.build(rows, posts=[weak])["queued_contacts"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()
