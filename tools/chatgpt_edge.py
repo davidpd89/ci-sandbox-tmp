@@ -5,7 +5,7 @@ Por que existe: el trabajador de la cola de respuestas (`reply_queue.py`) consul
 (`chatgpt_browser`) escribe siempre, en paralelo a las rondas. Las cadenas API y movil NO usan navegador (solo encolan textos), asi que no necesitan otro puerto.
 
     python tools/chatgpt_edge.py status         # ¿esta el Edge 9224 arriba y con ChatGPT con sesion?
-    python tools/chatgpt_edge.py start          # lo arranca si no esta (perfil C:\\Temp\\rrss-autorademo-chatgpt)
+    python tools/chatgpt_edge.py start          # lo arranca si no esta (perfil C:\\Temp\\rrss-davidporto-chatgpt)
     python tools/chatgpt_edge.py copy-session   # copia la sesion de ChatGPT del Edge 9223 al 9224 (cookies solo en memoria, no se guardan en ningun fichero)
 
 La primera vez, si ChatGPT pide iniciar sesion, la inicia David en esa ventana (nunca se teclean contrasenas). El perfil guarda la sesion para siempre.
@@ -21,7 +21,7 @@ import time
 
 PORT = int(os.environ.get("RRSS_CHATGPT_CDP_PORT", "9224"))
 SOURCE_PORT = 9223
-PROFILE = os.environ.get("RRSS_CHATGPT_EDGE_PROFILE", r"C:\Temp\rrss-autorademo-chatgpt")
+PROFILE = os.environ.get("RRSS_CHATGPT_EDGE_PROFILE", r"C:\Temp\rrss-davidporto-chatgpt")
 EDGE = os.environ.get("RRSS_EDGE_EXE", r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe")
 START_URL = "https://chatgpt.com/"
 COOKIE_DOMAINS = ("chatgpt.com", "openai.com", "oaistatic.com")
@@ -76,12 +76,18 @@ class _Cdp:
 
     def call(self, method, params=None):
         self.n += 1
+        deadline = time.monotonic() + 10
         self.ws.send(self._json.dumps({"id": self.n, "method": method, "params": params or {}}))
         while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(f"CDP {method}: plazo de respuesta agotado")
+            self.ws.settimeout(remaining)
             reply = self._json.loads(self.ws.recv())
             if reply.get("id") == self.n:
                 if "error" in reply:
-                    raise RuntimeError(f"{method}: {reply['error'].get('message')}")
+                    # Evitar propagar detalles que podrían contener datos de la cuenta.
+                    raise RuntimeError(f"CDP {method}: error remoto")
                 return reply.get("result", {})
 
     def close(self):
@@ -89,7 +95,10 @@ class _Cdp:
 
 
 def _is_chatgpt_cookie(cookie):
-    return any(cookie.get("domain", "").lstrip(".").endswith(d) for d in COOKIE_DOMAINS)
+    if not isinstance(cookie, dict):
+        return False
+    domain = str(cookie.get("domain") or "").lstrip(".").lower().rstrip(".")
+    return any(domain == root or domain.endswith("." + root) for root in COOKIE_DOMAINS)
 
 
 def has_chatgpt_session(port=PORT):

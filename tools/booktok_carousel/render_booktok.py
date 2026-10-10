@@ -105,7 +105,7 @@ def render_slide_html(data: dict, slide: dict, index: int, total: int, assets: P
     body_html = f"<div class='body'>{body}</div>" if body else ""
     cta_html = f"<div class='cta'>{cta}</div>" if cta else ""
     chrome_html = (
-        "<div class='web'>autorademodiaz.com</div>"
+        "<div class='web'>davidportodiaz.com</div>"
         "<div class='bottom'><div class='actions'>"
         "<div class='action'><span class='icon'>♡</span>Like</div>"
         "<div class='action'><span class='icon'>✎</span>Comenta</div>"

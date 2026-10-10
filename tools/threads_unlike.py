@@ -25,6 +25,10 @@ def unlike(pg, handle, fragment):
     button = t._find_action_button(container, "Ya no me gusta")
     if button is None:
         return "sin_like"
+    import circuit_breaker as cb
+    allowed, reason = cb.write_preflight("threads")
+    if not allowed:
+        return f"cortacircuitos_abierto:{reason}"
     button.click()
     pg.wait_for_timeout(1000)
     t._check_bot_warning(pg)

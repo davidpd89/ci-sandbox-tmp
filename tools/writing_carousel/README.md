@@ -66,7 +66,7 @@ Revisar IG-02-01 e IG-02-02 completos en móvil antes de renderizar el lote:
 - la foto sigue pareciendo fotografía real, no un filtro “fantasy”;
 - el mismo asset se reconoce como sistema deliberado, no como ocho imágenes fingidamente distintas;
 - el texto de cada slide coincide con `ig02_manifest.json`;
-- marca exacta `AUTORA DEMO DÍAZ`, sin `.com` ni logo grande;
+- marca exacta `DAVID PORTO DÍAZ`, sin `.com` ni logo grande;
 - slides intermedias: solo `DESLIZA →`;
 - última slide: solo el CTA `GUARDA…` exacto del manifest;
 - caption no repite literalmente el titular;

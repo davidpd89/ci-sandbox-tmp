@@ -73,10 +73,10 @@ CDP_URL = "http://127.0.0.1:9223"
 EDGE_EXE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 # Cambiado el 17/09: mismo motivo que x_interact.py - el perfil real por
 # defecto dejo de aceptar --remote-debugging-port (visto en vivo). Perfil
-# dedicado solo para esta automatizacion; David loguea @autorademodiaz en
+# dedicado solo para esta automatizacion; David loguea @davidportodiaz en
 # Threads ahi UNA vez y la sesion se queda guardada.
-EDGE_USER_DATA = r"C:\Temp\rrss-autorademo-edge"
-MY_HANDLE = "autorademodiaz"
+EDGE_USER_DATA = r"C:\Temp\rrss-davidporto-edge"
+MY_HANDLE = "davidportodiaz"
 
 # Mismo seguro que x_interact.py (añadido alli el 17/09 a peticion de
 # David) - si Threads muestra cualquier aviso real de bot/actividad
@@ -118,7 +118,7 @@ class WrongAccountActive(RuntimeError):
 def _assert_active_account(pg):
     """Seguro real anadido el 21/09 tras un aviso de David: la cuenta
     ACTIVA de la sesion (la que ejecuta follow/like/post) puede no ser
-    autorademodiaz aunque la sesion este logueada - Threads/Instagram
+    davidportodiaz aunque la sesion este logueada - Threads/Instagram
     permiten varias cuentas a la vez con un selector de cuenta activa.
     Se llama antes de CUALQUIER accion de escritura (follow/like/post),
     reutilizando la pagina ya cargada - no anade una navegacion extra."""
@@ -127,37 +127,25 @@ def _assert_active_account(pg):
         raise WrongAccountActive(
             f"CUENTA ACTIVA INCORRECTA: esta sesion tiene activa @{active}, "
             f"no @{MY_HANDLE}. Accion cancelada antes de ejecutarse. "
-            "Cambiar de cuenta en Threads (perfil Autora Demo Escritor) "
+            "Cambiar de cuenta en Threads (perfil David Porto Diaz Escritor) "
             "y volver a intentar."
         )
 
 
 # 06/10: un `evaluate` de Playwright sobre un Edge colgado no tiene tiempo limite y dejo una prueba parada 19 minutos (y el bloqueo del navegador con ella). Vigilante: si no
 # hay actividad (`beat()`) en `limit` segundos, el proceso termina; el registro es accion a accion y el bloqueo de archivo caduca con el proceso, asi que no se pierde nada.
-_WATCH = {"last": time.time(), "started": False}
+import browser_common as bc
+
+_WATCHDOG = bc.Watchdog("threads")
 
 
 def beat():
-    _WATCH["last"] = time.time()
+    _WATCHDOG.beat()
 
 
 def start_watchdog(limit=300, interval=15):
-    if _WATCH["started"] or not limit:
-        return
-    import threading
-    _WATCH["started"] = True
+    _WATCHDOG.start(limit=limit, interval=interval)
 
-    def loop():
-        while True:
-            time.sleep(interval)
-            idle = time.time() - _WATCH["last"]
-            if idle > limit:
-                print(f"VIGILANTE: {int(idle)} s sin actividad en el navegador (Edge colgado); se aborta el proceso para liberar el turno. "
-                      "Receta: tools/cdp_resume_workers.py", flush=True)
-                os._exit(6)
-
-    beat()
-    threading.Thread(target=loop, daemon=True, name="threads-watchdog").start()
 
 
 def _check_bot_warning(pg):
@@ -253,11 +241,11 @@ def session():
     @contextlib.contextmanager
     def manager():
         p = sync_playwright().start()
+        pg = None
         try:
-            browser = p.chromium.connect_over_cdp(CDP_URL)
-            ctx = browser.contexts[0]
-            pages = [pg for pg in ctx.pages if urlsplit(pg.url).hostname in {"threads.com", "www.threads.com", "threads.net", "www.threads.net"}]
-            pg = pages[-1] if pages else ctx.new_page()
+            import browser_common as bc
+            browser = bc.connect_cdp(p.chromium, CDP_URL)
+            pg = bc.new_owned_page(browser)
             pg.set_default_timeout(15000)             # 06/10: ninguna llamada espera los 30 s por defecto (un perfil que no responde tardaba minutos entre botones)
             pg.set_default_navigation_timeout(30000)
             _SHARED["pg"] = pg
@@ -265,7 +253,16 @@ def session():
             yield pg
         finally:
             _SHARED["pg"] = None
-            p.stop()
+            try:
+                if pg is not None:
+                    pg.close()
+            except Exception:
+                pass
+            finally:
+                try:
+                    _WATCHDOG.stop()
+                finally:
+                    p.stop()
 
     return manager()
 
@@ -274,18 +271,14 @@ def _connect():
     if _SHARED["pg"] is not None:
         return _KeepOpen(), _SHARED["pg"]
     p = sync_playwright().start()
-    browser = p.chromium.connect_over_cdp(CDP_URL)
-    ctx = browser.contexts[0]
     try:
-        import browser_lean
-        browser_lean.apply(ctx)         # 07/10: sin imagenes/video/fuentes
+        import browser_common as bc
+        browser = bc.connect_cdp(p.chromium, CDP_URL)
+        pg = bc.new_owned_page(browser)
+        return bc.OwnedPlaywright(p, pg), pg
     except Exception:
-        pass
-    pages = [pg for pg in ctx.pages if urlsplit(pg.url).hostname in {
-        "threads.com", "www.threads.com", "threads.net", "www.threads.net"
-    }]
-    pg = pages[-1] if pages else ctx.new_page()
-    return p, pg
+        p.stop()
+        raise
 
 
 def _active_profile_handle(pg):
@@ -335,7 +328,7 @@ def _health_check(pg):
 
 def health():
     """Comprueba que la sesion sigue logueada Y que la cuenta ACTIVA es
-    autorademodiaz - no solo que exista una sesion cualquiera. Mismo
+    davidportodiaz - no solo que exista una sesion cualquiera. Mismo
     reintento que x_interact.py (evita el falso negativo por hidratacion
     lenta visto en vivo en X el 17/09)."""
     p, pg = _connect()
