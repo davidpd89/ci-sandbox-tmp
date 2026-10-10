@@ -2,7 +2,7 @@
 import copy
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import subprocess
 import sys
@@ -58,6 +58,20 @@ class RedditSnapshotPreflightTests(unittest.TestCase):
         self.assertTrue(decision("quoted_message_valid").allowed)
         self.assertFalse(decision("quoted_message_missing").allowed)
         self.assertFalse(decision("cited_deleted").allowed)
+
+    def test_root_comment_uses_common_three_day_age_limit(self):
+        # Outreach/comment externo: 3 días; los 7 días de follow-up
+        # pertenecen a un contrato distinto que este módulo no admite.
+        item = scenario()
+        at = datetime(2026, 10, 9, 19, 5, tzinfo=timezone.utc)
+        post = item["snapshot"]["body"][0]["data"]["children"][0]["data"]
+        post["created_utc"] = (at - timedelta(days=4)).timestamp()
+        result = evaluate(item["plan"], item["snapshot"], item["review"], now=at)
+        self.assertFalse(result.allowed, result.reason)
+        self.assertIn("ventana editorial", result.reason)
+        post["created_utc"] = (at - timedelta(days=3)).timestamp()
+        result = evaluate(item["plan"], item["snapshot"], item["review"], now=at)
+        self.assertTrue(result.allowed, result.reason)
 
     def test_fields_missing_fail_closed_not_keyerror(self):
         for key in ("id", "subreddit", "locked", "archived", "created_utc", "removed_by_category"):
