@@ -78,12 +78,12 @@ def touched_paths(root: Path, commit: str, parents: list[str]) -> set[str]:
                "--no-textconv", "--name-only", "-z", "--diff-filter=AMT"]
     if not parents:
         data = git(root, "diff-tree", "--root", *options, commit)
-        return {p.decode("utf-8", "surrogateescape") for p in data.split(b"\0") if p}
+        return {p.decode("utf-8") for p in data.split(b"\0") if p}
     # Compare to the first parent: a merge can resurrect a sensitive path
     # from an already-reachable side branch, then delete it in this push.
     # Intersection of all parent diffs would silently miss that transient path.
     data = git(root, "diff-tree", *options, parents[0], commit)
-    return {p.decode("utf-8", "surrogateescape") for p in data.split(b"\0") if p}
+    return {p.decode("utf-8") for p in data.split(b"\0") if p}
 
 def scan_history(root: Path, before: str | None, after: str, forbidden) -> list[tuple[str, int]]:
     findings = []

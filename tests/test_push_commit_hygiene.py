@@ -244,6 +244,14 @@ class PushCommitTests(unittest.TestCase):
         self.commit("space")
         self.assertEqual(self.scan(), [(self.head(), 1)])
 
+    def test_invalid_utf8_git_path_fails_closed(self):
+        # Git supports arbitrary path bytes on Unix; Windows cannot construct
+        # this fixture directly. Do not silently classify a decoded surrogate.
+        malformed = b"credentials.json\\xff\\0".replace(b"\\xff", bytes([255])).replace(b"\\0", bytes([0]))
+        with patch.object(gh, "git", return_value=malformed):
+            with self.assertRaises(UnicodeDecodeError):
+                gh.touched_paths(self.repo, self.head(), [])
+
     def test_root_commit_sensitive_on_first_push(self):
         # An orphan first push must inspect the root commit, not only its tip.
         self.git("checkout", "--orphan", "first")
