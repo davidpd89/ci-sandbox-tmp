@@ -80,6 +80,21 @@ class EvidenceTest(unittest.TestCase):
             bridge_results(s, b, [row(ack=bad)])
             self.assertEqual(next(iter(s.items.values()))["outcome"], "unverified")
 
+    def test_reused_ack_cannot_confirm_two_distinct_records(self):
+        b = Batch("x", "WEB", "x_execute.run_plan", "exp")
+        entries = [row(record_id="a", ack=ack("WEB")),
+                   row(record_id="b", ack=ack("WEB")),
+                   row(record_id="c", ack=ack("WEB", id="different"))]
+        sink = Sink()
+        result = bridge_results(sink, b, entries)
+        self.assertEqual(result["inserted"], 3)
+        self.assertEqual(result["downgraded_reused_ack"], 2)
+        outcomes = {json.loads(v["source_id"])[1]: v["outcome"]
+                    for v in sink.items.values()}
+        self.assertEqual(outcomes, {"a": "unverified",
+                                    "b": "unverified", "c": "confirmed"})
+        self.assertEqual(bridge_results(sink, b, entries)["replayed"], 3)
+
     def test_no_false_outcomes(self):
         s = Sink()
         b = Batch("x", "WEB", "x_execute.run_plan", "exp")
