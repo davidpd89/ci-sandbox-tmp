@@ -282,7 +282,7 @@ class LegacyContractTests(unittest.TestCase):
 
     def test_orphaned_unfollow_is_diagnosed_not_invented(self):
         result = rm.audit_legacy_rows("mastodon", [
-            {"fecha": "2026-10-01", "cuenta": "fake@federated.example",
+            {"fecha": "2026-10-01", "cuenta": "fake@example.net",
              "tipo": "unfollow", "resultado": "confirmado"},
             {"fecha": "mal", "cuenta": "another", "tipo": "follow", "resultado": "confirmado"},
         ])
