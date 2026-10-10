@@ -1,0 +1,20 @@
+json
+{
+  "network": "reddit",
+  "kind": "t3",
+  "short_id": "abc123",
+  "fullname": "t3_abc123",
+  "subreddit": "Fantasy",
+  "author": "usuario_ejemplo",
+  "permalink": "https://www.reddit.com/r/Fantasy/comments/abc123/...",
+  "created_utc": 1760000000,
+  "created_at": "2025-10-09T08:53:20+00:00",
+  "title": "Recomendaciones de romantasy en español",
+  "body_or_selftext": "...",
+  "score": 42,
+  "num_comments": 7,
+  "language": "es",
+  "action": "comment",
+  "target_fullname": "t3_abc123",
+  "parent_fullname": null
+}
