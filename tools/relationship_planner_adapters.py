@@ -26,6 +26,18 @@ VERSION = "relationship-planner-adapters/v1"
 
 def _day(value):
     """Fecha real, estricta y sin asumir que timestamps locales son UTC."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)) or (isinstance(value, str) and re.fullmatch(r"\\d{10}(?:\\d{3})?", value)):
+        try:
+            number = float(value)
+            if number > 1e11:
+                number /= 1000
+            if 946684800 <= number < 4102444800:
+                return dt.datetime.fromtimestamp(number, tz=dt.timezone.utc).date().isoformat()
+        except (OverflowError, ValueError, TypeError):
+            return None
+        return None
     if not isinstance(value, str):
         return None
     try:
@@ -147,12 +159,13 @@ def _verified_inbound(events, today):
 
 def _target_day(row):
     # Nunca usar created_at de la raíz de una tarea: puede ser la fecha de la cola.
-    for key in ("target_created_at", "post_created_at", "reply_target_at"):
+    for key in ("target_created_at", "post_created_at", "reply_target_at",
+                "target_created_utc", "post_created_utc"):
         if _day(row.get(key)):
             return _day(row[key])
     post = row.get("post")
     if isinstance(post, dict):
-        for key in ("created_at", "createdAt", "create_time", "created_time"):
+        for key in ("created_at", "createdAt", "create_time", "created_time", "created_utc"):
             if _day(post.get(key)):
                 return _day(post[key])
     return None
