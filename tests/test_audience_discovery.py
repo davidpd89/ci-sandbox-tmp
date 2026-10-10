@@ -69,7 +69,8 @@ class AudienceTests(unittest.TestCase):
         first = ad.normalize("bluesky", "like", raw, surface="liked_by",
                              post_key="p1", observed_at=NOW, post_created_at=POST)
         self.assertIn("liked_by|p1|like|", first.event_key)
-        self.assertEqual(self.ingest([first, first])["new_events"], 1)
+        self.assertEqual(self.store.ingest([first, first], network="bluesky",
+            surface="liked_by", seed="seed", next_cursor=None, now=NOW)["new_events"], 1)
 
     def test_comment_requires_real_event_id(self):
         with self.assertRaisesRegex(ad.ObservationError, "evento_sin_id"):
@@ -105,6 +106,25 @@ class AudienceTests(unittest.TestCase):
             self.ingest([obs], network="instagram")
         self.assertEqual(len(self.store.ranked("instagram")), 2)
         self.assertTrue(all(not x["stable_identity"] for x in self.store.ranked("instagram")))
+
+    def test_late_create_cannot_undo_newer_delete(self):
+        created = event(occurred_at="2026-10-10T09:00:00Z",
+                        observed_at="2026-10-10T09:00:00Z")
+        deleted = event(occurred_at="2026-10-10T10:00:00Z",
+                        observed_at="2026-10-10T10:00:00Z", deleted=True)
+        replay = event(occurred_at="2026-10-10T09:30:00Z",
+                       observed_at="2026-10-10T12:00:00Z")
+        self.ingest([created])
+        self.ingest([deleted])
+        stats = self.ingest([replay])
+        self.assertEqual(stats["replays"], 1)
+        self.assertEqual(self.store.ranked("bluesky", now=NOW), [])
+
+    def test_ranking_rechecks_post_age_after_storage(self):
+        self.ingest([event()])
+        self.assertEqual(len(self.store.ranked("bluesky", now=NOW)), 1)
+        self.assertEqual(self.store.ranked("bluesky",
+                         now="2026-10-25T00:00:00Z"), [])
 
     def test_mastodon_local_ids_are_instance_scoped(self):
         a = event("mastodon")
