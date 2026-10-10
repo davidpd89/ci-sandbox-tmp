@@ -173,6 +173,16 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(report["networks"]["x"]["rounds"]["total"], 3)
         self.assertIsNone(report["networks"]["x"]["rounds"]["mean_minutes"])
 
+    def test_headerless_or_wrong_schema_is_unknown_not_zero(self):
+        registry = self.root / "SISTEMA_DIARIO_X" / "registro_interacciones.csv"
+        csv_file(registry, ["foo"], [{"foo": "PRIVATE"}])
+        round_path = self.root / "00_OPERATIVO" / "tiempos_rondas.csv"
+        csv_file(round_path, ["foo"], [{"foo": "PRIVATE"}])
+        report = dash.collect(self.root, as_of=NOW)
+        self.assertIsNone(report["networks"]["x"]["actions"])
+        self.assertIsNone(report["networks"]["x"]["rounds"])
+        self.assertFalse(report["coverage"]["round_csv"])
+
     def test_cli_writes_only_sanitized_artifacts(self):
         output = pathlib.Path(self.tmp.name) / "export"
         result = dash.main(["--root", str(self.root), "--output", str(output),
