@@ -156,6 +156,39 @@ CREATE INDEX IF NOT EXISTS relation_events_order
 """
 
 
+# Se comprueban también PK, tipos, orden y nulabilidad. INSERT sin lista de
+# columnas exige esta forma exacta; aceptar un esquema legado parcialmente
+# compatible provocaría errores tardíos o claves idempotentes incorrectas.
+_EXPECTED_SCHEMA = {
+    "relation_state": (
+        ("network", "TEXT", 1, 1), ("account", "TEXT", 1, 2),
+        ("state", "TEXT", 1, 0), ("following", "INTEGER", 1, 0),
+        ("follows_me", "INTEGER", 1, 0), ("version", "INTEGER", 1, 0),
+        ("last_at", "TEXT", 1, 0),
+    ),
+    "relation_events": (
+        ("network", "TEXT", 1, 1), ("account", "TEXT", 1, 2),
+        ("event_id", "TEXT", 1, 3), ("kind", "TEXT", 1, 0),
+        ("lane", "TEXT", 1, 0), ("occurred_at", "TEXT", 1, 0),
+        ("before_state", "TEXT", 0, 0), ("after_state", "TEXT", 1, 0),
+        ("version", "INTEGER", 1, 0),
+    ),
+}
+
+
+def _validate_sqlite_schema(db, *, require_all: bool = False) -> None:
+    """Rechazo preventivo de DB ajena/antigua; nunca migra datos implícitamente."""
+    for table, expected in _EXPECTED_SCHEMA.items():
+        rows = db.execute(f"PRAGMA table_info({table})").fetchall()
+        if not rows:
+            if require_all:
+                raise ValueError(f"missing relationship SQLite table: {table}")
+            continue
+        columns = tuple((r[1], str(r[2]).upper(), r[3], r[5]) for r in rows)
+        if columns != expected:
+            raise ValueError(f"incompatible relationship SQLite schema: {table}")
+
+
 def _lookup_key(network: str, account: str) -> tuple[str, str]:
     """Aplica también a las lecturas la normalización usada en apply()."""
     net = network.strip().casefold() if isinstance(network, str) else ""
@@ -182,7 +215,9 @@ class RelationshipStore:
         if self.path == ":memory:":
             raise ValueError("SQLite :memory: does not survive per-call connections; use a temporary file")
         with closing(self._connect()) as db:
+            _validate_sqlite_schema(db)
             db.executescript(_SCHEMA)
+            _validate_sqlite_schema(db, require_all=True)
             db.commit()
 
     def _connect(self):
