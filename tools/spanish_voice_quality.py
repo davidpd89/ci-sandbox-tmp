@@ -145,15 +145,23 @@ def advisory(text, *, network, queue=None, log=print, label="[voz] revision_es")
     No reescribe, no bloquea, ni incorpora texto/autor/URL al log. Devuelve
     hallazgos para interfaz editorial, incluso cuando no se imprimen avisos.
     """
-    if network not in NETWORKS:
+    if not isinstance(network, str) or network not in NETWORKS:
         return []
+
+    def safe_log(message):
+        # El registro es opcional: un logger roto no interrumpe la ronda.
+        try:
+            log(message)
+        except Exception:
+            pass
+
     try:
         findings = audit(text, network=network, queue=queue)["findings"]
     except Exception as exc:
-        log(label + " auditor_es_no_disponible: " + type(exc).__name__)
+        safe_log(label + " auditor_es_no_disponible: " + type(exc).__name__)
         return []
     if findings:
-        log(label + ": " + ",".join(sorted({issue["code"] for issue in findings})))
+        safe_log(label + ": " + ",".join(sorted({issue["code"] for issue in findings})))
     return findings
 
 
