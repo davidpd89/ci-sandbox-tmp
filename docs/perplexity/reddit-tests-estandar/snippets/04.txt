@@ -1,0 +1,31 @@
+python
+# Propuesta: tools/growth_contracts.py
+from dataclasses import dataclass
+from datetime import datetime, timezone
+
+@dataclass(frozen=True)
+class GrowthCandidate:
+    network: str
+    kind: str
+    short_id: str
+    fullname: str
+    created_utc: float
+    permalink: str
+    action: str
+    target_fullname: str
+    parent_fullname: str | None = None
+    subreddit: str | None = None
+    author: str | None = None
+    title: str | None = None
+    body_or_selftext: str | None = None
+    score: int | None = None
+    num_comments: int | None = None
+    language: str | None = None
+
+    @property
+    def created_at(self) -> datetime:
+        return datetime.fromtimestamp(self.created_utc, tz=timezone.utc)
+
+    @property
+    def dedupe_key(self) -> tuple[str, str, str, str]:
+        return (self.network, self.kind, self.short_id, self.action)
