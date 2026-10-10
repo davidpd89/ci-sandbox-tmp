@@ -38,6 +38,52 @@ def api_get(path, token, **params):
     return mc.graph_get(BASE, path, token, **params)
 
 
+def paginated(path, token, *, fields, limit=50, max_pages=5):
+    """Itera paginas de Graph Threads sin abrir URLs devueltas por el servidor.
+
+    'paging.next' solo indica que hay otra pagina: se pasa su cursor 'after' al
+    endpoint original. Ante truncado/error se aborta antes de producir un plan parcial.
+    """
+    if (type(limit) is not int or type(max_pages) is not int
+            or not 1 <= limit <= 100 or max_pages < 1):
+        raise ValueError("limite de paginacion invalido")
+    items, seen_cursors, seen_ids = [], set(), set()
+    cursor = None
+    for _ in range(max_pages):
+        params = {"fields": fields, "limit": limit}
+        if cursor is not None:
+            params["after"] = cursor
+        response = api_get(path, token, **params)
+        if not isinstance(response, dict) or not isinstance(response.get("data"), list):
+            raise RuntimeError("respuesta paginada Threads sin data valida")
+        for item in response["data"]:
+            if not isinstance(item, dict) or not item.get("id"):
+                raise RuntimeError("elemento Threads sin id")
+            if str(item["id"]) not in seen_ids:
+                items.append(item)
+                seen_ids.add(str(item["id"]))
+        paging = response.get("paging") or {}
+        if not isinstance(paging, dict):
+            raise RuntimeError("paging Threads invalido")
+        cursors = paging.get("cursors") or {}
+        if not isinstance(cursors, dict):
+            raise RuntimeError("cursores Threads invalidos")
+        next_cursor = cursors.get("after")
+        # Meta tambien documenta respuestas con solo paging.cursors, sin
+        # paging.next. Una pagina llena puede ocultar mas elementos.
+        has_next = bool(paging.get("next"))
+        full_page = len(response["data"]) >= limit
+        if not has_next and not full_page:
+            return items
+        if not isinstance(next_cursor, str) or not next_cursor:
+            raise RuntimeError("cursor Threads ausente: paginacion potencialmente incompleta")
+        if next_cursor in seen_cursors:
+            raise RuntimeError("cursor Threads repetido")
+        seen_cursors.add(next_cursor)
+        cursor = next_cursor
+    raise RuntimeError("Threads: paginacion incompleta, revisar limite antes de generar acciones")
+
+
 def token_days_left(env, today=None):
     today = today or datetime.date.today()
     try:
@@ -193,6 +239,8 @@ def build_plan(items, decisions):
                   "reply_to_id": item["id"],
                   "url": item.get("permalink") or item.get("url"),
                   "post_text": item.get("text", ""),
+                  "target_created_at": item.get("timestamp"),
+                  "thread_turns": item.get("thread_turns", []),
                   "reply_to_us": True, "motivo": "followup API Threads"}
         import reply_provenance as proof
         carried = proof.carry_decision_proof(
@@ -202,19 +250,107 @@ def build_plan(items, decisions):
     return plan
 
 
+def _reply_parent_id(item):
+    """Read the Graph parent reference; a missing one cannot prove ancestry."""
+    parent = item.get("replied_to")
+    if not isinstance(parent, dict):
+        return None
+    value = parent.get("id")
+    return str(value) if isinstance(value, (str, int)) and not isinstance(value, bool) and str(value).strip() else None
+
+
+def _thread_path(nodes, root_id, reply_id, owned_ids, *, max_turns=20):
+    """Reconstruct an exact root-to-reply path without inventing missing turns."""
+    path, seen, current_id = [], set(), str(reply_id)
+    while current_id not in seen and len(path) < max_turns:
+        seen.add(current_id)
+        node = nodes.get(current_id)
+        if not isinstance(node, dict) or not isinstance(node.get("text"), str) or not node["text"].strip():
+            return []
+        path.append({
+            "role": "ours" if current_id in owned_ids else "theirs",
+            "text": node["text"], "post_id": current_id,
+        })
+        if current_id == root_id:
+            return list(reversed(path))
+        current_id = _reply_parent_id(node)
+        if not current_id:
+            return []
+    return []
+
+
 def followups(token, my_username, limit_posts=25):
-    mine = api_get("me/threads", token, fields="id,text,timestamp,is_reply,has_replies,replied_to{id}", limit=limit_posts)
-    posts = mine.get("data", [])
-    answered = {(p.get("replied_to") or {}).get("id") for p in posts if p.get("is_reply")}
-    pending = []
+    """Read complete root conversations and select fresh questions addressed to us.
+
+    Only replies to an owned post/reply qualify. Never interpret a missing
+    ancestor or incomplete pagination as proof that a question was unanswered.
+    """
+    posts = paginated("me/threads", token, fields="id,text,timestamp,is_reply,has_replies", limit=limit_posts)
+    own_replies = paginated("me/replies", token, fields="id,replied_to", limit=100)
+    answered = set()
+    own_ids = set()
+    for own in own_replies:
+        parent = _reply_parent_id(own)
+        if parent is None:
+            raise RuntimeError("Threads: una respuesta propia carece de replied_to; no se puede reconciliar")
+        own_ids.add(str(own["id"]))
+        answered.add(parent)
+
+    mine = str(my_username).casefold().lstrip("@")
+    pending, seen = [], set()
     for post in posts:
-        if not post.get("has_replies"):
+        if post.get("is_reply") or not post.get("has_replies"):
             continue
-        data = api_get(f"{post['id']}/replies", token, fields="id,text,username,timestamp,permalink")
-        for reply in unanswered(data.get("data", []), my_username, answered):
-            reply["a_nuestro"] = (post.get("text") or "")[:100]
-            pending.append(reply)
-    return pending
+        root_id = str(post["id"])
+        conversation = paginated(
+            f"{root_id}/conversation", token,
+            fields="id,text,username,timestamp,permalink,replied_to,is_reply_owned_by_me,root_post",
+            limit=100,
+        )
+        nodes = {root_id: post}
+        for reply in conversation:
+            rid = str(reply["id"])
+            if rid != root_id:
+                nodes[rid] = reply
+        visible_owned_replies = {
+            str(reply["id"]) for reply in conversation
+            if str(reply["id"]) != root_id and (
+                reply.get("is_reply_owned_by_me") is True
+                or str(reply.get("username") or "").casefold().lstrip("@") == mine
+            )
+        }
+        # An own reply may be visible in /conversation before /me/replies:
+        # either source can prove that its immediate parent was answered.
+        for reply in conversation:
+            if str(reply["id"]) in visible_owned_replies:
+                parent_id = _reply_parent_id(reply)
+                if parent_id is None:
+                    raise RuntimeError("Threads: respuesta propia en conversacion sin replied_to")
+                answered.add(parent_id)
+        owned = {root_id} | own_ids | visible_owned_replies
+        for reply in unanswered(conversation, my_username, answered):
+            rid = str(reply["id"])
+            if (rid == root_id or rid in seen or rid in own_ids
+                    or reply.get("is_reply_owned_by_me") is True):
+                continue
+            # Conversations include user-to-user debates: only reply when
+            # the immediate recipient is one of our own posts or replies.
+            parent_id = _reply_parent_id(reply)
+            if parent_id is None:
+                raise RuntimeError("Threads: respuesta recibida sin replied_to; no se puede validar destino")
+            if parent_id not in owned:
+                continue
+            turns = _thread_path(nodes, root_id, rid, owned)
+            if not turns:
+                raise RuntimeError("Threads: cadena de respuestas incompleta; no ofrecer un contexto inventado")
+            seen.add(rid)
+            candidate = dict(reply)
+            candidate["id"] = rid
+            candidate["a_nuestro"] = nodes[parent_id]["text"][:100]
+            candidate["thread_turns"] = turns
+            candidate["reply_to_us"] = True
+            pending.append(candidate)
+    return sorted(pending, key=lambda x: x.get("timestamp") or "", reverse=True)
 
 
 def main(argv=None):
