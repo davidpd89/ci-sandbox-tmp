@@ -21,7 +21,7 @@ No se reutilizan archivos ni dependencias de Reddit/PRAW/RedditWarp/Devvit. El a
 
 ## Decisión
 
-Salida **C**: conservar el ejecutor/CDP existente y añadir un comprobador offline puro, sin comunicación con Reddit. Toda aprobación está ligada a post, texto y revisión reciente; el resultado positivo **no concede permiso para publicar**. En el repositorio oficial, la integración bajo bloqueo y la reconciliación de intentos permanecen pendientes.
+Salida **C**: conservar el ejecutor/CDP existente y añadir un comprobador offline puro, sin comunicación con Reddit. Toda aprobación está ligada a post, texto, cita seleccionada y revisión reciente; el resultado positivo **no concede permiso para publicar**. En el repositorio oficial, la integración bajo bloqueo y la reconciliación de intentos permanecen pendientes.
 
 ## Pruebas
 
@@ -67,6 +67,8 @@ python -m pytest tests/test_reddit_snapshot_preflight.py -q
 python tools/reddit_snapshot_preflight.py --plan plan.json --snapshot reddit_listing.json --review revision.json
 ```
 El primer comando tiene el mismo criterio que pytest, pero `python -m pytest tests/test_reddit_snapshot_preflight.py -q` es el comando de CI. CLI devuelve 0 para *apto para revisión*, 2 si bloquea. **Nunca autoriza por sí sola publicar**; el snapshot debe adquirirse de modo autorizado y revalidarse bajo el candado de escritura.
+
+**Paridad de cita (REV 18, 10-10-2026):** una aprobación vinculada a hilo y texto podía reaprovecharse cambiando `quoted_comment_id` por otro comentario válido. El preflight exige ahora coincidencia del identificador de cita en `review` y `plan`; las fixtures de cita llevan esa vinculación y el test adversarial comprueba que una modificación sin nueva revisión bloquea. Esto documenta la revisión, pero no verifica identidad humana ni origen del snapshot.
 
 **Paridad de antigüedad (REV 18, 10-10-2026):** el preflight original aceptaba 7 días para un comentario raíz, mientras el contrato común del oficial (`tools/post_age_policy.py`) establece 3 días para `comment` y 7 solo para `follow-up`. Se acota ahora a 3 días con prueba de 4 días bloqueado y 3 días permitido. Al integrar en el privado, **importar** la política compartida y no mantener dos fuentes de verdad. Este módulo sigue siendo offline y no autoriza publicación.
 
@@ -147,11 +149,11 @@ El baseline oficial **no se ejecutó en este mirror**: faltan sus módulos. Por 
 
 **Corrección aplicada en esta misma PR**:
 
-- El esquema de revisión añade `post_id`, `plan_sha256` (SHA-256 UTF-8 del texto exacto) y `context_checked_at`. El instante de lectura humana debe ser posterior o igual al del snapshot, no futuro y no superar cinco minutos. Cambiar el texto o el hilo obliga a una nueva revisión; el digest **no autentica** a la persona que rellenó el JSON.
+- El esquema de revisión añade `post_id`, `plan_sha256` (SHA-256 UTF-8 del texto exacto), `quoted_comment_id` (cuando se cita) y `context_checked_at`. El instante de lectura humana debe ser posterior o igual al del snapshot, no futuro y no superar cinco minutos. Cambiar el texto, el hilo o el identificador de la cita obliga a una nueva revisión; el digest **no autentica** a la persona que rellenó el JSON.
 - El recorrido de Listings ahora es iterativo (no recursivo), comprueba por cada `t1` el `id` único, `link_id=t3_<post>`, `parent_id` del contenedor, autor y cuerpo. Rechaza `more`, hijos ausentes, duplicados, profundidad mayor que 64 y más de 10 000 comentarios. Esta cota evita desbordamientos con JSONs sintéticos o dañados y no pretende cubrir todo hilo gigantesco.
 - Las marcas temporales requieren zona horaria explícita y números finitos; se evita interpretar silenciosamente una hora ingenua usando la zona local de Windows/Ubuntu.
 - `tests/test_reddit_snapshot_provenance.py` cubre revisión reutilizada en otro hilo/texto, lecturas caducadas, nodos injertados, duplicados, árbol anidado legítimo, `more`, profundidad adversarial y timestamps anómalos. `tests/test_reddit_snapshot_preflight.py` comprueba cita Markdown incluso con digest de revisión actualizado. La fixture y todos los casos son inventados.
-- Migración: **no hay migración de datos reales**. Los consumidores offline que construyan un `review` deben añadir las tres claves; omitirlas bloquea la decisión de forma explícita. No reutilizar automáticamente fichas anteriores como aprobaciones.
+- Migración: **no hay migración de datos reales**. Los consumidores offline que construyan un `review` deben añadir las claves de identidad, hash y lectura, y vincular también cualquier `quoted_comment_id`; omitirlas bloquea la decisión de forma explícita. No reutilizar automáticamente fichas anteriores como aprobaciones.
 - Rollback: revertir los commits de módulo/tests/fixture de esta revisión; no existe escritura en bases de datos, usuarios ni navegador.
 
 **Reutilización pública (comparación ampliada):** se contrastó también [RedditWarp, MIT](https://github.com/Pyprohly/redditwarp/blob/c117c4e677a397c3779c1b9d7017926587110fda/LICENSE), commit [`c117c4e` del 01-07-2024](https://github.com/Pyprohly/redditwarp/commit/c117c4e677a397c3779c1b9d7017926587110fda), sin commits posteriores en la rama principal según GitHub al 09-10-2026. Ofrece wrappers tipados Python >=3.8, compatibles de forma declarada con Python 3.11/Windows. Frente a PRAW/Async PRAW, mantenidos con `v8.0.3` de agosto de 2026, no justifica incorporar una tercera capa de autenticación/red a un verificador de snapshots inerte. Se reutilizó el **contrato público** de Listings `t3/t1/more` de la [documentación de Reddit](https://www.reddit.com/dev/api/), no código externo ni una dependencia nueva.
