@@ -49,6 +49,62 @@ def _actor(raw: Mapping) -> Mapping | None:
     return None
 
 
+def _bluesky_thread(payload: Mapping) -> tuple[list[Mapping], int]:
+    """Recorre replies reales de getPostThread, sin atribuir el post raíz."""
+    root = payload.get("thread")
+    if not isinstance(root, Mapping):
+        raise core.ObservationError("thread_invalido")
+    pending = list(reversed(root.get("replies") or []))
+    items = []
+    unavailable = 0
+    while pending:
+        if len(items) + len(pending) > 100000:
+            raise core.ObservationError("thread_demasiado_grande")
+        node = pending.pop()
+        if not isinstance(node, Mapping):
+            raise core.ObservationError("reply_invalida")
+        post = node.get("post")
+        # NotFoundPost y BlockedPost son placeholders, nunca personas.
+        if not isinstance(post, Mapping):
+            unavailable += 1
+            continue
+        author = post.get("author")
+        uri = post.get("uri")
+        if not isinstance(author, Mapping) or not isinstance(uri, str) or not uri:
+            raise core.ObservationError("reply_sin_autor_o_uri")
+        record = post.get("record") if isinstance(post.get("record"), Mapping) else {}
+        items.append({"actor": author, "event_id": uri,
+                      "text": record.get("text") or "",
+                      "createdAt": record.get("createdAt")})
+        replies = node.get("replies") or []
+        if not isinstance(replies, (list, tuple)):
+            raise core.ObservationError("replies_invalidas")
+        pending.extend(reversed(replies))
+    return items, unavailable
+
+
+def _reddit_tree(entries: list | tuple) -> list[Mapping]:
+    """Aplana respuestas ya hidratadas; rechaza MoreComments sin expandir."""
+    result = []
+    pending = list(reversed(entries))
+    while pending:
+        if len(result) + len(pending) > 100000:
+            raise core.ObservationError("comentarios_demasiado_grandes")
+        entry = pending.pop()
+        if not isinstance(entry, Mapping):
+            raise core.ObservationError("fila_no_es_mapa")
+        if entry.get("kind") in ("more", "MoreComments"):
+            raise core.ObservationError("reddit_morecomments_sin_expandir")
+        result.append(entry)
+        children = entry.get("replies") or []
+        if isinstance(children, Mapping):
+            children = children.get("comments") or children.get("data") or []
+        if not isinstance(children, (list, tuple)):
+            raise core.ObservationError("respuestas_invalidas")
+        pending.extend(reversed(children))
+    return result
+
+
 def adapt_page(network: str, kind: str, payload: Mapping, *, post_key: str,
                post_created_at: str | None = None, source_instance: str | None = None) -> dict:
     """Contrato de importación explícito. No se convierte un count agregado a usuarios.
@@ -62,10 +118,19 @@ def adapt_page(network: str, kind: str, payload: Mapping, *, post_key: str,
     if not isinstance(payload, Mapping):
         raise core.ObservationError("export_invalido")
     field = FIELDS[network][kind]
-    if field not in payload or not isinstance(payload[field], (list, tuple)):
+    unavailable = 0
+    if network == "bluesky" and kind in ("comment", "reply") and "thread" in payload:
+        entries, unavailable = _bluesky_thread(payload)
+    elif network == "mastodon" and kind in ("comment", "reply") and "descendants" in payload:
+        entries = payload["descendants"]
+    else:
+        entries = payload.get(field)
+    if not isinstance(entries, (list, tuple)):
         raise core.ObservationError("export_sin_lista_de_actores")
+    if network == "reddit" and kind in ("comment", "reply"):
+        entries = _reddit_tree(entries)
     items = []
-    for entry in payload[field]:
+    for entry in entries:
         if not isinstance(entry, Mapping):
             raise core.ObservationError("fila_no_es_mapa")
         actor = _actor(entry)
@@ -106,4 +171,5 @@ def adapt_page(network: str, kind: str, payload: Mapping, *, post_key: str,
             cursor = None
     # Evitar persistir URLs de paging.next con query strings o tokens.
     return {"items": items, "kind": kind, "post_key": str(post_key),
-            "post_created_at": post_created_at, "next_cursor": cursor}
+            "post_created_at": post_created_at, "next_cursor": cursor,
+            "unavailable": unavailable}
