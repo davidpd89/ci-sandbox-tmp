@@ -111,6 +111,9 @@
     "quoted_message_valid": {
       "plan": {
         "quoted_comment_id": "t1_c001"
+      },
+      "review": {
+        "quoted_comment_id": "t1_c001"
       }
     },
     "stale_thread": {
