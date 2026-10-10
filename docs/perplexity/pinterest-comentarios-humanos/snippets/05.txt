@@ -1,0 +1,16 @@
+python
+# Métrica propia, alineada con la idea de diversidad semántica y léxica:
+# https://github.com/YichenZW/awesome-llm-diversity
+from collections import Counter
+
+def metrica_diversidad(comentarios: list[str]) -> dict:
+    aperturas = [c.strip().split()[0].lower() for c in comentarios if c.strip()]
+    palabras = [p.lower() for c in comentarios for p in c.split()]
+
+    return {
+        "total": len(comentarios),
+        "aperturas_unicas": len(set(aperturas)),
+        "ratio_aperturas_unicas": len(set(aperturas)) / max(1, len(aperturas)),
+        "palabras_unicas": len(set(palabras)),
+        "repeticion_maxima_apertura": max(Counter(aperturas).values(), default=0),
+    }
