@@ -288,6 +288,15 @@ def _process_discovery_rows(rows, *, excluded, operational, emit=None):
 
 
 
+def _lexical_queries(budget):
+    """Búsquedas del turno, con una plaza de hashtags si existen nuevos."""
+    import hashtag_query_consumers as hqc
+    tick = datetime.date.today().toordinal() * 6 + datetime.datetime.now().hour // 4
+    tags = hqc.select("x", "hashtags", [], budget=1, tick=tick)
+    return hqc.select("x", "busquedas", SEARCH_POOL,
+                      budget=max(0, budget - len(tags)), tick=tick) + tags
+
+
 def _rotate_queries(n=3):
     day = datetime.date.today().timetuple().tm_yday
     pool_n = len(SEARCH_POOL)
