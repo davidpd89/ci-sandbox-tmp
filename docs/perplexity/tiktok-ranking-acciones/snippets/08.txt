@@ -1,0 +1,7 @@
+python
+# https://github.com/davidpd89/ci-sandbox-tmp/blob/main/tools/tiktok_growth_scan.py
+posts.append({
+    "id": f"{cid}-P{pi}",
+    ...
+    "score": row["niche_hits"],
+})
