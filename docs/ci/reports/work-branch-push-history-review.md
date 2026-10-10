@@ -41,6 +41,10 @@ Segunda revisión adversarial realizada:
 
 Fuentes de comportamiento: [GitHub Workflows](https://docs.github.com/en/actions/concepts/workflows-and-actions/workflows), [push event](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows) y [git-rev-list](https://git-scm.com/docs/git-rev-list). El protocolo de scouting existe en research/public-reuse-parent, pero **no** en esta rama/base; se consultó su criterio sin alterar otras PR. Del oficial privado integracion/crecimiento-2026-10 se comprobó únicamente README e inventario de workflows: no se copia contenido ni estado privado.
 
+## Compatibilidad temporal con el workflow general
+
+Antes de integrar #93 en la rama base, `validate-social-tools.yml` ejecuta `pytest tests` sin el núcleo común `git_history_paths.py`: el import de la suite #97 provocaba error de colección en Ubuntu y Windows. La suite #97 ahora hace `SkipTest` **solo** en ese contexto, mientras su workflow dedicado exige `CI97_REQUIRE_SHARED_CORE=1` y sigue fallando si falta el núcleo. Tras fusionar #93, la suite general volverá a ejecutarla, sin duplicar código. Verificar las dos pipelines en cada integración.
+
 ## Límites, coste, canario y rollback
 
 Un workflow ejecutado **después del push** no previene una publicación inicial ni elimina datos de clones/objetos/cachés. GitHub evalúa presencia de workflows en el SHA/ref del evento; la ausencia inicial del workflow, un evento que nunca se disparó o un run omitido **no es recuperable retrospectivamente por este chequeo**. Los registros son temporales. El force-push limpio puede generar un run verde posterior al rojo original: el control de integridad debe revisar histórico de runs y huecos, no solo el check actual.

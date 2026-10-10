@@ -14,6 +14,15 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 sys.path.append(str(ROOT / ".ci97-pr93-core" / "tools"))
+# The regular repository-wide pytest job does not checkout PR #93 yet.
+# Only this test module skips there; the dedicated #97 job MUST load the core.
+_LOCAL_CORE = ROOT / "tools" / "git_history_paths.py"
+_PINNED_CORE = ROOT / ".ci97-pr93-core" / "tools" / "git_history_paths.py"
+if not _LOCAL_CORE.is_file() and not _PINNED_CORE.is_file():
+    if os.environ.get("CI97_REQUIRE_SHARED_CORE") == "1":
+        raise RuntimeError("Required PR #93 Git core missing in dedicated #97 suite")
+    raise unittest.SkipTest("PR #93 core not integrated; covered by dedicated #97 CI")
+
 import work_branch_push_hygiene as work
 import git_history_paths as history
 

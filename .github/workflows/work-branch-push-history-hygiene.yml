@@ -42,6 +42,8 @@ jobs:
         with:
           python-version: '3.11'
       - name: Offline synthetic Git regressions
+        env:
+          CI97_REQUIRE_SHARED_CORE: '1'
         run: python -m unittest discover -s tests -p test_work_branch_push_hygiene.py -v
       - name: Audit actual push event (not a PR simulation)
         if: github.event_name == 'push'
