@@ -1,0 +1,52 @@
+python
+# Archivo nuevo propuesto para davidpd89/ci-sandbox-tmp
+# Ruta: SISTEMA_DIARIO_BLUESKY/replies/reply_validator.py
+import re
+import unicodedata
+
+MIN_WORDS = 20
+MAX_WORDS = 45
+MAX_EMOJIS = 2
+BANNED_PATTERNS = [
+    r"\bgran contenido\b",
+    r"\bme encanta tu perfil\b",
+    r"\bsigue así\b",
+    r"\bno te lo pierdas\b",
+    r"\bdisponible en mi web\b",
+    r"\bcompra mi libro\b",
+]
+
+
+def _count_words(text: str) -> int:
+    return len(re.findall(r"\b[\wáéíóúüñÁÉÍÓÚÜÑ]+\b", text, flags=re.UNICODE))
+
+
+def _count_emojis(text: str) -> int:
+    return sum(1 for char in text if unicodedata.category(char) == "So")
+
+
+def validate_reply(text: str) -> tuple[bool, list[str]]:
+    errors = []
+
+    if not text or not text.strip():
+        errors.append("empty_reply")
+
+    words = _count_words(text)
+    if words < MIN_WORDS:
+        errors.append(f"too_short:{words}")
+    if words > MAX_WORDS:
+        errors.append(f"too_long:{words}")
+
+    emojis = _count_emojis(text)
+    if emojis > MAX_EMOJIS:
+        errors.append(f"too_many_emojis:{emojis}")
+
+    lowered = text.lower()
+    for pattern in BANNED_PATTERNS:
+        if re.search(pattern, lowered):
+            errors.append(f"banned_phrase:{pattern}")
+
+    if text.count("?") > 1:
+        errors.append("too_many_questions")
+
+    return not errors, errors
