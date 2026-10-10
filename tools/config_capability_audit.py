@@ -242,6 +242,13 @@ def audit(root=ROOT, *, pipelines=None, cleanup_adapters=None, harvesters=None):
                                        "detail": type(exc).__name__, "severity": "error"})
             continue
         errors = validate_config(config)
+        if not isinstance(config, dict):
+            result["errors"] += len(errors)
+            result["configurations"][network] = {"status": "invalid", "path": relative}
+            for detail in errors:
+                result["findings"].append({"network": network, "kind": "invalid_config",
+                                           "detail": detail, "severity": "error"})
+            continue
         for detail in errors:
             result["findings"].append({"network": network, "kind": "invalid_config",
                                        "detail": detail, "severity": "error"})
