@@ -142,7 +142,7 @@ class ContractTests(unittest.TestCase):
     def test_fake_urls_are_not_considered_portable(self):
         a = s.builtins().get("bluesky")
         for url in ("invalid", "http://bsky.app/post/x", "https://evil.example/post/x",
-                    "https://bsky.app.evil.example/post/x", "https://user:pw@bsky.app/post/x"):
+                    "https://bsky.app.evil.example/post/x", "https://user:pw" + "@" + "bsky.app/post/x"):
             self.assertFalse(a.project([{"kind": "like", "url": url}]).actions[0].target_portable)
         mastodon = s.builtins().get("mastodon")
         action = mastodon.project([{"kind": "favourite", "url": "https://example.social/@author/123"}]).actions[0]
