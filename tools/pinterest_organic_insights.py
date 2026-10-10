@@ -62,8 +62,8 @@ def summarize(pins, *, window="90d", min_impressions=100):
                  counts["clickthrough"] is not None and imp > 0 else None)
         # Contraste visual basado solo en metadatos API; no inferir calidad.
         image = pinterest_niche.largest_image(dict(pin))
-        ratio = (image[1] / image[2]) if image else None
-        vertical_2_3 = (abs(ratio - 2 / 3) <= 0.025) if ratio is not None else None
+        image_ratio = (image[1] / image[2]) if image else None
+        vertical_2_3 = (abs(image_ratio - 2 / 3) <= 0.025) if image_ratio is not None else None
         rows.append({
             "image_dimensions": [image[1], image[2]] if image else None,
             "vertical_2_3": vertical_2_3,
