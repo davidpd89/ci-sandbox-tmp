@@ -1,0 +1,15 @@
+text
+# config/bluesky/seed_sources.yaml
+seed_accounts:
+  - handle: "skypacks.bsky.social"
+    role: "curator"
+    comment_eligible: false
+    purpose: "discover_packs_and_feeds"
+
+seed_queries:
+  - "#Romantasy lang:es"
+  - "#FantasíaJuvenil lang:es"
+  - '"recomendaciones fantasía" lang:es'
+
+seed_feeds:
+  - "pending_manual_validation"
