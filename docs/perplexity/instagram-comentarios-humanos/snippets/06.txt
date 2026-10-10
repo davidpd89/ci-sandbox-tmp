@@ -1,0 +1,15 @@
+python
+# https://github.com/davidpd89/ci-sandbox-tmp/blob/main/tools/reply_writer.py
+def new_authors_only(items, network, log=print):
+    """Quita los posts de autores a los que ya hemos comentado (salvo que sea ELLOS quienes nos comentan: `reply_to_us`)."""
+    cache, kept = {}, []
+    for item in items:
+        net = item.get("network") or network
+        if net not in cache:
+            cache[net] = replied_authors(net)
+        import relationship_policy as rp
+        if not item.get("reply_to_us") and rp.norm(item.get("author")) in cache[net]:
+            log(f"[reply_writer] {item['id']} omitido: ya comentamos a {item.get('author')} en {net}")
+            continue
+        kept.append(item)
+    return kept
