@@ -23,7 +23,7 @@ Normalización read-only compartida con especializaciones por red, separada de l
 
 ## Pruebas
 
-Suite sintética unittest Python 3.11 en Ubuntu/Windows; 22 tests específicos tras las regresiones del controlador (revalidar CI en el HEAD). No es un canario operativo.
+Suite sintética unittest Python 3.11 en Ubuntu/Windows; 23 tests específicos tras las regresiones del controlador (revalidar CI en el HEAD). No es un canario operativo.
 
 ## Retirada
 
