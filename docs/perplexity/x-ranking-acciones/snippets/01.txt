@@ -1,0 +1,32 @@
+python
+# Fuente: https://github.com/vladkens/twscrape/blob/main/twscrape/models.py
+# Licencia: MIT — https://github.com/vladkens/twscrape/blob/main/LICENSE
+
+@dataclass
+class User(JSONTrait):
+    id: int
+    id_str: str
+
+    url: str
+    username: str
+    displayname: str
+    rawDescription: str
+    created: datetime
+    followersCount: int
+    friendsCount: int
+    statusesCount: int
+    favouritesCount: int
+    listedCount: int
+    mediaCount: int
+    location: str
+
+    profileImageUrl: str
+    profileBannerUrl: str | None = None
+    protected: bool | None = None
+    verified: bool | None = None
+    blue: bool | None = None
+    blueType: str | None = None
+    descriptionLinks: list[TextLink] = field(default_factory=list)
+
+    pinnedIds: list[int] = field(default_factory=list)
+    _type: str = "snscrape.modules.twitter.User"
