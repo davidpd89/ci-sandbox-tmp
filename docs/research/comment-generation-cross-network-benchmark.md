@@ -116,8 +116,8 @@ y rutas coincidentes. El CLI no crea archivos salvo con nombres de
 salida explícitos. Los tests usan directorios temporales.
 
 **Antes (HEAD original):** 0 pares comparables con anotación ciega en
-las nueve redes. **Después (fixtures):** 36 pares, 72 ejemplos;
-12 pruebas unitarias específicas; las pruebas de revisión ficticia
+las nueve redes. **Después (fixtures):** 36 pares, 72 ejemplos, pero solo **4 publicaciones e hilos únicos** replicados en nueve redes; es una prueba de paridad del harness, no representatividad de contenido propio de cada plataforma;
+13 pruebas unitarias específicas; las pruebas de revisión ficticia
 demuestran el funcionamiento del cálculo, **no una preferencia real**.
 Evidencia del HEAD de código `9830eddd79bca6336d5357f7c876cff1077d9cb3`:
 [Actions de pruebas 38016943031](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38016943031),
@@ -147,6 +147,7 @@ los ejecutores dentro de #72.
   de `judge` no prueban independencia humana; no hay verificación de identidad.
 - **Cambio de fecha / DST:** se comparan instantes con zona explícita en UTC;
   se descartan fechas ingenuas, negativas y >72 h.
+- **Cobertura de categorías:** cuatro posts de una misma red ya no bastan para proclamar vencedor si falta alguna de las cuatro categorías editoriales; regresión añadida en revisión independiente.
 - **Pareado adversarial:** una versión inicial permitía comparar una estrategia evaluada en cuatro posts con otra evaluada solo en uno. Ahora exige el mismo conjunto de estrategias y la misma cobertura en todos los casos, y excluye ganadores con respuestas inválidas; hay una regresión sintética específica.
 - **Repetición:** informe por red de duplicados exactos, no detector
   semántico de paráfrasis; el corpus puede mejorar con revisión humana.
@@ -177,4 +178,4 @@ No existe estado persistido del benchmark dentro de producción.
    naturalidad, cobertura y longitud.
 4. Solo entonces seleccionar un perfil editorial por red y probarlo con
    un canario supervisado en su respectiva cola, sin mezclar API/WEB/MOBILE.
-   Coordinar con #22 (memoria) y #51 (evaluación ciega); no duplicarlos.
+   Coordinar con #22 (memoria), #51 y #79 (evaluación ciega y métricas de voz), y #80 (experimentos con resultados) para no mantener sistemas de medición incompatibles; no duplicarlos.
