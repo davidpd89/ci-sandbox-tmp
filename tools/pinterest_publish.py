@@ -194,6 +194,9 @@ def publish_pin(image, title, description, link, alt, board, apply=False, log=pr
         if not image_info["aspect_2_3"]:
             log("  aviso: imagen no tiene proporción recomendada 2:3")
         return "ensayo"
+    import voice_output_finalization as voice
+    fields = {"titulo": title, "descripcion": description, "alt": alt}
+    voice.inspect_fields(fields, network="pinterest", queue="WEB", log=log)
     p = sync_playwright().start()
     try:
         browser = p.chromium.connect_over_cdp(CDP_URL)
