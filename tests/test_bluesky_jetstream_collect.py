@@ -169,15 +169,29 @@ class JetstreamCollectorTests(unittest.TestCase):
         )
         self.assertEqual(cursor, now_us - 30 * 60 * 1_000_000)
 
-    def test_saved_seq_beats_lookback_on_v2(self):
+    def test_saved_seq_beats_lookback_on_v2_if_source_matches(self):
         cursor = js._resume_cursor(
             is_v2=True,
             saved_seq="12345",
+            saved_source="jetstream.us-east.bsky.network",
+            current_source="jetstream.us-east.bsky.network",
             saved_time="1999999999999999",
             initial_lookback_minutes=30,
             now_us=2_000_000_000_000_000,
         )
         self.assertEqual(cursor, 12345)
+
+    def test_saved_seq_rejected_on_source_mismatch_fail_closed(self):
+        now_us = 2_000_000_000_000_000
+        cursor = js._resume_cursor(
+            is_v2=True,
+            saved_seq="12345",
+            saved_source="host1.bsky.network",
+            current_source="host2.bsky.network",
+            initial_lookback_minutes=30,
+            now_us=now_us,
+        )
+        self.assertEqual(cursor, now_us - 30 * 60 * 1_000_000)
 
     def test_legacy_time_resume_keeps_overlap(self):
         cursor = js._resume_cursor(
@@ -365,19 +379,22 @@ class JetstreamCollectorTests(unittest.TestCase):
             self.assertEqual(count, 0)
             db.close()
 
-    def test_recover_archive_gap_without_provider_remains_pending(self):
+    def test_recover_archive_gap_incomplete_backfill_remains_pending(self):
         with tempfile.TemporaryDirectory() as tmp:
             db_path = str(pathlib.Path(tmp) / "cache.sqlite3")
             db = js.init_db(db_path)
             js.set_state(db, "last_seq", "100")
             terms = js.load_terms(self.config())
 
-            res = js.recover_archive_gap(db, js.DEFAULT_ENDPOINT, terms, fetch_archive_fn=None)
+            def mock_archive_failing(start_seq):
+                raise RuntimeError("http_timeout")
+
+            res = js.recover_archive_gap(db, js.DEFAULT_ENDPOINT, terms, fetch_archive_fn=mock_archive_failing, sealed_tip=200)
 
             self.assertFalse(res["complete"])
             self.assertEqual(js.get_state(db, "gap_detected"), "true")
             self.assertEqual(js.get_state(db, "recovery_pending"), "true")
-            self.assertEqual(js.get_state(db, "last_error"), "no_archive_provider")
+            self.assertTrue(js.get_state(db, "last_error").startswith("archive_fetch_error"))
             self.assertIsNone(js.get_state(db, "complete_through"))
             db.close()
 

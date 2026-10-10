@@ -24,6 +24,7 @@ import sys
 import time
 import unicodedata
 from urllib.parse import urlencode, urlparse
+import urllib.request
 
 sys.path.insert(0, os.path.dirname(__file__))
 import scan_common as sc
@@ -415,11 +416,10 @@ def _resume_cursor(
 ):
     """Elige cursor sin empezar siempre en el instante de conexión.
 
-    v2 prioriza seq persistido si proviene de la misma fuente (host).
-    Si cambia la fuente, detecta brecha. Si solo queda estado legacy usa time_us
-    o un lookback acotado en tiempo sin asumir equivalencia directa entre seq y time_us.
+    Fail-closed por origen: v2 exige que `saved_source` sea idéntico a `current_source`.
+    Si cambia la fuente o `saved_source` es nulo, rechaza `saved_seq` para evitar saltos.
     """
-    if is_v2 and saved_seq and (saved_source is None or current_source is None or saved_source == current_source):
+    if is_v2 and saved_seq and saved_source is not None and current_source is not None and saved_source == current_source:
         return int(saved_seq)
     if saved_time:
         return max(
@@ -439,12 +439,32 @@ def _next_retry_delay(delay):
     return min(60.0, max(1.0, float(delay) * 2.0))
 
 
+def _default_fetch_archive(endpoint, start_seq):
+    """Proveedor REST/HTTP por defecto para descargar eventos archive de Jetstream."""
+    parsed = urlparse(endpoint)
+    scheme = "https" if parsed.scheme in {"wss", "https"} else "http"
+    http_url = f"{scheme}://{parsed.netloc}/xrpc/network.bsky.jetstream.subscribeEvents?cursor={start_seq}&wantedCollections=app.bsky.feed.post"
+    try:
+        req = urllib.request.Request(http_url, headers={"User-Agent": "JetstreamArchiveCollector/2.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            lines = resp.read().decode("utf-8").splitlines()
+            events = []
+            for line in lines:
+                if line.strip():
+                    try:
+                        events.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
+            return [{"events": events}]
+    except Exception:
+        return []
+
+
 def recover_archive_gap(db, endpoint, terms, *, fetch_archive_fn=None, sealed_tip=None):
     """Recuperación paginada de brecha mediante archive/backfill y reconciliación de estado.
 
-    Si no hay proveedor de archive (`fetch_archive_fn` es None) o las páginas no
-    alcanzan la punta sellada (`sealed_tip`), NO declara la brecha como resuelta.
-    Conserva `gap_detected = true`, `recovery_pending = true` y registra `last_error`.
+    Si las páginas no alcanzan la punta sellada (`sealed_tip`), NO declara la brecha
+    como resuelta. Conserva `gap_detected = true`, `recovery_pending = true` y registra `last_error`.
     """
     set_state(db, "gap_detected", "true")
     set_state(db, "recovery_pending", "true")
@@ -456,8 +476,12 @@ def recover_archive_gap(db, endpoint, terms, *, fetch_archive_fn=None, sealed_ti
     stored_count = 0
     page_count = 0
 
-    if fetch_archive_fn is None:
-        err = "no_archive_provider"
+    fetch_fn = fetch_archive_fn if fetch_archive_fn is not None else lambda s: _default_fetch_archive(endpoint, s)
+
+    try:
+        pages = fetch_fn(start_seq)
+    except Exception as exc:
+        err = f"archive_fetch_error:{type(exc).__name__}"
         set_state(db, "last_error", err)
         set_state(db, "recovery_stats", json.dumps({
             "pages": 0,
@@ -476,7 +500,6 @@ def recover_archive_gap(db, endpoint, terms, *, fetch_archive_fn=None, sealed_ti
             "error": err,
         }
 
-    pages = fetch_archive_fn(start_seq)
     for page in pages:
         page_count += 1
         for raw_event in page.get("events") or []:
@@ -496,7 +519,7 @@ def recover_archive_gap(db, endpoint, terms, *, fetch_archive_fn=None, sealed_ti
                 set_state(db, "last_time_us", event_time)
 
     target_tip = sealed_tip if sealed_tip is not None else current_seq
-    incomplete = (current_seq < target_tip) or (page_count == 0 and target_tip > start_seq)
+    incomplete = (current_seq < target_tip) or (page_count == 0 and target_tip > start_seq) or (start_seq == 0 and current_seq == 0 and page_count == 0)
 
     if incomplete:
         err = f"incomplete_backfill:{current_seq}/{target_tip}"
@@ -597,11 +620,14 @@ async def collect(
     saved_time = get_state(db, "last_time_us")
     saved_source = get_state(db, "stream_source")
 
-    # Migración reversible pre-#11: si cambia la fuente o no hay fuente, se marca la discrepancia
+    # Fail-closed por origen: si cambia la fuente o difiere, no reutilizar last_seq y marcar brecha
     if is_v2 and saved_source and saved_source != current_source:
         set_state(db, "gap_detected", "true")
         set_state(db, "recovery_pending", "true")
         db.commit()
+        last_seq = None
+    else:
+        last_seq = int(saved_seq) if saved_seq and (saved_source == current_source or saved_source is None) else None
 
     cursor = _resume_cursor(
         is_v2=is_v2,
@@ -612,7 +638,6 @@ async def collect(
         overlap_seconds=resume_overlap_seconds,
         initial_lookback_minutes=initial_lookback_minutes,
     )
-    last_seq = saved_seq
 
     try:
         while time.monotonic() < deadline:
@@ -650,6 +675,10 @@ async def collect(
                         if event_cursor:
                             cursor = event_cursor
                             if mode == "v2":
+                                # Detección de hueco interno en la secuencia live
+                                if last_seq is not None and event_cursor > last_seq + 1:
+                                    set_state(db, "gap_detected", "true")
+                                    set_state(db, "recovery_pending", "true")
                                 last_seq = max(int(last_seq or 0), event_cursor)
                         if store_event(db, event, terms):
                             stored += 1
@@ -661,8 +690,10 @@ async def collect(
                                 set_state(db, "last_time_us", last_time_us)
                             if last_seq:
                                 set_state(db, "last_seq", last_seq)
-                            now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
-                            set_state(db, "complete_through", now_iso)
+                            # Guard: complete_through SOLO se actualiza si NO hay brecha ni recuperación pendiente
+                            if get_state(db, "gap_detected") != "true" and get_state(db, "recovery_pending") != "true":
+                                now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                                set_state(db, "complete_through", now_iso)
                             db.commit()
                 if time.monotonic() < deadline:
                     reconnects += 1
@@ -678,7 +709,6 @@ async def collect(
                     set_state(db, "gap_detected", "true")
                     set_state(db, "recovery_pending", "true")
                     db.commit()
-                    # Ejecutar recuperación de brecha
                     rec_res = recover_archive_gap(db, endpoint, terms, fetch_archive_fn=fetch_archive_fn, sealed_tip=sealed_tip)
                     if not rec_res.get("complete"):
                         last_error = rec_res.get("error", "incomplete_recovery")
@@ -709,8 +739,9 @@ async def collect(
             set_state(db, "last_time_us", last_time_us)
         if last_seq:
             set_state(db, "last_seq", last_seq)
-        now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        if get_state(db, "gap_detected") != "true":
+        # Guard: complete_through SOLO se actualiza si NO hay brecha ni recuperación pendiente
+        if get_state(db, "gap_detected") != "true" and get_state(db, "recovery_pending") != "true":
+            now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
             set_state(db, "complete_through", now_iso)
         db.commit()
         db.close()
