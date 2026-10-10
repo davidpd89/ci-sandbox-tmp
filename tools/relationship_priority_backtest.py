@@ -60,6 +60,19 @@ def run():
         # Control histórico simple: ordenar por volumen de likes.
         rows.sort(key=lambda r: (-r["inbound"]["like"], r["network"], r["handle"]))
         baseline[lane] = precision(rows)
+    complete = priority.rank_daily(snapshot, today=DATE,
+                                   limits={lane: 1000 for lane in LANES})
+    per_network = {}
+    for network in NETWORKS:
+        selected = [by_key[(r["network"], r["handle"])]
+                    for lane in LANES for r in complete["queues"][lane]
+                    if r["network"] == network][:5]
+        base = [r for r in snapshot["candidates"] if r["network"] == network]
+        base.sort(key=lambda r: (-r["inbound"]["like"], r["handle"]))
+        per_network[network] = {
+            "precision_at_5": precision(selected, 5),
+            "likes_baseline_at_5": precision(base, 5),
+        }
     later = priority.rank_daily(snapshot, today=DATE + dt.timedelta(days=1), limits=limits)
     stability = {}
     diversity = {}
@@ -72,6 +85,7 @@ def run():
             "date": DATE.isoformat(), "at_10": evaluation,
             "baseline_likes_precision": baseline,
             "network_coverage_by_lane": diversity,
+            "precision_by_network": per_network,
             "day_plus_one_jaccard": stability}
 
 
