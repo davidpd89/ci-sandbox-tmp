@@ -176,15 +176,15 @@ def prepare_blind(cases: list[dict], candidates: list[dict]) -> tuple[list[dict]
     blind, key = [], []
     for candidate in candidates:
         case = indexed[candidate["case_id"]]
-        token = secrets.token_hex(16)
-        while token in tokens:
-            token = secrets.token_hex(16)
-        tokens.add(token)
-        blind.append({"token": token, "network": case["network"], "kind": case["kind"],
+        opaque = secrets.token_hex(16)
+        while opaque in tokens:
+            opaque = secrets.token_hex(16)
+        tokens.add(opaque)
+        blind.append({"token": opaque, "network": case["network"], "kind": case["kind"],
                       "post": case["post"], "thread": case.get("thread", ""),
                       "reply": candidate.get("reply") or "", "judge": "",
                       **{axis: "" for axis in AXES}})
-        key.append({"token": token, "case_id": case["id"], "strategy": candidate["strategy"],
+        key.append({"token": opaque, "case_id": case["id"], "strategy": candidate["strategy"],
                     "sha256": _fingerprint(case, candidate)})
     blind.sort(key=lambda r: r["token"])
     key.sort(key=lambda r: r["token"])
@@ -202,18 +202,18 @@ def _load_key(path: str | Path, cases: list[dict],
         if not reader.fieldnames or set(reader.fieldnames) != set(KEY_COLUMNS):
             raise ValueError("La clave no tiene el esquema esperado")
         for row in reader:
-            token = row.get("token")
+            opaque = row.get("token")
             pair = (row.get("case_id"), row.get("strategy"))
-            if (not isinstance(token, str) or not re.fullmatch(r"[0-9a-f]{32}", token)
-                    or token in lookup or pair in seen_pairs or pair not in expected_pairs):
+            if (not isinstance(opaque, str) or not re.fullmatch(r"[0-9a-f]{32}", opaque)
+                    or opaque in lookup or pair in seen_pairs or pair not in expected_pairs):
                 raise ValueError("Clave duplicada o ajena al dataset")
             candidate = expected_pairs[pair]
             case = indexed[pair[0]]
             if row.get("sha256") != _fingerprint(case, candidate):
                 raise ValueError("Clave alterada o dataset modificado")
             seen_pairs.add(pair)
-            lookup[token] = {"case_id": pair[0], "strategy": pair[1]}
-            blind[token] = {"token": token, "network": case["network"], "kind": case["kind"],
+            lookup[opaque] = {"case_id": pair[0], "strategy": pair[1]}
+            blind[opaque] = {"token": opaque, "network": case["network"], "kind": case["kind"],
                             "post": case["post"], "thread": case.get("thread", ""),
                             "reply": candidate.get("reply") or ""}
     if seen_pairs != set(expected_pairs):
