@@ -205,6 +205,10 @@ def reserve_fresh(chosen, fresh, *, budget: int, tick: int):
         return result
     selected = additions[tick % len(additions)]
     if len(result) == budget:
+        # Cuota unitaria: alternar la semilla nativa y la exploración evita
+        # que una novedad borre sistemáticamente el único resultado rankeado.
+        if budget == 1 and tick % 2 == 0:
+            return result
         result[-1] = selected
     else:
         result.append(selected)
