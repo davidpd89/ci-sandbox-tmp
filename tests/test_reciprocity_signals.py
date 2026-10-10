@@ -79,6 +79,17 @@ class SignalTests(unittest.TestCase):
                 self.assertTrue(rs.classify_text(value))
                 self.assertTrue(all(x["intent"] == "mention" for x in rs.classify_text(value)))
 
+    def test_adversarial_negation_does_not_suppress_different_clause(self):
+        mixed = rs.classify_text(
+            "No hago f4f entre escritores; pero sí hago intercambio de reseñas.")
+        self.assertEqual([(x["kind"], x["intent"]) for x in mixed],
+                         [("follow_exchange", "mention"), ("reading_chain", "explicit")])
+        positive = rs.assess_candidate(
+            {"network": "threads", "surface": "bio",
+             "text": "No hago f4f; pero sí hago intercambio de reseñas de fantasía"},
+            as_of=TODAY)
+        self.assertEqual(positive["status"], "eligible")
+
     def test_missing_niche_is_review_not_promotion(self):
         value = rs.assess_candidate({"network": "x", "surface": "bio",
                                      "text": "f4f fotografía"}, as_of=TODAY)
