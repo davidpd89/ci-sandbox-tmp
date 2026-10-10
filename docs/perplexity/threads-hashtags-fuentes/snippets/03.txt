@@ -1,0 +1,10 @@
+text
+# Propuesta: config/discovery/threads_seed_profiles.yaml
+seed_profiles:
+  - handle: "urbanbookly"
+    reason: "Referencia editorial de romantasy en español"
+    source: "https://urbanbookly.com/autores-romantasy/"
+    status: "pending_validation"
+  - handle: "TBD_desde_keyword_search"
+    reason: "Candidatos detectados por 'romantasy recomendación' o 'fantasía juvenil libros'"
+    status: "pending_validation"
