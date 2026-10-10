@@ -156,6 +156,32 @@ class ConsumerParityTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             hqc.select_mixed("x", ["lectores"], budget=1, tick=0, tag_slots=-1)
 
+    def test_mixed_single_slot_rotates_text_and_hashtag(self):
+        def lexicon(network, kind):
+            return ["año"] if kind == "hashtags" else ["fantasía juvenil"]
+
+        for network in ("x", "threads", "pinterest"):
+            with self.subTest(network=network):
+                picks = [hqc.select_mixed(
+                    network, ["semilla"], budget=1, tick=tick,
+                    reader=lexicon) for tick in range(8)]
+                self.assertTrue(all(len(pick) == 1 for pick in picks))
+                queries = [item[0] for item in picks]
+                self.assertIn(hqc.format_term(network, "busquedas", "semilla"), queries)
+                self.assertIn(hqc.format_term(
+                    network, "busquedas", "fantasía juvenil"), queries)
+                self.assertIn(hqc.format_term(network, "hashtags", "año"), queries)
+                self.assertEqual(
+                    hqc.select_mixed(
+                        network, ["semilla"], budget=1, tick=1,
+                        reader=lambda n, k: []),
+                    [hqc.format_term(network, "busquedas", "semilla")])
+                self.assertEqual(
+                    hqc.select_mixed(
+                        network, [], budget=1, tick=0,
+                        reader=lambda n, k: ["año"] if k == "hashtags" else []),
+                    [hqc.format_term(network, "hashtags", "año")])
+
     def test_native_budget_reservation_without_mutating_rankings(self):
         old = [("family", f"semilla_{i}") for i in range(38)]
         extra = [("lexical_expansion", "lectura ñ"),
