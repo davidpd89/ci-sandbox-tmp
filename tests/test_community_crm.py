@@ -166,6 +166,22 @@ class CommunityCrmTests(unittest.TestCase):
         contact = next(c for c in data["contacts"] if c["network"] == "instagram")
         self.assertEqual(contact["lane"], "WEB")
 
+    def test_compound_outbound_kind_keeps_confirmed_history(self):
+        path = self.outroot / "SISTEMA_DIARIO_MASTODON" / "registro_interacciones.csv"
+        write_csv(path, ["fecha", "cuenta", "tipo", "resultado"], [
+            {"fecha": "2026-10-09", "cuenta": "ana", "tipo": "reply+like", "resultado": "confirmado"},
+            {"fecha": "2026-10-09", "cuenta": "ana", "tipo": "reply+unknown", "resultado": "confirmado"},
+        ])
+        a = next(c for c in self.build()["contacts"] if c["network"] == "mastodon")
+        self.assertEqual(a["outbound_confirmed"], 1)
+        self.assertIn({"date": "2026-10-09", "direction": "out", "kind": "reply+like"}, a["history"])
+
+    def test_missing_inbox_reports_unknown_coverage(self):
+        data = cm.build(self.inbound, self.outroot, as_of=TODAY)
+        self.assertEqual(data["pending_threads"], 0)
+        self.assertEqual(data["inbox_coverage"], "absent")
+        self.assertEqual(self.build()["inbox_coverage"], "provided_completeness_unknown")
+
     def test_no_synthetic_tags_phantom_contacts(self):
         self.tags.write_text(json.dumps({"x:nadie": ["venderle"], "bluesky:ana": ["lectora"]}), encoding="utf-8")
         self.assertNotIn("nadie", json.dumps(self.build()))

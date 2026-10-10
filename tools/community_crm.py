@@ -117,7 +117,7 @@ def build(inbound: Path, registries_root: Path, *, inbox: Path | None = None,
         for number, row in enumerate(_csv(path, {"fecha", "cuenta", "tipo", "resultado"}, missing_ok=True), 2):
             handle = _handle(row["cuenta"])
             kind = (row["tipo"] or "").strip().casefold()
-            if not handle or kind not in OUTBOUND_KINDS or (row["resultado"] or "").strip().casefold() not in CONFIRMED:
+            if not handle or any(part not in OUTBOUND_KINDS for part in kind.split("+")) or (row["resultado"] or "").strip().casefold() not in CONFIRMED:
                 continue
             day = _day(row["fecha"], f"outbound:{net}:{number}")
             if not historic <= day <= today:
@@ -212,6 +212,7 @@ def build(inbound: Path, registries_root: Path, *, inbox: Path | None = None,
         result.append(c)
     result.sort(key=lambda x: (-bool(x["pending"]), -x["score"], -(date.fromisoformat(x["last_inbound"]).toordinal() if x["last_inbound"] else 0), x["network"], x["handle"]))
     return {"schema": 1, "as_of": today.isoformat(), "window_days": window_days,
+            "inbox_coverage": "absent" if inbox is None else "provided_completeness_unknown",
             "contacts": result, "pending_threads": sum(len(c["pending"]) for c in result),
             "by_lane": {lane: sum(len(c["pending"]) for c in result if c["lane"] == lane)
                         for lane in ("WEB", "API", "MOBILE", "UNASSIGNED")}}
