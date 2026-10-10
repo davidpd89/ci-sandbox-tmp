@@ -1,0 +1,22 @@
+json
+{
+  "network": "facebook",
+  "surface": "page|group",
+  "post_id": "string",
+  "parent_comment_id": "string|null",
+  "context": {
+    "post_text": "string",
+    "thread": [],
+    "entities": ["trope", "personaje", "portada"]
+  },
+  "candidates": [
+    {
+      "text": "string",
+      "voice_profile": "pagina_autora|grupo_lectores",
+      "length_class": "short|medium",
+      "has_question": true,
+      "emoji_count": 1,
+      "specificity_score": 0.82
+    }
+  ]
+}
