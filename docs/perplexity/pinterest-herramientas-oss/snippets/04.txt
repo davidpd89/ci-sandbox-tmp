@@ -1,0 +1,12 @@
+python
+# https://github.com/shaikhsajid1111/social-media-profile-scrapers/blob/master/pinterest.py
+@staticmethod
+def _iter_dicts(node):
+    """Depth-first walk over every dict inside a parsed payload."""
+    if isinstance(node, dict):
+        yield node
+        for value in node.values():
+            yield from Pinterest._iter_dicts(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from Pinterest._iter_dicts(value)
