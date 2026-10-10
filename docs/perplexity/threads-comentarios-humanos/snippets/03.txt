@@ -1,0 +1,77 @@
+python
+# Fuente de patrón de scoring:
+# https://github.com/dancolta/subscope/blob/cf45ffd8956d0d24bbaaf4eaa5d7f0ecc293cb27/engine/subscope/cli.py
+# Integración prevista: tools/comment_naturalness_evaluator.py
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class NaturalnessReport:
+    score: float
+    passes: bool
+    reasons: list[str]
+
+
+GENERIC_PHRASES = (
+    "qué bueno", "qué bonito", "me encanta", "increíble",
+    "muy interesante", "buen post", "totalmente de acuerdo",
+    "gracias por compartir", "qué gran libro",
+)
+
+EMOJI_RE = re.compile(r"[\U0001F300-\U0001FAFF\u2600-\u27BF]")
+
+
+def evaluate_comment(
+    comment: str,
+    context_anchors: list[str],
+    *,
+    max_words: int = 32,
+    min_words: int = 8,
+    max_emojis: int = 1,
+    allow_question: bool = True,
+    min_score: float = 6.0,
+) -> NaturalnessReport:
+    reasons: list[str] = []
+    score = 10.0
+    words = len(comment.split())
+    lowered = comment.lower()
+
+    if words < min_words:
+        score -= 3.0
+        reasons.append(f"Demasiado corto: {words} palabras")
+
+    if words > max_words:
+        score -= min(4.0, (words - max_words) / 8)
+        reasons.append(f"Demasiado largo: {words} palabras")
+
+    if not any(anchor.lower() in lowered for anchor in context_anchors):
+        score -= 4.0
+        reasons.append("Sin anclaje contextual detectable")
+
+    if any(phrase in lowered for phrase in GENERIC_PHRASES):
+        score -= 5.0
+        reasons.append("Contiene fórmula genérica")
+
+    emojis = len(EMOJI_RE.findall(comment))
+    if emojis > max_emojis:
+        score -= 2.0
+        reasons.append(f"Exceso de emojis: {emojis}")
+
+    questions = comment.count("¿") + comment.count("?")
+    if questions > 1 or (questions == 1 and not allow_question):
+        score -= 2.5
+        reasons.append("Pregunta no justificada por el contexto")
+
+    if re.search(r"\b(jajaja+|lol|xd)\b", lowered):
+        score -= 1.0
+        reasons.append("Registro demasiado informal para autoría")
+
+    return NaturalnessReport(
+        score=round(score, 2),
+        passes=score >= min_score,
+        reasons=reasons,
+    )
