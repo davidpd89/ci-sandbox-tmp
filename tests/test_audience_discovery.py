@@ -206,8 +206,11 @@ class AudienceTests(unittest.TestCase):
                 self.assertEqual(stale_read, "A")
                 first.ingest([], network="bluesky", surface="liked_by", seed="s",
                              next_cursor="B", now=NOW, expected_cursor="A")
+                liker = ad.normalize("bluesky", "like",
+                    {"actor": actor("bluesky", "99")}, surface="liked_by",
+                    post_key="p1", observed_at=NOW, post_created_at=POST)
                 with self.assertRaisesRegex(ad.ObservationError, "cursor_cambiado"):
-                    second.ingest([event(uid="99")], network="bluesky",
+                    second.ingest([liker], network="bluesky",
                         surface="liked_by", seed="s", next_cursor="C",
                         now=NOW, expected_cursor=stale_read)
                 self.assertEqual(first.cursor("bluesky", "liked_by", "s"), "B")
