@@ -18,7 +18,7 @@ Los candidatos de terceros analizados son MIT. No se incorpora código ni depend
 Adaptador ligero de solo lectura, preflight explícito, deduplicación por #71 y ninguna acción social.
 
 ## Pruebas
-Pruebas sintéticas 9x3, 13 tests offline con ejecución en Ubuntu y Windows 3.11, revisión adversarial y benchmark local de lectura; detalles y runs en la sección inferior.
+Pruebas sintéticas 9x3, 16 tests offline con ejecución en Ubuntu y Windows 3.11, revisión adversarial y benchmark local de lectura; detalles y runs en la sección inferior.
 
 ## Retirada
 Revertir commits de la PR o no conectar su invocación. No hay migraciones ni modificaciones persistentes.
@@ -74,4 +74,4 @@ No se actualiza ningún planificador ni estado persistente. Para desactivar el p
 
 - Revisión de funciones con entrada hostil: rechazos por tipo, fecha futura, desconocimiento de cuenta propia, score externo sin validar y colisiones de eventos.
 - Auditado que el código no importa clientes de redes, no crea archivos ni escribe SQLite. `plan_dry_run` invoca directamente al score #71 sin añadir acciones.
-- Pendiente de validar la segunda pasada de CI y el gate de privacidad con este informe incluido; no se declara aptitud de merge hasta comprobar resultados.
+- La suite específica fijada a #71 ha pasado en Windows y Ubuntu (15 pruebas en la ejecución previa, ampliada a 16 con aislamiento de archivos). La suite general omite exclusivamente la integración #71 cuando no está presente en la rama base; el workflow dedicado la ejecuta obligatoriamente. **Bloqueo externo:** el validador de campaña comunica \`#103: child absent from parent manifest\` para la rama padre \`research/public-reuse-parent\`; el controlador deberá sincronizar \`children.json\`/índice en la PR padre sin modificar esta rama. No es fallo del puente ni permite afirmar merge listo.
