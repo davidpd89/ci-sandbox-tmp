@@ -1,5 +1,6 @@
 """Offline contract tests for the read-only relationship history migration."""
 import csv
+from contextlib import closing
 import pathlib
 import sqlite3
 import sys
@@ -42,7 +43,7 @@ class LedgerTest(unittest.TestCase):
 
     def test_append_only_guard_and_isolated_action_ledger(self):
         self.ledger.append(event())
-        with sqlite3.connect(self.path) as conn:
+        with closing(sqlite3.connect(self.path)) as conn:
             with self.assertRaises(sqlite3.DatabaseError):
                 conn.execute("UPDATE relationship_events SET outcome='failed'")
             with self.assertRaises(sqlite3.DatabaseError):
@@ -50,11 +51,11 @@ class LedgerTest(unittest.TestCase):
             self.assertFalse(conn.execute(
                 "SELECT name FROM sqlite_master WHERE name='actions'").fetchall())
         operational = pathlib.Path(self.tmp.name) / "actions.sqlite"
-        with sqlite3.connect(operational) as conn:
+        with closing(sqlite3.connect(operational)) as conn:
             conn.execute("CREATE TABLE actions (kind TEXT)")
         with self.assertRaisesRegex(ValueError, "separate DB"):
             RelationshipLedger(operational)
-        with sqlite3.connect(operational) as conn:
+        with closing(sqlite3.connect(operational)) as conn:
             self.assertEqual(conn.execute("SELECT count(*) FROM actions").fetchone()[0], 0)
 
     def test_multi_network_three_queues_and_identity_isolation(self):
@@ -106,7 +107,7 @@ class LedgerTest(unittest.TestCase):
 
     def test_existing_schema_version_refusal(self):
         other = pathlib.Path(self.tmp.name) / "newer.sqlite"
-        with sqlite3.connect(other) as conn:
+        with closing(sqlite3.connect(other)) as conn:
             conn.execute("PRAGMA user_version=99")
         with self.assertRaisesRegex(ValueError, "version"):
             RelationshipLedger(other)
@@ -254,7 +255,7 @@ class LedgerTest(unittest.TestCase):
             )["replayed"], 2)
         self.assertEqual(self.ledger.count(), 18)
         self.assertEqual(len(self.ledger.history("reddit", "ñandú")), 2)
-        with sqlite3.connect(self.path) as conn:
+        with closing(sqlite3.connect(self.path)) as conn:
             saved = str(conn.execute("SELECT * FROM relationship_events").fetchall())
             self.assertNotIn("texto privado de fixture", saved)
 
