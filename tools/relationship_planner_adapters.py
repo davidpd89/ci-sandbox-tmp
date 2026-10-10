@@ -28,7 +28,7 @@ def _day(value):
     """Fecha real, estricta y sin asumir que timestamps locales son UTC."""
     if isinstance(value, bool):
         return None
-    if isinstance(value, (int, float)) or (isinstance(value, str) and re.fullmatch(r"\\d{10}(?:\\d{3})?", value)):
+    if isinstance(value, (int, float)) or (isinstance(value, str) and re.fullmatch(r"\d{10}(?:\d{3})?", value)):
         try:
             number = float(value)
             if number > 1e11:
