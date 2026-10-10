@@ -1,0 +1,30 @@
+python
+# https://www.sociavault.com/blog/scrape-pinterest-data-pins-boards
+import requests
+import os
+
+API_KEY = os.getenv('SOCIAVAULT_API_KEY')
+BASE_URL = 'https://api.sociavault.com'
+headers = {'X-API-Key': API_KEY}
+
+def search_pinterest(query):
+    response = requests.get(
+        f'{BASE_URL}/v1/scrape/pinterest/search',
+        params={'query': query},
+        headers=headers
+    )
+    data = response.json()
+    pins = data.get('data', [])
+
+    print(f'\nSearch: "{query}" — {len(pins)} results\n')
+    for i, pin in enumerate(pins[:10]):
+        title = pin.get('title') or pin.get('grid_title') or 'Untitled'
+        saves = pin.get('repin_count', 0)
+        link = pin.get('link', 'No link')
+
+        print(f"{i+1}. {title}")
+        print(f"   Saves: {saves:,} | Link: {link}")
+
+    return pins
+
+search_pinterest('home office setup ideas')
