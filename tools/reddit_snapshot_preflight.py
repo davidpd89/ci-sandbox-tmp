@@ -160,8 +160,9 @@ def evaluate(plan, snapshot, review, *, now=None):
         # El hash documenta la vinculación, pero NO autentica al revisor.
         expected_digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
         if (review.get("post_id") != post_id
-                or review.get("plan_sha256") != expected_digest):
-            return Decision(False, "revisión no vinculada a este hilo y texto")
+                or review.get("plan_sha256") != expected_digest
+                or review.get("quoted_comment_id") != plan.get("quoted_comment_id")):
+            return Decision(False, "revisión no vinculada a este hilo, texto y cita")
         context_checked = _instant(review["context_checked_at"])
         if context_checked < checked or context_checked > now or now - context_checked > MAX_SNAPSHOT_AGE:
             return Decision(False, "lectura humana desactualizada respecto al snapshot")
