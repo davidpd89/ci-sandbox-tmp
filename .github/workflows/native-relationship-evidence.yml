@@ -1,0 +1,35 @@
+name: Native relationship evidence bridges (offline)
+on:
+  pull_request:
+    paths:
+      - 'tools/native_relationship_evidence_bridge.py'
+      - 'tests/test_native_relationship_evidence_bridge.py'
+      - 'tests/test_native_ledger84_contract.py'
+      - '.github/workflows/native-relationship-evidence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: davidpd89/ci-sandbox-tmp
+          ref: 8c2b289092d142574700563bc71b9b9a0d62e2a5
+          path: ledger84
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run isolated synthetic bridge and ledger contract tests
+        env:
+          LEDGER84_PY: ${{ github.workspace }}/ledger84/tools/relationship_event_ledger.py
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python -m unittest discover -s tests -p test_native_relationship_evidence_bridge.py -v
+          python -m unittest discover -s tests -p test_native_ledger84_contract.py -v
