@@ -332,6 +332,19 @@ def write_replies(items, network, *, wait_min=10, consult=None, recent=None, log
         net = next((i.get("network") for i in items if i["id"] == item_id), None) or network
         ok, why = valid_reply(reply, net, recent)
         if ok:
+            # Diagnóstico editorial común: WEB/API/MOBILE, jamás una nueva
+            # condición de bloqueo o una autocorrección de texto ajeno.
+            try:
+                import spanish_voice_quality as voice_qa
+                qa_net = "reddit" if net == "reddit_micro" else net
+                if qa_net in voice_qa.NETWORKS:
+                    findings = voice_qa.audit(reply, network=qa_net)["findings"]
+                    if findings:
+                        codes = sorted({item["code"] for item in findings})
+                        log("[reply_writer] revision_es_" + qa_net + ": " + ",".join(codes))
+            except Exception as exc:
+                # Un problema del auditor NO interrumpe ni descarta la ronda.
+                log("[reply_writer] auditor_es_no_disponible: " + type(exc).__name__)
             out[item_id] = " ".join(reply.split())
             recent.append(out[item_id])
             mark_gpt(out[item_id])
