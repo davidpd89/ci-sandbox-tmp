@@ -1,0 +1,26 @@
+python
+# Código original para davidpd89/rrss-davidporto-CODE
+# Integración: capa de candidatos de respuesta, no publicación automática.
+from dataclasses import dataclass, field
+from enum import Enum
+
+class ReplyAngle(str, Enum):
+    VALIDACION = "validacion"
+    EXPERIENCIA = "experiencia"
+    CONTRASTE = "contraste"
+    PREGUNTA = "pregunta"
+    RECOMENDACION = "recomendacion"
+    HUMOR = "humor"
+
+@dataclass(frozen=True)
+class ReplyCandidate:
+    text: str
+    angle: ReplyAngle
+    network: str
+    tone: str
+    emoji_count: int
+    question_count: int
+    similarity_to_post: float
+    similarity_to_recent: float
+    score: float = 0.0
+    reasons: list[str] = field(default_factory=list)
