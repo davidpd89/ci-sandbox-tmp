@@ -67,11 +67,16 @@ def audit_projection(row, target):
     a, b = row.get("treatment"), row.get("control")
     if not isinstance(a, dict) or not isinstance(b, dict):
         return None
-    if type(a.get("n")) is not int or type(b.get("n")) is not int:
-        return None
+    # La procedencia no convierte brazos incoherentes en evidencia auditable.
+    # Repite el predicado numérico mínimo del gate para que approves() también
+    # falle cerrado cuando se invoca directamente fuera de review().
+    for arm in (a, b):
+        if (set(arm) != {"n", "successes"}
+                or type(arm["n"]) is not int or not 40 <= arm["n"] <= 1_000_000
+                or type(arm["successes"]) is not int
+                or not 0 <= arm["successes"] <= arm["n"]):
+            return None
     count = a["n"] + b["n"]
-    if not 0 < count <= 2_000_000:
-        return None
     if not isinstance(row.get("origin"), str) or not isinstance(row.get("feature"), str):
         return None
     return {

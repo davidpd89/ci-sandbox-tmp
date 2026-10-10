@@ -341,6 +341,98 @@ class VersionedEvidenceTests(unittest.TestCase):
             self.assertIn("      - 'tools/growth_attribution.py'", event_paths)
         self.assertIn("tools/discovery_attribution.py tools/growth_attribution.py", workflow)
 
+    def test_distinct_trials_can_share_design_not_assignment(self):
+        a, b = trial(), trial("trial-B002")
+        self.assertEqual(a["experiment"]["design_sha256"],
+                         b["experiment"]["design_sha256"])
+        self.assertNotEqual(a["experiment"]["assignment_sha256"],
+                            b["experiment"]["assignment_sha256"])
+        registry = TrustedRegistry([audited(a), audited(b)])
+        self.assertTrue(registry.approves(a, "mastodon"))
+        self.assertTrue(registry.approves(b, "mastodon"))
+        # Una réplica independiente exige evaluación conjunta; no se
+        # promocionan dos propuestas solapadas aunque ambas sean legítimas.
+        self.assertEqual(run(a, b, registry=registry)["proposals"], [])
+
+    def test_invalid_arms_cannot_get_direct_registry_approval(self):
+        original = trial()
+        registry = TrustedRegistry([audited(original)])
+        for changes in (
+            {"successes": -1}, {"successes": 101},
+            {"successes": True}, {"successes": 70.0},
+            {"n": True}, {"n": 39}, {"n": -50},
+            {"n": 1_000_001},
+        ):
+            row = copy.deepcopy(original)
+            row["treatment"].update(changes)
+            with self.subTest(changes=changes):
+                self.assertIsNone(audit_projection(row, "mastodon"))
+                self.assertIsNone(evidence_digest(row, "mastodon"))
+                self.assertFalse(registry.approves(row, "mastodon"))
+                self.assertEqual(run(row, registry=registry)["proposals"], [])
+
+    def test_unrelated_metadata_does_not_affect_evidence_commitment(self):
+        row = trial()
+        registry = TrustedRegistry([audited(row)])
+        extra = copy.deepcopy(row)
+        extra["internal_label"] = "private-synthetic-metadata"
+        extra["targets"]["mastodon"]["note"] = "synthetic"
+        extra["targets"]["mastodon"]["experiment_labels"] = ["fiction"]
+        self.assertEqual(evidence_digest(row, "mastodon"),
+                         evidence_digest(extra, "mastodon"))
+        self.assertTrue(registry.approves(extra, "mastodon"))
+        self.assertNotIn("synthetic", json.dumps(run(extra, registry=registry)))
+
+    def test_duplicate_record_cannot_override_evidence_digest(self):
+        row = trial()
+        first = audited(row)
+        altered = {**first, "evidence_sha256": "f" * 64}
+        with self.assertRaisesRegex(ValueError, "registro duplicado"):
+            TrustedRegistry([first, altered])
+        # Distintos destinos pueden necesitar hashes distintos, no son
+        # duplicados: la clave incluye target y queue.
+        cross = copy.deepcopy(row)
+        cross["targets"]["reddit"] = dict(cross["targets"]["mastodon"])
+        registry = TrustedRegistry([
+            first,
+            {**audit_projection(cross, "reddit"),
+             "evidence_sha256": evidence_digest(cross, "reddit")},
+        ])
+        self.assertTrue(registry.approves(cross, "reddit"))
+
+    def test_future_target_permission_does_not_promote(self):
+        row = trial()
+        future = copy.deepcopy(row)
+        future["targets"]["mastodon"]["checked_on"] = "2026-10-10"
+        registry = TrustedRegistry([audited(future)])
+        self.assertEqual(run(future, registry=registry)["proposals"][0]["state"],
+                         "investigar_equivalencia")
+
+    def test_registry_limit_counts_records_not_distinct_experiments(self):
+        records = [audited(trial(identity=f"trial-{i:04d}")) for i in range(800)]
+        registry = TrustedRegistry(records)
+        self.assertEqual(len(registry._entries), 800)
+        self.assertTrue(registry.approves(trial(identity="trial-0799"),
+                                          "mastodon"))
+        with self.assertRaisesRegex(ValueError, "registro de auditoría inválido"):
+            TrustedRegistry(records + [audited(trial("trial-0800"))])
+
+    def test_digest_is_order_invariant_and_type_sensitive(self):
+        row = trial()
+        reordered = dict(reversed(list(copy.deepcopy(row).items())))
+        reordered["treatment"] = dict(reversed(list(row["treatment"].items())))
+        reordered["targets"] = {"mastodon": dict(reversed(list(
+            row["targets"]["mastodon"].items())))}
+        self.assertEqual(evidence_digest(row, "mastodon"),
+                         evidence_digest(reordered, "mastodon"))
+        for changed_value in (True, 14.0):
+            altered = copy.deepcopy(row)
+            altered["mature_days"] = changed_value
+            self.assertNotEqual(evidence_digest(row, "mastodon"),
+                                evidence_digest(altered, "mastodon"))
+            self.assertEqual(run(altered, registry=TrustedRegistry([audited(row)]))
+                             ["proposals"], [])
+
     def test_no_network_calls_or_user_identity_in_output(self):
         row = trial()
         row["internal_handle"] = "secret-pseudonym"

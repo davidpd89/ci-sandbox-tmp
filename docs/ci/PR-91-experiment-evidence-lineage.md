@@ -231,3 +231,37 @@ en auditorías reales y no representa un canario supervisado. Para portar al
 oficial, el controlador contrastará los hashes del código receptor y ejecutará
 sus pruebas aisladas; la procedencia auditada del registro debe verificarse
 fuera del agregado, por un auditor independiente, antes de habilitar propuestas.
+
+## Dictamen sobre las propuestas de Perplexity (10/10/2026)
+
+Se ha leído íntegra la revisión añadida a la conversación. **Adoptado ahora:**
+regresiones para dos identidades independientes que comparten diseño pero no
+manifiesto; brazos numéricamente incoherentes (y rechazo incluso de
+`TrustedRegistry.approves()` directo); metadatos extra fuera de proyección;
+rechazo de dos registros con clave idéntica pero digests distintos; permiso
+futuro; 800 ensayos independientes y límite de 801; JSON determinista ante
+cambio de orden y distinción numérica de tipos. Se endureció
+`audit_projection()` para comprobar `n/successes` de ambos brazos
+antes de asociar un digest v2. El gate estadístico principal ya impedía
+promocionar esos brazos, pero ahora tampoco devuelve aprobación directa un
+registro fuera de `review()`.
+
+**No se añade un exportador in-toto o JCS opcional:** su formato de auditor
+(p.ej. quién firma, clave confiable, expiración, política de revocación y cadena
+de custodia) aún no existe. Convertir `reviewed_by` en una cadena opaca y
+rehashar JSON sin firma válida no demuestra procedencia. La firma y la
+canonicalización interoperable deben diseñarse juntas cuando haya un productor
+y verificador externos, sin romper el digest v2 de esta PR. Tampoco se añade
+`surface` ni se amplía la lista de redes: hacerlo cambia el contrato de
+aprobación y requiere coordinar los adaptadores y su fuente de verdad; la
+identidad de cuenta entre redes (#85), procedencia (#107), colas (#111),
+replay (#137) y diagnósticos (#183) tienen trabajos separados.
+
+**Punto rebatido con el contrato vigente:** no debe prohibirse que un mismo
+`experiment_id` tenga `evidence_sha256` diferente en dos DESTINOS
+válidos; el hash enlaza el ensayo **y** destino y cola. Sí se rechazan dos
+registros con igual clave `(ID, origin, feature, target, queue)` y
+hashes diferentes. La prueba distingue ambos casos.
+
+Los tests siguen siendo sintéticos; esta revisión no certifica manifests
+materiales reales ni sustituye un canario supervisado.
