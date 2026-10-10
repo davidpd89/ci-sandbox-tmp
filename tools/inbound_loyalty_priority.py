@@ -245,7 +245,7 @@ def build(observations, *, as_of, legacy=(), outbound=(), posts=(),
             if prev is not None and (as_of - prev).days < 7:
                 continue
             if action == "thank":
-                if len(days) >= 2 or len(kinds) >= 2:
+                if len(days) >= 2 or len(kinds) >= 2 or "follow" in kinds:
                     proposals.append({"kind": label})
             else:
                 post = recent_posts.get((net, handle))
@@ -262,11 +262,20 @@ def build(observations, *, as_of, legacy=(), outbound=(), posts=(),
                            "proposals": proposals})
     ranked.sort(key=lambda r: (-r["score"], -r["distinct_days"],
                                r["network"], r["identity"]))
+    # Repartir turnos dentro de cada cola: un volumen alto en X no oculta
+    # señales de Facebook/Threads, sin mezclar locks o ejecutores de cola.
     queues = {lane: [] for lane in ("WEB", "API", "MOBILE", "UNASSIGNED")}
+    buckets = {lane: {} for lane in queues}
     for item in ranked:
-        lane = item["lane"]
-        if len(queues[lane]) < per_lane:
-            queues[lane].append(item)
+        buckets[item["lane"]].setdefault(item["network"], []).append(item)
+    for lane, by_network in buckets.items():
+        while len(queues[lane]) < per_lane and any(by_network.values()):
+            order = sorted((net for net, items in by_network.items() if items),
+                           key=lambda net: (-by_network[net][0]["score"], net))
+            for net in order:
+                if len(queues[lane]) >= per_lane:
+                    break
+                queues[lane].append(by_network[net].pop(0))
     by_network = {}
     for net in NETWORKS:
         group = [events for (n, _), events in people.items() if n == net]
