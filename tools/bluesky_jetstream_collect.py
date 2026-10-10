@@ -439,40 +439,86 @@ def _next_retry_delay(delay):
     return min(60.0, max(1.0, float(delay) * 2.0))
 
 
-def recover_archive_gap(db, endpoint, terms, *, fetch_archive_fn=None):
+def recover_archive_gap(db, endpoint, terms, *, fetch_archive_fn=None, sealed_tip=None):
     """Recuperación paginada de brecha mediante archive/backfill y reconciliación de estado.
 
-    Ejecuta descarga de páginas/segmentos sintéticos o remotos, actualiza
-    `verified_range_start`, `verified_range_end`, `complete_through`, y limpia
-    `gap_detected` / `recovery_pending`.
+    Si no hay proveedor de archive (`fetch_archive_fn` es None) o las páginas no
+    alcanzan la punta sellada (`sealed_tip`), NO declara la brecha como resuelta.
+    Conserva `gap_detected = true`, `recovery_pending = true` y registra `last_error`.
     """
     set_state(db, "gap_detected", "true")
     set_state(db, "recovery_pending", "true")
     db.commit()
 
-    processed_count = 0
-    stored_count = 0
     start_seq = int(get_state(db, "last_seq") or 0)
     current_seq = start_seq
+    processed_count = 0
+    stored_count = 0
+    page_count = 0
 
-    if fetch_archive_fn is not None:
-        pages = fetch_archive_fn(start_seq)
-    else:
-        pages = []
+    if fetch_archive_fn is None:
+        err = "no_archive_provider"
+        set_state(db, "last_error", err)
+        set_state(db, "recovery_stats", json.dumps({
+            "pages": 0,
+            "sealed_tip": sealed_tip or start_seq,
+            "planned_through": start_seq,
+            "residual_gap": max(0, (sealed_tip or start_seq) - start_seq),
+            "error": err,
+        }))
+        db.commit()
+        return {
+            "complete": False,
+            "processed": 0,
+            "stored": 0,
+            "start_seq": start_seq,
+            "end_seq": start_seq,
+            "error": err,
+        }
 
+    pages = fetch_archive_fn(start_seq)
     for page in pages:
+        page_count += 1
         for raw_event in page.get("events") or []:
             event, seq, mode = _normalize_frame(raw_event)
             if not event:
                 continue
+            # Deduplicación por cursor inclusivo
+            if seq is not None and seq <= start_seq:
+                continue
             processed_count += 1
-            if seq:
+            if seq is not None:
                 current_seq = max(current_seq, seq)
             if store_event(db, event, terms):
                 stored_count += 1
             event_time = int(event.get("time_us") or 0)
             if event_time:
                 set_state(db, "last_time_us", event_time)
+
+    target_tip = sealed_tip if sealed_tip is not None else current_seq
+    incomplete = (current_seq < target_tip) or (page_count == 0 and target_tip > start_seq)
+
+    if incomplete:
+        err = f"incomplete_backfill:{current_seq}/{target_tip}"
+        set_state(db, "last_error", err)
+        set_state(db, "recovery_stats", json.dumps({
+            "pages": page_count,
+            "sealed_tip": target_tip,
+            "planned_through": current_seq,
+            "residual_gap": max(0, target_tip - current_seq),
+            "error": err,
+        }))
+        if current_seq > start_seq:
+            set_state(db, "last_seq", str(current_seq))
+        db.commit()
+        return {
+            "complete": False,
+            "processed": processed_count,
+            "stored": stored_count,
+            "start_seq": start_seq,
+            "end_seq": current_seq,
+            "error": err,
+        }
 
     now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
     verified_start = get_state(db, "verified_range_start") or str(start_seq)
@@ -482,9 +528,16 @@ def recover_archive_gap(db, endpoint, terms, *, fetch_archive_fn=None):
     set_state(db, "gap_detected", "false")
     set_state(db, "recovery_pending", "false")
     set_state(db, "complete_through", now_iso)
+    set_state(db, "recovery_stats", json.dumps({
+        "pages": page_count,
+        "sealed_tip": target_tip,
+        "planned_through": current_seq,
+        "residual_gap": 0,
+    }))
     db.commit()
 
     return {
+        "complete": True,
         "processed": processed_count,
         "stored": stored_count,
         "start_seq": start_seq,
@@ -502,6 +555,7 @@ async def collect(
     resume_overlap_seconds,
     initial_lookback_minutes=30,
     fetch_archive_fn=None,
+    sealed_tip=None,
 ):
     try:
         import websockets
@@ -596,7 +650,7 @@ async def collect(
                         if event_cursor:
                             cursor = event_cursor
                             if mode == "v2":
-                                last_seq = event_cursor
+                                last_seq = max(int(last_seq or 0), event_cursor)
                         if store_event(db, event, terms):
                             stored += 1
                             if time.monotonic() - last_commit > 5.0:       # 06/10: una transaccion abierta mas de unos segundos bloquea al otro recolector
@@ -625,7 +679,9 @@ async def collect(
                     set_state(db, "recovery_pending", "true")
                     db.commit()
                     # Ejecutar recuperación de brecha
-                    recover_archive_gap(db, endpoint, terms, fetch_archive_fn=fetch_archive_fn)
+                    rec_res = recover_archive_gap(db, endpoint, terms, fetch_archive_fn=fetch_archive_fn, sealed_tip=sealed_tip)
+                    if not rec_res.get("complete"):
+                        last_error = rec_res.get("error", "incomplete_recovery")
                     cursor = get_state(db, "last_seq")
                 if time.monotonic() < deadline:
                     reconnects += 1
@@ -638,7 +694,9 @@ async def collect(
                     set_state(db, "gap_detected", "true")
                     set_state(db, "recovery_pending", "true")
                     db.commit()
-                    recover_archive_gap(db, endpoint, terms, fetch_archive_fn=fetch_archive_fn)
+                    rec_res = recover_archive_gap(db, endpoint, terms, fetch_archive_fn=fetch_archive_fn, sealed_tip=sealed_tip)
+                    if not rec_res.get("complete"):
+                        last_error = rec_res.get("error", "incomplete_recovery")
                     cursor = get_state(db, "last_seq")
                 if time.monotonic() < deadline:
                     reconnects += 1

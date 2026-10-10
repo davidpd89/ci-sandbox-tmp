@@ -353,6 +353,7 @@ class JetstreamCollectorTests(unittest.TestCase):
 
             res = js.recover_archive_gap(db, js.DEFAULT_ENDPOINT, terms, fetch_archive_fn=mock_archive)
 
+            self.assertTrue(res["complete"])
             self.assertEqual(res["processed"], 2)
             self.assertEqual(js.get_state(db, "gap_detected"), "false")
             self.assertEqual(js.get_state(db, "recovery_pending"), "false")
@@ -362,6 +363,93 @@ class JetstreamCollectorTests(unittest.TestCase):
             # Confirm delete removed post1
             count = db.execute("SELECT COUNT(*) FROM posts WHERE rkey = 'post1'").fetchone()[0]
             self.assertEqual(count, 0)
+            db.close()
+
+    def test_recover_archive_gap_without_provider_remains_pending(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = str(pathlib.Path(tmp) / "cache.sqlite3")
+            db = js.init_db(db_path)
+            js.set_state(db, "last_seq", "100")
+            terms = js.load_terms(self.config())
+
+            res = js.recover_archive_gap(db, js.DEFAULT_ENDPOINT, terms, fetch_archive_fn=None)
+
+            self.assertFalse(res["complete"])
+            self.assertEqual(js.get_state(db, "gap_detected"), "true")
+            self.assertEqual(js.get_state(db, "recovery_pending"), "true")
+            self.assertEqual(js.get_state(db, "last_error"), "no_archive_provider")
+            self.assertIsNone(js.get_state(db, "complete_through"))
+            db.close()
+
+    def test_recover_archive_gap_inclusive_cursor_and_out_of_order(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = str(pathlib.Path(tmp) / "cache.sqlite3")
+            db = js.init_db(db_path)
+            js.set_state(db, "last_seq", "100")
+            terms = js.load_terms(self.config())
+
+            def mock_archive(start_seq):
+                return [{
+                    "events": [
+                        {
+                            "$type": "message",
+                            "payload": {
+                                "$type": "network.bsky.jetstream.subscribeEvents#commit",
+                                "seq": 100,  # Cursor inclusivo: debe omitirse
+                                "did": "did:plc:user1",
+                                "time": "2026-09-29T08:00:00Z",
+                                "operation": "create",
+                                "collection": "app.bsky.feed.post",
+                                "rkey": "old",
+                                "record": {
+                                    "$type": "app.bsky.feed.post",
+                                    "text": "Lectura de fantasía vieja",
+                                    "createdAt": "2026-09-29T08:00:00Z",
+                                },
+                            },
+                        },
+                        {
+                            "$type": "message",
+                            "payload": {
+                                "$type": "network.bsky.jetstream.subscribeEvents#commit",
+                                "seq": 103,  # Desordenado: llega primero 103
+                                "did": "did:plc:user2",
+                                "time": "2026-09-29T08:02:00Z",
+                                "operation": "create",
+                                "collection": "app.bsky.feed.post",
+                                "rkey": "new2",
+                                "record": {
+                                    "$type": "app.bsky.feed.post",
+                                    "text": "Lectura de fantasía dos",
+                                    "createdAt": "2026-09-29T08:02:00Z",
+                                },
+                            },
+                        },
+                        {
+                            "$type": "message",
+                            "payload": {
+                                "$type": "network.bsky.jetstream.subscribeEvents#commit",
+                                "seq": 101,  # Desordenado: llega después 101
+                                "did": "did:plc:user3",
+                                "time": "2026-09-29T08:01:00Z",
+                                "operation": "create",
+                                "collection": "app.bsky.feed.post",
+                                "rkey": "new1",
+                                "record": {
+                                    "$type": "app.bsky.feed.post",
+                                    "text": "Lectura de fantasía uno",
+                                    "createdAt": "2026-09-29T08:01:00Z",
+                                },
+                            },
+                        },
+                    ]
+                }]
+
+            res = js.recover_archive_gap(db, js.DEFAULT_ENDPOINT, terms, fetch_archive_fn=mock_archive)
+
+            self.assertTrue(res["complete"])
+            self.assertEqual(res["processed"], 2)  # seq=100 fue omitido por cursor inclusivo
+            self.assertEqual(js.get_state(db, "last_seq"), "103")  # Mantiene el máximo seq visto
             db.close()
 
 
