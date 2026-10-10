@@ -81,3 +81,13 @@ Ejecución: `python -m unittest discover -s tests -p test_audience_discovery.py 
 **Limitaciones explícitas:** los adaptadores de lectura real a cada API/Edge/MOBILE aún no están conectados; disponibilidad variable por red/superficie; comentarios sin `event_id` real se rechazan; lista sin fecha verificable se guarda pero no se propone para acción; `occurred_at` debe representar reloj consistente de la mutación en fuentes de streaming; los resultados de ranking son heurísticos, no estimaciones de reciprocidad calibradas; no se ha probado Edge ni Android ni se ha ejecutado canario supervisado. No se asegura cobertura 100 %. Integración real debe respetar las PR abiertas #11, #21, #25, #26, #60, #63, #65, #69 y #95 sin copiar ni sustituir sus contratos.
 
 **Rollback:** eliminar `tools/audience_discovery.py`, sus pruebas y su workflow; ninguna tabla operativa cambia. Si se creó un archivo SQLite específico de ensayo, archivarlo o eliminarlo manualmente; no comparte DB por defecto con Jetstream, queue ni perfiles. No hay migración irreversible.
+
+
+## Evidencia CI verificable (HEAD de código 3a322789, 10/10/2026)
+
+- [Audience discovery offline / run 38015734972](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38015734972): **41/41 tests** sintéticos en Python 3.11 sobre Ubuntu y Windows, ambos jobs `success`.
+- [Validador de campaña / run 38015734930](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38015734930): **success en Ubuntu y Windows** tras corregir las reservas de dominios sintéticos y aportar metadatos de investigación.
+- [Suite general de herramientas RRSS / run 38015732119](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38015732119): iniciada y todavía en ejecución al redactar este bloque; no se anticipa su resultado.
+- El test de tres colas es de **importación y persistencia offline**. No se verificó Edge ni TikTok móvil ni un canario con cuentas; queda para Claude.
+
+**Hallazgo no resuelto en esta PR:** los endpoints que enumeran likers/boosters como snapshots completos no anuncian necesariamente un evento `delete` cuando una cuenta desaparece de la siguiente captura. No se debe inferir ausencia hasta terminar todas las páginas; necesita reconciliación específica con watermark, aislamiento por post y rollback ante páginas faltantes. Es distinto del replay del listener Jetstream cubierto por #95.
