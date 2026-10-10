@@ -55,6 +55,30 @@ class ProvenanceRegressionTests(unittest.TestCase):
         self.assertFalse(result.allowed)
         self.assertIn("revisión", result.reason)
 
+    def test_switching_to_a_different_valid_quote_requires_new_review(self):
+        data = load()
+        data["plan"]["quoted_comment_id"] = "t1_c001"
+        data["review"]["quoted_comment_id"] = "t1_c001"
+        self.assertTrue(check(data).allowed)
+        comments(data).append({
+            "kind": "t1",
+            "data": {
+                "id": "c002",
+                "parent_id": "t3_abc123",
+                "link_id": "t3_abc123",
+                "author": "lector03",
+                "body": "Otra intervención",
+                "replies": "",
+            },
+        })
+        post(data)["num_comments"] = 2
+        data["plan"]["quoted_comment_id"] = "t1_c002"
+        result = check(data)
+        self.assertFalse(result.allowed)
+        self.assertIn("revisión", result.reason)
+        data["review"]["quoted_comment_id"] = "t1_c002"
+        self.assertTrue(check(data).allowed)
+
     def test_review_must_follow_snapshot_and_be_fresh(self):
         for value in ("2026-10-09T19:03:59Z",
                       "2026-10-09T19:05:01Z",
