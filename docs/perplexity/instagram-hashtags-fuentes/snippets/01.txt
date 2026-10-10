@@ -1,0 +1,38 @@
+text
+# Archivo nuevo: data/instagram/hashtags_core.yaml
+version: 1
+network: instagram
+language: es
+updated_at: "2026-10-10"
+
+hashtags:
+  - tag: bookstagramespaña
+    tier: core
+    priority: 10
+  - tag: bookstagramespañol
+    tier: core
+    priority: 9
+  - tag: romantasy
+    tier: core
+    priority: 10
+  - tag: librosdefantasia
+    tier: core
+    priority: 10
+  - tag: fantasia
+    tier: core
+    priority: 8
+  - tag: bookstagram
+    tier: core
+    priority: 7
+  - tag: lectura
+    tier: core
+    priority: 6
+  - tag: libros
+    tier: broad
+    priority: 4
+  - tag: reseñasdelibros
+    tier: core
+    priority: 8
+  - tag: tbr
+    tier: intent
+    priority: 9
