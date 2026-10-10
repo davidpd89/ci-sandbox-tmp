@@ -82,3 +82,10 @@ Pruebas locales de diseño en Linux/Python: **24 casos** (incluidos casos adicio
 **Integración**: después de aprobar #85, usar `AliasTimeline(key_builder=identity_profiles.account_key)` y conectar solo fuentes con pruebas de ID verificadas; en históricos sin fecha/ID remoto, mantener `unresolved`. PR #109 investiga enlaces de perfil, #108 evidencias de relaciones, no se duplican aquí. Windows vivo, Edge, Android y canario supervisado **pendientes para Claude**; ningún resultado simulado se presenta como canario real.
 
 **Rollback**: desactivar el consumidor de `AliasTimeline`, retirar módulo/pruebas/workflow aditivos y conservar, si se desea, JSON v1 para auditoría. Para vínculo equivocado, `revoke`, recalcular vistas desde eventos originales, revisar `unresolved`; `restore` deshace. No migrar ni sobreescribir cuentas/CSV/acciones históricas.
+
+
+## Normalización de evidencia por red (entrega adicional)
+
+`tools/native_alias_observations.py` añade `NATIVE_RULES` para las nueve redes, y `ingest_observations(network, rows, timeline=...)` para fuentes WEB/API/MOBILE ya capturadas. Bluesky exige `handle`, `did` y bandera booleana `did_document_handle_verified=True`; Mastodon exige `acct`, `actor_uri` y `actor_uri_confirmed=True`; las otras siete redes comparten el sobre **normalizado** `handle`, `remote_account_id`, `remote_id_verified=True`. Un texto `"true"` no es verificación. El resultado incluye `accepted` y `diagnostics` sin eco de IDs ni pruebas sensibles. El adaptador no realiza fetching ni afirma que los nueve orígenes ya produzcan estos sobres; cada productor debe mapear y verificar de verdad sus campos antes de entrar. Contrato homogéneo, integración operativa pendiente.
+
+La suite `tests/test_native_alias_observations.py` añade cinco pruebas, incluida matriz sintética de 9 redes × 3 colas (27 entradas), ausencia de pruebas, colisión de identificadores, replay idempotente, diagnóstico y no mutación. Pruebas totales publicadas: 20 del resolver + 5 de adaptadores = **25 casos**; el banco inicial de diseño del resolver se validó localmente por separado (24 casos).
