@@ -25,12 +25,17 @@ def terms(network, kind="busquedas", suffix="", skip=()):
         data = {}
     if not isinstance(data, dict):
         data = {}
-    static = (data.get(network) or {}).get(kind) or []
+    entry = data.get(network)
+    static = entry.get(kind, []) if isinstance(entry, dict) else []
     if not isinstance(static, list):
         static = []
 
-    # Import interno: escáneres siguen funcionando cuando no hay caché.
-    from hashtag_expansion import snapshot_terms
+    # Funciona tanto con `import discovery_terms` como con
+    # `from tools import discovery_terms` (raíz del repositorio en sys.path).
+    if __package__:
+        from .hashtag_expansion import snapshot_terms
+    else:
+        from hashtag_expansion import snapshot_terms
     observed = snapshot_terms(network, kind)
 
     skip_keys = {norm(item) for item in skip}
