@@ -1,0 +1,11 @@
+python
+# https://github.com/subzeroid/instagrapi — README / guía de uso
+from instagrapi import Client
+
+cl = Client()
+cl.login(USERNAME, PASSWORD)
+target_id = cl.user_id_from_username("target_user")
+posts = cl.user_medias(target_id, amount=10)
+for media in posts:
+    # download photos to the current folder
+    cl.photo_download(media.pk)
