@@ -11,7 +11,7 @@ import datetime as dt
 import hashlib
 import json
 import stat
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -217,13 +217,23 @@ def review(data, *, today=None, trusted_verifications=None, trusted_registry=Non
     ]
     effects = [_positive_effect(a) for a in arms]
     counts = Counter()
-    for row, trial, targets_ok in zip(items, arms, valid_targets):
+    # Diagnóstico transversal: conservar por separado identidad, signo del
+    # resultado y procedencia de cada réplica, sin cambiar el veto vigente.
+    collision_profiles = defaultdict(list)
+    for row, trial, targets_ok, effect in zip(items, arms, valid_targets, effects):
         if trial is None or not targets_ok:
             continue
         origin, feature, targets = row["origin"], row["feature"], row["targets"]
         for target, entry in targets.items():
             if target != origin:
-                counts[(origin, feature, target, _queue(entry))] += 1
+                key = (origin, feature, target, _queue(entry))
+                counts[key] += 1
+                if schema == 2:
+                    exp = row["experiment"]
+                    identity = (exp["id"], exp["design_sha256"], exp["assignment_sha256"])
+                    reviewed = (trusted_registry is not None
+                                and trusted_registry.approves(row, target))
+                    collision_profiles[key].append((identity, effect is not None, reviewed))
 
     report = {"schema": schema, "as_of": today.isoformat(),
               "identity_contract": "v2_external_registry" if schema == 2 else "legacy_read_only",
@@ -231,6 +241,15 @@ def review(data, *, today=None, trusted_verifications=None, trusted_registry=Non
                            for n in sorted(NETWORKS)}, "proposals": [],
               "invalid_or_unproven": 0, "non_positive_trials": 0,
               "suppressed": 0, "duplicate_evidence": 0, "writes": False}
+    if schema == 2:
+        # Contadores de propuestas positivas vetadas, no de grupos de ensayos.
+        # Las categorías se solapan: una réplica distinta puede ser negativa
+        # y carecer de revisión independiente a la vez.
+        report["collision_diagnostics"] = {
+            "same_trial_replay": 0, "distinct_trials": 0,
+            "includes_non_positive": 0, "includes_unreviewed": 0,
+            "includes_unknown_queue": 0,
+        }
     seen = set()
     for row, trial, targets_ok, effect in zip(items, arms, valid_targets, effects):
         if trial is None or not targets_ok:
@@ -255,6 +274,20 @@ def review(data, *, today=None, trusted_verifications=None, trusted_registry=Non
             if counts[key] > 1 or (queue is not None and counts[legacy_key]):
                 report["suppressed"] += 1
                 report["duplicate_evidence"] += 1
+                if schema == 2:
+                    peers = collision_profiles[key]
+                    if queue is not None:
+                        peers = peers + collision_profiles[legacy_key]
+                    diagnosis = report["collision_diagnostics"]
+                    identities = {peer[0] for peer in peers}
+                    kind = "same_trial_replay" if len(identities) == 1 else "distinct_trials"
+                    diagnosis[kind] += 1
+                    if any(not peer[1] for peer in peers):
+                        diagnosis["includes_non_positive"] += 1
+                    if any(not peer[2] for peer in peers):
+                        diagnosis["includes_unreviewed"] += 1
+                    if queue is None or (queue is not None and counts[legacy_key]):
+                        diagnosis["includes_unknown_queue"] += 1
                 continue
             if key in seen or key in suppressed or legacy_key in suppressed:
                 report["suppressed"] += 1
