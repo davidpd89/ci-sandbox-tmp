@@ -121,6 +121,36 @@ class HistoricalMemoryTests(unittest.TestCase):
                     self.assertEqual(rp.blocked_accounts(str(src), TODAY), {"b"})
                     self.assertEqual(rp.follow_memory_ranking(str(src), TODAY), {"a": -1.5})
 
+    def test_synthetic_volume_and_conversion_proxy(self):
+        """Etiquetas inventadas: prueba del embudo, NO atribución real."""
+        cases = []
+        for i in range(4):
+            cases.append((str(i), [], i < 2))
+        for i in range(3):
+            cases.append((f"one{i}", cycle(f"one{i}", "2026-09-10", "2026-09-15"), i == 0))
+        for i in range(2):
+            rows = (cycle(f"two{i}", "2026-08-01", "2026-08-02") +
+                    cycle(f"two{i}", "2026-09-10", "2026-09-15"))
+            cases.append((f"two{i}", rows, False))
+        for i in range(2):
+            rows = (cycle(f"three{i}", "2026-07-01", "2026-07-02") +
+                    cycle(f"three{i}", "2026-08-01", "2026-08-02") +
+                    cycle(f"three{i}", "2026-09-10", "2026-09-15"))
+            cases.append((f"three{i}", rows, False))
+        cases.append(("permanent", [row("permanent", "block", "2026-09-01")], False))
+        old, new = [], []
+        for handle, rows, converted in cases:
+            events = mem.events_from_rows(rows, "x")
+            old_state = mem.decision(events, "x", handle, today=TODAY,
+                                     policy=mem.Policy(multiplier=1))
+            new_state = mem.decision(events, "x", handle, today=TODAY)
+            if old_state["allowed"]:
+                old.append(converted)
+            if new_state["allowed"]:
+                new.append(converted)
+        self.assertEqual((len(old), sum(old)), (9, 3))
+        self.assertEqual((len(new), sum(new)), (7, 3))
+
     def test_configurable_retention_and_cooldown(self):
         events = mem.events_from_rows(cycle("a", "2026-09-01", "2026-09-02"), "x")
         state = mem.decision(events, "x", "a", today=TODAY, policy=mem.Policy(lookback_days=2))
