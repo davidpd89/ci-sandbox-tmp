@@ -181,6 +181,7 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(report["queues"]["WEB"]["open_breakers"], 1)
         report = set_breaker({"fails": 1, "open_until": "bad timestamp"})
         self.assertEqual(report["networks"]["x"]["breaker"]["status"], "invalido")
+        self.assertIn("breaker_invalido", report["networks"]["x"]["alerts"])
         report = set_breaker({"fails": 1})
         self.assertEqual(report["networks"]["x"]["breaker"]["status"], "invalido")
         path.write_text("{broken", encoding="utf-8")
