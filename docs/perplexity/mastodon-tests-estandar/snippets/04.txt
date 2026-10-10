@@ -1,0 +1,17 @@
+json
+// tests/fixtures/mastodon/status_remote_author.json
+{
+  "id": "109900000000000002",
+  "created_at": "2026-10-10T12:05:00.000Z",
+  "visibility": "public",
+  "url": "https://fosstodon.org/@autor/109900000000000002",
+  "content": "<p>Recomendaciones de fantasía épica para este otoño.</p>",
+  "account": {
+    "id": "200000000000000002",
+    "username": "autor",
+    "acct": "autor@fosstodon.org",
+    "display_name": "Autor remoto",
+    "url": "https://fosstodon.org/@autor",
+    "created_at": "2026-01-01T00:00:00.000Z"
+  }
+}
