@@ -127,10 +127,15 @@ def memoria_texto(recent=(), path=None, *, items=None, network=None):
 def estilo_red_texto(networks, path=None):
     """Como se suele contestar en cada red (solo las que aparecen en la tanda): se afina con lo que vayamos viendo, en `estilo_por_red` de la memoria."""
     try:
-        data = json.load(open(path or MEMORIA_PATH, encoding="utf-8")).get("estilo_por_red") or {}
+        with open(path or MEMORIA_PATH, encoding="utf-8") as stream:
+            saved = json.load(stream)
+        data = saved.get("estilo_por_red", {}) if isinstance(saved, dict) else {}
+        if not isinstance(data, dict):
+            return ""
     except (OSError, ValueError):
         return ""
-    lines = [f"- {net}: {data[net]}" for net in sorted(set(networks)) if data.get(net)]
+    lines = [f"- {net}: {data[net]}" for net in sorted(set(networks))
+             if isinstance(data.get(net), str) and data[net].strip()]
     return ("CÓMO SE SUELE CONTESTAR EN CADA RED (adapta el registro a la red de cada publicación):\n" + "\n".join(lines) + "\n\n") if lines else ""
 
 
