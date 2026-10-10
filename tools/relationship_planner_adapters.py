@@ -174,17 +174,28 @@ def _verified_inbound(events, today):
 
 
 def _target_day(row):
+    """Fecha del destino: no escoger la más favorable entre datos contradictorios."""
     # Nunca usar created_at de la raíz de una tarea: puede ser la fecha de la cola.
+    observed = []
+    def register(value):
+        if value is None or value == "":
+            return True
+        day = _day(value)
+        if day is None:
+            return False
+        observed.append(day)
+        return True
+
     for key in ("target_created_at", "post_created_at", "reply_target_at",
                 "target_created_utc", "post_created_utc"):
-        if _day(row.get(key)):
-            return _day(row[key])
+        if not register(row.get(key)):
+            return None
     post = row.get("post")
     if isinstance(post, dict):
         for key in ("created_at", "createdAt", "create_time", "created_time", "created_utc"):
-            if _day(post.get(key)):
-                return _day(post[key])
-    return None
+            if not register(post.get(key)):
+                return None
+    return observed[0] if observed and len(set(observed)) == 1 else None
 
 
 def _coverage_complete(proof, rows, today):
