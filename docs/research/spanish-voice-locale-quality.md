@@ -1,6 +1,6 @@
 # PR #79 — calidad lingüística y voz (10/10/2026)
 
-## Diagnóstico y alcance
+## Problema
 
 Rama: research/69-spanish-voice-locale-quality. Se leyó el encargo, PROTOCOL.md y el código del espejo; el contexto adicional de `davidpd89/rrss-davidporto-CODE` en `integracion/crecimiento-2026-10` incluye `tools/reply_quality_metrics.py`, `reply_blind_review.py`, `reply_research_eval.py` y `reply_context_trial.py`. No se copió código privado. En el espejo ya están `spellcheck_es.py`, `check_language_variety.py`, `reply_corpus_lint.py` y `reply_writer.py`. El primero detecta algunas tildes faltantes; los otros miden repetición/cadencia. Falta un diagnóstico **común y no destructivo** de apertura de interrogación/exclamación, calcos, variantes es-ES, codificación y preservación de spans ajenos.
 
@@ -10,7 +10,18 @@ Rama: research/69-spanish-voice-locale-quality. Se leyó el encargo, PROTOCOL.md
 
 `tools/spanish_voice_blind.py`: revisión A/B emparejada con semilla, orden estable y fichero de clave aparte. Cada caso incluye el mismo contexto y dos textos; las preferencias quedan vacías hasta que un revisor humano puntúe `left/right/tie/both_bad`. `score` no acepta opiniones ausentes. `tools/spanish_voice_eval.py` mide avisos en antes/después sintéticos y genera los dos ficheros ciegos opcionalmente. No confunde menos avisos con ser más humano.
 
-## Investigación pública actual y decisión
+## Alternativas
+
+Se contrastaron herramientas públicas actuales con la continuidad de los módulos internos ya instalados.
+
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/barrust/pyspellchecker
+Fecha de consulta: 2026-10-10
+Licencia SPDX: MIT
+Referencia inmutable: https://github.com/barrust/pyspellchecker/commit/f72172c4ddb3d1c3464cf500cc2420a4831a2b55
+
+### Comparativa aplicada
 
 | Opción | Versión de referencia comprobada / actividad | Licencia | Compatibilidad y coste | Decisión |
 |---|---|---|---|---|
@@ -21,7 +32,11 @@ Rama: research/69-spanish-voice-locale-quality. Se leyó el encargo, PROTOCOL.md
 
 No hay código externo vendorizado. Procedencia: reutilización de la API interna de `tools/spellcheck_es.py`, que a su vez usa pyspellchecker MIT. El auditor de reglas y el generador ciego están escritos específicamente para esta PR. Los repos examinados son públicos y su estado/licencia se inspeccionaron el 10/10/2026. Las métricas de comunidad no sustituyen las pruebas de compatibilidad en nuestro entorno.
 
-## Medición reproducible y comparación
+## Decisión
+
+Conservar y reutilizar el corrector de tildes ya instalado; añadir diagnósticos pequeños de stdlib, sin motor Java ni corpus nuevo. No se copia material externo en el árbol. Los componentes se pueden desactivar sin migración.
+
+## Pruebas
 
 ```powershell
 python -m unittest discover -s tests -p test_spanish_voice_quality.py -v
@@ -41,7 +56,7 @@ Fixture propia sintética: **9 pares / 9 redes**. Auditor sin diccionario (regla
 5. **Interferencia con crecimiento:** nuevo preflight impediría comentarios sanos. Corregido: diagnóstico posterior a `valid_reply`, informativo, excepción del auditor aislada; ninguna operación de escritura remota ni modificación de colas.
 6. **Alcance parcial:** el autor de respuestas común conecta varios caminos, pero las fichas de publicación y cualquier edición manual no pasan necesariamente por él. No afirmar cobertura operativa total por tener nueve adaptadores; auditar cada punto de salida o abrir integración separada cuando no duplique otros frentes.
 
-## Reversión y pendientes para Claude
+## Retirada y pendientes para Claude
 
 Revertir el commit de integración en `reply_writer.py` para volver exactamente a la lógica anterior (los módulos nuevos no tienen efectos por importación). Los tests y reportes se pueden retirar independientemente. No hay esquema, DB, fichero operativo ni credenciales modificados. Ejecutar la suite global del mirror y de la rama privada tras integrar; verificar en Windows vivo con tildes, consolidador de logs, Edge real y móvil en **canario supervisado**, no en prueba simulada; repetir evaluación ciega con corpus propio/autorizado y seguimiento de preferencia humana. Ninguna acción real de redes fue realizada por esta PR.
 
