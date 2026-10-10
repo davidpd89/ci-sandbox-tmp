@@ -78,6 +78,8 @@ def _key(event: Event) -> tuple[str, str, str, str, str, str]:
     eid = event.event_id.strip() if isinstance(event.event_id, str) else ""
     if net not in NETWORKS:
         raise ValueError("unknown network")
+    if any(ord(c) < 32 for c in event.account) or any(ord(c) < 32 for c in event.event_id):
+        raise ValueError("control character in account or event_id")
     if not account or len(account) > 512 or any(ord(c) < 32 for c in account):
         raise ValueError("invalid account identifier")
     if not eid or len(eid) > 256 or any(ord(c) < 32 for c in eid):
