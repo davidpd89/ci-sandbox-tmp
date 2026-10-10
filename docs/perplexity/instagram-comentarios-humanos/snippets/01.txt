@@ -1,0 +1,4 @@
+python
+# https://github.com/davidpd89/ci-sandbox-tmp/blob/main/tools/reply_writer.py
+MAX_CHARS = {"reddit_micro": 62, "pinterest": 110, "x": 200, "threads": 230, "facebook": 230, "bluesky": 200, "mastodon": 230, "tiktok": 90, "reddit": 170}
+MAX_WORDS = {"reddit_micro": 9, "pinterest": 16, "x": 32, "threads": 36, "facebook": 36, "bluesky": 32, "mastodon": 36, "tiktok": 14, "reddit": 28}
