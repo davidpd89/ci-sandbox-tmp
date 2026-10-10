@@ -1,0 +1,7 @@
+python
+# https://github.com/halcy/Mastodon.py/blob/master/mastodon/statuses.py
+    @api_version("1.0.0", "4.5.0")
+    def status_post(self, status: str, in_reply_to_id: Optional[Union[Status, IdType]] = None, media_ids: Optional[List[Union[MediaAttachment, IdType]]] = None,
+                    sensitive: bool = False, visibility: Optional[str] = None, spoiler_text: Optional[str] = None, language: Optional[str] = None, 
+                    idempotency_key: Optional[str] = None, content_type: Optional[str] = None, scheduled_at: Optional[datetime] = None, 
+                    poll: Optional[Union[Poll, IdType]] = None, quote_id: Optional[Union[Status, IdType]] = None, strict_content_type: bool = False,
