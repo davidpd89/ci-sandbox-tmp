@@ -6,11 +6,15 @@ on:
     paths:
       - tools/audience_discovery.py
       - tests/test_audience_discovery.py
+      - tests/test_audience_adapters.py
+      - tools/audience_adapters.py
       - .github/workflows/audience-discovery-offline.yml
   pull_request:
     paths:
       - tools/audience_discovery.py
       - tests/test_audience_discovery.py
+      - tests/test_audience_adapters.py
+      - tools/audience_adapters.py
       - .github/workflows/audience-discovery-offline.yml
 permissions:
   contents: read
@@ -27,4 +31,4 @@ jobs:
         with:
           python-version: '3.11'
       - name: Offline synthetic tests (no network/API/social sessions)
-        run: python -m unittest discover -s tests -p test_audience_discovery.py -v
+        run: python -m unittest discover -s tests -p 'test_audience_*.py' -v
