@@ -139,6 +139,19 @@ def _permalink(network, value):
         return None
 
 
+def _post_identity(network, url):
+    """Remote post identity independent of an X/Threads author's mutable handle.
+
+    Output URLs remain network-canonical; this key is only for in-batch
+    deduplication and ownership collision detection. Never use scan ordinals.
+    """
+    if network == "x":
+        return (network, url.rsplit("/status/", 1)[1])
+    if network == "threads":
+        return (network, url.rsplit("/post/", 1)[1])
+    return (network, url)
+
+
 def _observations(network, snapshot):
     if network == "pinterest" and isinstance(snapshot, Mapping):
         authors, pins = snapshot.get("authors"), snapshot.get("pins")
@@ -379,27 +392,28 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
                 replies = post.get("comment_count")
             if type(replies) is int and 0 <= replies <= 1_000_000:
                 known["stats"] = {"replies": replies}
-            existing = account["posts"].get(url)
-            if url in account["conflicting_posts"]:
+            post_key = _post_identity(network, url)
+            existing = account["posts"].get(post_key)
+            if post_key in account["conflicting_posts"]:
                 continue
             if existing and existing["created_at"] != known["created_at"]:
-                account["posts"].pop(url, None)
-                account["conflicting_posts"].add(url)
+                account["posts"].pop(post_key, None)
+                account["conflicting_posts"].add(post_key)
                 diagnostics.append({"index": i, "reason": "conflicting_post_timestamps"})
                 continue
             if existing is None or (existing["language"] is None and known["language"] is not None):
-                account["posts"][url] = known
+                account["posts"][post_key] = known
     # The same remote post cannot be attributed to different accounts.
     # Remove the collision from every account rather than create duplicate
     # ranked opportunities when author provenance is incomplete.
     owners = {}
     for key, account in grouped.items():
-        for url in account["posts"]:
-            owners.setdefault(url, set()).add(key)
-    for url, keys in owners.items():
+        for post_key in account["posts"]:
+            owners.setdefault(post_key, set()).add(key)
+    for post_key, keys in owners.items():
         if len(keys) > 1:
             for key in keys:
-                grouped[key]["posts"].pop(url, None)
+                grouped[key]["posts"].pop(post_key, None)
             diagnostics.append({"reason": "cross_account_post_collision"})
     shortlist = []
     for key, account in sorted(grouped.items()):
