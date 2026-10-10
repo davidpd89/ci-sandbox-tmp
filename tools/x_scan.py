@@ -75,8 +75,8 @@ SEARCH_POOL = [
     "recomendacion lectura fantasia lang:es",
 ]
 
-import discovery_terms
-SEARCH_POOL += discovery_terms.terms("x", "busquedas", " lang:es", skip=[q.replace(" lang:es", "").strip('"') for q in SEARCH_POOL])      # 07/10: consulta M a GPT (apoyo mutuo, presentaciones, hilos de escritores)
+# discovery_terms se consume a través del adaptador común.
+# El vocabulario dinámico se resuelve en cada ronda desde hashtag_query_consumers.
 
 # Búsquedas de intención recogidas en HASHTAGS.md (21/09); todavía NO
 # probadas en vivo. Rotar una por sesión junto a tres consultas históricas.
@@ -612,7 +612,7 @@ def scan():
         collect_posts("following-feed", x._dump_following_feed)
         for name, url in DAILY_LISTS:
             collect_posts(f"lista:{name}", x._dump_list_feed, url)
-        for q in _rotate(SEARCH_POOL, stage["searches"]):
+        for q in _lexical_queries(stage["searches"]):
             for mode in ("live", "top"):
                 if time_left():
                     collect_posts(f"search:validada:{q}" if mode == "live" else f"search:destacados:{q}", x.open_search, q, mode, limit=80)
