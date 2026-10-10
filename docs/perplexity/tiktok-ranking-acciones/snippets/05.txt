@@ -1,0 +1,54 @@
+python
+# Adaptación para davidpd89/ci-sandbox-tmp/tools/tiktok_external_signals.py
+# API y ejemplos oficiales de:
+# https://github.com/davidteather/TikTok-Api/blob/main/examples/user_example.py
+# https://github.com/davidteather/TikTok-Api/blob/main/examples/comment_example.py
+from __future__ import annotations
+import os
+from typing import Optional
+
+from TikTokApi import TikTokApi
+
+
+class TikTokExternalSignals:
+    """Proveedor opcional. Debe permanecer desactivado por defecto."""
+
+    def __init__(self, enabled: bool = False):
+        self.enabled = enabled and bool(os.getenv("TIKTOK_EXTERNAL_SIGNALS_ENABLED"))
+        self._api: Optional[TikTokApi] = None
+
+    def _ensure_api(self) -> TikTokApi:
+        if self._api is None:
+            self._api = TikTokApi()
+        return self._api
+
+    def profile_signals(self, handle: str) -> dict:
+        if not self.enabled:
+            return {}
+        user = self._ensure_api().user(username=handle.lstrip("@"))
+        info = user.info()
+        return {
+            "handle": handle,
+            "followers": info.get("followerCount"),
+            "following": info.get("followingCount"),
+            "video_count": info.get("videoCount"),
+            "bio": info.get("signature") or "",
+        }
+
+    def post_signals(self, video_id: str) -> dict:
+        if not self.enabled:
+            return {}
+        video = self._ensure_api().video(id=video_id)
+        info = video.info()
+        comments = list(video.comments(count=20))
+        latest = max(
+            (c.get("create_time") for c in comments if c.get("create_time")),
+            default=None,
+        )
+        return {
+            "url": f"https://www.tiktok.com/@x/video/{video_id}",
+            "create_time": info.get("createTime"),
+            "comment_count": info.get("commentCount"),
+            "latest_comment_at": latest,
+            "comments": comments,
+        }
