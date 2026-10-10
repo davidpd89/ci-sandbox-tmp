@@ -92,6 +92,7 @@ class OrganicInsightsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicado"):
             insights.summarize([pin, dict(pin, id="10")])
         row = insights.summarize([pin])["unranked"][0]
+        self.assertEqual(row["source"], "offline_unverified_json")
         self.assertIsNone(row["metrics"]["clickthrough"])
         self.assertIsNone(row["clickthrough_per_impression"])
 
@@ -105,6 +106,8 @@ class OrganicInsightsTests(unittest.TestCase):
             insights.summarize([{"id": True}])
 
     def test_invalid_threshold_and_window(self):
+        with self.assertRaisesRegex(ValueError, "procedencia"):
+            insights.summarize([], provenance="confirmed")
         with self.assertRaises(ValueError):
             insights.summarize([], min_impressions=0)
         with self.assertRaises(ValueError):
@@ -128,7 +131,7 @@ class OrganicInsightsTests(unittest.TestCase):
                 self.assertEqual(insights.main(["--demo"]), 0)
         data = json.loads(out.getvalue())
         self.assertEqual(data["comparable_pins"], 1)
-        self.assertEqual(data["ranked"][0]["source"], "api_v5_owned_pin_metrics")
+        self.assertEqual(data["ranked"][0]["source"], "synthetic_demo")
 
 
 if __name__ == "__main__":
