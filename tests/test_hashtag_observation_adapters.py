@@ -259,6 +259,33 @@ class ObservationTests(unittest.TestCase):
         self.assertEqual(c.to_engine_rows()[0]["text"],
                          "La fantasía juvenil y lectura")
 
+    def test_retained_posts_reflect_live_coverage_after_conflicts(self):
+        c = ObservationCollector(now=NOW)
+        original = sample("x", post="survivor", author="reader")
+        c.add_posts("x", "WEB", "search", [original])
+        c.add_posts("x", "WEB", "profile", [original])
+        c.add_posts("x", "API", "feed", [original])
+
+        def coverage():
+            return {row["queue"]: row for row in c.aggregate_report()["coverage"]
+                    if row["network"] == "x"}
+
+        before = coverage()
+        self.assertEqual(before["WEB"]["retained_posts"], 1)
+        self.assertEqual(before["API"]["retained_posts"], 1)
+        self.assertEqual(before["WEB"]["accepted"], 1)
+        self.assertEqual(before["API"]["accepted"], 0)
+
+        conflicting = copy.deepcopy(original)
+        conflicting["full_text"] = "Una publicación diferente #Romantasy"
+        c.add_posts("x", "MOBILE", "reader", [conflicting])
+        self.assertEqual(c.to_engine_rows(), [])
+        after = coverage()
+        self.assertTrue(all(after[q]["retained_posts"] == 0 for q in QUEUES))
+        # Historical acceptance must remain auditable, not masquerade as live.
+        self.assertEqual(after["WEB"]["accepted"], 1)
+        self.assertEqual(c.aggregate_report()["unique_posts"], 0)
+
     def test_global_capacity_retains_existing_idempotent_sources(self):
         c = ObservationCollector(now=NOW, max_unique_posts=1)
         c.add_posts("x", "WEB", "reader1", [sample("x", post="x1")])
