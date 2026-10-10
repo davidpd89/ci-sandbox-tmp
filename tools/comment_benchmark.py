@@ -10,6 +10,7 @@ import csv
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 import hashlib
+import secrets
 import json
 from pathlib import Path
 import re
@@ -18,6 +19,7 @@ import unicodedata
 
 from reply_writer import MAX_CHARS, MAX_WORDS, valid_reply
 from scan_common import reply_format
+from reply_corpus_lint import lint as lint_corpus
 
 NETWORKS = ("x", "threads", "facebook", "pinterest", "reddit",
             "bluesky", "mastodon", "tiktok", "instagram")
@@ -29,7 +31,7 @@ LIMITS = {net: (MAX_CHARS.get(net, 130), MAX_WORDS.get(net, 22)) for net in NETW
 LIMITS["instagram"] = (130, 22)
 MAX_AGE_HOURS = 72
 COLUMNS = ("token", "network", "kind", "post", "thread", "reply", "judge") + AXES
-KEY_COLUMNS = ("token", "case_id", "strategy")
+KEY_COLUMNS = ("token", "case_id", "strategy", "sha256")
 WORD = re.compile(r"[^\W_]+", re.UNICODE)
 
 
@@ -103,6 +105,7 @@ def automatic(cases: list[dict], candidates: list[dict]) -> dict:
     by_id = {c["id"]: c for c in cases}
     groups = defaultdict(list)
     all_text = defaultdict(list)
+    corpus = []
     for candidate in candidates:
         case = by_id[candidate["case_id"]]
         network, strategy = case["network"], candidate["strategy"]
@@ -114,8 +117,10 @@ def automatic(cases: list[dict], candidates: list[dict]) -> dict:
                "reason": reason, "anchor_hit": anchored, "question": bool(reply and "?" in reply),
                "format": reply_format(reply) if reply else "abstencion"}
         groups[(network, strategy)].append(row)
-        if reply:
-            all_text[(network, strategy)].append(_fold(" ".join(reply.split()).strip(" .!?")))
+        if reply and reply.strip():
+            normal = _fold(" ".join(reply.split()).strip(" .!?"))
+            all_text[(network, strategy)].append(normal)
+            corpus.append((network, reply, normal))
     summary = []
     for (network, strategy), rows in sorted(groups.items()):
         texts = all_text[(network, strategy)]
@@ -129,31 +134,91 @@ def automatic(cases: list[dict], candidates: list[dict]) -> dict:
                         "duplicate_texts": sum(v - 1 for v in counts.values()),
                         "formats": dict(sorted(Counter(r["format"] for r in rows).items())),
                         "details": rows})
-    return {"mode": "automatic_proxies_not_human_quality", "summary": summary}
+    across = defaultdict(list)
+    per_network = defaultdict(list)
+    for network, reply, normal in corpus:
+        across[normal].append(network)
+        per_network[network].append(normal)
+    cross_network = sum(len(networks) - 1 for networks in across.values()
+                        if len(set(networks)) > 1)
+    lint_metrics, lint_warnings = lint_corpus([reply for _, reply, _ in corpus])
+    diversity = {
+        "global_duplicate_texts": sum(len(networks) - 1 for networks in across.values()),
+        "cross_network_duplicate_texts": cross_network,
+        "duplicate_texts_by_network": {
+            network: sum(count - 1 for count in Counter(texts).values())
+            for network, texts in sorted(per_network.items())
+        },
+        "lint_metrics": lint_metrics,
+        "lint_warnings": lint_warnings,
+    }
+    return {"mode": "automatic_proxies_not_human_quality", "summary": summary,
+            "diversity": diversity}
 
 
-def prepare_blind(cases: list[dict], candidates: list[dict], salt: str) -> tuple[list[dict], list[dict]]:
-    if not salt or len(salt) > 200:
-        raise ValueError("Sal no válida")
+def _fingerprint(case: dict, candidate: dict) -> str:
+    """Vincula cada clave privada a texto, red, tipo, hilo y estrategia exactos."""
+    data = {
+        "case_id": case["id"], "strategy": candidate["strategy"],
+        "network": case["network"], "kind": case["kind"],
+        "post": case["post"], "thread": case.get("thread", ""),
+        "reply": candidate.get("reply"),
+    }
+    canonical = json.dumps(data, ensure_ascii=False, sort_keys=True,
+                           separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
+def prepare_blind(cases: list[dict], candidates: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Tokens aleatorios por ejecución; jamás regenerarlos al evaluar."""
     indexed = {c["id"]: c for c in cases}
     tokens = set()
     blind, key = [], []
     for candidate in candidates:
         case = indexed[candidate["case_id"]]
-        token = (
-            hashlib.sha256((salt + "\0" + case["id"] + "\0" + candidate["strategy"]).encode("utf-8")).hexdigest()[:20]
-        )
-        if token in tokens:
-            raise ValueError("Colisión de identificadores ciegos")
+        token = secrets.token_hex(16)
+        while token in tokens:
+            token = secrets.token_hex(16)
         tokens.add(token)
         blind.append({"token": token, "network": case["network"], "kind": case["kind"],
                       "post": case["post"], "thread": case.get("thread", ""),
                       "reply": candidate.get("reply") or "", "judge": "",
                       **{axis: "" for axis in AXES}})
-        key.append({"token": token, "case_id": case["id"], "strategy": candidate["strategy"]})
+        key.append({"token": token, "case_id": case["id"], "strategy": candidate["strategy"],
+                    "sha256": _fingerprint(case, candidate)})
     blind.sort(key=lambda r: r["token"])
     key.sort(key=lambda r: r["token"])
     return blind, key
+
+
+def _load_key(path: str | Path, cases: list[dict],
+              candidates: list[dict]) -> tuple[dict[str, dict], dict[str, dict]]:
+    """Exige clave completa del mismo dataset; nunca infiere estrategia desde el token."""
+    indexed = {case["id"]: case for case in cases}
+    expected_pairs = {(c["case_id"], c["strategy"]): c for c in candidates}
+    blind, lookup, seen_pairs = {}, {}, set()
+    with Path(path).open(encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        if not reader.fieldnames or set(reader.fieldnames) != set(KEY_COLUMNS):
+            raise ValueError("La clave no tiene el esquema esperado")
+        for row in reader:
+            token = row.get("token")
+            pair = (row.get("case_id"), row.get("strategy"))
+            if (not isinstance(token, str) or not re.fullmatch(r"[0-9a-f]{32}", token)
+                    or token in lookup or pair in seen_pairs or pair not in expected_pairs):
+                raise ValueError("Clave duplicada o ajena al dataset")
+            candidate = expected_pairs[pair]
+            case = indexed[pair[0]]
+            if row.get("sha256") != _fingerprint(case, candidate):
+                raise ValueError("Clave alterada o dataset modificado")
+            seen_pairs.add(pair)
+            lookup[token] = {"case_id": pair[0], "strategy": pair[1]}
+            blind[token] = {"token": token, "network": case["network"], "kind": case["kind"],
+                            "post": case["post"], "thread": case.get("thread", ""),
+                            "reply": candidate.get("reply") or ""}
+    if seen_pairs != set(expected_pairs):
+        raise ValueError("La clave no cubre todos los candidatos")
+    return blind, lookup
 
 
 def _ratings(path: str | Path, expected: dict[str, dict]) -> dict[str, dict[str, float]]:
@@ -185,14 +250,15 @@ def _ratings(path: str | Path, expected: dict[str, dict]) -> dict[str, dict[str,
             for opaque, values in grouped.items() for v in [values]}
 
 
-def evaluate(cases: list[dict], candidates: list[dict], ratings_path: str | None = None, *, salt="benchmark-v1") -> dict:
+def evaluate(cases: list[dict], candidates: list[dict], ratings_path: str | None = None, *, key_path: str | Path | None = None) -> dict:
     result = automatic(cases, candidates)
     if ratings_path is None:
         result["human"] = {"status": "pending", "winners": [], "reason": "Faltan dos evaluadores independientes por muestra"}
         return result
-    blind, key = prepare_blind(cases, candidates, salt)
-    grades = _ratings(ratings_path, {r["token"]: r for r in blind})
-    lookup = {r["token"]: r for r in key}
+    if not key_path:
+        raise ValueError("Evaluar valoraciones exige --key con la clave privada de prepare")
+    blind, lookup = _load_key(key_path, cases, candidates)
+    grades = _ratings(ratings_path, blind)
     indexed = {c["id"]: c for c in cases}
     by_case = defaultdict(dict)
     for token, grade in grades.items():
@@ -272,7 +338,6 @@ def main(argv=None) -> int:
     parser.add_argument("--key")
     parser.add_argument("--ratings")
     parser.add_argument("--output")
-    parser.add_argument("--salt", default="benchmark-v1")
     parser.add_argument("--case")
     args = parser.parse_args(argv)
     try:
@@ -283,7 +348,9 @@ def main(argv=None) -> int:
             src, blind_path, key_path = map(lambda p: Path(p).resolve(), (args.input, args.blind, args.key))
             if len({src, blind_path, key_path}) != 3 or blind_path.exists() or key_path.exists():
                 raise ValueError("Rutas iguales o existentes; se rechaza sobrescritura")
-            blind, key = prepare_blind(cases, candidates, args.salt)
+            if blind_path.parent == key_path.parent:
+                raise ValueError("CSV ciego y clave privada deben guardarse en directorios distintos")
+            blind, key = prepare_blind(cases, candidates)
             _write_csv(blind_path, blind, COLUMNS)
             _write_csv(key_path, key, KEY_COLUMNS)
             print(json.dumps({"blind_rows": len(blind), "key_rows": len(key)}, ensure_ascii=False))
@@ -293,7 +360,7 @@ def main(argv=None) -> int:
                 raise ValueError("--case debe identificar una publicación")
             print(prompt_context(match))
         else:
-            result = evaluate(cases, candidates, args.ratings, salt=args.salt)
+            result = evaluate(cases, candidates, args.ratings, key_path=args.key)
             serial = json.dumps(result, ensure_ascii=False, indent=2) + "\n"
             if args.output:
                 dest = Path(args.output).resolve()
