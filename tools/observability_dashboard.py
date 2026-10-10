@@ -160,6 +160,12 @@ def _phases(folder, cutoff, today):
 def _rounds(rows, net, cutoff, today):
     if rows is None:
         return None
+    # El CSV es global: sin ninguna fila histórica de la red no hay evidencia
+    # de que esa red se esté observando. No atribuirle un cero inventado.
+    observed_network = any(isinstance(row, dict) and
+                           str(row.get("red") or "").casefold() == net for row in rows)
+    if not observed_network:
+        return None
     selected = []
     for row in rows:
         if not isinstance(row, dict) or str(row.get("red") or "").casefold() != net:
