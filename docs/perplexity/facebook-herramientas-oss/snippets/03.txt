@@ -1,0 +1,32 @@
+python
+# tools/facebook/normalize.py
+# Normaliza posts de Facebook al formato común del sistema.
+# Referencia de campos: https://github.com/SSujitX/facebook-pages-scraper/blob/master/facebook_page_scraper/page_post_info.py
+
+from datetime import datetime, timezone
+
+def normalize_post(raw: dict) -> dict:
+    return {
+        "network": "facebook",
+        "destination_type": "page_post",
+        "external_id": raw.get("id"),
+        "page_id": raw.get("page_id"),
+        "created_at": raw.get("created_time"),
+        "text": raw.get("message") or "",
+        "permalink": raw.get("permalink_url"),
+        "shares": (raw.get("shares") or {}).get("count", 0),
+        "comments": (raw.get("comments") or {}).get("summary", {}).get("total_count", 0),
+        "reactions": (raw.get("reactions") or {}).get("summary", {}).get("total_count", 0),
+        "raw": raw,
+        "ingested_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+def is_actionable(post: dict, max_age_days: int = 7) -> bool:
+    if not post.get("external_id") or not post.get("text"):
+        return False
+    created = post.get("created_at")
+    if not created:
+        return False
+    created_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+    age_days = (datetime.now(timezone.utc) - created_dt).days
+    return age_days <= max_age_days
