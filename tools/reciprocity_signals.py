@@ -53,7 +53,7 @@ _META = re.compile(
     r"no hago|no participo|nunca hago|evita|evitad|cuidado con|"
     r"odio|estafa|trampa|no recomiendo|desaconsejo|"
     r"definicion de|hablamos de|debate sobre|contra el|"
-    r"ejemplo de|explicar el|explico el)\b"
+    r"ejemplo de|explicar el|explico el|en mi novela|personaje dice|prefiero no|no recomendar)\b"
 )
 _NICHE = re.compile(
     r"\b(?:libros?|lecturas?|lectores?|escrit(?:or|ora|ores|oras)|"
