@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from discovery_attribution import NETWORKS as OBSERVABLE_NETWORKS, STATE_ADAPTERS
 from growth_attribution import wilson
-from experiment_evidence_lineage import TrustedRegistry
+from experiment_evidence_lineage import TrustedRegistry, has_valid_experiment
 
 # No ampliar superficies por arrastre de otro módulo; Instagram sigue fuera.
 NETWORKS = frozenset((
@@ -203,7 +203,13 @@ def review(data, *, today=None, trusted_verifications=None, trusted_registry=Non
     # Una réplica negativa o inconclusa es evidencia CONTRADICTORIA aunque
     # no cumpla el umbral positivo; no permitir sesgo de selección de ensayos.
     # A la inversa, filas sin control o con estructura inválida no contaminan.
-    arms = [_eligible_trial(row, today) for row in items]
+    # En v2 una fila sin identidad válida no es una réplica acreditable:
+    # no puede bloquear otra evidencia por colisión de origen/táctica/cola.
+    # Las réplicas negativas con identidad válida siguen contando.
+    # En v1 se conserva la evaluación histórica sin exigir identidad.
+    arms = [_eligible_trial(row, today)
+            if schema == 1 or has_valid_experiment(row) else None
+            for row in items]
     valid_targets = [
         _targets_valid(row.get("targets"), row.get("origin"))
         if isinstance(row, dict) else False
