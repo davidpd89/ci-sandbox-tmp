@@ -1,0 +1,14 @@
+python
+# Código original para davidpd89/rrss-davidporto-CODE
+# Integración: enrutado básico de intención a ángulo de respuesta.
+INTENT_TO_ANGLES = {
+    "duda": ["recomendacion", "experiencia", "pregunta"],
+    "opinion": ["contraste", "validacion", "pregunta"],
+    "celebracion": ["validacion", "humor", "pregunta"],
+    "queja": ["validacion", "experiencia"],
+    "promocion": ["pregunta", "contraste"],
+    "recomendacion": ["experiencia", "pregunta", "recomendacion"],
+}
+
+def allowed_angles(intent: str) -> list[str]:
+    return INTENT_TO_ANGLES.get(intent, ["validacion", "pregunta"])
