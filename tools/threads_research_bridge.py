@@ -69,9 +69,8 @@ def _threads_row(item, now):
     if not isinstance(url, str):
         raise ValueError("url_invalida")
     parts = urlsplit(url)
-    if (parts.scheme != "https" or parts.hostname not in
-            ("threads.com", "www.threads.com", "threads.net", "www.threads.net")
-            or parts.username or parts.password or parts.port):
+    if (parts.scheme != "https" or parts.netloc.casefold() not in
+            ("threads.com", "www.threads.com", "threads.net", "www.threads.net")):
         raise ValueError("url_invalida")
     match = _POST.fullmatch(parts.path.rstrip("/"))
     if not match or match.group(1)[1:].casefold() != handle.lstrip("@").casefold():
@@ -79,9 +78,9 @@ def _threads_row(item, now):
     if not isinstance(body, str) or not body.strip() or len(body) > 20_000:
         raise ValueError("texto_invalido")
     age = _timestamp(row.get("timestamp") or row.get("published_at"), now)
-    canonical_url = f"https://www.threads.com/{match.group(1)}/post/{match.group(2)}"
+    canonical_url = f"https://www.threads.com/@{handle.lstrip('@').casefold()}/post/{match.group(2)}"
     return (handle.lstrip("@"), canonical_url, " ".join(body.split()),
-            "search:th_export", age, None)
+            "import:th_public_export", age, None)
 
 
 ADAPTERS = {"threads": _threads_row}
