@@ -20,6 +20,16 @@ class Clock:
 
 
 class WebRetryTests(unittest.TestCase):
+    def setUp(self):
+        # Hermetico: `instagram_due` lee el CSV real de tiempos; estos tests solo hablan de TikTok.
+        patcher = mock.patch.object(rq, "instagram_due", return_value=False)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        # Estos tests sustituyen `datetime.datetime` por un Proxy; el cortacircuitos real (#154) usaria ese Proxy y fallaria cerrado.
+        blocked = mock.patch.object(rq, "tiktok_writes_blocked", return_value=False)
+        blocked.start()
+        self.addCleanup(blocked.stop)
+
     def run_scenario(self, targets, outcomes, hours=4):
         clock = Clock()
         done = {}

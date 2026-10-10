@@ -19,7 +19,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 import requests
 
-UA = "David-Porto-RRSS-Archive-Puzzle/1.0 (+https://autorademodiaz.com/)"
+UA = "David-Porto-RRSS-Archive-Puzzle/1.0 (+https://davidportodiaz.com/)"
 
 
 def normalize_url(url: str) -> str:

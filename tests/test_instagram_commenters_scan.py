@@ -65,7 +65,7 @@ class EvaluateTests(unittest.TestCase):
     def test_commenters_parsing(self):
         text = "angel_mg\nplanetadelibros\nSeguir\nCaption\nPara ti\nquilaknabooks\n \n2 d\nQué maravilla 😍\nResponder\n" \
                "blaancawritess\n \n2 d\nMi corazón\n1 Me gusta\nResponder\nVer las 1 respuestas\nplanetadelibros\nautor\n"
-        out = cs._commenters(text, ["quilaknabooks", "blaancawritess", "planetadelibros"], "planetadelibros", "autorademodiaz")
+        out = cs._commenters(text, ["quilaknabooks", "blaancawritess", "planetadelibros"], "planetadelibros", "davidportodiaz")
         self.assertEqual([h for h, _ in out], ["quilaknabooks", "blaancawritess"])
         self.assertIn("maravilla", out[0][1])
 
