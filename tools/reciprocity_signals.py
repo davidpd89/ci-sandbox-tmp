@@ -22,6 +22,7 @@ _RULES = {
     "follow_exchange": (
         r"\b(?:sigo de vuelta|sigo a (?:todos|quien(?:es)? me sig(?:a|an|ue|uen))|"
         r"sigueme y te sigo|siguenos y te seguimos|siguenos y te sigo|"
+        r"sigo a mis seguidores|"
         r"te sigo si me sigues|seguimos a quien nos sigue|"
         r"follow[\s-]?back|follow[\s-]?for[\s-]?follow|follow4follow|"
         r"f4f|sdv|fb100|fb\s?100|devuelvo (?:el )?follow|"
@@ -104,7 +105,10 @@ def classify_text(text: str) -> list[dict]:
         return []
     # La negación solo afecta a su cláusula: "No hago f4f, pero sí
     # intercambio reseñas" es un negativo de follow y un positivo de lectura.
-    clauses = re.split(r"[.;!?\n]+|\bpero\b", value)
+    clauses = re.split(
+        r"[.;!?\n]+|\bpero\b|,\s*(?=si\s+(?:hago|sigo|devuelvo|participo)\b)",
+        value,
+    )
     results = []
     for kind, patterns in _PATTERNS.items():
         hits = []
@@ -208,7 +212,7 @@ def outcome_report(rows: list[dict], *, as_of: dt.date, min_age_days: int = 3) -
                 not all(isinstance(x, str) and 0 < len(x) <= 256
                         for x in (actor, source))):
             continue
-        key = (network, actor, source)
+        key = (network, actor, source, kind)
         if key in seen:
             continue
         try:
