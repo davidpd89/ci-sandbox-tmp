@@ -1,0 +1,39 @@
+python
+# Origen: patrón de normalización inspirado en
+# https://github.com/Zeeshanahmad4/Threads-Scraper/blob/main/src/scraper/parser.py
+# Archivo propuesto: tools/discovery/threads_normalize.py
+from __future__ import annotations
+
+import hashlib
+import re
+from typing import Any
+
+
+def normalize_threads_post(raw: dict[str, Any], source: str, query: str) -> dict[str, Any]:
+    post_id = str(raw.get("id") or raw.get("pk") or "")
+    if not post_id:
+        raise ValueError("El post de Threads no tiene identificador")
+
+    text = re.sub(r"\s+", " ", str(raw.get("text") or raw.get("caption") or "")).strip()
+    username = (
+        raw.get("username")
+        or raw.get("user", {}).get("username")
+        or raw.get("author", {}).get("username")
+        or ""
+    )
+
+    return {
+        "network": "threads",
+        "post_id": post_id,
+        "dedupe_key": hashlib.sha1(f"threads:{post_id}".encode()).hexdigest(),
+        "username": username,
+        "text": text,
+        "permalink": raw.get("permalink") or raw.get("url") or "",
+        "published_at": raw.get("timestamp") or raw.get("taken_at") or "",
+        "likes": int(raw.get("like_count") or 0),
+        "replies": int(raw.get("reply_count") or 0),
+        "reposts": int(raw.get("repost_count") or 0),
+        "quotes": int(raw.get("quote_count") or 0),
+        "source": source,
+        "query": query,
+    }
