@@ -1,0 +1,14 @@
+python
+# Adaptación: priorizar posts recientes y conversacionales
+post_score = (
+    row["niche_hits"]
+    + fresh.freshness_bonus(row.get("post_age_hours"))
+    + fresh.conversation_bonus(row.get("caption"), row.get("comments"))
+)
+
+posts.append({
+    "id": f"{cid}-P{pi}",
+    ...
+    "score": round(post_score, 2),
+    "post_age_hours": row.get("post_age_hours"),
+})
