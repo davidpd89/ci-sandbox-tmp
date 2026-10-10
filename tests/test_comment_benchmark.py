@@ -114,7 +114,7 @@ class BenchmarkTests(unittest.TestCase):
                         b.evaluate(self.cases, self.candidates, str(path), key_path=self._temp_key(key))
 
     def test_ratings_reject_altered_text_or_context(self):
-        blind, _ = b.prepare_blind(self.cases, self.candidates)
+        blind, key = b.prepare_blind(self.cases, self.candidates)
         original = {**blind[0], "judge": "reviewer",
                     **{axis: 2 for axis in b.AXES}}
         for field in ("network", "kind", "post", "thread", "reply"):
