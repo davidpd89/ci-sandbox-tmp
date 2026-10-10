@@ -248,8 +248,18 @@ def collect(root, *, as_of, days=7):
             gaps.append("cola_respuestas")
         if breaker["status"] in ("sin_datos", "invalido"):
             gaps.append("breaker")
+        # Señales observacionales; nunca bloquean ni modifican el breaker.
+        alerts = []
+        if breaker["status"] == "abierto":
+            alerts.append("breaker_abierto")
+        if round_stats is not None and round_stats["states"]["error"]:
+            alerts.append("rondas_con_error")
+        if round_stats is not None and round_stats["states"]["parcial"]:
+            alerts.append("rondas_parciales")
+        if stats is not None and stats["pending_verification"]:
+            alerts.append("acciones_sin_verificar")
         item = {
-            "queue": queue, "actions": stats, "rounds": round_stats,
+            "queue": queue, "actions": stats, "rounds": round_stats, "alerts": alerts,
             "pending_replies": pending[net] if pending is not None else None,
             "breaker": breaker, "phases": phase_stats, "missing_sources": gaps,
         }
@@ -265,6 +275,7 @@ def collect(root, *, as_of, days=7):
             "networks_with_round_data": len(round_values),
             "networks_with_action_data": len(action_values),
             "open_breakers": sum(networks[n]["breaker"]["status"] == "abierto" for n in members),
+            "networks_with_alerts": sum(bool(networks[n]["alerts"]) for n in members),
         }
     return {"schema_version": 1, "as_of": now.isoformat(timespec="seconds"),
             "days": days, "coverage": {"round_csv": rounds is not None, "reply_queue": pending is not None},
@@ -301,7 +312,7 @@ def render_html(report):
     parts.append("</tbody></table></div><h2>Redes</h2><div class=scroll><table><thead><tr>"
                  "<th>Red</th><th>Cola</th><th>Confirmadas¹</th><th>Rondas</th><th>Fallidas</th>"
                  "<th>Ocupadas</th><th>Pendientes respuesta</th><th>Media ronda</th>"
-                 "<th>Breaker</th><th>Fuentes ausentes</th></tr></thead><tbody>")
+                 "<th>Breaker</th><th>Avisos</th><th>Fuentes no disponibles</th></tr></thead><tbody>")
     for name, item in report["networks"].items():
         actions, rounds = item["actions"], item["rounds"]
         status = item["breaker"]["status"]
@@ -312,7 +323,8 @@ def render_html(report):
                      fmt(rounds["states"]["ocupada"] if rounds else None) + "</td><td>" +
                      fmt(item["pending_replies"]) + "</td><td>" +
                      fmt(rounds["mean_minutes"] if rounds else None) + "</td><td>" +
-                     esc(status) + "</td><td>" + esc(", ".join(item["missing_sources"]) or "—") + "</td></tr>")
+                     esc(status) + "</td><td>" + esc(", ".join(item["alerts"]) or "—") +
+                     "</td><td>" + esc(", ".join(item["missing_sources"]) or "—") + "</td></tr>")
     parts.append("</tbody></table></div><p class=muted><small>¹ Filas confirmadas/publicadas del registro, "
                  "no identidades únicas ni éxitos atribuidos. «—» indica fuente ausente; cero indica "
                  "fuente presente sin datos en la ventana. Cola de respuestas compartida: "
