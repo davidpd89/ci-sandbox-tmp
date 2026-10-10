@@ -1,0 +1,17 @@
+python
+# Uso previsto desde reply_writer.py o threads_reply_queue.py
+from tools.threads_comment_style import ThreadContext, pick_best
+
+ctx = ThreadContext(
+    text="¿Vosotras preferís enemigos a amantes o amigos a amantes?",
+    has_question=True,
+)
+
+candidates = [
+    "Amigos a amantes, pero solo cuando la confianza se ha construido durante años.",
+    "Enemigos a amantes si hay tensión real; si no, se vuelve previsible.",
+    "Me gusta más amigos a amantes porque el vínculo previo hace que importe más.",
+]
+
+best, score, decision = pick_best(candidates, ctx)
+print(decision.intent, score, best)
