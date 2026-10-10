@@ -1,0 +1,11 @@
+python
+# Fuente: https://atproto.blue/guides/reading/
+from atproto import Client
+
+def get_safe_thread(client: Client, uri: str):
+    thread = client.get_post_thread(uri=uri, depth=2)
+
+    if getattr(thread.thread, "py_type", "") != "app.bsky.feed.defs#threadViewPost":
+        return None
+
+    return thread.thread
