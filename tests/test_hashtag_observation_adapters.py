@@ -384,6 +384,32 @@ class ObservationTests(unittest.TestCase):
         self.assertIn("año", snapshot["networks"]["bluesky"]["hashtags"])
         self.assertEqual(snapshot["networks"]["reddit"]["hashtags"], [])
 
+    def test_epoch_seconds_as_strict_decimal_strings_across_networks(self):
+        # Common native JSON variation: Unix seconds serialized as a string.
+        # Reject ambiguous 8-digit dates and milliseconds, not impute dates.
+        from hashtag_expansion import build_snapshot
+        for network, field in (("reddit", "created_utc"),
+                               ("tiktok", "createTime"),
+                               ("instagram", "timestamp")):
+            bridge = ObservationCollector(now=NOW)
+            for index in (1, 2):
+                item = sample(network, post=f"epoch-{index}",
+                              author=f"author-{index}")
+                item[field] = str(EPOCH)
+                bridge.add_posts(network, "API", "native", [item])
+            self.assertEqual(bridge.aggregate_report()["unique_posts"], 2, network)
+            snapshot = build_snapshot(bridge.to_engine_rows(), now=NOW)
+            self.assertEqual(snapshot["diagnostics"]["invalid"], 0, network)
+            self.assertEqual(snapshot["diagnostics"]["unique"], 2, network)
+
+            ambiguous = sample(network, post="ambiguous")
+            ambiguous[field] = "20261009"
+            milliseconds = sample(network, post="milliseconds")
+            milliseconds[field] = str(EPOCH * 1000)
+            bridge.add_posts(network, "API", "native", [ambiguous, milliseconds])
+            self.assertEqual(bridge.counts["invalid"], 2, network)
+            self.assertEqual(bridge.aggregate_report()["unique_posts"], 2, network)
+
     def test_strict_bad_scope_bounds_and_rollback(self):
         c = ObservationCollector(now=NOW)
         for args in (("fake", "WEB", "test", []),
