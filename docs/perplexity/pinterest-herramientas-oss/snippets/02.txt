@@ -1,0 +1,5 @@
+text
+# https://github.com/pinterest/pinterest-python-sdk/blob/main/README.md
+PINTEREST_APP_ID=<app id>
+PINTEREST_APP_SECRET=<app secret>
+PINTEREST_REFRESH_ACCESS_TOKEN='<refresh token>'
