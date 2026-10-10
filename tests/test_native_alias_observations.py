@@ -39,6 +39,8 @@ class NativeAliasAdapters(unittest.TestCase):
             self.assertEqual(r["diagnostics"][0]["reason"], "native_identity_not_verified")
         with self.assertRaises(AliasError):
             ingest_observations("unknown", [])
+        with self.assertRaises(AliasError):
+            ingest_observations([], [])
 
     def test_required_fields_wrong_network_and_nonmapping(self):
         a = self.fixture("bluesky", "API")

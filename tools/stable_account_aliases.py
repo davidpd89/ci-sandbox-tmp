@@ -39,7 +39,7 @@ def _stamp(dt: datetime) -> str:
 
 def account_key(network: str, handle: str) -> str:
     """Local-key adapter for #85; prefer its account_key via key_builder after merge."""
-    if network not in NETWORKS or not isinstance(handle, str):
+    if not isinstance(network, str) or network not in NETWORKS or not isinstance(handle, str):
         raise AliasError("account_invalid")
     h = handle.strip().lstrip("@").casefold()
     if not h or len(h) > 256 or any(c.isspace() or c in "|/:?#\\" for c in h):
@@ -56,7 +56,7 @@ def account_key(network: str, handle: str) -> str:
 
 def stable_key(network: str, value: str, verification: str) -> str:
     """Accept only native remote identity pre-verified by a source adapter."""
-    if network not in NETWORKS or not isinstance(value, str) or not value:
+    if not isinstance(network, str) or network not in NETWORKS or not isinstance(value, str) or not value:
         raise AliasError("stable_id_invalid")
     if network == "bluesky":
         if verification != "did_bidirectional" or not _DID.fullmatch(value):
@@ -113,7 +113,7 @@ class AliasTimeline:
                 verification: str) -> str:
         if not isinstance(evidence_id, str) or not _ID_PATTERN.fullmatch(evidence_id):
             raise AliasError("evidence_id_invalid")
-        if queue not in QUEUES or not all(isinstance(x, str) and 0 < len(x.strip()) <= 300
+        if not isinstance(queue, str) or queue not in QUEUES or not all(isinstance(x, str) and 0 < len(x.strip()) <= 300
                                           for x in (source, proof)):
             raise AliasError("provenance_required")
         key = self.key_builder(network, handle)
@@ -130,7 +130,7 @@ class AliasTimeline:
         return evidence_id
 
     def _audit(self, verb: str, evidence_id: str, reason: str) -> None:
-        if evidence_id not in self.evidence:
+        if not isinstance(evidence_id, str) or evidence_id not in self.evidence:
             raise AliasError("unknown_evidence")
         if not isinstance(reason, str) or not reason.strip() or len(reason) > 500:
             raise AliasError("review_reason_required")
@@ -253,7 +253,7 @@ class AliasTimeline:
                 raise AliasError("event_kind_invalid")
             if not isinstance(event_id, str) or not event_id or len(event_id) > 512:
                 raise AliasError("event_id_invalid")
-            if raw.get("queue") not in QUEUES:
+            if not isinstance(raw.get("queue"), str) or raw.get("queue") not in QUEUES:
                 raise AliasError("queue_invalid")
             at = _stamp(_when(at))
             occurred = raw.get("occurred_at")
@@ -342,7 +342,7 @@ class AliasTimeline:
         for action in document["actions"]:
             if not isinstance(action, dict) or set(action) != {"action", "evidence_id", "reason"}:
                 raise AliasError("action_schema_invalid")
-            if action["action"] not in {"revoke", "restore"}:
+            if not isinstance(action["action"], str) or action["action"] not in {"revoke", "restore"}:
                 raise AliasError("action_invalid")
             before = len(timeline.actions)
             timeline._audit(action["action"], action["evidence_id"], action["reason"])

@@ -20,7 +20,7 @@ def ingest_observations(network: str, rows: Iterable[Mapping],
     An explicit boolean True is required; the string 'true' is NOT a proof.
     Returns in-memory timeline, accepted observation IDs, diagnostic reasons.
     """
-    if network not in NATIVE_RULES:
+    if not isinstance(network, str) or network not in NATIVE_RULES:
         raise AliasError("network_invalid")
     if isinstance(rows, (str, bytes, Mapping)) or not isinstance(rows, Iterable):
         raise AliasError("rows_must_be_iterable_of_mappings")

@@ -272,6 +272,35 @@ class StableAliasTests(unittest.TestCase):
                          "superseded_alias")
         self.assertEqual(len(self.g.actions), 2)
 
+    def test_unhashable_fields_fail_closed_with_alias_errors(self):
+        add(self.g, "a", "first.bsky.social")
+        document = json.loads(json.dumps(self.g.to_document()))
+        for bad_queue in ([], {}, 3):
+            with self.subTest(queue=repr(bad_queue)):
+                changed = json.loads(json.dumps(document))
+                changed["evidence"][0]["queue"] = bad_queue
+                with self.assertRaises(AliasError):
+                    AliasTimeline.from_document(changed)
+        for bad_action, reason in (([], "action_invalid"), ({}, "action_invalid"),
+                                   ("revoke", "unknown_evidence")):
+            changed = json.loads(json.dumps(document))
+            changed["actions"] = [{"action": bad_action,
+                                   "evidence_id": [] if bad_action == "revoke" else "a",
+                                   "reason": "synthetic"}]
+            with self.subTest(action=repr(bad_action)), self.assertRaisesRegex(AliasError, reason):
+                AliasTimeline.from_document(changed)
+        row = evt("x")
+        row["queue"] = []
+        with self.assertRaisesRegex(AliasError, "queue_invalid"):
+            self.g.project_events([row])
+        for method in (lambda: self.g.resolve([], "writer", T1),
+                       lambda: account_key([], "writer"),
+                       lambda: self.g.observe(evidence_id="z", network=[],
+                           handle="writer", stable_id="42", observed_at=T1,
+                           queue="API", source="s", proof="p", verification="provider_account_id")):
+            with self.assertRaises(AliasError):
+                method()
+
     def test_replay_rejects_bad_documents(self):
         add(self.g, "a", "first.bsky.social")
         snapshot = self.g.to_document()

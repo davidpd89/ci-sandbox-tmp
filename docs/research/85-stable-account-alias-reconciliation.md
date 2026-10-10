@@ -117,3 +117,8 @@ coherente en cada captura y no se reescribe el pasado. Sigue pendiente el
 acoplamiento con colectores reales, #85 (cerrada sin merge), y el manifiesto
 de campaña padre; la matriz de adaptadores no equivale a nueve verificadores
 nativos operativos.
+
+**Tercera pasada adversarial:** entradas no fiables con `network`, `queue` o
+`action` JSON de tipo lista/diccionario ya no pueden provocar `TypeError`
+por búsquedas de pertenencia en `set`/`dict` con claves no hashables.
+Se rechazan mediante `AliasError`, con regresiones de replay y eventos.
