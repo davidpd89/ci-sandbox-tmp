@@ -90,6 +90,8 @@ def validate_config(config):
                     issues.append(f"shortlist.{key}: entero positivo requerido")
             if len(defined) == 2 and defined[0][1] != defined[1][1]:
                 issues.append(f"shortlist: alias contradictorios {defined[0][0]} y {defined[1][0]}")
+    if "scoring" in config and not isinstance(config["scoring"], dict):
+        issues.append("scoring: se esperaba objeto")
     for group in ("surfaces",):
         if group in config:
             value = config[group]
@@ -152,7 +154,10 @@ def _candidate_keys(root, network, config):
     literals = set().union(*(_source_literals(path) for path in files if path.is_file() and not path.is_symlink()))
     candidates = []
     for section in ("budgets", "coverage", "shortlist", "scoring", "surfaces"):
-        for key in (config.get(section) or {}):
+        values = config.get(section)
+        if not isinstance(values, dict):
+            continue  # Una sección mal formada ya se señala en validate_config.
+        for key in values:
             if key not in literals:
                 candidates.append(f"{section}.{key}")
     return sorted(candidates)
