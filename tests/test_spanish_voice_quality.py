@@ -96,6 +96,23 @@ class TestSpanishVoice(unittest.TestCase):
             self.assertNotEqual(second.returncode, 0)
             self.assertIn("no sobrescribir", second.stderr)
 
+
+    def test_deterministic_accent_candidates_and_large_repeats(self):
+        with mock.patch("spanish_voice_quality._accent_checker",
+                        return_value=lambda raw: [("capitulo", "capítúlo"),
+                                                  ("capitulo", "capítulo")]):
+            findings = audit("capitulo " * 40, network="x")["findings"]
+        accent = [v for v in findings if v["code"] == "possible_missing_accent"]
+        self.assertEqual(len(accent), 40)
+        self.assertTrue(all("capítulo" in v["advice"] for v in accent))
+
+    def test_invalid_network_and_queue_types(self):
+        for invalid in ([], {}, 2):
+            with self.assertRaises(ValueError):
+                self.check("Texto", network=invalid)
+            with self.assertRaises(ValueError):
+                self.check("Texto", queue=invalid)
+
     def test_reuse_existing_accent_checker(self):
         with mock.patch("spanish_voice_quality._accent_checker",
                         return_value=lambda text: [("capitulo", "capítulo")]):
@@ -152,6 +169,13 @@ class TestBlind(unittest.TestCase):
         self.assertEqual(measured["rule_findings"], {"before": 2, "after": 0})
         self.assertEqual(measured["by_network"][self.pairs[0]["network"]],
                          {"before": 2, "after": 0, "cases": 2})
+
+
+    def test_invalid_choice_type_is_rejected(self):
+        doc, key = pack(self.pairs, seed="review")
+        doc["items"][0]["preference"] = ["left"]
+        with self.assertRaises(ValueError):
+            score(doc, key)
 
     def test_duplicate_pair_or_missing_key_is_error(self):
         with self.assertRaises(ValueError):
