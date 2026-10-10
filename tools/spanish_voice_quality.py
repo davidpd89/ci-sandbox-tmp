@@ -31,7 +31,7 @@ CALQUES = (
     (re.compile(r"\ben base a\b", re.I), "revisar «sobre la base de»"),
 )
 SUSPECT_ENCODING = re.compile(r"\ufffd|Ã[¡-ÿ]|Â[¿¡]|â[€žœ™šŸ]")
-TOKEN = re.compile(r"(?<!\w)[^\W\d_]+(?!\w)", re.UNICODE)
+WORD_PATTERN = re.compile(r"(?<!\w)[^\W\d_]+(?!\w)", re.UNICODE)
 MISSING_SPACE = re.compile(r"(?<=[^\W\d_])\s+[,.;:](?=\s|$)", re.UNICODE)
 
 
@@ -98,7 +98,7 @@ def audit(text: str, *, network: str, locale: str = "es-ES", queue: str = "WEB",
                     "Comprobar apertura «¡» en exclamación en español")
             segment_start = i + 1
     if locale == "es-ES":
-        for match in TOKEN.finditer(masked):
+        for match in WORD_PATTERN.finditer(masked):
             replacement = VARIANT_ES_ES.get(match.group().casefold())
             if replacement:
                 add("locale_variant", "hint", match.start(), match.end(),
@@ -109,7 +109,7 @@ def audit(text: str, *, network: str, locale: str = "es-ES", queue: str = "WEB",
     checker = _accent_checker() if check_accents else None
     if checker is not None:
         proposed = {(word.casefold(), suggestion) for word, suggestion in checker(masked)}
-        for match in TOKEN.finditer(masked):
+        for match in WORD_PATTERN.finditer(masked):
             for wrong, suggestion in proposed:
                 if match.group().casefold() == wrong:
                     add("possible_missing_accent", "hint", match.start(), match.end(),
