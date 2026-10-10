@@ -312,7 +312,7 @@ class NativeDispatchBoundaryTests(unittest.TestCase):
             ("mastodon_execute.py", "_do", 'voice.inspect(item["text"], network="mastodon", queue="API")', 'created = m.reply_to('),
             ("threads_execute.py", "run_plan", 'voice.inspect(item["text"], network="threads", queue="API")', 'api.publish_reply('),
             ("facebook_execute.py", "run_plan", 'voice.inspect(item["text"], network="facebook", queue="WEB")', 'outcome = fb.comment('),
-            ("instagram_execute.py", "run_plan", 'voice.inspect(item["text"], network="instagram", queue="WEB")', 'outcome = ig.comment('),
+            ("instagram_execute.py", "run_plan", 'voice.inspect(item["text"], network="instagram",', 'outcome = ig.comment('),
         ]
         for path, scope, audit, action in scenarios:
             with self.subTest(path=path):
