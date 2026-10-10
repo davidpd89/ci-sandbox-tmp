@@ -187,6 +187,26 @@ class ExperimentEngineTests(unittest.TestCase):
         self.assertTrue(0 <= first["studies"][0]["p_second_better_exploratory"] <= 1)
         self.assertIn("Sin atribución validada", self.store.markdown())
 
+    def test_posterior_mc_compares_independent_samples_not_sorted_quantiles(self):
+        a, b = ce.INITIAL_EXPERIMENTS["apertura"][1]
+        found = {}
+        for index in range(100):
+            candidate = f"trial_pair_{index}"
+            found.setdefault(self.assign(candidate), candidate)
+            if len(found) == 2:
+                break
+        self.assertEqual(len(found), 2)
+        for arm, converted in ((a, False), (b, True)):
+            unit = found[arm]
+            self.exposure(unit, event=f"expo_{arm}")
+            self.outcome(unit, event=f"result_{arm}", converted=converted)
+        probability = self.store.report(draws=8192)["studies"][0][
+            "p_second_better_exploratory"]
+        # Exactamente P(Beta(2,1)>Beta(1,2)) = 5/6. Un cálculo
+        # que enfrente los cuantiles ordenados sobreestima hasta ~1.
+        self.assertGreater(probability, 0.79)
+        self.assertLess(probability, 0.88)
+
     def test_reject_bad_identifiers_seed_and_outcomes_without_mutation(self):
         for name in ("inventado", "", "apertura\n"):
             with self.assertRaises(ValueError):
