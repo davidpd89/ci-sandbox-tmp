@@ -1,0 +1,43 @@
+python
+# Nuevo código para davidpd89/ci-sandbox-tmp
+# Ubicación sugerida: tools/instagram_contract.py
+from datetime import datetime, timezone
+
+
+def normalize_instagram_timestamp(value) -> str:
+    if value in (None, ""):
+        raise ValueError("instagram timestamp is empty")
+
+    if isinstance(value, (int, float)):
+        parsed = datetime.fromtimestamp(value, tz=timezone.utc)
+    else:
+        text = str(value).strip()
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        parsed = datetime.fromisoformat(text)
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+
+    return parsed.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def instagram_canonical_key(
+    *,
+    candidate_type: str,
+    external_id: str,
+) -> str:
+    if candidate_type not in {"media", "comment", "profile"}:
+        raise ValueError(f"unsupported candidate_type: {candidate_type}")
+    if not external_id:
+        raise ValueError("external_id is required")
+    return f"instagram:{candidate_type}:{external_id}"
+
+
+def instagram_identity(user_id: str, username: str | None = None) -> dict:
+    if not user_id:
+        raise ValueError("user_id is the stable identity and is required")
+    return {
+        "user_id": str(user_id),
+        "username": username,
+    }
