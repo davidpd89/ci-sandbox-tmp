@@ -173,6 +173,8 @@ def main(argv=None):
         if not allowed:
             print(f"[x] NO se publica: cortacircuitos ABIERTO ({reason})")
             return 0
+        import voice_output_finalization as voice
+        voice.inspect(item["text"], network="x", queue="WEB")
         url = x.post(item["text"])
         record(item, url)
     print(f"[x] PUBLICADO: «{item['text']}» -> {url}")
