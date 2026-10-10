@@ -1,0 +1,28 @@
+python
+# Fuente base: https://github.com/MarshalX/atproto/blob/main/examples/profile_posts.py
+# Objetivo: puntuar autores antes de interactuar, usando señales ya presentes
+# en candidate_identity.py, discovery_terms.py y reciprocity.py.
+
+from datetime import datetime, timezone
+
+def author_score(
+    posts: int,
+    original_ratio: float,
+    recent_activity: float,
+    topic_affinity: float,
+    engagement_per_post: float,
+    reciprocal: bool,
+) -> float:
+    if posts < 3:
+        return 0.0
+    base = (
+        0.30 * min(original_ratio, 1.0)
+        + 0.25 * min(recent_activity, 1.0)
+        + 0.25 * min(topic_affinity, 1.0)
+        + 0.20 * min(engagement_per_post, 1.0)
+    )
+    return base * (1.10 if reciprocal else 1.0)
+
+def is_stale(last_post_at: datetime, now: datetime | None = None) -> bool:
+    now = now or datetime.now(timezone.utc)
+    return (now - last_post_at).days > 45
