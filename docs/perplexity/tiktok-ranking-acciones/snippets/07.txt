@@ -1,0 +1,12 @@
+python
+# Adaptación: orden por probabilidad de reciprocidad y frescura
+ranked = sorted(
+    grouped.values(),
+    key=lambda item: (
+        -item.get("score_final", item["score"]),
+        -item.get("freshness_bonus", 0.0),
+        0 if item.get("is_spanish") else 1,
+        0 if item.get("reciprocity_class") else 1,
+        item["handle"].casefold(),
+    ),
+)
