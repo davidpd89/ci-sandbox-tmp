@@ -1,0 +1,7 @@
+# ONLY for integration tests: fabricated sentinel, not a working credential.
+title = "Synthetic CI-only Gitleaks rule"
+[[rules]]
+id = "ci87-synthetic-fixture"
+description = "Demonstrate scan of a PR merge without real credentials"
+regex = '''CI87_SYNTHETIC_[A-Z0-9]{12}'''
+keywords = ["CI87_SYNTHETIC_"]
