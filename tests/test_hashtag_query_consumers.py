@@ -201,6 +201,21 @@ class ConsumerParityTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             hqc.reserve_fresh(old, extra, budget=-1, tick=0)
 
+    def test_native_reservation_single_slot_preserves_both_cohorts(self):
+        old = [("native", "semilla")]
+        lexical = [("lexical_expansion", "fantasía juvenil")]
+        chosen = [hqc.reserve_fresh(old, lexical, budget=1, tick=t)
+                  for t in range(8)]
+        self.assertTrue(all(len(items) == 1 for items in chosen))
+        self.assertEqual(chosen[0], old)
+        self.assertEqual(chosen[1], lexical)
+        self.assertEqual(chosen[2], old)
+        self.assertEqual(chosen[3], lexical)
+        self.assertEqual(
+            hqc.reserve_fresh([], lexical, budget=1, tick=0), lexical)
+        self.assertEqual(
+            hqc.reserve_fresh(old, [], budget=1, tick=1), old)
+
     def test_budget_and_missing_reader_guard(self):
         with self.assertRaises(ValueError):
             hqc.select("x", "busquedas", [], budget=-1, tick=0)
