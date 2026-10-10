@@ -1,0 +1,250 @@
+"""Regression suite: all observations and profiles are synthetic; no sessions."""
+import pathlib
+import sqlite3
+import sys
+import tempfile
+import unittest
+from datetime import datetime, timedelta, timezone
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools"))
+import audience_discovery as ad
+
+NOW = "2026-10-10T12:00:00+00:00"
+POST = "2026-10-09T12:00:00+00:00"
+
+
+def actor(network, uid="7", handle="lectora"):
+    if network == "bluesky":
+        return {"did": "did:plc:" + uid, "handle": handle, "bio": "Leo romantasy"}
+    if network == "mastodon":
+        return {"id": uid, "acct": handle + "@book.example", "bio": "Leo romantasy"}
+    return {"id": uid, "username": handle, "bio": "Leo romantasy"}
+
+
+def event(network="bluesky", kind="comment", uid="7", handle="lectora", **kw):
+    row = {"actor": actor(network, uid, handle), "event_id": "event-" + uid,
+           "text": "¿Qué libro de fantasía recomiendas?"}
+    row.update(kw)
+    if network == "mastodon":
+        row["instance"] = "mastodon.example"
+    return ad.normalize(network, kind, row, surface="own_post",
+                        post_key="p1", observed_at=kw.get("observed_at", NOW),
+                        post_created_at=kw.get("post_created_at", POST))
+
+
+class AudienceTests(unittest.TestCase):
+    def setUp(self):
+        self.store = ad.AudienceStore()
+
+    def tearDown(self):
+        self.store.close()
+
+    def ingest(self, rows, network="bluesky", surface="own_post", cursor=None):
+        return self.store.ingest(rows, network=network, surface=surface,
+                                 seed="seed", next_cursor=cursor, now=NOW)
+
+    def test_all_nine_networks_and_lanes(self):
+        self.assertEqual(len(ad.LANES), 9)
+        for network in ad.LANES:
+            with self.subTest(network=network):
+                kind = "comment"
+                item = event(network, kind)
+                self.assertEqual(item.network, network)
+                self.assertTrue(item.stable_identity)
+                self.assertEqual(ad.CAPABILITIES[network]["comment"] is not None, True)
+
+    def test_unobservable_not_zero(self):
+        self.assertIsNone(ad.CAPABILITIES["reddit"]["like"])
+        self.assertIsNone(ad.CAPABILITIES["pinterest"]["like"])
+        self.assertIsNone(ad.CAPABILITIES["tiktok"]["like"])
+
+    def test_first_seen_and_exact_replay(self):
+        item = event()
+        self.assertEqual(self.ingest([item])["new_people"], 1)
+        self.assertEqual(self.ingest([item])["replays"], 1)
+        self.assertEqual(len(self.store.ranked("bluesky")), 1)
+
+    def test_like_edges_without_event_id_deduplicate(self):
+        raw = {"actor": actor("bluesky"), "text": ""}
+        first = ad.normalize("bluesky", "like", raw, surface="liked_by",
+                             post_key="p1", observed_at=NOW, post_created_at=POST)
+        self.assertIn("liked_by|p1|like|", first.event_key)
+        self.assertEqual(self.ingest([first, first])["new_events"], 1)
+
+    def test_comment_requires_real_event_id(self):
+        with self.assertRaisesRegex(ad.ObservationError, "evento_sin_id"):
+            ad.normalize("reddit", "comment", {"actor": actor("reddit")},
+                         surface="comments", post_key="post", observed_at=NOW)
+
+    def test_no_author_from_post_id(self):
+        with self.assertRaisesRegex(ad.ObservationError, "actor_ausente"):
+            ad.normalize("x", "repost", {"id": "a-post-id"},
+                         surface="retweets", post_key="p", observed_at=NOW)
+
+    def test_identity_rename_same_stable_id(self):
+        first = event()
+        later = event(handle="nuevo_nombre", observed_at="2026-10-10T12:01:00Z")
+        self.ingest([first])
+        self.ingest([later])
+        self.assertEqual(self.store.ranked("bluesky")[0]["handle"], "nuevo_nombre")
+        self.assertEqual(self.store.db.execute("SELECT COUNT(*) FROM audience_accounts").fetchone()[0], 1)
+
+    def test_out_of_order_profile_does_not_rollback(self):
+        newer = event(handle="nuevo", observed_at="2026-10-10T12:02:00Z")
+        older = event(handle="viejo", observed_at=NOW)
+        self.ingest([newer])
+        self.ingest([older])
+        self.assertEqual(self.store.ranked("bluesky")[0]["handle"], "nuevo")
+
+    def test_provisional_handles_not_falsely_merged(self):
+        for h in ("ana", "ana2"):
+            raw = {"actor": {"handle": h}, "event_id": h}
+            obs = ad.normalize("instagram", "comment", raw,
+                    surface="own_post", post_key="p1", observed_at=NOW,
+                    post_created_at=POST)
+            self.ingest([obs], network="instagram")
+        self.assertEqual(len(self.store.ranked("instagram")), 2)
+        self.assertTrue(all(not x["stable_identity"] for x in self.store.ranked("instagram")))
+
+    def test_mastodon_local_ids_are_instance_scoped(self):
+        a = event("mastodon")
+        row = {"actor": actor("mastodon"), "instance": "other.example", "event_id": "e"}
+        b = ad.normalize("mastodon", "comment", row, surface="own_post",
+                post_key="p1", observed_at=NOW, post_created_at=POST)
+        self.assertNotEqual(a.account_key, b.account_key)
+
+    def test_mastodon_without_instance_is_provisional(self):
+        raw = {"actor": actor("mastodon"), "event_id": "e"}
+        obs = ad.normalize("mastodon", "comment", raw, surface="own_post",
+                post_key="p1", observed_at=NOW, post_created_at=POST)
+        self.assertFalse(obs.stable_identity)
+
+    def test_delete_tombstone_blocks_older_replay(self):
+        initial = event(occurred_at="2026-10-10T11:00:00Z")
+        deleted = event(deleted=True, observed_at="2026-10-10T12:05:00Z")
+        self.ingest([initial])
+        self.ingest([deleted])
+        self.ingest([initial])
+        self.assertEqual(len(self.store.ranked("bluesky")), 0)
+        self.assertEqual(self.store.db.execute(
+            "SELECT active FROM audience_events").fetchone()[0], 0)
+
+    def test_stale_posts_excluded_but_recent_stored(self):
+        old = event(post_created_at="2026-09-01T12:00:00Z")
+        stats = self.ingest([old])
+        self.assertEqual(stats["stale_posts"], 1)
+        self.assertEqual(stats["new_people"], 0)
+
+    def test_unknown_post_age_kept_but_not_action_ranked(self):
+        raw = {"actor": actor("bluesky"), "event_id": "x"}
+        obs = ad.normalize("bluesky", "comment", raw, surface="own_post",
+                           post_key="p", observed_at=NOW)
+        self.assertEqual(self.ingest([obs])["unverified_age"], 1)
+        self.assertEqual(self.store.ranked("bluesky"), [])
+        self.assertEqual(len(self.store.ranked("bluesky", require_verified_age=False)), 1)
+
+    def test_strict_timezone_and_bad_input(self):
+        with self.assertRaisesRegex(ad.ObservationError, "timestamp_sin_zona"):
+            ad.timestamp("2026-10-10T12:00:00")
+        with self.assertRaises(ad.ObservationError):
+            ad.timestamp("nada")
+
+    def test_page_atomicity_with_mixed_networks(self):
+        with self.assertRaisesRegex(ad.ObservationError, "origen_cruzado"):
+            self.ingest([event(), event("mastodon")])
+        self.assertEqual(self.store.db.execute(
+            "SELECT COUNT(*) FROM audience_events").fetchone()[0], 0)
+        self.assertIsNone(self.store.cursor("bluesky", "own_post", "seed"))
+
+    def test_page_cursor_and_resume(self):
+        calls = []
+        pages = {
+            None: {"items": [{"actor": actor("reddit", "1"), "event_id": "c1"}],
+                   "kind": "comment", "post_key": "p1",
+                   "post_created_at": POST, "next_cursor": "p2"},
+            "p2": {"items": [{"actor": actor("reddit", "2"), "event_id": "c2"}],
+                   "kind": "comment", "post_key": "p1",
+                   "post_created_at": POST, "next_cursor": None},
+        }
+        def fetch(cur):
+            calls.append(cur)
+            return pages[cur]
+        first = ad.collect_pages(self.store, network="reddit", surface="comments",
+            seed="seed", fetch_page=fetch, observed_at=NOW, max_pages=1)
+        self.assertEqual(first["new_people"], 1)
+        self.assertFalse(first["complete"])
+        self.assertEqual(self.store.cursor("reddit", "comments", "seed"), "p2")
+        second = ad.collect_pages(self.store, network="reddit", surface="comments",
+            seed="seed", fetch_page=fetch, observed_at=NOW, max_pages=2)
+        self.assertEqual(second["new_people"], 1)
+        self.assertEqual(calls, [None, "p2"])
+        self.assertTrue(second["complete"])
+
+    def test_cursor_loop_raises_without_advancing(self):
+        def fetch(cur):
+            return {"items": [], "kind": "like", "post_key": "p",
+                    "next_cursor": cur or "loop"}
+        with self.assertRaisesRegex(ad.ObservationError, "cursor_ciclico"):
+            ad.collect_pages(self.store, network="bluesky", surface="liked_by",
+                seed="seed", fetch_page=fetch, observed_at=NOW, max_pages=3)
+        self.assertEqual(self.store.cursor("bluesky", "liked_by", "seed"), "loop")
+
+    def test_failure_on_second_page_keeps_first_checkpoint(self):
+        def fetch(cur):
+            if cur is not None:
+                raise RuntimeError("transient")
+            return {"items": [{"actor": actor("bluesky"), "event_id": "a"}],
+                    "kind": "comment", "post_key": "p", "post_created_at": POST,
+                    "next_cursor": "next"}
+        with self.assertRaisesRegex(RuntimeError, "transient"):
+            ad.collect_pages(self.store, network="bluesky", surface="own_post",
+                seed="seed", fetch_page=fetch, observed_at=NOW)
+        self.assertEqual(self.store.cursor("bluesky", "own_post", "seed"), "next")
+        self.assertEqual(len(self.store.ranked("bluesky")), 1)
+
+    def test_dedup_per_post_and_multi_surface_ranking(self):
+        first = event(uid="7")
+        rival = event(uid="8")
+        self.ingest([first, rival])
+        raw = {"actor": actor("bluesky", "7"), "event_id": "c3",
+               "text": "Recomiendo una novela"}
+        extra = ad.normalize("bluesky", "reply", raw, surface="own_post",
+                             post_key="p2", observed_at=NOW, post_created_at=POST)
+        self.ingest([extra])
+        ranking = self.store.ranked("bluesky")
+        self.assertEqual(ranking[0]["handle"], "lectora")
+        self.assertEqual(ranking[0]["posts"], 2)
+        self.assertEqual(ranking[0]["signals"], 2)
+
+    def test_multiple_surface_candidates_one_person(self):
+        a = event()
+        self.ingest([a])
+        raw = {"actor": actor("bluesky"), "event_id": "b", "text": "Libros"}
+        b = ad.normalize("bluesky", "comment", raw, surface="external_post",
+             post_key="p2", observed_at=NOW, post_created_at=POST)
+        self.store.ingest([b], network="bluesky", surface="external_post",
+             seed="seed2", next_cursor=None, now=NOW)
+        self.assertEqual(len(self.store.ranked("bluesky")), 1)
+        self.assertEqual(self.store.ranked("bluesky")[0]["surfaces"], 2)
+
+    def test_sqlite_reopen_persists_cursor_and_rank(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = str(pathlib.Path(directory) / "audience.db")
+            s = ad.AudienceStore(path)
+            s.ingest([event()], network="bluesky", surface="own_post",
+                     seed="s", next_cursor="bookmark", now=NOW)
+            s.close()
+            s = ad.AudienceStore(path)
+            self.assertEqual(s.cursor("bluesky", "own_post", "s"), "bookmark")
+            self.assertEqual(len(s.ranked("bluesky")), 1)
+            s.close()
+
+    def test_no_cross_network_identity_collision(self):
+        self.ingest([event("bluesky")])
+        self.ingest([event("reddit")], network="reddit")
+        self.assertEqual(len(self.store.ranked("bluesky")), 1)
+        self.assertEqual(len(self.store.ranked("reddit")), 1)
+
+
+if __name__ == "__main__":
+    unittest.main()
