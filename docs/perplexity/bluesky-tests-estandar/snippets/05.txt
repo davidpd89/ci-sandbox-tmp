@@ -1,0 +1,45 @@
+python
+# tests/contracts/social_adapter_contract.py
+# Contrato común propuesto para todos los adaptadores del sistema.
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime
+from enum import StrEnum
+from typing import Literal
+
+
+class ErrorClass(StrEnum):
+    AUTH = "auth"
+    RATE_LIMIT = "rate_limit"
+    NOT_FOUND = "not_found"
+    INVALID_TARGET = "invalid_target"
+    FORBIDDEN = "forbidden"
+    NETWORK = "network"
+    UPSTREAM = "upstream"
+    CONTRACT_VIOLATION = "contract_violation"
+
+
+@dataclass(frozen=True)
+class PostCandidate:
+    network: str
+    external_id: str
+    author_id: str
+    author_handle: str | None
+    text: str
+    post_url: str
+    created_at: datetime
+    canonical_ref: str
+    raw: dict
+
+
+@dataclass(frozen=True)
+class ActionResult:
+    network: str
+    intent_id: str
+    target_ref: str
+    action: Literal["reply", "like", "repost", "follow"]
+    status: Literal["succeeded", "duplicate", "failed", "skipped"]
+    external_id: str | None
+    error_class: ErrorClass | None
+    retry_after_seconds: int | None
