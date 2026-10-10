@@ -69,21 +69,55 @@ def _has_seed(text, seed):
 
 
 def _feedback(rows):
-    result = defaultdict(lambda: [0, 0, 0, 0])
+    """Agrega resultados por etiqueta sin repetir eventos ni ventanas.
+
+    El productor puede entregar (event_id, window) para distinguir ventanas
+    genuinas con igual resultado. En el legado sin esas claves, solo se
+    eliminan filas *exactamente* iguales dentro de una misma ingesta.
+    """
+    unkeyed, keyed, conflicts = set(), {}, set()
     for row in rows:
         try:
-            key = row["network"], tag(row["tag"])
-            total, engaged, replies, follows = (
-                int(row.get(k, 0)) for k in ("eligible", "engaged", "replies", "followers"))
-            if key[0] not in NETWORKS or not key[1] or not (
-                    0 <= engaged <= total and replies >= 0 and follows >= 0):
+            network, label = row["network"], tag(row["tag"])
+            values = tuple(row.get(k, 0) for k in
+                           ("eligible", "engaged", "replies", "followers"))
+            eligible, engaged, replies, follows = values
+            if (network not in NETWORKS or not label or
+                    any(type(v) is not int or v < 0 for v in values) or
+                    engaged > eligible or
+                    (eligible == 0 and (engaged or replies or follows))):
                 continue
-        except (KeyError, ValueError, TypeError):
+            has_event = "event_id" in row or "window" in row
+            if has_event:
+                identifier = row.get("event_id")
+                if (not isinstance(identifier, str) or
+                        not 0 < len(identifier.strip()) <= 256 or
+                        any(ord(ch) < 32 for ch in identifier)):
+                    continue
+                window = instant(row["window"]).isoformat()
+                key = (network, label, window, identifier.strip())
+                if key in conflicts:
+                    continue
+                if key in keyed:
+                    if keyed[key] != values:
+                        # Dos versiones del mismo evento: no elegir al azar.
+                        del keyed[key]
+                        conflicts.add(key)
+                else:
+                    keyed[key] = values
+            else:
+                unkeyed.add((network, label, values))
+        except (KeyError, ValueError, TypeError, OverflowError):
             continue
-        for i, v in enumerate((total, engaged, replies, follows)):
-            result[key][i] += v
-    return result
 
+    result = defaultdict(lambda: [0, 0, 0, 0])
+    for network, label, values in unkeyed:
+        for i, value in enumerate(values):
+            result[network, label][i] += value
+    for (network, label, _window, _event), values in keyed.items():
+        for i, value in enumerate(values):
+            result[network, label][i] += value
+    return result
 
 def build_snapshot(observations, *, seeds=None, feedback=(), now=None,
                    max_post_age_days=14, ttl_hours=48, min_authors=2,
