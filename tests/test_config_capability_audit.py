@@ -45,7 +45,7 @@ class ConfigCapabilityAuditTests(unittest.TestCase):
         """Mismo test en mirror y repo oficial: no asumir que falta TikTok."""
         root = Path(__file__).resolve().parents[1]
         report = audit.audit(root)
-        self.assertEqual(set(report["capabilities"]), set(audit.cap.NETWORKS))
+        self.assertEqual(set(report["capabilities"]), set(audit.cap.INVENTORY_NETWORKS))
         self.assertEqual(report["errors"], 0, report["findings"])
         self.assertEqual(report["pipelines"]["instagram"]["primary_lane"], "WEB")
         self.assertEqual(report["pipelines"]["tiktok"]["primary_lane"], "MOBILE")
