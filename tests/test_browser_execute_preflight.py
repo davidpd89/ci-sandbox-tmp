@@ -90,7 +90,7 @@ class BrowserBatchPreflightTests(unittest.TestCase):
         env = {
             "fb": fb,
             "dup": types.SimpleNamespace(check=lambda _text: []),
-            "sc": types.SimpleNamespace(drop_stacked_actions=drop_stacked, guard_plan_item=_real_sc.guard_plan_item, report_plan_style=lambda plan: None),
+            "sc": types.SimpleNamespace(drop_stacked_actions=drop_stacked, guard_plan_item=_real_sc.guard_plan_item, report_plan_style=lambda plan: None, plan_action_duplicate_key=_real_sc.plan_action_duplicate_key),
             "_ALLOWED_KINDS": {"like", "comment", "like_external", "comment_external"},
             "_pause": lambda *_args: None, "ec": __import__("exec_common"),
         }
@@ -120,7 +120,7 @@ class BrowserBatchPreflightTests(unittest.TestCase):
         env = {
             "t": t,
             "dup": types.SimpleNamespace(check=lambda text: ["duplicate"] if text == "copied" else []),
-            "sc": types.SimpleNamespace(drop_stacked_actions=drop_stacked, guard_plan_item=_real_sc.guard_plan_item, report_plan_style=lambda plan: None),
+            "sc": types.SimpleNamespace(drop_stacked_actions=drop_stacked, guard_plan_item=_real_sc.guard_plan_item, report_plan_style=lambda plan: None, plan_action_duplicate_key=_real_sc.plan_action_duplicate_key),
             "_VALID_KINDS": {"follow", "like", "reply"},
             "_check_length": lambda text: None,
             "_check_spanish_orthography": lambda text: None,
@@ -143,7 +143,7 @@ class BrowserBatchPreflightTests(unittest.TestCase):
         env = {
             "t": t, "dup": types.SimpleNamespace(check=lambda text: []),
             "sc": types.SimpleNamespace(drop_stacked_actions=drop_stacked, guard_plan_item=_real_sc.guard_plan_item,
-                                        report_plan_style=lambda plan: None),
+                                        report_plan_style=lambda plan: None, plan_action_duplicate_key=_real_sc.plan_action_duplicate_key),
             "_VALID_KINDS": {"follow", "like", "reply"}, "_pause": lambda *_args: None, "ec": __import__("exec_common"),
         }
         load_functions("threads_execute.py", ["_drop_stacked_actions", "_preflight_plan", "run_plan"], env)
@@ -169,7 +169,7 @@ class BrowserBatchPreflightTests(unittest.TestCase):
         env = {
             "t": t,
             "dup": types.SimpleNamespace(check=lambda _text: []),
-            "sc": types.SimpleNamespace(drop_stacked_actions=drop_stacked, guard_plan_item=_real_sc.guard_plan_item, report_plan_style=lambda plan: None),
+            "sc": types.SimpleNamespace(drop_stacked_actions=drop_stacked, guard_plan_item=_real_sc.guard_plan_item, report_plan_style=lambda plan: None, plan_action_duplicate_key=_real_sc.plan_action_duplicate_key),
             "_VALID_KINDS": {"follow", "like", "reply"},
             "_check_length": lambda text: None,
             "_check_spanish_orthography": lambda text: None,
@@ -203,7 +203,7 @@ class BrowserBatchPreflightTests(unittest.TestCase):
         env = {
             "ig": ig,
             "dup": types.SimpleNamespace(check=lambda _text: []),
-            "sc": types.SimpleNamespace(drop_stacked_actions=drop_stacked, guard_plan_item=_real_sc.guard_plan_item, report_plan_style=lambda plan: None),
+            "sc": types.SimpleNamespace(drop_stacked_actions=drop_stacked, guard_plan_item=_real_sc.guard_plan_item, report_plan_style=lambda plan: None, plan_action_duplicate_key=_real_sc.plan_action_duplicate_key),
             "_VALID_KINDS": {"follow", "like", "comment"},
             "_drop_stacked_actions": lambda plan: drop_stacked(
                 plan, cheap_kinds=("like",), rich_kinds=("comment",), key="permalink"
