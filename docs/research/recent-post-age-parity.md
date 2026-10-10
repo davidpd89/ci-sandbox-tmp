@@ -79,6 +79,9 @@ código privado; no se introduce una dependencia nueva ni un nuevo gate.
 - tools/post_age_distribution.py: calcula de forma homogénea en nueve redes
   las ventanas acumuladas e inclusivas de 24, 72 y 168 horas; rangos disjuntos
   0–24, (24–72], (72–168], >168 y clases unknown/future/conflict.
+  **Excluye acciones sobre perfiles** (`follow`, `follow_external`, `followback`,
+  `unfollow`) del denominador de posts y las cuenta aparte. Esto evita que un
+  plan Instagram compuesto solo por follows genere falsos «posts sin fecha».
 - Procedencia explícita: target_created_at/post_created_at; fechas en post,
   record, status o media; Reddit created_utc; TikTok create_time. Created_at en
   raíz solo con source_kind=post. El campo created_at de una ACCIÓN,
@@ -103,7 +106,10 @@ código privado; no se introduce una dependencia nueva ni un nuevo gate.
 ahora existen nueve estados, tres contadores acumulados y siete rangos por
 red. Coste O(n) por candidatos, O(1) memoria del agregado, excluida la lectura
 JSON. No hay cifras reales ni supuesta mejora de conversión. Solo mide los
-planes presentes, no la totalidad de resultados de descubrimiento.
+planes presentes, no la totalidad de resultados de descubrimiento. `total`
+contabiliza destinos de post (no acciones de perfil); el agregado expone
+`acciones_perfil_excluidas` separadamente. Otros tipos sin fecha acreditada
+siguen siendo `unknown` hasta demostrar su procedencia.
 
 ## Validación offline
 
@@ -117,7 +123,8 @@ enumeradas en .github/workflows/validate-social-tools.yml del espejo).
 Fixtures generados dentro de la suite: nueve redes, bordes exactos y segundo
 posterior a 24/72/168h, offsets y DST, timestamp Unix Reddit/TikTok, fechas
 anidadas, cola vs publicación, fechas contradictorias, futuro, JSON roto,
-plan enorme, plan ausente, CLI sin filtrar URLs ni rutas.
+plan enorme, plan ausente, CLI sin filtrar URLs ni rutas, y planes mixtos
+con follows en las nueve redes (incluido Instagram de solo follows).
 
 ## Segunda revisión adversarial
 
