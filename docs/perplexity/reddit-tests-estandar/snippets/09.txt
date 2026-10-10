@@ -1,0 +1,15 @@
+json
+{
+  "kind": "t1",
+  "data": {
+    "id": "c1abc",
+    "name": "t1_c1abc",
+    "author": "lector_es",
+    "body": "Me encanta la tensión romántica de este fragmento.",
+    "score": 3,
+    "created_utc": 1760000000,
+    "permalink": "/r/Fantasy/comments/abc123/ejemplo/c1abc/",
+    "link_id": "t3_abc123",
+    "parent_id": "t3_abc123"
+  }
+}
