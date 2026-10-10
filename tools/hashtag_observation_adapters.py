@@ -360,12 +360,20 @@ class ObservationCollector:
 
     def aggregate_report(self):
         """Exportable diagnostics contain neither identities nor raw post text."""
+        # "accepted" is historical ingress; conflicts may later invalidate it.
+        # Track surviving posts per (network, queue), not per source label, so
+        # multiple readers in the same queue do not inflate live coverage.
+        retained = Counter()
+        for (network, _post_id), item in self._posts.items():
+            for queue in {origin.split(":", 1)[0] for origin in item["sources"]}:
+                retained[(network, queue)] += 1
         return {"schema": 1, "counts": dict(sorted(self.counts.items())),
                 "unique_posts": len(self._posts),
                 "coverage": [
                     {"network": network, "queue": queue,
                      "input": self.by_network_queue[(network, queue, "input")],
                      "accepted": self.by_network_queue[(network, queue, "accepted")],
+                     "retained_posts": retained[(network, queue)],
                      "invalid": self.by_network_queue[(network, queue, "invalid")],
                      "stale": self.by_network_queue[(network, queue, "stale")],
                      "future": self.by_network_queue[(network, queue, "future")],
