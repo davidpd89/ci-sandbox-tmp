@@ -311,3 +311,108 @@ def test_synthetic_evaluation_canonical_actor_id_with_whitespace():
     snapshot = {"candidates": [candidate]}
     ranked = p.rank_daily(snapshot, today=TODAY)
     assert p.evaluate_synthetic(snapshot, ranked)["API"]["precision"] == 1.0
+
+
+# Tercera auditoria: fallos funcionales P1/P2 del controlador.
+def test_lane_fallback_when_primary_budget_zero():
+    limits = {"WEB": 1, "API": 0, "MOBILE": 0}
+    result = rank(row(handle="actora", lane="API"),
+                  row(handle="actora", lane="WEB", reply_eligible=False),
+                  limits=limits)
+    assert result["summary"]["unique_eligible"] == 1
+    assert result["summary"]["selected"] == 1
+    assert result["queues"]["WEB"][0]["handle"] == "actora"
+
+
+def test_lane_fallback_when_primary_full_with_other_actor():
+    limits = {"WEB": 1, "API": 1, "MOBILE": 0}
+    result = rank(row(handle="ana", lane="API", affinity=0.8),
+                  row(handle="ana", lane="WEB", affinity=0.8, reply_eligible=False),
+                  row(handle="bea", lane="API", affinity=0.95),
+                  limits=limits)
+    assert result["summary"]["selected"] == 2
+    assert {r["handle"] for lane in LANES for r in result["queues"][lane]} == {"ana", "bea"}
+
+
+def test_augmented_matching_reassigns_high_scored_actor_for_coverage():
+    # La asignacion codiciosa elegiria primero a Ana en API, despues dejaria
+    # fuera a Bea, aunque Ana tiene alternativa WEB y Bea solo API.
+    limits = {"WEB": 1, "API": 1, "MOBILE": 0}
+    items = [row(handle="ana", lane="API", affinity=1),
+             row(handle="ana", lane="WEB", affinity=1, reply_eligible=False),
+             row(handle="bea", lane="API", affinity=0.9)]
+    first = rank(*items, limits=limits)
+    reverse = rank(*reversed(items), limits=limits)
+    assert first["queues"] == reverse["queues"]
+    assert first["summary"]["selected"] == 2
+    assert first["queues"]["API"][0]["handle"] == "bea"
+    assert first["queues"]["WEB"][0]["handle"] == "ana"
+
+
+@pytest.mark.parametrize("flag", ["blocked", "self_account"])
+@pytest.mark.parametrize("reverse", [False, True])
+def test_cross_collector_veto_prevents_all_recommendations(flag, reverse):
+    items = [row(handle="dos_alias", actor_id="did:plc:uno", lane="WEB",
+                 reply_eligible=False, **{flag: True}),
+             row(handle="otra_cuenta", actor_id="DID:PLC:UNO", lane="API")]
+    if reverse:
+        items.reverse()
+    result = rank(*items)
+    assert result["summary"]["selected"] == 0
+    assert result["summary"]["unique_eligible"] == 0
+    assert any("veto" in v["reason"] for v in result["excluded"])
+
+
+def test_alias_with_and_without_actor_id_is_one_person():
+    result = rank(row(handle="  inválida", lane="API"),
+                  row(handle="@lectór", lane="API", actor_id="DID:PLC:UNO"),
+                  row(handle="lectór", lane="WEB"))
+    assert result["summary"]["candidates"] == 3
+    assert result["summary"]["unique_eligible"] == 1
+    assert result["summary"]["selected"] == 1
+
+
+def test_ambiguous_unverified_handle_not_fused_with_two_ids():
+    result = rank(row(handle="mismo", actor_id="did:plc:uno"),
+                  row(handle="mismo", actor_id="did:plc:dos"),
+                  row(handle="@mismo", lane="WEB"))
+    assert result["summary"]["unique_eligible"] == 2
+    assert result["summary"]["selected"] == 2
+    assert any("ambigua" in v["reason"] for v in result["excluded"])
+
+
+def test_ambiguous_blocked_handle_vetoes_all_conflicting_ids():
+    result = rank(row(handle="mismo", actor_id="did:plc:uno"),
+                  row(handle="mismo", actor_id="did:plc:dos"),
+                  row(handle="@mismo", blocked=True))
+    assert result["summary"]["selected"] == 0
+
+
+def test_changed_handle_with_same_stable_id_is_single_actor():
+    result = rank(row(handle="antiguo", actor_id="did:plc:uno", lane="WEB"),
+                  row(handle="nuevo", actor_id="DID:PLC:UNO", lane="API"))
+    assert result["summary"]["unique_eligible"] == 1
+    assert result["summary"]["selected"] == 1
+
+
+@pytest.mark.parametrize("network", NETWORKS)
+def test_historical_engagement_decay_shared_across_networks(network):
+    old = rank(row(network=network, handle="antigua", affinity=0.2,
+                   inbound={"comment": 5, "follow": 1, "repost": 4, "like": 6},
+                   last_inbound_at="2025-01-01"))
+    recent = rank(row(network=network, handle="reciente", affinity=0.2,
+                      inbound={"comment": 1}, last_inbound_at="2026-10-09"))
+    old_features = old["queues"]["API"][0]["features"]
+    new_features = recent["queues"]["API"][0]["features"]
+    assert old_features["inbound"] < new_features["inbound"]
+    assert old_features["depth"] < new_features["depth"]
+
+
+def test_missing_inbound_observation_distinguished_from_verified_zero():
+    unknown = rank(row(handle="desconocida", inbound=None))
+    assert unknown["summary"]["selected"] == 0  # invalid contract, not imputed to zero
+    r = row(handle="desconocida", last_inbound_at=None)
+    del r["inbound"]
+    result = rank(r)
+    assert "inbound: observacion desconocida" in result["queues"]["API"][0]["notes"]
+    assert result["queues"]["API"][0]["features"]["inbound"] == 0
