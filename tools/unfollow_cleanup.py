@@ -123,7 +123,10 @@ class Bluesky:
 
     def follows_me(self, account):
         profile = self.b._get(self.b.AUTH_BASE, "app.bsky.actor.getProfile", {"actor": account})
-        return bool((profile.get("viewer") or {}).get("followedBy"))
+        viewer = profile.get("viewer") if isinstance(profile, dict) else None
+        if not isinstance(viewer, dict):
+            raise RuntimeError("Bluesky: sin viewer autenticado; followback no verificable")
+        return bool(viewer.get("followedBy"))
 
     def unfollow(self, account):
         return self.b.unfollow(account)
@@ -155,7 +158,11 @@ class Mastodon:
     def follows_me(self, account):
         account_id = self._id(account) or self.m._resolve_account_id(account)
         rel = self.m.patient(lambda: self.m._get("accounts/relationships", {"id[]": account_id}))
-        return bool(rel and rel[0].get("followed_by"))
+        if (not isinstance(rel, list) or len(rel) != 1
+                or not isinstance(rel[0], dict)
+                or type(rel[0].get("followed_by")) is not bool):
+            raise RuntimeError("Mastodon: followback no verificable; omitir unfollow")
+        return rel[0]["followed_by"]
 
     def unfollow(self, account):
         return self.m.patient(lambda: self.m.unfollow(account, self._id(account)))

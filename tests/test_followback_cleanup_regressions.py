@@ -115,6 +115,22 @@ class CleanupCandidateRegressionTests(unittest.TestCase):
                     self.assertEqual((candidate_count, done, failed), (1, 0, 0))
                     self.assertEqual(adapter.unfollowed, [])
 
+    def test_api_adapters_reject_missing_live_followback_evidence(self):
+        from types import SimpleNamespace
+
+        b = uc.Bluesky()
+        b.b = SimpleNamespace(AUTH_BASE="fake", _get=lambda *args: {"viewer": None})
+        with self.assertRaisesRegex(RuntimeError, "no verificable"):
+            b.follows_me("ana.example")
+
+        m = uc.Mastodon()
+        m.ids = {"ana@example.net": "123"}
+        m.m = SimpleNamespace(
+            _get=lambda *args: [{"following": True}],
+            patient=lambda func: func())
+        with self.assertRaisesRegex(RuntimeError, "no verificable"):
+            m.follows_me("ana@example.net")
+
 
 if __name__ == "__main__":
     unittest.main()
