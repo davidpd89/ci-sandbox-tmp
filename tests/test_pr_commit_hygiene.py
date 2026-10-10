@@ -243,6 +243,127 @@ class PRHistoryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             h.scan_pr(self.initial, self.initial, root=self.root)
 
+    def test_add_delete_readd_and_modify_are_each_audited(self):
+        self.topic()
+        self.write("secrets/repeated.json", "first")
+        self.commit("add")
+        first = self.oid()
+        (self.root / "secrets/repeated.json").unlink()
+        self.commit("delete")
+        self.write("secrets/repeated.json", "second")
+        self.commit("readd")
+        second = self.oid()
+        self.write("secrets/repeated.json", "third")
+        self.commit("modify")
+        third = self.oid()
+        self.assertEqual(self.audit(), [(first, 1), (second, 1), (third, 1)])
+
+    def test_octopus_merge_resurrects_sensitive_path(self):
+        self.git("switch", "-qc", "side1")
+        self.write("secrets/old.json")
+        self.commit("old path")
+        self.git("switch", "base")
+        self.git("merge", "--no-ff", "-qm", "old import", "side1")
+        (self.root / "secrets/old.json").unlink()
+        self.commit("base removes")
+        base = self.oid()
+        self.git("switch", "side1")
+        self.write("side1.txt")
+        self.commit("side update")
+        side1 = self.oid()
+        self.git("switch", "-qc", "side2", self.initial)
+        self.write("side2.txt")
+        self.commit("other side")
+        side2 = self.oid()
+        self.git("switch", "-qc", "topic", base)
+        self.write("topic.txt")
+        self.commit("topic")
+        first_parent = self.oid()
+        # Create a synthetic three-parent merge with a deliberately restored
+        # sensitive path. commit-tree preserves the exact octopus DAG on NTFS.
+        self.git("restore", "--source", side1, "--staged", "--worktree", "secrets/old.json")
+        tree = self.git("write-tree").stdout.decode().strip()
+        merged = self.git("commit-tree", tree, "-p", first_parent,
+                          "-p", side1, "-p", side2, "-m", "octopus restore").stdout.decode().strip()
+        self.git("reset", "--hard", merged)
+        self.assertEqual(self.audit(base), [(merged, 1)])
+
+    def test_merge_from_side_first_parent_does_not_import_base_path(self):
+        self.topic()
+        self.write("topic.txt")
+        self.commit("side first")
+        self.git("switch", "base")
+        self.write("secrets/from-base.json")
+        self.commit("new base")
+        base = self.oid()
+        self.git("switch", "topic")
+        self.git("merge", "--no-ff", "-qm", "import base second", "base")
+        self.assertEqual(self.audit(base), [])
+
+    def test_gitlink_to_forbidden_path_detected_without_network(self):
+        self.topic()
+        self.git("update-index", "--add", "--cacheinfo",
+                 f"160000,{self.initial},secrets/submodule")
+        self.git("commit", "-qm", "synthetic gitlink")
+        self.assertEqual(self.audit(), [(self.oid(), 1)])
+
+    def test_squash_checks_current_dag_not_abandoned_commits(self):
+        self.topic()
+        self.write("secrets/abandoned.json")
+        self.commit("formerly bad")
+        (self.root / "secrets/abandoned.json").unlink()
+        self.write("safe.txt")
+        self.commit("safe final change")
+        self.assertEqual(len(self.audit()), 1)
+        self.git("reset", "--soft", self.initial)
+        self.git("commit", "-qm", "squashed clean current state")
+        self.assertEqual(self.audit(), [])
+        # Historical remote objects before force-push are outside this
+        # *current* DAG. Their absence is not proof they were never exposed.
+
+    def test_unicode_paths_are_kept_distinct_and_processed(self):
+        from unittest import mock
+        import unicodedata
+
+        nfc = "secrets/caf\u00e9.json"
+        nfd = unicodedata.normalize("NFD", nfc)
+        self.assertNotEqual(nfc, nfd)
+        output = nfc.encode() + bytes([0]) + nfd.encode() + bytes([0])
+        with mock.patch.object(h, "git", return_value=output):
+            result = h.changes(self.root, "a", "b")
+        self.assertEqual(result, {nfc, nfd})
+        self.assertTrue(all(h.forbidden_path(p) for p in result))
+
+    def test_commit_limit_is_fail_closed(self):
+        self.topic()
+        self.write("safe.txt")
+        self.commit("one")
+        self.write("safe2.txt")
+        self.commit("two")
+        with self.assertRaisesRegex(ValueError, "limit"):
+            h.scan_pr(self.initial, self.oid(), root=self.root, limit=1)
+        self.assertEqual(self.audit(), [])
+        with self.assertRaisesRegex(ValueError, "Invalid commit limit"):
+            h.scan_pr(self.initial, self.oid(), root=self.root, limit=0)
+
+    def test_cli_expected_head_must_match_synthetic_merge(self):
+        import contextlib
+        import io
+        from unittest import mock
+
+        with mock.patch.object(h, "pr_parents", return_value=("a" * 40, "b" * 40)):
+            with mock.patch.object(h, "oid", return_value="c" * 40):
+                with mock.patch.object(h, "scan_pr") as scan:
+                    with contextlib.redirect_stderr(io.StringIO()) as stderr:
+                        result = h.main(["--expected-head", "c" * 40])
+                    self.assertEqual(result, 2)
+                    self.assertIn("event SHA", stderr.getvalue())
+                    scan.assert_not_called()
+            with mock.patch.object(h, "oid", side_effect=["b" * 40, "a" * 40]):
+                with mock.patch.object(h, "scan_pr", return_value=[]):
+                    self.assertEqual(h.main(["--expected-head", "b" * 40,
+                                             "--expected-base", "a" * 40]), 0)
+
     def test_bad_ref_and_missing_history_fail_closed(self):
         with self.assertRaises(ValueError):
             h.scan_pr("-danger", self.initial, root=self.root)
