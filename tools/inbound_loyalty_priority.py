@@ -60,6 +60,18 @@ def read_legacy_csv(path):
     return result
 
 
+def _identity(actor_id, handle=None):
+    """ID estable primero; sin ID solo alias (nunca unir los dos)."""
+    if actor_id is not None:
+        if (not isinstance(actor_id, str) or not actor_id.strip()
+                or len(actor_id) > 240):
+            raise ValueError("actor_id inválido")
+        return "id:" + actor_id.strip()
+    if handle is None:
+        raise ValueError("identidad de outbound/post ausente")
+    return "handle:" + _name(handle)
+
+
 def _normalize(raw, today, history_days):
     if not isinstance(raw, dict):
         raise ValueError("observación no es un objeto")
@@ -84,24 +96,46 @@ def _normalize(raw, today, history_days):
     elif event_id is not None:
         raise ValueError("agregado diario no lleva event_id")
     actor_id = raw.get("actor_id")
-    if actor_id is not None and (not isinstance(actor_id, str) or not actor_id.strip()
-                                  or len(actor_id) > 240):
-        raise ValueError("actor_id inválido")
     target_ref = raw.get("target_ref")
+    context = raw.get("context_quality")
+    source = raw.get("source")
+    if source is not None:
+        # Puente explícito de lectura de X/Threads: el target_id NATIVO
+        # apunta a la cuenta/post propio, NO al comentario entrante.
+        allowed = {("x", "api:users_mentions"), ("threads", "api:own_post_replies")}
+        if ((net, source) not in allowed or granularity != "event"
+                or kind not in (("comment", "mention") if net == "x" else ("comment",))):
+            raise ValueError("origen nativo incompatible")
+        native_target = raw.get("target_id")
+        if (not isinstance(native_target, str) or not native_target.strip()
+                or len(native_target) > 240):
+            raise ValueError("origen nativo sin target_id acreditado")
+        if actor_id is not None or target_ref not in (None, event_id):
+            raise ValueError("origen nativo con identidad/destino contradictorios")
+        native_author = raw.get("author_id")
+        if net == "x":
+            if (not isinstance(native_author, str) or not native_author.strip()
+                    or len(native_author) > 240):
+                raise ValueError("autor X no acreditado")
+            actor_id = native_author
+        elif native_author not in ("", None):
+            raise ValueError("identidad Threads no acreditada")
+        target_ref = event_id  # ID del evento entrante, nunca post propio
+        context = context or "partial"
+    person = _identity(actor_id, handle)
     if target_ref is not None and (not isinstance(target_ref, str)
                                    or not target_ref.strip() or len(target_ref) > 500):
         raise ValueError("destino inválido")
     answered = raw.get("answered")
     if answered is not None and type(answered) is not bool:
         raise ValueError("answered debe ser booleano verificado")
-    context = raw.get("context_quality")
     if context is not None and context not in ("complete", "partial"):
         raise ValueError("context_quality desconocida")
     return {"network": net, "handle": handle, "kind": kind, "day": day,
             "granularity": granularity, "event_id": event_id,
             "actor_id": actor_id, "target_ref": target_ref,
-            "answered": answered, "context_quality": context}
-
+            "answered": answered, "context_quality": context, "source": source,
+            "person": person}
 
 def _canonical_events(rows, today, history_days):
     normalized = [item for raw in rows if (item := _normalize(raw, today, history_days))]
@@ -122,7 +156,7 @@ def _canonical_events(rows, today, history_days):
         old = unique.get(key)
         if old:
             fields = ("network", "person", "kind", "day", "granularity", "actor_id",
-                      "target_ref", "answered")
+                      "target_ref", "answered", "source")
             if any(old[field] != item[field] for field in fields):
                 raise ValueError("colisión de identidad o contenido de evento")
             if old["context_quality"] != item["context_quality"]:
@@ -157,18 +191,22 @@ def _outbound_lookup(rows, today):
         when = _day(row.get("day"), "outbound")
         if when > today:
             continue
-        key = (row["network"], _name(row.get("handle")), action,
-               row.get("target_ref") if action == "reply" else None)
+        # Jamás atribuir una acción por el handle de un actor identificado:
+        # puede haberse renombrado o el alias haber pasado a otra persona.
+        person = _identity(row.get("actor_id"), row.get("handle"))
+        target = row.get("target_ref") if action == "reply" else None
+        if action == "reply" and (not isinstance(target, str) or not target.strip()):
+            continue  # no cerrar un hilo sin destino exacto confirmado
+        key = (row["network"], person, action, target)
         done[key] = max(when, done.get(key, when))
     return done
-
 
 def _posts(rows, today, max_age):
     posts = {}
     for item in rows:
         if not isinstance(item, dict) or item.get("network") not in NETWORKS:
             raise ValueError("post: red inválida")
-        handle = _name(item.get("handle"))
+        person = _identity(item.get("actor_id"), item.get("handle"))
         day = _day(item.get("day"), "post")
         ref = item.get("ref")
         if (type(item.get("verified")) is not bool or
@@ -179,16 +217,15 @@ def _posts(rows, today, max_age):
                 or not isinstance(ref, str) or not ref.strip()
                 or day > today or (today - day).days > max_age):
             continue
-        key = (item["network"], handle)
+        key = (item["network"], person)
         value = {"ref": ref, "day": day}
         if key not in posts or (day, ref) > (posts[key]["day"], posts[key]["ref"]):
             posts[key] = value
     return posts
 
-
 def build(observations, *, as_of, legacy=(), outbound=(), posts=(),
           history_days=90, recent_days=14, post_max_age_days=7,
-          per_lane=12, coverage=None):
+          per_lane=12, per_contact_threads=4, coverage=None):
     """Proyecta señales, score explicable, recurrencia y revisión por cola.
 
     API puramente funcional: jamás llama a red ni lee estados predeterminados.
@@ -196,7 +233,7 @@ def build(observations, *, as_of, legacy=(), outbound=(), posts=(),
     if type(as_of) is not date:
         raise ValueError("as_of debe ser date")
     if (not all(type(n) is int and n > 0 for n in
-                (history_days, recent_days, post_max_age_days, per_lane))
+                (history_days, recent_days, post_max_age_days, per_lane, per_contact_threads))
             or recent_days > history_days):
         raise ValueError("ventanas o límite inválidos")
     if coverage is None:
@@ -231,25 +268,35 @@ def build(observations, *, as_of, legacy=(), outbound=(), posts=(),
         }
         score = sum(components.values())
         proposals = []
-        latest_inbound = next((e for e in reversed(recent)
-                              if e["kind"] in ("reply", "comment", "mention")
-                              and e["target_ref"] and e["answered"] is False), None)
-        if latest_inbound:
-            last_reply = confirmed.get((net, handle, "reply", latest_inbound["target_ref"]))
-            if last_reply is None or last_reply < latest_inbound["day"]:
-                proposals.append({"kind": "reply_review" if
-                                  latest_inbound["context_quality"] == "complete"
-                                  else "context_review",
-                                  "target_ref": latest_inbound["target_ref"]})
+        # Una cuenta ocupa un cupo, pero puede tener varios hilos abiertos.
+        # latest por ref, incluso answered=True para no resucitar un hilo cerrado.
+        by_ref = {}
+        for e in reversed(recent):
+            if e["kind"] in ("reply", "comment", "mention") and e["target_ref"]:
+                by_ref.setdefault(e["target_ref"], e)
+        for ref, e in list(by_ref.items()):
+            if len([p for p in proposals if p["kind"] in ("reply_review", "context_review")]) >= per_contact_threads:
+                break
+            if e["answered"] is True or (e["answered"] is None and not e["source"]):
+                continue
+            last_reply = confirmed.get((net, person, "reply", ref))
+            if last_reply is not None and last_reply >= e["day"]:
+                continue
+            # La mención y el estado de respuesta desconocido solo autorizan
+            # investigar contexto; jamás presentar una respuesta como pendiente.
+            verified_pending = e["answered"] is False and e["kind"] != "mention"
+            proposals.append({"kind": ("reply_review" if verified_pending and
+                                      e["context_quality"] == "complete"
+                                      else "context_review"), "target_ref": ref})
         for action, label in (("thank", "thank_review"), ("visit", "visit_recent_review")):
-            prev = confirmed.get((net, handle, action, None))
+            prev = confirmed.get((net, person, action, None))
             if prev is not None and (as_of - prev).days < 7:
                 continue
             if action == "thank":
                 if len(days) >= 2 or len(kinds) >= 2 or "follow" in kinds:
                     proposals.append({"kind": label})
             else:
-                post = recent_posts.get((net, handle))
+                post = recent_posts.get((net, person))
                 if post:
                     proposals.append({"kind": label, "target_ref": post["ref"],
                                       "post_day": post["day"].isoformat()})
