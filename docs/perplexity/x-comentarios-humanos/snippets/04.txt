@@ -1,0 +1,33 @@
+python
+# Código original para davidpd89/rrss-davidporto-CODE
+# Integración: puerta de calidad antes del ranking final.
+import re
+from pydantic import BaseModel, field_validator
+
+EMOJI_RE = re.compile(
+    "[\U0001F300-\U0001FAFF\U00002700-\U000027BF\U0001F000-\U0001F02F]"
+)
+
+class ReplyContract(BaseModel):
+    text: str
+    network: str
+    angle: str
+    max_chars: int = 240
+    max_emojis: int = 1
+    max_questions: int = 1
+
+    @field_validator("text")
+    @classmethod
+    def validate_text(cls, v: str, info) -> str:
+        text = v.strip()
+        if not text:
+            raise ValueError("La respuesta no puede estar vacía")
+        if len(text) > info.data.get("max_chars", 240):
+            raise ValueError("Respuesta demasiado larga para la red")
+        if len(EMOJI_RE.findall(text)) > info.data.get("max_emojis", 1):
+            raise ValueError("Demasiados emojis")
+        if text.count("?") > info.data.get("max_questions", 1):
+            raise ValueError("Como máximo una pregunta por respuesta")
+        if re.search(r"\b(gracias por compartir|me encanta tu post)\b", text, re.I):
+            raise ValueError("Fórmula genérica prohibida")
+        return text
