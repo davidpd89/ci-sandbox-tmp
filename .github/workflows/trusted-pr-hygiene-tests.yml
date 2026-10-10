@@ -1,0 +1,28 @@
+name: Trusted hygiene synthetic regressions (untrusted)
+
+# This workflow runs code from the PR and IS NOT the independent path gate.
+on:
+  pull_request:
+  push:
+    branches: [ci/trusted-pr-hygiene]
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic:
+    name: trusted-hygiene-tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - run: python -m unittest discover -s tests -p test_trusted_pr_hygiene.py -v
