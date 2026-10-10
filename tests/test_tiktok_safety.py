@@ -359,10 +359,11 @@ class TikTokSafetyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             path = pathlib.Path(folder) / "registro.csv"
             intent_id = "d" * 32
+            today = dt.date.today().isoformat()
             lines = [
                 "fecha,cuenta,tipo,post_resumen,texto_usado,resultado,notas",
-                f"2026-10-09,@privada,follow,,,pendiente_verificacion,x | intent_id={intent_id}",
-                f"2026-10-09,@privada,follow,,,pendiente_aprobacion,x | intent_id={intent_id}",
+                f"{today},@privada,follow,,,pendiente_verificacion,x | intent_id={intent_id}",
+                f"{today},@privada,follow,,,pendiente_aprobacion,x | intent_id={intent_id}",
             ]
             path.write_text("\n".join(lines) + "\n", encoding="utf-8-sig")
             with mock.patch.object(bulk, "REGISTRO_CSV", str(path)):
