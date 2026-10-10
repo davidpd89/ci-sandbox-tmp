@@ -82,7 +82,7 @@ class ConfirmedOutcomeTests(unittest.TestCase):
             BotWarningDetected=Stop, WrongAccountActive=Wrong, AlreadyCommented=Already,
             follow=lambda h: "already",
             like_in_feed=lambda *a: "created",
-            reply_to=lambda *a: "unverified",
+            reply_to=lambda *a, **kw: "unverified",
         )
         ns = {"t": t, "dup": Dup(), "_drop_stacked_actions": lambda p: p,
               "_pause": lambda: None, "ec": __import__("exec_common"), "_already_replied_via_api": lambda text: False,
@@ -91,7 +91,7 @@ class ConfirmedOutcomeTests(unittest.TestCase):
         result = run([
             {"kind": "follow", "handle": "@a"},
             {"kind": "like", "handle": "@b", "text_fragment": "x"},
-            {"kind": "reply", "handle": "@c", "text_fragment": "y", "text": "respuesta"},
+            {"kind": "reply", "handle": "@c", "text_fragment": "y", "text": "respuesta",\n             "permalink": "https://www.threads.com/@c/post/ABCD1234"},
         ], prevalidated=True)
         self.assertEqual(
             [r["resultado"] for r in result],
@@ -99,7 +99,7 @@ class ConfirmedOutcomeTests(unittest.TestCase):
         )
         ns["_verified_via_api"] = lambda text: True   # la API oficial si ve la respuesta: queda confirmada
         result = load_function("threads_execute.py", "run_plan", ns)(
-            [{"kind": "reply", "handle": "@c", "text_fragment": "y", "text": "respuesta"}], prevalidated=True)
+            [{"kind": "reply", "handle": "@c", "text_fragment": "y", "text": "respuesta",\n              "permalink": "https://www.threads.com/@c/post/ABCD1234"}], prevalidated=True)
         self.assertEqual([r["resultado"] for r in result], ["confirmado"])
 
     def test_instagram_pending_private_follow_is_not_confirmed(self):
