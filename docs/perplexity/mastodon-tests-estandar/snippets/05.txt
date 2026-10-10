@@ -1,0 +1,26 @@
+json
+// tests/fixtures/mastodon/status_boost.json
+{
+  "id": "109900000000000003",
+  "created_at": "2026-10-10T12:10:00.000Z",
+  "visibility": "public",
+  "reblog": {
+    "id": "109900000000000002",
+    "created_at": "2026-10-10T12:05:00.000Z",
+    "visibility": "public",
+    "url": "https://fosstodon.org/@autor/109900000000000002",
+    "content": "<p>Recomendaciones de fantasía épica para este otoño.</p>",
+    "account": {
+      "id": "200000000000000002",
+      "username": "autor",
+      "acct": "autor@fosstodon.org",
+      "url": "https://fosstodon.org/@autor"
+    }
+  },
+  "account": {
+    "id": "100000000000000001",
+    "username": "davidporto",
+    "acct": "davidporto",
+    "url": "https://mastodon.social/@davidporto"
+  }
+}
