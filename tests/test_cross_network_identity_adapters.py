@@ -32,6 +32,20 @@ class LegacyProjectionTests(unittest.TestCase):
         view = self.graph.crm_view(self.x, events)
         self.assertEqual(sum(e["count"] for e in view["events_by_network"]), 1)
 
+    def test_inbound_identity_uses_canonical_network_and_kind(self):
+        rows = [
+            {"fecha": "2026-10-10", "red": " X ", "handle": "@Reader", "tipo": " Comment "},
+            {"fecha": "2026-10-10", "red": "x", "handle": "reader", "tipo": "comment"},
+        ]
+        events, warnings = adapt_inbound_rows(rows)
+        self.assertEqual(warnings, [])
+        self.assertEqual(events[0]["event_id"], events[1]["event_id"])
+        self.assertEqual(events[0]["kind"], "comment")
+        view = self.graph.crm_view(self.x, events)
+        self.assertEqual(view["events_by_network"], [
+            {"network": "x", "direction": "inbound", "kind": "comment", "count": 1}
+        ])
+
     def test_mastodon_unscoped_acct_reports_without_guessing(self):
         events, warnings = adapt_inbound_rows([
             {"fecha": "2026-10-10", "red": "mastodon", "handle": "reader", "tipo": "follow"}
