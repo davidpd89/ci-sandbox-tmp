@@ -1,0 +1,3 @@
+bash
+python tools/pinterest_metrics.py fetch --since 7d
+python tools/pinterest_metrics.py sync
