@@ -187,11 +187,12 @@ def regressions(current: list[dict], baseline: list[dict]) -> list[dict]:
 
 def missing_modules(tools_dir: str | Path, expected: list[str]) -> list[str]:
     """Identify a vanished audited module even if its network is still present."""
-    if (not isinstance(expected, list) or len(expected) != len(set(expected))
+    if (not isinstance(expected, list)
             or not all(isinstance(name, str)
-                       and Path(name).name == name
+                       and "/" not in name and "\\" not in name
                        and _network(Path(name)) is not None
-                       and name.endswith(SUFFIXES) for name in expected)):
+                       and name.endswith(SUFFIXES) for name in expected)
+            or len(expected) != len(set(expected))):
         raise ValueError("Malformed architecture module manifest")
     current = {path.name for path, _ in _eligible_paths(Path(tools_dir))}
     return sorted(set(expected) - current)
