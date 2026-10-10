@@ -36,14 +36,23 @@ def forbidden_path(path: str) -> bool:
     """No se basan las decisiones en Gitignore: un fichero ya stageado cuenta."""
     if not isinstance(path, str) or not path.strip():
         return True
-    normalized = path.replace("\\", "/").strip().lstrip("/")
-    parts = [p.casefold() for p in normalized.split("/") if p != ""]
-    if not parts or any(p in {".", ".."} for p in parts):
+    normalized = path.replace("\\", "/").lstrip("/")
+    raw_parts = [p for p in normalized.split("/") if p != ""]
+    # No permitir que espacios conviertan un nombre distinto en una plantilla autorizada.
+    if any(p != p.strip() and p.strip().casefold() in ENV_TEMPLATES for p in raw_parts):
+        return True
+    parts = [p.strip().casefold() for p in raw_parts]
+    if not parts or any(p in {"", ".", ".."} for p in parts):
         return True
     name = parts[-1]
-    if any(p in RUNTIME_DIRS for p in parts[:-1]):
-        return True
-    if any(p in {"secrets", "credentials", ".ssh"} for p in parts[:-1]):
+    # Una ruta protegida usada como directorio sigue siendo protegida.
+    # La llamada sobre un único componente carece de padres: no hay recursión.
+    # Las plantillas .env solo se permiten como archivos independientes.
+    if any(
+        p in RUNTIME_DIRS or p in {"secrets", "credentials", ".ssh"}
+        or p.startswith(".env") or forbidden_path(p)
+        for p in parts[:-1]
+    ):
         return True
     if name in RUNTIME_FILES or name.endswith("_interacciones.csv"):
         return True
@@ -80,7 +89,11 @@ def changed_paths(base: str, *, root: pathlib.Path = ROOT) -> list[str]:
     if completed.returncode:
         raise RuntimeError("No se pudo comparar la rama con la base de Git: " +
                            completed.stderr.decode("utf-8", "replace")[:300])
-    return [p.decode("utf-8", "replace") for p in completed.stdout.split(b"\0") if p]
+    try:
+        return [p.decode("utf-8") for p in completed.stdout.split(b"\0") if p]
+    except UnicodeDecodeError as exc:
+        # git diff -z entrega nombres como bytes; no ocultar rutas con replacement.
+        raise RuntimeError("Git devolvió una ruta sin codificación UTF-8 válida") from exc
 
 
 def main(argv=None) -> int:
@@ -90,12 +103,12 @@ def main(argv=None) -> int:
     try:
         offenders = violations_for_paths(changed_paths(args.base))
     except (RuntimeError, ValueError) as exc:
-        print(f"HIGIENE ERROR: {exc}", file=sys.stderr)
+        print(f"HIGIENE ERROR: {str(exc)!r}", file=sys.stderr)
         return 2
     if offenders:
         print("HIGIENE FALLIDA: no versionar artefactos de cuentas, logs, perfiles ni secretos:", file=sys.stderr)
         for path in offenders:
-            print(f"  - {path}", file=sys.stderr)
+            print(f"  - {path!r}", file=sys.stderr)
         return 1
     print("HIGIENE OK: cambios A/M/T sin ficheros operativos prohibidos.")
     return 0
