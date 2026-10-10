@@ -205,6 +205,21 @@ class StableAliasTests(unittest.TestCase):
             with self.subTest(net=net), self.assertRaises(AliasError):
                 account_key(net, handle)
 
+    def test_out_of_order_claims_and_index_invalidation(self):
+        add(self.g, "new", "second.bsky.social", when=T3)
+        add(self.g, "old", "first.bsky.social", when=T1)
+        self.assertEqual(self.g.resolve("bluesky", "first.bsky.social", T1)["stable_key"],
+                         "bluesky|" + D1)
+        self.assertEqual(self.g.resolve("bluesky", "first.bsky.social", T3)["status"],
+                         "superseded_alias")
+        cached_revision = self.g._indexed_epoch
+        self.g.resolve("bluesky", "second.bsky.social", T3)
+        self.assertEqual(self.g._indexed_epoch, cached_revision)
+        self.g.revoke("new", reason="synthetic correction")
+        self.assertEqual(self.g.resolve("bluesky", "first.bsky.social", T3)["status"],
+                         "inferred_interval")
+        self.assertGreater(self.g._indexed_epoch, cached_revision)
+
     def test_compatible_future_85_key_builder(self):
         g = AliasTimeline(key_builder=account_key)
         add(g, "a", "first.bsky.social")
