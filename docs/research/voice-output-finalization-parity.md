@@ -6,7 +6,7 @@ La PR #106 **no trae una copia** del auditor: importa `spanish_voice_quality.aud
 Antes de integrar #106, fusionar y verificar #79; si falta el módulo, cualquier llamada nueva a QA falla
 sin enviar. El código original de esta rama puede ejecutarse sin él mientras no pase por salidas auditadas.
 
-## Origen y alcance comprobado
+## Problema y alcance comprobado
 
 - Espejo `ci-sandbox-tmp`, HEAD inicial `4ea955d05811c288e688f9a22f03dcfad54e2557`: no había adaptador final.
 - #79, HEAD leído `b09e5dcf50daba1b552e4d8da939c69741c2258d`: `reply_writer` audita en construcción;
@@ -48,7 +48,7 @@ si atraviesan las rutas directas instrumentadas: son fases distintas, no dos lla
 una misma construcción. La excepción de Pinterest `voice_checked=True` impide una
 segunda revisión de la misma descripción en la cadena de fichas #79.
 
-## Contrato y seguridad técnica
+## Decisión y contrato técnico
 
 `voice_output_finalization.inspect(text, network, queue)` acepta la cadena original y devuelve
 los findings sin modificar la entrada. Un `hint`, `warning` o `error` editorial **no**
@@ -70,17 +70,35 @@ saltos de línea. Se mantiene la procedencia es-ES de #79.
 | [jxmorris12/language_tool_python](https://github.com/jxmorris12/language_tool_python/commit/6c935da8ef739b22d62c13cd682cb9a2922e4f98) | GPL-3.0-only | commit 03/10/2026, Python 3.11 en metadata; JVM/proceso externo para comprobación completa | No añadir JVM/red/latencia ni duplicar motor |
 | [codespell-project/codespell](https://github.com/codespell-project/codespell/commit/54cc31bc819f4af008b58a29ab16b5173dc1ff3b) | GPL-2.0-only | commit 09/10/2026; Windows y Python 3.11 declarados | Orientado a faltas comunes en ficheros/código, no a español conversacional con citas |
  
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/barrust/pyspellchecker/commit/f72172c4ddb3d1c3464cf500cc2420a4831a2b55
+Fecha de consulta: 2026-10-10
+Licencia SPDX: MIT
+Referencia inmutable: https://github.com/barrust/pyspellchecker/commit/f72172c4ddb3d1c3464cf500cc2420a4831a2b55
+
+Los campos anteriores acreditan una **alternativa evaluada**, no código externo
+copiado a la PR #106. El adaptador nuevo es original y solo importa en ejecución
+la API propia de la PR #79. Los proyectos GPL de la tabla son comparables, no
+código derivado ni dependencia incorporada.
+
 La solución seleccionada es la menor reutilización permitida: consumir la API estable
 de #79 (stdlib, sin dependencias nuevas para este puente). No se incorporó código de terceros;
 se mantienen licencias y atribuciones en enlaces de investigación. Metadatos consultados en
 GitHub y PyPI, y decisión contrastada con `docs/research/spanish-voice-locale-quality.md` de #79.
 
-## Reproducir, métricas y despliegue
+## Pruebas, métricas y despliegue
 
 ```sh
 python -m compileall -q tools/voice_output_finalization.py tools/x_bank_publish.py tools/reddit_publish.py tools/reddit_comments.py tools/reddit_interact.py tools/tiktok_mobile_interact.py tools/pinterest_publish.py tools/content_publisher.py tools/content_queue_alert.py tools/bluesky_execute.py tools/mastodon_execute.py tools/threads_execute.py tools/facebook_execute.py tools/instagram_execute.py tools/x_execute.py
 python -m unittest discover -s tests -p test_voice_output_finalization.py -v
 ```
+
+Resultado contrastado en el HEAD `bbb1256aef78d1828fb221e3542530f7d1a9b958`:
+[CI offline](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38023070577),
+25/25 tests en Ubuntu Python 3.11 y 25/25 en Windows Python 3.11.
+El runner Windows necesita `tzdata` (ya consta en `requirements-ci.txt`);
+se instala en el workflow aislado sin contactar con cuentas sociales.
 
 En CI `.github/workflows/voice-output-finalization.yml` ejecuta tests offline
 en Windows y Ubuntu, Python 3.11, sin token de red social ni acciones reales.
@@ -98,7 +116,7 @@ Métrica de cobertura documentada antes/después:
 - Contratos simulados: matriz 9 × 3; inmutabilidad de cadenas Unicode y formatos protegidos;
   fallos técnicos antes del punto de escritura; sin cambios en resultados editoriales.
 
-## Segunda revisión adversarial y reversión
+## Retirada y segunda revisión adversarial
 
 1. **Crítico — ausencia de #79:** rama #106 aislada no puede ejercer el motor real.
    Resuelto como dependencia explícita y preflight de fallo controlado; orden de merge obligatorio.
