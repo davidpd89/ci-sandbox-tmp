@@ -1,0 +1,41 @@
+python
+# tools/threads_action_ranker.py
+# Nuevo módulo de ranking; se apoya en action_ledger.py y growth_attribution.py existentes.
+# Base propia del sistema: https://github.com/davidpd89/ci-sandbox-tmp/blob/main/tools/action_ledger.py
+from __future__ import annotations
+
+from datetime import datetime, timezone
+
+WEIGHTS = {
+    "affinity": 0.35,
+    "freshness": 0.25,
+    "history": 0.20,
+    "social": 0.10,
+    "ease": 0.10,
+}
+
+def freshness(hours_old: float, max_hours: float = 72.0) -> float:
+    return max(0.0, 1.0 - min(hours_old, max_hours) / max_hours)
+
+def rank_candidate(candidate: dict) -> float:
+    return sum(
+        WEIGHTS[key] * float(candidate.get(key, 0.0))
+        for key in WEIGHTS
+    )
+
+def rank_candidates(candidates: list[dict], now: datetime | None = None) -> list[dict]:
+    now = now or datetime.now(timezone.utc)
+    ranked = []
+    for item in candidates:
+        created = item.get("created_at")
+        hours = 999.0
+        if created:
+            delta = now - datetime.fromisoformat(created.replace("Z", "+00:00"))
+            hours = delta.total_seconds() / 3600
+        scored = {
+            **item,
+            "freshness": freshness(hours),
+            "score": rank_candidate({**item, "freshness": freshness(hours)}),
+        }
+        ranked.append(scored)
+    return sorted(ranked, key=lambda x: x["score"], reverse=True)
