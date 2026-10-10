@@ -72,7 +72,10 @@ QUERY_POOL = [      # 06/10 (GPT, intencion de busqueda): ~75 % consultas de des
 ]
 import discovery_terms
 QUERY_POOL += [(q, None) for q in discovery_terms.terms("pinterest", "busquedas", skip=[q for q, _ in QUERY_POOL])]      # 07/10: consulta M a GPT (tableros grupales/colaborativos, estetica de lectura, escritura)
-# #125: sumamos búsquedas de intención sin reemplazar búsquedas actuales ni sus límites.\nimport pinterest_niche\nQUERY_POOL = pinterest_niche.merge_queries(QUERY_POOL)\nQUERIES_PER_DAY = 8          # por RONDA (3 rondas al dia): rotan por dia y por ronda
+# #125: ampliar intención lectora conservando el pool, su rotación y cuotas.
+import pinterest_niche
+QUERY_POOL = pinterest_niche.merge_queries(QUERY_POOL)
+QUERIES_PER_DAY = 8          # por RONDA (3 rondas al dia): rotan por dia y por ronda
 PINS_PER_QUERY = 8
 MAX_PROFILE_VISITS = 40
 PENDING_TEXT = "(pendiente de ChatGPT)"      # 08/10: ya no hay banco de comentarios; los escribe ChatGPT (write_comments) y el ejecutor rechaza texto que no venga de ahi
