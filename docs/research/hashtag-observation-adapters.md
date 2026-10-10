@@ -23,7 +23,7 @@ Normalización read-only compartida con especializaciones por red, separada de l
 
 ## Pruebas
 
-Suite sintética unittest Python 3.11 en Ubuntu/Windows, no es un canario operativo; 17 tests tras la tercera pasada, revalidar en el HEAD.
+Suite sintética unittest Python 3.11 en Ubuntu/Windows, no es un canario operativo; 19 tests tras la revisión externa, revalidar en el HEAD.
 
 ## Retirada
 
@@ -108,6 +108,14 @@ Workflow: `.github/workflows/hashtag-observation-adapters.yml` (Ubuntu y Windows
 4. **Contención:** dos versiones discordantes de un post y de un evento de feedback no se resuelven por orden de llegada, sino descartando el elemento ambiguo y contando conflictos.
 5. **Tercera pasada:** el parser HTML de Mastodon partía palabras delimitadas por marcas inline (p. ej., `fantas<b>ía</b>`); ahora mantiene el texto continuo, separa bloques y verifica el resultado con un fixture. Asimismo, la memoria solo estaba acotada por llamada, no por ronda; incorporado límite global configurable y contador explícito de descartes, sin perder deduplicación de posts ya vistos.
 6. **No alcance:** no se conectaron colectores al flujo de operación real ni se ha medido conversión. Falta el ensayo de integración de #63/#99, no un parche en el ranking.
+
+### Revisión independiente posterior — 10/10/2026
+
+La revisión externa detectó dos desajustes reproducibles y los corrigió en esta PR:
+1. `post_id` y `author_id` estaban limitados a 512 caracteres; el consumidor #63 solo admite 256, por lo que podía descartar observaciones previamente contabilizadas como válidas. Se alinea el límite a 256 con regresiones en el borde 256/257.
+2. `to_engine_rows()` entregaba referencias mutables a las listas internas de `tags`, compartidas entre varias fuentes. Ahora devuelve copias independientes; una mutación externa no altera observaciones anteriores ni futuras.
+
+Quedan pendientes de resolución **antes del merge operativo**: conexión read-only real de productores (los 27 caminos solo representan contratos), prueba integrada con `build_snapshot()` en una rama que incluya #63, límite global también para `_feedback`, `_feedback_conflicts`, `_conflicts` y procedencias por publicación, y reconciliación del `event_id` de feedback cuando una misma identidad aparece con distintas ventanas. La suite de normalización, aunque verde, no sustituye estas comprobaciones.
 
 ### Plan de integración, canario y retirada
 
