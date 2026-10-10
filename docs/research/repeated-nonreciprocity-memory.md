@@ -58,3 +58,10 @@ No se abren PR adicionales: ciclo de estado (#57/#60), reconciliación (#58), ra
 ## Retirada
 
 La vía de discovery puede volver a la proyección anterior por reversión del cambio en `relationship_policy.py`; el CSV original no cambia. Si se creó una base auxiliar de ensayo mediante `RelationshipMemory`, hay que conservar previamente su copia de respaldo y eliminarla sólo con autorización del controlador. No existe migración automática ni se habilitan acciones externas.
+
+## Revisión final adicional (10/10/2026)
+
+- Históricos mixtos: un `follow` conocido ya no hace invisibles posteriores `unfollow` confirmados sin follow de origen. Un fallo por cuenta y fecha, con deduplicación; una evidencia de reciprocidad verificada reinicia la racha. No se interpreta un follow aislado como fracaso. Regresión ejecutable en las nueve redes.
+- Persistencia: `RelationshipMemory` exige base SQLite auxiliar dedicada y rechaza de forma explícita tablas o estructura `relation_events` incompatibles antes de crear índices/cambiar versiones. Evita mezcla accidental con `RelationshipStore` de #60 o ledger de #84; no resuelve la interoperabilidad futura, que debe abordarse en #84.
+- Ingesta: CSV truncado, comillas sin cerrar o columnas de más se rechazan sin sustituir la proyección anterior; archivos correctos mantienen su semántica.
+- Prueba de compatibilidad: `python -m unittest discover -s tests -p test_repeated_nonreciprocity_memory.py -v` y suite completa offline en Ubuntu/Windows tras cada HEAD, sin asumir que el CI de un SHA anterior valide uno nuevo.

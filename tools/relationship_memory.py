@@ -114,9 +114,7 @@ def decision(events, network, account, *, today=None, policy=None):
         relevant = [e for e in relevant if e.date >= start or e.kind == "permanent"]
     relevant.sort(key=lambda e: e.date)
     failures = 0
-    active = False
-    seen_follow = False
-    orphan_dates = set()
+    failure_dates = set()
     last_failure = None
     last_evidence = None
     permanent_evidence = None
@@ -185,6 +183,8 @@ class RelationshipMemory:
 
     def __init__(self, path):
         self.path = os.fspath(path)
+        if self.path == ":memory:":
+            raise ValueError("usar un archivo SQLite: conexiones :memory: no persisten")
 
     def _connect(self):
         conn = sqlite3.connect(self.path, timeout=30)
@@ -196,6 +196,20 @@ class RelationshipMemory:
             version = conn.execute("PRAGMA user_version").fetchone()[0]
             if version not in (0, 1):
                 raise RuntimeError("versión de memoria desconocida")
+            # Base auxiliar dedicada: la máquina #60 usa otro esquema con el
+            # mismo nombre de tabla; #84 usa su propio ledger. Fallar antes
+            # de modificar cualquier base ajena evita colisiones silenciosas.
+            tables = {name for (name,) in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'")
+                if not name.startswith("sqlite_")}
+            if tables - {"relation_events"}:
+                raise RuntimeError("base SQLite compartida/incompatible; usar una ruta dedicada")
+            columns = tuple(row[1] for row in conn.execute(
+                "PRAGMA table_info(relation_events)"))
+            expected = ("network", "source", "source_line", "account",
+                        "date", "kind", "reason", "evidence")
+            if columns and columns != expected:
+                raise RuntimeError("relation_events incompatible; usar una ruta dedicada")
             conn.execute("""CREATE TABLE IF NOT EXISTS relation_events (
                 network TEXT NOT NULL, source TEXT NOT NULL, source_line INTEGER NOT NULL,
                 account TEXT NOT NULL, date TEXT NOT NULL, kind TEXT NOT NULL,
@@ -222,11 +236,17 @@ class RelationshipMemory:
     def import_csv(self, network, csv_path, *, source=None):
         source = source or Path(csv_path).name
         with open(csv_path, encoding="utf-8-sig", newline="") as fh:
-            reader = csv.DictReader(fh)
+            reader = csv.DictReader(fh, restkey="__extra__", strict=True)
             required = {"fecha", "cuenta", "tipo", "notas", "resultado"}
             if not required.issubset(set(reader.fieldnames or ())):
                 raise ValueError("registro CSV incompleto; no se sustituye la memoria")
-            rows = list(reader)
+            try:
+                rows = list(reader)
+            except csv.Error as exc:
+                raise ValueError("registro CSV malformado; memoria intacta") from exc
+            if any("__extra__" in row or any(row.get(key) is None for key in required)
+                   for row in rows):
+                raise ValueError("fila CSV incompleta o con columnas extra; memoria intacta")
         events = events_from_rows(rows, network, source=source)
         return self.replace_source(network, source, events)
 

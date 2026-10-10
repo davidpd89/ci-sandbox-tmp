@@ -2,6 +2,7 @@
 import csv
 import datetime as dt
 import pathlib
+import sqlite3
 import sys
 import tempfile
 import unittest
@@ -59,6 +60,19 @@ class HistoricalMemoryTests(unittest.TestCase):
                 for day in ("2026-07-01", "2026-08-01", "2026-09-01")]
         state = mem.decisions_from_rows(rows, "x", today=TODAY)["a"]
         self.assertEqual((state["failures"], state["status"]), (3, "exhausted"))
+
+    def test_mixed_follow_and_orphan_history_preserves_distinct_failures(self):
+        rows = cycle("a", "2026-07-01", "2026-07-02")
+        rows += [row("a", "unfollow", "2026-07-02", notes="no devuelve"),
+                 row("a", "unfollow", "2026-08-02", notes="no devuelve"),
+                 row("a", "unfollow", "2026-09-02", notes="no devuelve")]
+        for network in mem.NETWORKS:
+            with self.subTest(network=network):
+                state = mem.decisions_from_rows(rows, network, today=TODAY)["a"]
+                self.assertEqual((state["failures"], state["status"]), (3, "exhausted"))
+                self.assertEqual(state["evidence"], "registro.csv:6")
+                reset = rows + [row("a", "followback_confirmed", "2026-09-03")]
+                self.assertEqual(mem.decisions_from_rows(reset, network, today=TODAY)["a"]["failures"], 0)
 
     def test_reciprocity_requires_verified_event_and_permanent_survives(self):
         rows = cycle("a", "2026-08-01", "2026-08-02") + [row("a", "followback", "2026-09-01")]
@@ -134,6 +148,54 @@ class HistoricalMemoryTests(unittest.TestCase):
             self.assertEqual(memory.lookup("x", "a", today=TODAY)["failures"], 0)
             self.assertEqual(memory.lookup("x", "b", today=TODAY)["status"], "permanent")
             self.assertEqual(memory.lookup("mastodon", "a", today=TODAY)["failures"], 1)
+
+    def test_sqlite_rejects_neighbor_state_machine_schema_without_writing(self):
+        with tempfile.TemporaryDirectory() as folder:
+            db = pathlib.Path(folder) / "shared.db"
+            with sqlite3.connect(db) as conn:
+                conn.executescript("""CREATE TABLE relation_events (
+                    network TEXT, account TEXT, event_id TEXT, kind TEXT,
+                    lane TEXT, occurred_at TEXT, before_state TEXT,
+                    after_state TEXT, version INTEGER);
+                    CREATE TABLE relation_state(network TEXT, account TEXT);
+                    INSERT INTO relation_events VALUES
+                    ('x', 'a', 'id', 'follow', 'outbound', '2026-09-01',
+                     NULL, 'activo', 1);""")
+                before = conn.execute("SELECT * FROM relation_events").fetchall()
+            memory = mem.RelationshipMemory(db)
+            with self.assertRaisesRegex(RuntimeError, "dedicada"):
+                memory.initialize()
+            with sqlite3.connect(db) as conn:
+                self.assertEqual(conn.execute("SELECT * FROM relation_events").fetchall(), before)
+                self.assertEqual(conn.execute("PRAGMA user_version").fetchone()[0], 0)
+                self.assertEqual(conn.execute("SELECT name FROM sqlite_master WHERE name='idx_relation_lookup'").fetchall(), [])
+            with self.assertRaises(ValueError):
+                mem.RelationshipMemory(":memory:")
+
+    def test_sqlite_rejects_same_name_incompatible_columns(self):
+        with tempfile.TemporaryDirectory() as folder:
+            db = pathlib.Path(folder) / "other.db"
+            with sqlite3.connect(db) as conn:
+                conn.execute("CREATE TABLE relation_events(network TEXT, account TEXT)")
+            with self.assertRaisesRegex(RuntimeError, "incompatible"):
+                mem.RelationshipMemory(db).initialize()
+
+    def test_sqlite_csv_malformed_rows_never_replace_history(self):
+        with tempfile.TemporaryDirectory() as folder:
+            db, src = pathlib.Path(folder) / "memory.db", pathlib.Path(folder) / "registro.csv"
+            header = "fecha,cuenta,tipo,notas,resultado\\n"
+            src.write_text(header + "2026-09-01,a,block,,confirmado\\n", encoding="utf-8")
+            memory = mem.RelationshipMemory(db)
+            memory.import_csv("x", src)
+            for bad in ("2026-09-01,b,block,,confirmado,EXTRA\\n",
+                        "2026-09-01,b,block\\n",
+                        \'"2026-09-01,b,block,,confirmado\\n\'):
+                with self.subTest(bad=bad):
+                    src.write_text(header + bad, encoding="utf-8")
+                    with self.assertRaises(ValueError):
+                        memory.import_csv("x", src)
+                    self.assertEqual(memory.lookup("x", "a", today=TODAY)["status"], "permanent")
+                    self.assertEqual(memory.lookup("x", "b", today=TODAY)["status"], "eligible")
 
     def test_integration_discovery_parity_for_nine_networks(self):
         for network in mem.NETWORKS:
