@@ -1,0 +1,19 @@
+text
+# Archivo nuevo: data/instagram/seed_accounts.yaml
+version: 1
+network: instagram
+language: es
+
+seeds:
+  - handle: littleredread
+    niche: romantasy_juvenil
+    priority: 9
+    source: "https://influencers.feedspot.com/spanish_book_instagram_influencers/"
+  - handle: nuribooks
+    niche: romance_fantasia
+    priority: 8
+    source: "https://influencers.feedspot.com/spanish_book_instagram_influencers/"
+  - handle: luciagsobrado
+    niche: autora_fantasia_romance
+    priority: 8
+    source: "https://influencers.feedspot.com/spanish_book_instagram_influencers/"
