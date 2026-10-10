@@ -14,6 +14,7 @@ from html.parser import HTMLParser
 import re
 import unicodedata
 from typing import Mapping
+from urllib.parse import urlsplit
 
 NETWORKS = frozenset(("x", "threads", "facebook", "pinterest", "reddit",
                       "bluesky", "mastodon", "tiktok", "instagram"))
@@ -191,6 +192,17 @@ def _tags(network, row):
     return sorted({x for v in raw if (x := _tag(v))})
 
 
+def _mastodon_global_url(value):
+    """Reject server-less or path-less URLs; server-local IDs may collide."""
+    try:
+        url = urlsplit(value)
+        return (url.scheme in ("http", "https") and bool(url.hostname)
+                and bool(url.path.strip("/")) and not url.username
+                and not url.password)
+    except ValueError:  # e.g. invalid IPv6 authority
+        return False
+
+
 def _normalize(network, source, row, now, max_age):
     if not isinstance(row, Mapping):
         raise ValueError("row is not a mapping")
@@ -199,8 +211,8 @@ def _normalize(network, source, row, now, max_age):
     author = _id(_first(row, fields[1]))
     if network == "mastodon":
         # A server-local status ID is not globally unique in the Fediverse.
-        if not post.startswith(("https://", "http://")) or not author.startswith(("https://", "http://")):
-            raise ValueError("mastodon requires globally scoped URLs")
+        if not _mastodon_global_url(post) or not _mastodon_global_url(author):
+            raise ValueError("mastodon requires global post and author URLs")
     raw = _first(row, fields[2])
     if network == "reddit":
         title = row.get("title")
