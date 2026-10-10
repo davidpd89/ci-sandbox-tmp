@@ -2,7 +2,7 @@
 
 **Fecha:** 10/10/2026. **Rama:** research/perplexity-paridad-adaptadores-redes. **Base:** research/public-reuse-parent. **No merge.**
 
-## Qué se ha verificado
+## Problema: qué se ha verificado
 
 Se contrastó el informe de Perplexity con el repo oficial privado davidpd89/rrss-davidporto-CODE en su rama integracion/crecimiento-2026-10, HEAD **5449513d9b545d0a6a72abf066ab6a779bfdad71** (solo lectura), con el espejo público y con las PR de paridad. Se inspeccionaron directamente los ejecutores bluesky_execute, mastodon_execute, x_execute, threads_execute, facebook_execute, instagram_execute, reddit_execute, pinterest_growth y **tiktok_mobile_execute** (no fiarse del obsoleto tiktok_execute para el flujo móvil).
 
@@ -12,7 +12,7 @@ Hallazgos aplicados:
 - Un fragmento de texto, un índice de feed, un handle, reply_to_id o status_id local **no es un ID global de post**. La salida marca target_portable=False. Las URL solo se consideran transportables si son HTTPS y del dominio permitido de esa red (Mastodon admite hosts federados).
 - tools/network_capabilities.py en el HEAD oficial sigue enumerando ocho redes. **No se modifica aquí**: la PR #43 ya añade Instagram y corrige su detección de tareas; la #81 añade matriz ejecutable de 63 celdas y la #82 cubre drift. Tampoco se duplica #100 (candidatos), #103 (prioridad) ni #108 (evidencia relacional).
 
-## Investigación y decisión de reutilización
+## Alternativas e investigación
 
 | Fuente y SHA fijado | Licencia contrastada | Actividad observada | Decisión |
 | --- | --- | --- | --- |
@@ -25,9 +25,18 @@ Hallazgos aplicados:
 | [Flare @ 834353b](https://github.com/DimensionDev/Flare/tree/834353b116db4e718dbdcb6c9c65723f673a52b1) | AGPL-3.0 | 09/10/2026, Kotlin | No reutilizar código |
 | [socialmediascheduler @ 27d0dcc](https://github.com/Masterjx9/socialmediascheduler/tree/27d0dcc1c50524a161ddf78f41d6a13a491487c4) | MIT | 05/04/2026, TypeScript | Calidad/cobertura insuficiente frente al proyecto actual |
 
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/soxoj/AdsLibrary
+Fecha de consulta: 2026-10-10
+Licencia SPDX: NOASSERTION
+Referencia inmutable: https://github.com/soxoj/AdsLibrary/tree/1ead5b3b6b055901233059f02c203ce38c1beb53
+
+No se identifica licencia SPDX inequívoca en la API: el fichero `Licensce.txt` contiene texto permisivo similar a MIT, pero con atribución llamativa. Se reutiliza exclusivamente el patrón técnico observado en `AdsLibrary/core/base.py`; no se ha copiado código. Los demás repositorios, licencias y SHAs figuran en la tabla anterior.
+
 No se copian líneas de ningún repositorio externo. Se reutiliza la **separación de capacidades declaradas y modelo normalizado** de AdsLibrary, y se conservan los clientes y flujos probados del propio proyecto. La dependencia de producción añadida es **cero**.
 
-## Código integrado en esta PR
+## Decisión: código integrado en esta PR
 
 - tools/social_plan_contract.py: dataclasses inmutables de capacidades, acciones, incidencias y resultados; ReadOnlyAdapter como Protocol; AdapterRegistry con rechazo de duplicados; nueve PlanAdapter de lectura; proyección con familia y kind nativo sin colapsar semánticas; marcador de identidad portable; observación de resultados con éxito solo para confirmado/publicado **exactos**. Errores desconocidos nunca implican reintento seguro.
 - CLI puramente local para diagnosticar un plan JSON existente. Devuelve solo agregados (red, número de acciones, incidencias, kind y objetivos sin identidad portable); nunca publica el texto de comentarios ni objetivos.
@@ -41,7 +50,7 @@ Ejecutar desde la raíz:
 
 El CLI devuelve 0 si el plan fue interpretable íntegramente, 1 si hubo incidencias y 2 para archivo/JSON/esquema inválido. **No es un preflight para permitir escrituras** ni certifica que la API/navegador acepte el destino; los ejecutores conservan sus propios gates.
 
-## Resultados y revisión adversarial
+## Pruebas y revisión adversarial
 
 Punto de partida: cero puentes homogéneos de **planes finales nativos** en la base de la PR; la matriz actual trata cableado/presencia de capacidades, no traducción de planes. Nuevo estado: nueve proyectores offline y un resultado normalizado de observación, preservando vocabulario y procedencia.
 
@@ -49,7 +58,7 @@ Punto de partida: cero puentes homogéneos de **planes finales nativos** en la b
 
 **Tercera revisión:** comprobada la lista estricta de acciones de TikTok móvil y el default de índice de Facebook contra sus ejecutores oficiales; desestimada la sugerencia de sustituir el core por Postiz o de agregar RESPX a tests que no envían HTTP. No se añaden mecanismos de programación ni se llaman APIs.
 
-## Integración y rollback
+## Retirada e integración
 
 El módulo es un **puente de lectura opt-in**; no está conectado a los nueve procesos de ejecución ni transforma planes en comandos. Claude podrá consumir project() desde el ranking y observe() desde un adaptador de logs, conservando las tres colas WEB/API/MOBILE y el bloqueo/validación propios de cada ejecutor. La importación del módulo no crea archivos ni abre sesiones. Para revertir, eliminar solo tools/social_plan_contract.py, tests/test_social_plan_contract.py y este documento; no hay migraciones ni datos persistidos.
 
