@@ -104,8 +104,11 @@ def _rotate_queries(n=2):
         if kind == "busquedas":
             values += terms(network, "hashtags")
         return values
+    # Tick de seis horas: una cuota unitaria no debe omitir un snapshot
+    # que expira antes de la siguiente rotación diaria.
+    trial_tick = day * 4 + datetime.datetime.now().hour // 6
     trial = hqc.select("instagram", "busquedas", TRIAL_QUERY_POOL,
-                       budget=1, tick=day, reader=vocabulary)[0]
+                       budget=1, tick=trial_tick, reader=vocabulary)[0]
     return [(q, "validada") for q in verified] + [(trial, "prueba_no_validada")]
 
 
