@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+from contextlib import closing
 import datetime as dt
 import importlib.util
 import json
@@ -142,7 +143,7 @@ class PlannerBridge(unittest.TestCase):
                        "pins": [{"author": "p_pins", "preflight": pre(follow_eligible=False),
                                  "target_created_at": "2026-10-10"}]}}
         tt = {"network": "tiktok", "lane": "MOBILE",
-              "data": {"candidates": [{"handle": "t_author", "preflight": pre(),
+              "data": {"candidates": [{"handle": "t_author", "preflight": pre(), "kind": "follow",
                         "posts": [{"created_at": "2026-10-10",
                                    "preflight": pre(follow_eligible=False)}]}]}}
         result, _ = bridge.build_snapshot([pi, tt], {}, [], today=TODAY)
@@ -157,7 +158,7 @@ class PlannerBridge(unittest.TestCase):
                 writer = csv.DictWriter(stream, ["cuenta", "tipo", "fecha", "resultado"])
                 writer.writeheader()
             dbpath = root / "events.sqlite"
-            with sqlite3.connect(dbpath) as db:
+            with closing(sqlite3.connect(dbpath)) as db, db:
                 db.execute("CREATE TABLE verified_inbound (network TEXT, event_id TEXT,"
                            " author_id TEXT, handle TEXT, kind TEXT, day TEXT)")
                 db.execute("INSERT INTO verified_inbound VALUES (?,?,?,?,?,?)",
