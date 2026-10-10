@@ -77,6 +77,20 @@ TAG_QUERY_POOL = [
 ]
 
 
+def _lexical_tag_pool(seed_pool, reader=None):
+    """Amplía etiquetas sin forzar la palabra «fantasía» a otros nichos.
+
+    En el transporte Bluesky se combinan q y tag: q debe referirse a la
+    propia etiqueta nueva, no limitar #lectura/#año a posts de fantasía.
+    Las parejas verificadas del pool original permanecen intactas.
+    """
+    import hashtag_query_consumers as hqc
+    _, tags = hqc.combine(
+        "bluesky", "hashtags", [tag for tag, _ in seed_pool], reader=reader
+    )
+    return list(seed_pool) + [(tag[1:], tag[1:]) for tag in tags]
+
+
 def _query_key(kind, item):
     return kind + ":" + "|".join(str(part).casefold() for part in item)
 
@@ -360,9 +374,8 @@ def scan():
     import hashtag_query_consumers as hqc
     # Pool no persistente: solo lectura; el histórico decide frecuencia.
     _, lexical = hqc.combine("bluesky", "busquedas", [q for q, _ in QUERY_POOL])
-    _, tags = hqc.combine("bluesky", "hashtags", [q for q, _ in TAG_QUERY_POOL])
     query_pool = QUERY_POOL + [(q, "es") for q in lexical]
-    tag_pool = TAG_QUERY_POOL + [(tag[1:], "fantasía") for tag in tags]
+    tag_pool = _lexical_tag_pool(TAG_QUERY_POOL)
 
     # No hacer tres búsquedas por rutina. Abrir superficies solo si las
     # anteriores no han producido suficiente material revisable.
