@@ -1,0 +1,51 @@
+python
+# Archivo propuesto: tools/x_discovery_catalog.py
+# Licencia: MIT — proyecto interno davidpd89/ci-sandbox-tmp
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+CATALOG = ROOT / "00_OPERATIVO" / "x" / "discovery_x_v2.json"
+
+
+def load_catalog() -> dict:
+    if not CATALOG.exists():
+        return {"hashtags_core": [], "hashtags_intent": [], "search_queries": []}
+
+    with CATALOG.open(encoding="utf-8") as stream:
+        data = json.load(stream)
+
+    required = {"id", "texto", "tipo", "estado"}
+    for section, items in data.items():
+        for item in items:
+            missing = required - item.keys()
+            if missing:
+                raise ValueError(f"Entrada incompleta en {section}: {missing}")
+
+    return data
+
+
+def active_terms(kind: str, suffix: str = "") -> list[str]:
+    data = load_catalog().get(kind, [])
+    seen: set[str] = set()
+    output: list[str] = []
+
+    for item in data:
+        if item.get("estado") != "activo":
+            continue
+
+        text = str(item["texto"]).strip()
+        if kind.startswith("hashtags"):
+            text = text.lstrip("#")
+
+        key = text.casefold()
+        if not text or key in seen:
+            continue
+
+        seen.add(key)
+        output.append(text + suffix)
+
+    return output
