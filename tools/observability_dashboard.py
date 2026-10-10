@@ -80,24 +80,47 @@ def _read_json(path):
         return None
 
 
+def _madrid_timezone():
+    """Mismo criterio que circuit_breaker._madrid_timezone del repositorio oficial."""
+    try:
+        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+        try:
+            return ZoneInfo("Europe/Madrid")
+        except ZoneInfoNotFoundError:
+            pass  # Windows sin base tzdata: usar zona local configurada
+    except ImportError:
+        pass
+    return dt.datetime.now().astimezone().tzinfo
+
+
 def _breaker(path, now):
-    source = _read_json(path)
-    if source is None:
+    if not path.is_file():
         return {"status": "sin_datos", "fails": None}
+    source = _read_json(path)
     if not isinstance(source, dict):
         return {"status": "invalido", "fails": None}
     fails = source.get("fails")
-    if type(fails) is not int or fails < 0:
+    if (type(fails) is not int or not 0 <= fails <= 1_000_000
+            or "open_until" not in source
+            or type(source.get("manual_hold", False)) is not bool):
         return {"status": "invalido", "fails": None}
-    until = source.get("open_until")
-    if until:
+    until = source["open_until"]
+    expiry = None
+    if until is not None:
+        if not isinstance(until, str) or not until or len(until) > 48:
+            return {"status": "invalido", "fails": None}
         try:
             expiry = dt.datetime.fromisoformat(until)
-            if expiry.tzinfo is not None:  # estado local legacy: sin zona
-                return {"status": "invalido", "fails": None}
-        except (TypeError, ValueError):
+        except (ValueError, OverflowError):
             return {"status": "invalido", "fails": None}
-        if expiry > now:
+    # Una retencion manual sigue activa incluso cuando el cooldown ha expirado.
+    if source.get("manual_hold"):
+        return {"status": "revision_manual", "fails": fails}
+    if expiry is not None:
+        zone = _madrid_timezone()
+        current = now if now.tzinfo is not None else now.replace(tzinfo=zone, fold=1)
+        expiry = expiry if expiry.tzinfo is not None else expiry.replace(tzinfo=zone, fold=1)
+        if expiry.astimezone(dt.timezone.utc) > current.astimezone(dt.timezone.utc):
             return {"status": "abierto", "fails": fails}
     return {"status": "cerrado", "fails": fails}
 
@@ -253,6 +276,8 @@ def collect(root, *, as_of, days=7):
         alerts = []
         if breaker["status"] == "abierto":
             alerts.append("breaker_abierto")
+        if breaker["status"] == "revision_manual":
+            alerts.append("retencion_manual")
         if round_stats is not None and round_stats["states"]["error"]:
             alerts.append("rondas_con_error")
         if round_stats is not None and round_stats["states"]["parcial"]:
@@ -275,7 +300,7 @@ def collect(root, *, as_of, days=7):
             "confirmed_records_observed": sum(action_values) if action_values else None,
             "networks_with_round_data": len(round_values),
             "networks_with_action_data": len(action_values),
-            "open_breakers": sum(networks[n]["breaker"]["status"] == "abierto" for n in members),
+            "open_breakers": sum(networks[n]["breaker"]["status"] in ("abierto", "revision_manual") for n in members),
             "networks_with_alerts": sum(bool(networks[n]["alerts"]) for n in members),
         }
     return {"schema_version": 1, "as_of": now.isoformat(timespec="seconds"),
@@ -301,7 +326,7 @@ def render_html(report):
         "<p>Ventana de " + esc(report["days"]) + " días. Corte: " + esc(report["as_of"]) +
         ". Datos agregados; sin cuentas ni contenidos.</p>",
         "<h2>Colas</h2><div class=scroll><table><thead><tr><th>Cola</th><th>Rondas observadas</th>"
-        "<th>Confirmaciones registradas</th><th>Cobertura rondas</th><th>Cortacircuitos abiertos</th></tr></thead><tbody>",
+        "<th>Confirmaciones registradas</th><th>Cobertura rondas</th><th>Cortacircuitos activos</th></tr></thead><tbody>",
     ]
     def fmt(value):
         return "—" if value is None else esc(value)
