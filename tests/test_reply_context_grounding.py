@@ -70,6 +70,15 @@ class ContextPacketTests(unittest.TestCase):
         p = self.packet(published_at=(NOW + timedelta(minutes=6)).isoformat())
         self.assertFalse(p.eligible)
 
+    def test_extreme_offset_time_does_not_crash_batch(self):
+        for published in ("0001-01-01T00:00:00+14:00",
+                          "9999-12-31T23:59:59-14:00",
+                          "2026-10-09T12:00:00+25:00"):
+            with self.subTest(published=published):
+                packet = self.packet(published_at=published)
+                self.assertFalse(packet.eligible)
+                self.assertIn("publication_time_unknown", packet.warnings)
+
     def test_bad_now(self):
         with self.assertRaises(ValueError):
             build_packet(sample(), now=datetime(2026, 10, 10))
