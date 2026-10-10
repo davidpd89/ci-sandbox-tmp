@@ -328,8 +328,8 @@ class ObservationCollector:
                     raise ValueError
                 label = _tag(row.get("tag"))
                 event = _id(row.get("event_id"))
-                window = _time(row.get("window"))
-                if window > self.now or self.now - window > timedelta(days=self.max_age_days):
+                window_dt = _time(row.get("window"))
+                if window_dt > self.now or self.now - window_dt > timedelta(days=self.max_age_days):
                     raise ValueError
                 vals = tuple(row[k] for k in ("eligible", "engaged", "replies", "followers"))
                 if (not label or any(type(v) is not int or v < 0 for v in vals)
@@ -339,8 +339,9 @@ class ObservationCollector:
                 self.counts["feedback_invalid"] += 1
                 continue
 
+            window_iso = window_dt.isoformat()
             event_key = (network, label, event)
-            key = (network, label, window.isoformat(), event)
+            key = (network, label, window_iso, event)
 
             if event_key in self._feedback_conflicts:
                 self.counts["feedback_conflicts"] += 1
@@ -348,7 +349,7 @@ class ObservationCollector:
 
             if event_key in self._feedback_events:
                 prev_window, prev_vals = self._feedback_events[event_key]
-                if prev_window == window.isoformat() and prev_vals == vals:
+                if prev_window == window_iso and prev_vals == vals:
                     self.counts["feedback_duplicates"] += 1
                 else:
                     # Conflict across windows or values for same event_id
@@ -363,7 +364,7 @@ class ObservationCollector:
                     self.counts["capacity_skipped"] += 1
                     continue
                 self._feedback[key] = vals
-                self._feedback_events[event_key] = (window.isoformat(), vals)
+                self._feedback_events[event_key] = (window_iso, vals)
 
     def feedback_aggregates(self):
         """Safe to export: no event identifiers, source or per-post payload."""
@@ -395,12 +396,11 @@ def ingest_collector_payload(collector: ObservationCollector, network: str,
                             queue: str, source: str, raw_rows: list[dict]) -> int:
     """Convenience helper to ingest posts from read-only scanner into a collector.
 
-    Returns the count of accepted posts for this batch.
+    Returns the count of new unique posts added to the collector.
     """
-    before = collector.aggregate_report()["unique_posts"]
+    before = len(collector._posts)
     collector.add_posts(network, queue, source, raw_rows)
-    after = collector.aggregate_report()["unique_posts"]
-    return max(0, after - before)
+    return len(collector._posts) - before
 
 
 def to_snapshot_kwargs(collector: ObservationCollector) -> dict[str, Any]:
