@@ -19,6 +19,7 @@ import pinterest_niche
 WINDOWS = ("90d", "lifetime_metrics")
 FIELDS = ("impression", "pin_click", "clickthrough", "save")
 MAX_PINS = 10000
+PROVENANCES = ("offline_unverified_json", "synthetic_demo", "api_v5_verified_readonly")
 
 
 def _count(source, name):
@@ -26,12 +27,14 @@ def _count(source, name):
     return val if type(val) is int and val >= 0 else None
 
 
-def summarize(pins, *, window="90d", min_impressions=100):
+def summarize(pins, *, window="90d", min_impressions=100, provenance="offline_unverified_json"):
     """Comparación descriptiva de Pins propios; sin decidir interacciones ajenas.
 
     Un dato ausente permanece None. Nunca sustituir lifetime por 90d:
     son cohortes de tiempo no comparables. IDs duplicados fallan cerrado.
     """
+    if provenance not in PROVENANCES:
+        raise ValueError("procedencia de métricas inválida")
     if window not in WINDOWS:
         raise ValueError("ventana de métricas desconocida")
     if type(min_impressions) is not int or not 1 <= min_impressions <= 1000000:
@@ -67,7 +70,8 @@ def summarize(pins, *, window="90d", min_impressions=100):
         rows.append({
             "image_dimensions": [image[1], image[2]] if image else None,
             "vertical_2_3": vertical_2_3,
-            "network": "pinterest", "source": "api_v5_owned_pin_metrics",
+            "network": "pinterest", "source": provenance,
+            "metric_schema": "pinterest_v5_pin_metrics",
             "pin_id": native_id,
             "title": str(pin.get("title") or "")[:100],
             "window": window,
@@ -81,7 +85,8 @@ def summarize(pins, *, window="90d", min_impressions=100):
                        -r["metrics"]["impression"], r["pin_id"]),
     )
     return {
-        "network": "pinterest", "source": "api_v5_owned_pin_metrics",
+        "network": "pinterest", "source": provenance,
+        "metric_schema": "pinterest_v5_pin_metrics",
         "window": window, "min_impressions": min_impressions,
         "total_pins": len(rows), "comparable_pins": len(comparable),
         "ranked": comparable, "unranked": [r for r in rows if not r["comparable"]],
@@ -112,6 +117,7 @@ def main(argv=None):
     parser.add_argument("--min-impressions", type=int, default=100)
     args = parser.parse_args(argv)
     if args.demo:
+        provenance = "synthetic_demo"
         pins = [
             {"id": "101", "title": "Fantasía juvenil", "pin_metrics": {"90d": {
                 "impression": 1000, "pin_click": 30, "clickthrough": 12}}},
@@ -119,14 +125,17 @@ def main(argv=None):
                 "impression": 20, "pin_click": 3, "clickthrough": 2}}},
         ]
     elif args.input:
+        provenance = "offline_unverified_json"
         pins = _from_json(args.input)
     else:
+        provenance = "api_v5_verified_readonly"
         import pinterest_api_audit as audit
         # Lectura explícita, verificación de cuenta y paginación completa.
         pins = list(audit.list_pins(os.environ.get("PINTEREST_ACCESS_TOKEN"),
                                    include_metrics=True))
     print(json.dumps(summarize(pins, window=args.window,
-                               min_impressions=args.min_impressions),
+                               min_impressions=args.min_impressions,
+                               provenance=provenance),
                      ensure_ascii=False, indent=2))
     return 0
 
