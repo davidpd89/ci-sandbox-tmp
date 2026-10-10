@@ -183,13 +183,13 @@ class HistoricalMemoryTests(unittest.TestCase):
     def test_sqlite_csv_malformed_rows_never_replace_history(self):
         with tempfile.TemporaryDirectory() as folder:
             db, src = pathlib.Path(folder) / "memory.db", pathlib.Path(folder) / "registro.csv"
-            header = "fecha,cuenta,tipo,notas,resultado\\n"
-            src.write_text(header + "2026-09-01,a,block,,confirmado\\n", encoding="utf-8")
+            header = "fecha,cuenta,tipo,notas,resultado\n"
+            src.write_text(header + "2026-09-01,a,block,,confirmado\n", encoding="utf-8")
             memory = mem.RelationshipMemory(db)
             memory.import_csv("x", src)
-            for bad in ("2026-09-01,b,block,,confirmado,EXTRA\\n",
-                        "2026-09-01,b,block\\n",
-                        \'"2026-09-01,b,block,,confirmado\\n\'):
+            for bad in ("2026-09-01,b,block,,confirmado,EXTRA\n",
+                        "2026-09-01,b,block\n",
+                        '"2026-09-01,b,block,,confirmado\n'):
                 with self.subTest(bad=bad):
                     src.write_text(header + bad, encoding="utf-8")
                     with self.assertRaises(ValueError):
