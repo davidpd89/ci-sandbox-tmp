@@ -1,0 +1,9 @@
+python
+# Fuente: https://atproto.blue/guides/reading/
+from atproto import Client
+
+def get_author_posts(client: Client, handle: str):
+    profile_feed = client.get_author_feed(actor=handle, filter="posts_no_replies")
+
+    for feed_view in profile_feed.feed:
+        yield feed_view.post
