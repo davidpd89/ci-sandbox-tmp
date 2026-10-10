@@ -113,10 +113,7 @@ ledger/CRM ni transferencia de acciones operativas.
 
 **Limitación intencionada:** Sin timestamp remoto, una observación tardía no
 demuestra retrospectivamente cuándo ocurrió el evento. Se exige identidad
-coherente en cada captura y no se reescribe el pasado. Sigue pendiente el
-acoplamiento con colectores reales, #85 (cerrada sin merge), y el manifiesto
-de campaña padre; la matriz de adaptadores no equivale a nueve verificadores
-nativos operativos.
+coherente en cada captura y no se reescribe el pasado. Sigue pendiente el acoplamiento con colectores reales y el manifiesto de campaña padre; la matriz de adaptadores no equivale a nueve verificadores nativos operativos. El código de #85 consta ya en la base y el oficial por sincronización, aunque la PR #85 figura cerrada sin merge.
 
 **Tercera pasada adversarial:** entradas no fiables con `network`, `queue` o
 `action` JSON de tipo lista/diccionario ya no pueden provocar `TypeError`
@@ -129,3 +126,35 @@ Se rechazan mediante `AliasError`, con regresiones de replay y eventos.
 el repositorio oficial. Se elimina la segunda implementación de las reglas
 de handle para las nueve redes; las llamadas existentes siguen recibiendo
 `AliasError`. Se prueba el adaptador canónico con las nueve redes.
+
+## Matriz de procedencia real tras sincronizar con el código oficial
+
+El siguiente inventario distingue explícitamente **campo observado en código**
+de **identidad persistente verificada**, así como la captura real frente al
+sobre sintético que acepta el adaptador:
+
+| Red | Fuente/campo del código oficial consultado | Verificador nativo conectado | Timestamp + WEB/API/MOBILE | Prueba negativa |
+| --- | --- | --- | --- | --- |
+| Bluesky | `candidate_identity.resolve_stable_account` lee `did`; escáner `handle` | Falta comprobación DID→handle→DID en productor | Pendiente mapear tiempos/colas al sobre | Se rechaza `did_document_handle_verified` no booleano |
+| Mastodon | `candidate_identity` lee `acct`, `account_id`, `instance`; **ninguno es URI actor** | Pendiente obtener y comprobar `actor_uri` real | Pendiente | Se rechaza `actor_uri_confirmed` no booleano |
+| X | Solo contrato `remote_account_id` normalizado, no origen probado | Pendiente | Pendiente | Se rechaza `remote_id_verified` no booleano |
+| Threads | Contrato normalizado, sin trazabilidad demostrada de cuenta remota persistente | Pendiente | Pendiente | Igual |
+| Facebook | Contrato normalizado, sin trazabilidad demostrada | Pendiente | Pendiente | Igual |
+| Pinterest | Contrato normalizado, sin trazabilidad demostrada | Pendiente | Pendiente | Igual |
+| Reddit | Contrato normalizado, sin trazabilidad demostrada | Pendiente | Pendiente | Igual |
+| TikTok | Contrato normalizado, sin trazabilidad demostrada | Pendiente | Pendiente | Igual |
+| Instagram | Contrato normalizado, sin trazabilidad demostrada | Pendiente | Pendiente | Igual |
+
+La matriz sintética de **nueve redes × tres colas** prueba únicamente la
+interfaz offline. Los campos marcados pendientes no se presumen existentes
+ni verificados en productores reales. La integración futura deberá aportar
+fixtures anonimizados y comprobar por cada red `source`, `proof`,
+`observed_at`, tipo de ID remoto, modo de captura y rechazo de otro dueño,
+sin activar acciones.
+
+Se ha constatado que `tools/identity_profiles.py` y
+`tools/identity_graph.py` están en la **base sincronizada** y en el
+repositorio oficial; el HEAD de la PR #85 sigue cerrado sin marca de merge.
+La indicación histórica «después de aprobar #85» queda superada por la
+presencia real de esas funciones: se reutiliza el contrato canónico, sin
+rehacer la lógica de identidad ni reescribir ledgers.
