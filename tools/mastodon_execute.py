@@ -192,6 +192,8 @@ def _retry_sleep(seconds):
 def _do(kind, item):
     created = outcome = None
     if kind == "reply":
+        import voice_output_finalization as voice
+        voice.inspect(item["text"], network="mastodon", queue="API")
         created = m.reply_to(item["status_id"], item["text"])
     elif kind == "follow":
         outcome = m.follow(item["handle"].lstrip("@"), item.get("account_id"))
