@@ -1,7 +1,7 @@
 """Distribucion offline de antiguedad del post destino, por red.
 
 Complementa el gate de tools/post_age_policy.py (#8/privado); nunca autoriza
-acciones. Solo se aceptan campos de publicacion con procedencia explicita.
+acciones. Solo se aceptan fechas del objetivo explicitas o payloads de post sin accion.
 No se leen cuentas, navegadores ni APIs; no se imprimen posts, URLs ni IDs.
 Python 3.11, biblioteca estandar (Windows/Linux).
 """
@@ -78,29 +78,38 @@ def _dates(network, row):
     nunca escoger el mas reciente para mejorar artificialmente el embudo.
     """
     sources = []
-    for field in ORIGIN_FIELDS + API_FIELDS.get(network, ()):
+    # Una tarea/accion tiene metadatos propios. Solo los campos que designan
+    # explicitamente el post destino son aptos para medir su antiguedad.
+    for field in ORIGIN_FIELDS:
         when = _parse(row.get(field))
         if when is not None:
             sources.append((field, when))
-    # Un escaner puede declarar expresamente que la raiz ES un post, no una tarea.
-    if row.get("source_kind") == "post":
+    # Los campos genericos de la API (incluidos record/status/media) son
+    # admisibles UNICAMENTE en un payload declarado como post sin accion.
+    # En un plan podrian describir el wrapper, un repost o nuestro propio post.
+    raw_post = row.get("source_kind") == "post" and not row.get("kind")
+    if raw_post:
+        for field in API_FIELDS.get(network, ()):
+            when = _parse(row.get(field))
+            if when is not None:
+                sources.append((field, when))
         for field in NESTED_FIELDS:
             when = _parse(row.get(field))
             if when is not None:
                 sources.append(("post." + field, when))
-    post = row.get("post")
-    for prefix, record in (
-        ("post", post),
-        ("record", row.get("record")),
-        ("post.record", post.get("record") if isinstance(post, dict) else None),
-        ("status", row.get("status")),
-        ("media", row.get("media")),
-    ):
-        if isinstance(record, dict):
-            for field in NESTED_FIELDS:
-                when = _parse(record.get(field))
-                if when is not None:
-                    sources.append((prefix + "." + field, when))
+        post = row.get("post")
+        for prefix, record in (
+            ("post", post),
+            ("record", row.get("record")),
+            ("post.record", post.get("record") if isinstance(post, dict) else None),
+            ("status", row.get("status")),
+            ("media", row.get("media")),
+        ):
+            if isinstance(record, dict):
+                for field in NESTED_FIELDS:
+                    when = _parse(record.get(field))
+                    if when is not None:
+                        sources.append((prefix + "." + field, when))
     return sources
 
 
@@ -184,6 +193,24 @@ def _load_plan(path):
     return payload
 
 
+def _snapshot_paths():
+    """Reutiliza el contrato de rutas del gate cuando esta instalado (#8).
+
+    El fallback permite ejecutar el medidor aisladamente en el mirror. Una
+    diferencia de claves en el contrato integrado se trata como error visible.
+    """
+    try:
+        import post_age_policy
+    except ImportError:
+        return PLAN_SNAPSHOTS
+    paths = getattr(post_age_policy, "PLAN_SNAPSHOTS", None)
+    if paths is None:
+        return PLAN_SNAPSHOTS
+    if not isinstance(paths, dict) or set(paths) != set(NETWORKS):
+        raise ValueError("contrato de snapshots incompatible")
+    return paths
+
+
 def audit_recent_plans(root, *, now=None, max_age_hours=36):
     """Instantanea agregada y read-only de las nueve rutas verificadas."""
     now = now or dt.datetime.now(dt.timezone.utc)
@@ -191,7 +218,7 @@ def audit_recent_plans(root, *, now=None, max_age_hours=36):
         raise ValueError("reloj o ventana invalidos")
     root = Path(root)
     out = {}
-    for network, relpath in PLAN_SNAPSHOTS.items():
+    for network, relpath in _snapshot_paths().items():
         if relpath is None:
             out[network] = {"estado": "sin_ruta_verificada"}
             continue
