@@ -225,6 +225,21 @@ class InboundLoyaltyTests(unittest.TestCase):
         self.assertEqual(kinds, ["thank_review"])
         self.assertNotIn("like", json.dumps(result))
 
+    def test_first_time_follow_is_worth_a_review(self):
+        result = self.build([obs(kind="follow")])
+        proposals = result["queues"]["API"][0]["proposals"]
+        self.assertEqual([p["kind"] for p in proposals], ["thank_review"])
+
+    def test_shared_lane_fairness_across_networks(self):
+        rows = [obs(network="x", handle=f"x{i}", kind="follow", event_id=f"x{i}",
+                    day="2026-10-10") for i in range(3)]
+        rows += [obs(network="facebook", handle="fb", kind="follow",
+                     event_id="fb", day="2026-10-08")]
+        result = self.build(rows, per_lane=2)
+        self.assertEqual({row["network"] for row in result["queues"]["WEB"]},
+                         {"x", "facebook"})
+        self.assertEqual(len(result["queues"]["WEB"]), 2)
+
     def test_post_data_must_be_explicitly_verified(self):
         rows = [obs(event_id="a"), obs(event_id="b", day="2026-10-08")]
         with self.assertRaises(ValueError):
