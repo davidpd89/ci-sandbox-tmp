@@ -16,10 +16,16 @@ from __future__ import annotations
 import argparse
 import json
 
-NETWORKS = (
+# Universo de inventario: las nueve redes con contenido/colas.
+INVENTORY_NETWORKS = (
     "bluesky", "mastodon", "x", "threads",
     "facebook", "instagram", "pinterest", "reddit", "tiktok",
 )
+# Compatibilidad del contrato de ejecución de texto/descubrimiento vigente.
+# Instagram se inventaría pero sus rutas no están certificadas por
+# network_policy_contracts.TEXT_EXECUTION_ROUTES ni discovery_graph.
+# NO ampliar este conjunto sin conectar y verificar esas rutas reales.
+NETWORKS = tuple(net for net in INVENTORY_NETWORKS if net != "instagram")
 FEATURES = (
     "pipeline", "unfollow_adapter", "unfollow_scheduled",
     "inbound_harvest", "loyalty_scheduled", "gpt_writer_scheduled",
@@ -54,7 +60,7 @@ def build_matrix(*, pipelines=None, cleanup_adapters=None, harvesters=None):
         harvesters = HARVEST
 
     out = {}
-    for net in NETWORKS:
+    for net in INVENTORY_NETWORKS:
         pipe = pipelines.get(net) or {}
         has_adapter = net in cleanup_adapters
         has_harvest = net in harvesters
