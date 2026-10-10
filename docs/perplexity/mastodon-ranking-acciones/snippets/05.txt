@@ -1,0 +1,65 @@
+python
+# Adaptación propia para davidpd89/ci-sandbox-tmp.
+# Campos fuente: https://docs.joinmastodon.org/methods/statuses/
+# Entidad Status: https://docs.joinmastodon.org/entities/Status/
+
+import html
+import re
+from datetime import datetime, timezone
+
+TAG_RE = re.compile(r"<[^>]+>")
+
+def clean_content(status):
+    raw = status.get("content") or ""
+    text = html.unescape(TAG_RE.sub(" ", raw))
+    return re.sub(r"\s+", " ", text).strip()
+
+def conversation_score(status):
+    replies = int(status.get("replies_count") or 0)
+    favourites = int(status.get("favourites_count") or 0)
+    boosts = int(status.get("reblogs_count") or 0)
+    text = clean_content(status).lower()
+
+    question_bonus = 0.2 if "?" in text else 0.0
+    recommendation_bonus = 0.2 if any(
+        word in text for word in ("recomend", "qué leo", "que leo", "sugerencia")
+    ) else 0.0
+
+    engagement = min(1.0, (replies * 2 + favourites + boosts) / 20)
+    return min(1.0, engagement + question_bonus + recommendation_bonus)
+
+def post_affinity(status, topics):
+    text = clean_content(status).lower()
+    tags = " ".join(t.get("name", "") for t in status.get("tags") or []).lower()
+    haystack = f"{text} {tags}"
+    hits = sum(1 for topic in topics if topic.lower() in haystack)
+    return min(1.0, hits / max(1, len(topics) // 3))
+
+def freshness_score(status, max_age_hours=72):
+    created = status.get("created_at")
+    if not created:
+        return 0.0
+    dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+    age_hours = max(0.0, (datetime.now(timezone.utc) - dt).total_seconds() / 3600)
+    if age_hours > max_age_hours:
+        return 0.0
+    return 1 - (age_hours / max_age_hours)
+
+def score_post(status, config):
+    weights = config["mastodon_scoring"]["reply_weights"]
+    limits = config["mastodon_scoring"]["limits"]
+    topics = config["mastodon_scoring"]["topics"]
+
+    language = (status.get("language") or "").lower()
+    language_score = 1.0 if language in config["mastodon_scoring"]["languages"] else 0.0
+
+    account = status.get("account") or {}
+    author_activity = activity_score(account, limits["max_account_inactivity_days"])
+
+    return round(min(1.0, (
+        weights["capacidad_conversacion"] * conversation_score(status)
+        + weights["afinidad_tematica"] * post_affinity(status, topics)
+        + weights["actividad_autor"] * author_activity
+        + weights["idioma_es"] * language_score
+        + weights["frescura"] * freshness_score(status, limits["max_post_age_hours"])
+    )), 4)
