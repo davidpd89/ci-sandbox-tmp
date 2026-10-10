@@ -7,3 +7,5 @@ requests>=2.32,<3
 tzdata>=2026.1,<2027
 pytest>=8,<10
 pyflakes>=3,<4
+# Parser YAML mantenido para comprobar identidades de workflows (PR #96).
+PyYAML==6.0.3
