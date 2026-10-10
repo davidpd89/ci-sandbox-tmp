@@ -67,6 +67,19 @@ class TestSerpImport(unittest.TestCase):
         self.assertEqual(r["counts"]["duplicate"], 1)
         self.assertEqual(r["candidates"][0]["intent"], "pide_recomendacion")
 
+    def test_duplicate_with_wrong_declared_network_does_not_poison_valid_result(self):
+        url = "https://facebook.com/club/posts/123"
+        bad = self.row(url, network="instagram")
+        good = self.row(url)
+        r = mod.import_results([bad, good])
+        self.assertEqual(r["review_count"], 1)
+        self.assertEqual(r["candidates"][0]["network"], "facebook")
+
+    def test_url_token_never_exported(self):
+        r = mod.import_results([self.row("https://facebook.com/club/posts/123?access_token=TOPSECRET")])
+        self.assertEqual(r["review_count"], 0)
+        self.assertNotIn("TOPSECRET", json.dumps(r))
+
     def test_encoded_host_path_collision_not_accepted(self):
         rows = [self.row("https://facebook.com.evil.example/name/posts/42"),
                 self.row("https://facebook.com@evil.example/name/posts/42"),
