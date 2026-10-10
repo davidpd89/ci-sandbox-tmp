@@ -60,11 +60,24 @@ def profile_link_ready(red, label, path=None):
 DATE_BOUND = re.compile(r"\b(hoy|mañana|esta noche|esta tarde|esta mañana|este (?:lunes|martes|miércoles|jueves|viernes|sábado|domingo)|ayer|dentro de \d+ días)\b", re.IGNORECASE)
 
 
+def _to_utc_instant(dt_or_now, tz_name="Europe/Madrid"):
+    if dt_or_now is None:
+        return None
+    if isinstance(dt_or_now, datetime.datetime):
+        if dt_or_now.tzinfo is None:
+            tz = ZoneInfo(tz_name)
+            return dt_or_now.replace(tzinfo=tz).astimezone(datetime.timezone.utc)
+        return dt_or_now.astimezone(datetime.timezone.utc)
+    return None
+
+
 def blockers_of(item, issues_by_path, now=None):
     """Motivos por los que una ficha NO se publica sola (lista vacia = se puede)."""
     reasons = []
     if DATE_BOUND.search(item.get("texto") or ""):
-        late = ((now or datetime.datetime.now()) - item["fecha_hora"]).days
+        now_utc = _to_utc_instant(now or datetime.datetime.now(ZoneInfo("Europe/Madrid")))
+        item_utc = item.get("fecha_hora_utc") or _to_utc_instant(item.get("fecha_hora"))
+        late = (now_utc - item_utc).days if (now_utc and item_utc) else 0
         if late >= 1:
             reasons.append("el texto depende de la fecha («hoy», «mañana»…) y ya esta vencido")
     estado = (item.get("estado") or "").casefold()
@@ -87,9 +100,11 @@ def blockers_of(item, issues_by_path, now=None):
 def eligible(red, now, config, issues_by_path):
     """(publicable, descartadas): ficha vencida mas antigua primero entre las que pasan todas las comprobaciones."""
     ok, skipped = [], []
-    for item in sorted(cq.due_items(red, now), key=lambda i: i["fecha_hora"]):
+    now_utc = _to_utc_instant(now or datetime.datetime.now(ZoneInfo("Europe/Madrid")))
+    for item in sorted(cq.due_items(red, now), key=lambda i: i.get("fecha_hora_utc") or _to_utc_instant(i["fecha_hora"])):
         reasons = blockers_of(item, issues_by_path, now)
-        late = (now - item["fecha_hora"]).days
+        item_utc = item.get("fecha_hora_utc") or _to_utc_instant(item["fecha_hora"])
+        late = (now_utc - item_utc).days if (now_utc and item_utc) else 0
         if late > config["max_overdue_days"]:
             reasons.append(f"vencida hace {late} dias (limite {config['max_overdue_days']}): decide David si sigue vigente")
         (skipped if reasons else ok).append((item, reasons))
@@ -206,10 +221,12 @@ def last_auto_publication(red, log_path=None, *, strict=False, not_after=None, n
                     continue
                 if red == "x" and when.tzinfo is not None:
                     when = when.astimezone(ZoneInfo("Europe/Madrid")).replace(tzinfo=None)
-                if red == "x" and not_after is not None and when > not_after:
-                    if notify is not None:
-                        notify("[x] AVISO: ficha con fecha en el futuro; no cuenta para cadencia")
-                    continue
+                if red == "x" and not_after is not None:
+                    check_not_after = not_after.replace(tzinfo=None) if not_after.tzinfo is not None else not_after
+                    if when > check_not_after:
+                        if notify is not None:
+                            notify("[x] AVISO: ficha con fecha en el futuro; no cuenta para cadencia")
+                        continue
                 last = when if last is None or when > last else last
     except FileNotFoundError:
         if strict and not os.path.isdir(os.path.dirname(os.path.abspath(path))):
@@ -229,9 +246,17 @@ def _verify(red, now):
 
 def run(red, *, apply=False, now=None, out=print, publishers=None, verify=_verify, log_path=None):
     """Publica como mucho una ficha de `red`. Devuelve la URL o None."""
-    now = now or datetime.datetime.now(ZoneInfo("Europe/Madrid")).replace(tzinfo=None)
-    if red == "x" and now.tzinfo is not None and now.utcoffset() is not None:
-        now = now.astimezone(ZoneInfo("Europe/Madrid")).replace(tzinfo=None)
+    now = now or datetime.datetime.now(ZoneInfo("Europe/Madrid"))
+    if red == "x":
+        if now.tzinfo is not None and now.utcoffset() is not None:
+            now = now.astimezone(ZoneInfo("Europe/Madrid")).replace(tzinfo=None)
+        elif now.tzinfo is not None:
+            now = now.replace(tzinfo=None)
+    else:
+        if now.tzinfo is None:
+            now = now.replace(tzinfo=ZoneInfo("Europe/Madrid"))
+        else:
+            now = now.astimezone(ZoneInfo("Europe/Madrid"))
     config = load_config()
     publishers = publishers or PUBLISHERS
     if red not in publishers or not config["enabled"].get(red):
@@ -260,8 +285,12 @@ def run(red, *, apply=False, now=None, out=print, publishers=None, verify=_verif
         out(f"[x] ERROR integridad: NO se publica; historial de fichas no verificable ({type(exc).__name__})")
         return None
     if apply and last is not None:
-        elapsed = (xb.conservative_elapsed_seconds(now, last) if red == "x"
-                   else (now - last).total_seconds())
+        if red == "x":
+            elapsed = xb.conservative_elapsed_seconds(now, last)
+        else:
+            now_dt = now.replace(tzinfo=None) if hasattr(now, "tzinfo") and now.tzinfo is not None else now
+            last_dt = last.replace(tzinfo=None) if hasattr(last, "tzinfo") and last.tzinfo is not None else last
+            elapsed = (now_dt - last_dt).total_seconds()
         if elapsed < x_gap_hours * 3600:
             out(f"[{red}] hay {len(ready)} ficha(s) lista(s) pero la ultima publicacion automatica fue a las {last:%H:%M}: se espera (minimo {x_gap_hours} h entre dos)")
             return None
