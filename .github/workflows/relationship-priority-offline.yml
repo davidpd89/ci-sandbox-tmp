@@ -1,0 +1,36 @@
+name: Relationship priority offline
+
+on:
+  push:
+    branches:
+      - research/61-relationship-priority-scoring
+  pull_request:
+    paths:
+      - tools/relationship_priority.py
+      - tools/relationship_priority_backtest.py
+      - tests/test_relationship_priority.py
+      - .github/workflows/relationship-priority-offline.yml
+
+permissions:
+  contents: read
+
+jobs:
+  priority-offline:
+    name: priority offline / ${{ matrix.os }} / py3.11
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install lightweight test runner
+        run: python -m pip install 'pytest>=8,<10'
+      - name: Unit, property and adversarial checks
+        run: python -m pytest tests/test_relationship_priority.py -q
+      - name: Offline reproducible synthetic backtest
+        run: python tools/relationship_priority_backtest.py
