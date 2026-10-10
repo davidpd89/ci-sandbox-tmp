@@ -1,0 +1,81 @@
+python
+# Archivo nuevo: tools/instagram/instaloader_source.py
+# Integración propia para davidpd89/ci-sandbox-tmp.
+# Basado en la API pública de Instaloader:
+# https://github.com/instaloader/instaloader/blob/master/instaloader/instaloader.py
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, asdict
+from datetime import datetime, timezone
+from typing import Iterable
+
+import instaloader
+
+
+HASHTAG_RE = re.compile(r"#([\wáéíóúüñÁÉÍÓÚÜÑ]+)")
+INTENT_WORDS = (
+    "recomiendo", "recomendación", "recomendaciones", "¿qué leo?",
+    "tbr", "reseña", "reseñas", "fantasía", "romantasy",
+)
+
+
+@dataclass(frozen=True)
+class InstagramCandidate:
+    network: str
+    post_id: str
+    shortcode: str
+    author: str
+    caption: str
+    hashtags: list[str]
+    posted_at: str
+    permalink: str
+    language: str
+    intent_score: int
+    source: str
+
+
+def _intent_score(caption: str) -> int:
+    text = caption.lower()
+    return sum(1 for word in INTENT_WORDS if word in text)
+
+
+def _to_candidate(post: instaloader.Post, source: str) -> InstagramCandidate:
+    caption = post.caption or ""
+    hashtags = HASHTAG_RE.findall(caption)
+    posted_at = (
+        post.date_utc.astimezone(timezone.utc).isoformat()
+        if post.date_utc else datetime.now(timezone.utc).isoformat()
+    )
+    return InstagramCandidate(
+        network="instagram",
+        post_id=str(post.mediaid),
+        shortcode=post.shortcode,
+        author=post.owner_username,
+        caption=caption,
+        hashtags=hashtags,
+        posted_at=posted_at,
+        permalink=f"https://www.instagram.com/p/{post.shortcode}/",
+        language="es",
+        intent_score=_intent_score(caption),
+        source=source,
+    )
+
+
+def discover_hashtag(
+    hashtag: str,
+    max_count: int = 50,
+    login: str | None = None,
+    session_file: str | None = None,
+) -> Iterable[dict]:
+    loader = instaloader.Instaloader quiet=True, download_comments=False)
+    if login and session_file:
+        loader.load_session_from_file(login, session_file)
+
+    hashtag_obj = instaloader.Hashtag.from_name(loader.context, hashtag)
+    for post in hashtag_obj.get_posts():
+        if max_count <= 0:
+            break
+        max_count -= 1
+        yield asdict(_to_candidate(post, source=f"hashtag:{hashtag}"))
