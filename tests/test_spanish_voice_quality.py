@@ -136,6 +136,18 @@ class TestSpanishVoice(unittest.TestCase):
             self.assertIn("no sobrescribir", second.stderr)
 
 
+    def test_human_score_cli_requires_both_paths(self):
+        import subprocess
+        root = pathlib.Path(__file__).resolve().parents[1]
+        command = [sys.executable, str(root / "tools" / "spanish_voice_eval.py"),
+                   str(root / "tests" / "fixtures" / "spanish_voice_pairs.json")]
+        for incomplete in (("--score-review", "review.json"),
+                           ("--score-key", "key.json")):
+            result = subprocess.run([*command, *incomplete],
+                                    text=True, capture_output=True, encoding="utf-8")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("deben facilitarse juntos", result.stderr)
+
     def test_deterministic_accent_candidates_and_large_repeats(self):
         with mock.patch("spanish_voice_quality._accent_checker",
                         return_value=lambda raw: [("capitulo", "capítúlo"),
