@@ -264,6 +264,59 @@ class TestContracts(unittest.TestCase):
         self.assertNotIn("reddit", called)
         self.assertEqual(out["networks"]["x"]["shortlist"][0]["handle"], "lectora_1")
 
+
+    def test_account_language_not_inferred_from_a_single_post(self):
+        row = dict(SAMPLES["x"], created_at=FRESH, language="es")
+        self.assertIsNone(run("x", row)["shortlist"][0]["language"])
+        row["profile_language"] = "es"
+        self.assertEqual(run("x", row)["shortlist"][0]["language"], "es")
+
+    def test_same_permalink_conflicting_timestamps_discarded(self):
+        row = dict(SAMPLES["x"], language="es", created_at=FRESH)
+        changed = dict(row, created_at="2026-10-08T12:00:00Z")
+        out = n.normalize_candidates("x", [row, changed], as_of=NOW)
+        self.assertEqual(out["shortlist"][0]["posts"], [])
+        self.assertIn("conflicting_post_timestamps",
+                      [d["reason"] for d in out["diagnostics"]])
+
+    def test_duplicate_post_enriches_explicit_language(self):
+        first = dict(SAMPLES["x"], created_at=FRESH)
+        second = dict(first, language="es")
+        out = n.normalize_candidates("x", [first, second], as_of=NOW)
+        self.assertEqual(out["shortlist"][0]["posts"][0]["language"], "es")
+
+    def test_conflicting_follower_numbers_flagged(self):
+        a = dict(SAMPLES["x"], followers=40)
+        b = dict(SAMPLES["x"], followers=50)
+        out = n.normalize_candidates("x", [a, b], as_of=NOW)
+        self.assertEqual(out["shortlist"][0]["followers"], 40)
+        self.assertIn("conflicting_follower_snapshots",
+                      [d["reason"] for d in out["diagnostics"]])
+
+    def test_timestamp_fallback_if_null(self):
+        row = dict(SAMPLES["x"], created_at=None, timestamp=FRESH, language="es")
+        self.assertEqual(len(run("x", row)["shortlist"][0]["posts"]), 1)
+
+    def test_reddit_huge_epoch_rejects_without_exception(self):
+        row = dict(SAMPLES["reddit"], created_utc=10 ** 400)
+        out = run("reddit", row)
+        self.assertEqual(out["shortlist"][0]["posts"], [])
+        self.assertIn("missing_post_timestamp", [d["reason"] for d in out["diagnostics"]])
+
+    def test_old_post_handle_with_confirmed_author_id(self):
+        row = dict(SAMPLES["x"], account_id="123", handle="renombrada",
+                   created_at=FRESH, language="es", author_id="123")
+        out = run("x", row)
+        self.assertEqual(len(out["shortlist"][0]["posts"]), 1)
+        row.pop("author_id")
+        self.assertEqual(run("x", row)["shortlist"][0]["posts"], [])
+
+    def test_reddit_comment_count_is_engagement_not_profile_followers(self):
+        row = dict(SAMPLES["reddit"], created_utc=FRESH, language="es")
+        out = run("reddit", row)["shortlist"][0]
+        self.assertIsNone(out["followers"])
+        self.assertEqual(out["posts"][0]["stats"]["replies"], 10)
+
     def test_invalid_nested_shape_and_network(self):
         with self.assertRaises(ValueError):
             n.normalize_candidates("pinterest", {"authors": [], "pins": None}, as_of=NOW)
