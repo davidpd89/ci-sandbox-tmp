@@ -1,0 +1,23 @@
+text
+# Archivo nuevo: queries/instagram/posts_es.yaml
+version: 1
+network: instagram
+language: es
+
+queries:
+  - text: "romantasy recomendación"
+    intent: high
+  - text: "fantasía romance recomendación"
+    intent: high
+  - text: "¿qué leo después de romantasy?"
+    intent: high
+  - text: "TBR fantasía"
+    intent: high
+  - text: "libros fantasía españoles"
+    intent: medium
+  - text: "reseña fantasía"
+    intent: medium
+  - text: "romantasy oscuro"
+    intent: medium
+  - text: "fantasía juvenil recomendación"
+    intent: high
