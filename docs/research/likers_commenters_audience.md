@@ -1,5 +1,30 @@
 # PR #70 — Audiencias desde likes, comentarios y reposts (10/10/2026)
 
+
+## Problema
+Identidades e interacciones capturadas en formatos incompatibles, sin deduplicación transversal ni métricas por superficie/semilla. No confundir contadores agregados con una lista de cuentas.
+
+## Alternativas
+Se compararon atproto, Mastodon.py, PRAW, instagrapi y granary (commits fijos en la tabla inferior), frente a conservar los colectores actuales y añadir únicamente una capa común de importación sin nuevas dependencias.
+
+## Licencias y procedencia
+Fuente primaria: https://github.com/MarshalX/atproto/tree/4c17895c97f6d42ecb9c41dc5c2fb450ab9c6ac8
+Fecha de consulta: 2026-10-10
+Licencia SPDX: MIT
+Referencia inmutable: N/A (sin codigo incorporado)
+
+Las alternativas detalladas abajo tienen MIT, BSD-2-Clause y CC0-1.0 según fuente (instagrapi declara MIT en su LICENSE, mientras GitHub metadata no expresa SPDX). No se han copiado archivos ni fragmentos de terceros: la capa Python/SQLite es nueva y los clientes permanecen fuera de este cambio.
+
+## Decisión
+Mantener los capturadores propios para WEB/API/MOBILE e introducir `audience_discovery.py` junto con `audience_adapters.py`: este último traduce listas de actores ya recuperadas en las 9 redes a páginas comunes; rechaza exportaciones anónimas y comentarios sin ID. Los adaptadores no ejecutan operaciones externas. La cola del producto no se modifica.
+
+## Pruebas
+`python -m unittest discover -s tests -p 'test_audience_*.py' -v`, con fixtures sintéticos. El workflow `Audience discovery offline (PR 70)` ejecuta Windows y Ubuntu, Python 3.11. Las regresiones específicas prueban identidad, replays, caducidad, paginación y listas nativas de 9 redes.
+
+## Retirada
+Borrar los dos módulos `tools/audience_*.py`, las dos suites `tests/test_audience_*.py` y el workflow `.github/workflows/audience-discovery-offline.yml`. No se ha migrado ninguna tabla operativa. Las bases SQLite temporales creadas por ensayos son independientes y se pueden retirar sin pérdida del estado original.
+
+
 ## Necesidad y comparación con el código real
 El espejo público y la rama oficial privada `integracion/crecimiento-2026-10` fueron consultados **en lectura**. Comprobación de contratos existentes: `tools/instagram_commenters_scan.py` (parsing de comentaristas y scoring Instagram), `tools/tiktok_discovery.py` (superficies mobile y candidatos), `tools/bluesky_taste_collect.py` (likes Jetstream -> SQLite), `tools/bluesky_jetstream_collect.py` (feeds), `tools/candidate_identity.py` (identidades de ejecutores Bluesky/Mastodon), `tools/scan_common.py` (cribado común) y `tools/round_queue.py` (WEB/API/MOBILE). **No se copiaron datos del privado al espejo**. Los nombres y formas de filas se contrastaron; los datos sintéticos son inventados. La rama oficial no se modifica.
 
