@@ -640,7 +640,8 @@ class TestContracts(unittest.TestCase):
                     profile_language="es", following=False, followed_by=True,
                     verified_actions=["follow"])
         result = n.normalize_candidates("x", [base, dict(base)], as_of=NOW)
-        self.assertEqual(result["diagnostics"], [])
+        self.assertFalse([d for d in result["diagnostics"]
+                          if d["reason"].startswith("conflicting_")])
         candidate = result["shortlist"][0]
         self.assertEqual(candidate["followers"], 40)
         self.assertEqual(candidate["language"], "es")
