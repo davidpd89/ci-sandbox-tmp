@@ -1,0 +1,17 @@
+python
+# Fuente: https://atproto.blue/guides/reading/
+from atproto import Client
+
+def get_profile_signals(client: Client, actor: str):
+    profile = client.get_profile(actor)
+
+    return {
+        "did": profile.did,
+        "handle": profile.handle,
+        "display_name": profile.display_name,
+        "description": profile.description,
+        "followers_count": profile.followers_count,
+        "follows_count": profile.follows_count,
+        "posts_count": profile.posts_count,
+        "created_at": profile.created_at,
+    }
