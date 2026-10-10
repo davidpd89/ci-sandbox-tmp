@@ -24,7 +24,7 @@ class PostAgeAuditTests(unittest.TestCase):
 
     def test_facebook_external_like_max_21_days(self):
         self.assertEqual(age.check("facebook", {
-            "kind": "like_external", "created_at": "2026-09-10T00:00:00Z"
+            "kind": "like_external", "post_created_at": "2026-09-10T00:00:00Z"
         }, now=NOW), (False, "post_antiguo"))
 
     def test_pinterest_reaction_and_reddit_vote_share_like_age_cap(self):
