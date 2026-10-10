@@ -1,0 +1,29 @@
+python
+# https://github.com/davidpd89/ci-sandbox-tmp/blob/main/tools/reply_writer.py
+def valid_reply(text, network, recent=(), *, allow_question=True):
+    """(True, '') o (False, motivo). Reglas de forma: no se juzga el fondo, eso lo decide la propia consulta."""
+    raw = (text or "").strip()
+    if not raw:
+        return False, "vacio"
+    words = re.findall(r"[^\W_]+", raw)
+    if len(words) < 2 or len(words) > MAX_WORDS.get(network, 30):      # 08/10: micro-reacciones de 2 palabras («Jaja, totalmente») valen (GUIA_VOZ_REPLIES)
+        return False, f"{len(words)} palabras"
+    if len(raw) > MAX_CHARS.get(network, 270) or "\n" in raw:
+        return False, "longitud/lineas"
+    if BANNED.search(raw):
+        return False, "frase o contenido prohibido"
+    if STYLE.search(raw):
+        return False, "punto y coma o guion largo"
+    if raw.count("?") > 1 or (not allow_question and "?" in raw):
+        return False, "preguntas"
+    try:
+        import x_interact as x
+        x._check_spanish_orthography(raw.replace("¿", "").replace("?", ""))
+    except ValueError as exc:
+        return False, str(exc)[:60]
+    except Exception:
+        pass
+    start = _start(raw)
+    if start and any(_start(old) == start for old in recent):
+        return False, "arranque repetido"
+    return True, ""
