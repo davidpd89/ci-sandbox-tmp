@@ -101,7 +101,7 @@ def _breaker(path, now):
     return {"status": "cerrado", "fails": fails}
 
 
-def _pending_counts(path):
+def _pending_counts(path, now):
     source = _read_json(path)
     if not isinstance(source, dict):
         return None
@@ -109,6 +109,16 @@ def _pending_counts(path):
     for entry in source.values():
         if not isinstance(entry, dict) or not isinstance(entry.get("network"), str):
             return None
+        # Mismo TTL temporal de reply_queue._fresh(), pero en lectura pura.
+        try:
+            ts = dt.datetime.fromisoformat(entry["ts"])
+            if ts.tzinfo is not None:
+                return None
+            age_seconds = (now - ts).total_seconds()
+        except (TypeError, KeyError, ValueError, OverflowError):
+            return None
+        if not -300 <= age_seconds < 36 * 3600:
+            continue
         name = entry["network"].casefold()
         if name in counts:
             counts[name] += 1
@@ -221,7 +231,7 @@ def collect(root, *, as_of, days=7):
     today = now.date()
     cutoff = today - dt.timedelta(days=days - 1)
     rounds = _read_csv(root / "00_OPERATIVO" / "tiempos_rondas.csv")
-    pending = _pending_counts(root / "00_OPERATIVO" / "_cola_respuestas" / "pending.json")
+    pending = _pending_counts(root / "00_OPERATIVO" / "_cola_respuestas" / "pending.json", now)
     networks = {}
     for net, queue in NETWORK_QUEUES.items():
         folder = root / ("SISTEMA_DIARIO_" + net.upper())
