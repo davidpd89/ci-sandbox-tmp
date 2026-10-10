@@ -298,8 +298,12 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
                                        if isinstance(s, str) and 0 < len(s.strip()) <= 200)
         # A post language does not prove the account/profile language.
         profile = row.get("profile") if isinstance(row.get("profile"), Mapping) else {}
-        profile_lang = _language({"language": row.get("profile_language") or
-                                             profile.get("language")})
+        profile_hint = row.get("profile_language") or profile.get("language")
+        # Pinterest authors are profile rows; Pin language belongs to the
+        # publication, never to the author's complete language history.
+        if not profile_hint and network == "pinterest" and not row.get("_pin"):
+            profile_hint = row.get("language") or row.get("lang")
+        profile_lang = _language({"language": profile_hint})
         if profile_lang is not None and account["language"] is None:
             account["language"] = profile_lang
         for rel in ("following", "followed_by"):

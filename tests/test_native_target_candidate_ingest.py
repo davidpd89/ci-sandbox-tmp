@@ -457,6 +457,22 @@ class TestContracts(unittest.TestCase):
         self.assertIn("cross_account_post_collision",
                       [d["reason"] for d in out["diagnostics"]])
 
+    def test_pinterest_author_profile_language_not_pin_language(self):
+        author = dict(SAMPLES["pinterest"], language="es")
+        pin = {"author": "lectora_1",
+               "url": "https://www.pinterest.com/pin/14445/",
+               "created_at": FRESH, "language": "en", "title": "Book"}
+        out = n.normalize_candidates("pinterest",
+                                     {"authors": [author], "pins": [pin]}, as_of=NOW)
+        self.assertEqual(out["shortlist"][0]["language"], "es")
+        self.assertEqual(out["shortlist"][0]["posts"], [])
+        without_author_lang = dict(SAMPLES["pinterest"])
+        out = n.normalize_candidates("pinterest",
+                                     {"authors": [without_author_lang], "pins": [dict(pin, language="es")]},
+                                     as_of=NOW)
+        self.assertIsNone(out["shortlist"][0]["language"])
+        self.assertEqual(len(out["shortlist"][0]["posts"]), 1)
+
     def test_real_ranker_nine_network_contract_and_missing_inputs(self):
         import target_quality_ranking as quality
         observations = {}
