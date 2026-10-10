@@ -1,0 +1,151 @@
+"""Contrato sintético sin credenciales, red ni estado vivo."""
+import json
+import pathlib
+import sys
+import tempfile
+import unittest
+from unittest.mock import patch
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools"))
+import hashtag_expansion as h
+import discovery_terms
+
+NOW = "2026-10-10T12:00:00+00:00"
+RECENT = "2026-10-09T12:00:00+00:00"
+
+
+def posts(network="bluesky", tag="FantasiaÉpica", n=3, seed="fantasía",
+          source="api", date=RECENT):
+    return [{"network": network, "source": source,
+             "post_id": f"{network}-{tag}-{i}", "author_id": f"a{i}",
+             "created_at": date, "text": f"Leo {seed} y #{tag}"}
+            for i in range(n)]
+
+
+class HashtagExpansionTest(unittest.TestCase):
+    def build(self, rows, **kwargs):
+        return h.build_snapshot(rows, now=NOW, seeds={"fantasia": ["fantasía"]}, **kwargs)
+
+    def test_two_networks_not_leaking_and_provenance(self):
+        result = self.build(posts() + posts("mastodon", source="stream"))
+        self.assertEqual(result["networks"]["bluesky"]["hashtags"], ["fantasiaepica"])
+        self.assertEqual(result["networks"]["mastodon"]["hashtags"], ["fantasiaepica"])
+        self.assertEqual(result["networks"]["reddit"]["hashtags"], [])
+        self.assertEqual(result["networks"]["mastodon"]["candidates"][0]["sources"], ["stream"])
+        self.assertEqual(result["diagnostics"]["selected"], 2)
+
+    def test_unique_post_distinct_authors_and_sources(self):
+        rows = posts(n=2)
+        rows.append({**rows[0], "source": "jetstream"})
+        result = self.build(rows)
+        candidate = result["networks"]["bluesky"]["candidates"][0]
+        self.assertEqual(candidate["sources"], ["api", "jetstream"])
+        self.assertEqual(candidate["posts"], 2)
+        self.assertEqual(candidate["authors"], 2)
+        self.assertEqual(result["diagnostics"]["duplicates"], 1)
+        self.assertFalse(self.build(posts(n=1) * 5)["networks"]["bluesky"]["hashtags"])
+
+    def test_old_future_and_naive_dates_skipped(self):
+        rows = (posts(tag="Antiguo", date="2026-09-01T12:00:00Z") +
+                posts(tag="Futuro", date="2026-10-11T12:00:00Z") +
+                posts(tag="SinZona", date="2026-10-09T12:00:00"))
+        result = self.build(rows)
+        self.assertEqual(result["networks"]["bluesky"]["hashtags"], [])
+        self.assertEqual(result["diagnostics"]["stale"], 6)
+        self.assertEqual(result["diagnostics"]["invalid"], 3)
+
+    def test_noise_unrelated_and_weak_association(self):
+        rows = posts(tag="SorteoGratis") + posts(tag="Fantasía")
+        rows += posts(tag="Tendencia", n=2)
+        noise = posts(tag="Tendencia", seed="fútbol", n=5)
+        for i, row in enumerate(noise):
+            row["post_id"] = f"elsewhere-{i}"
+        rows += noise
+        rows += posts(tag="Futbol", seed="fútbol")
+        self.assertEqual(self.build(rows)["networks"]["bluesky"]["hashtags"], [])
+
+    def test_unicode_casefold_and_multiple_tags(self):
+        rows = posts(tag="NiñezLectóra", n=2)
+        rows += posts(tag="NIÑEZLECTORA", n=2)
+        result = self.build(rows)
+        self.assertEqual(result["networks"]["bluesky"]["hashtags"], ["ninezlectora"])
+
+    def test_feedback_changes_score(self):
+        rows = posts(tag="Aventura", n=4) + posts(tag="Biblioteca", n=4)
+        feedback = [
+            {"network": "bluesky", "tag": "Aventura", "eligible": 20,
+             "engaged": 18, "replies": 5, "followers": 2},
+            {"network": "bluesky", "tag": "Biblioteca", "eligible": 20, "engaged": 0},
+        ]
+        result = self.build(rows, feedback=feedback)
+        scores = {x["tag"]: x["score"]
+                  for x in result["networks"]["bluesky"]["candidates"]}
+        self.assertGreater(scores["aventura"], scores["biblioteca"])
+
+    def test_topic_diversity_not_only_highest_frequency(self):
+        rows = posts(tag="Magia", n=3) + posts(tag="Dragones", n=3)
+        rows += posts(tag="Lectores", seed="lectura", n=3)
+        result = h.build_snapshot(rows, now=NOW,
+                                  seeds={"fantasia": ["fantasía"], "lectura": ["lectura"]},
+                                  max_per_network=2)
+        topics = {x["topic"] for x in result["networks"]["bluesky"]["candidates"]}
+        self.assertEqual(topics, {"fantasia", "lectura"})
+
+    def test_cache_expired_or_malformed_is_noop(self):
+        result = self.build(posts())
+        with tempfile.TemporaryDirectory() as folder:
+            path = pathlib.Path(folder) / "out.json"
+            h.save_snapshot(path, result)
+            self.assertEqual(h.snapshot_terms("bluesky", path=path, now=NOW),
+                             ["fantasiaepica"])
+            self.assertEqual(h.snapshot_terms("bluesky", path=path,
+                                              now="2026-10-13T12:00:00Z"), [])
+            path.write_text('{"wrong": true}', encoding="utf-8")
+            self.assertEqual(h.snapshot_terms("bluesky", path=path, now=NOW), [])
+
+    def test_all_networks_have_explicit_search_and_tag_policy(self):
+        rows = sum((posts(network=network) for network in h.NETWORKS), [])
+        result = self.build(rows)
+        self.assertEqual(set(result["networks"]), h.NETWORKS)
+        for network in h.NETWORKS:
+            self.assertEqual(result["networks"][network]["busquedas"], ["fantasiaepica"])
+            self.assertEqual(bool(result["networks"][network]["hashtags"]),
+                             network in h.TAG_NETWORKS)
+
+    def test_terms_integration_and_static_fallback(self):
+        result = self.build(posts())
+        with tempfile.TemporaryDirectory() as folder:
+            static, overlay = (pathlib.Path(folder) / name for name in ("static.json", "overlay.json"))
+            static.write_text('{"bluesky":{"hashtags":["#FantasíaÉpica","BookSky"]}}',
+                              encoding="utf-8")
+            h.save_snapshot(overlay, result)
+            with patch.object(discovery_terms, "PATH", str(static)), \
+                 patch.object(h, "DEFAULT_CACHE", overlay):
+                self.assertEqual(discovery_terms.terms("bluesky", "hashtags",
+                                                      skip=["BookSky"]), ["FantasíaÉpica"])
+                static.unlink()
+                self.assertEqual(discovery_terms.terms("bluesky", "hashtags"),
+                                 ["fantasiaepica"])
+
+    def test_cli_synthetic_roundtrip(self):
+        with tempfile.TemporaryDirectory() as folder:
+            source, out = (pathlib.Path(folder) / n for n in ("fixture.json", "overlay.json"))
+            source.write_text(json.dumps(posts(), ensure_ascii=False), encoding="utf-8")
+            self.assertEqual(h.main(["--observations", str(source), "--output", str(out),
+                                     "--now", NOW]), 0)
+            self.assertEqual(json.loads(out.read_text(encoding="utf-8"))["schema"], 1)
+
+    def test_synthetic_quality_precision_recall_improvement(self):
+        rows = posts(tag="FantasiaEpica") + posts(tag="LecturaMagica")
+        rows += posts(tag="SorteoGratis") + posts(tag="Futbol", seed="fútbol")
+        result = self.build(rows)
+        predicted = set(result["networks"]["bluesky"]["hashtags"])
+        gold = {"fantasiaepica", "lecturamagica"}
+        precision = len(predicted & gold) / max(1, len(predicted))
+        recall = len(predicted & gold) / len(gold)
+        self.assertEqual((precision, recall), (1, 1))
+        self.assertGreater(recall, 0)  # semillas fijas no incluyen estas etiquetas
+
+
+if __name__ == "__main__":
+    unittest.main()
