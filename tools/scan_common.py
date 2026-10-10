@@ -773,6 +773,25 @@ def opinion_safe(suggest, text_index=0, cheap="like"):
     return wrapper
 
 
+def plan_action_duplicate_key(item, *, stable_target_fields=()):
+    """Clave común de duplicación: ID remoto verificable antes que extracto.
+
+    El identificador estable evita confundir posts diferentes con idéntico
+    inicio; sin ID, se conserva el criterio histórico autor + fragmento.
+    La identidad del ID es opaca y no debe normalizarse por casefold().
+    """
+    kind = item.get("kind")
+    for field in stable_target_fields:
+        target = item.get(field)
+        if isinstance(target, (str, int)) and not isinstance(target, bool):
+            target = str(target).strip()
+            if target:
+                return (kind, "stable_target", target)
+    return (kind, "excerpt_target",
+            str(item.get("handle") or "").lstrip("@").casefold(),
+            str(item.get("text_fragment") or "").strip().casefold())
+
+
 def guard_plan_item(item, index=None):
     """Barrera comun en los preflight de TODOS los ejecutores: una reply/comment
     a un post que pide opinion solo pasa si es breve, positiva y neutra. El
