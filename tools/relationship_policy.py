@@ -53,42 +53,62 @@ def _rows(registro):
         return
 
 
+def _nonreciprocity_decisions(registro, today=None):
+    """Unica proyección para discovery y ranking; no escribe SQLite ni CSV."""
+    import json
+    import pathlib
+    import relationship_memory as rm
+
+    # El CSV por red es la fuente del estado actual. Los registros sintéticos
+    # sin carpeta de red usan una red neutral para el cálculo puro.
+    parent = pathlib.Path(registro).parent.name.upper()
+    network = parent.removeprefix("SISTEMA_DIARIO_").casefold()
+    if network not in rm.NETWORKS:
+        network = "x"
+
+    options = {}
+    try:
+        with open(SETTINGS, encoding="utf-8") as stream:
+            config = json.load(stream)
+        options.update(config.get("memoria_reciprocidad") or {})
+        network_settings = (config.get("redes") or {}).get(network) or {}
+        options.update(network_settings.get("memoria_reciprocidad") or {})
+    except (OSError, ValueError, TypeError, AttributeError):
+        pass
+    # Nombres reconocidos; un fichero antiguo no cambia nada.
+    allowed = rm.Policy.__dataclass_fields__
+    options = {key: val for key, val in options.items() if key in allowed}
+    policy = rm.Policy(initial_days=RETRY_COOLDOWN_DAYS,
+                       max_failures=MAX_ATTEMPTS, **{
+                           key: value for key, value in options.items()
+                           if key not in {"initial_days", "max_failures"}})
+    if "initial_days" in options or "max_failures" in options:
+        policy = rm.Policy(**{**policy.__dict__,
+                              **{k: v for k, v in options.items()
+                                 if k in {"initial_days", "max_failures"}}})
+    return rm.decisions_from_rows(_rows(registro), network,
+                                  today=today, policy=policy)
+
+
 def blocked_accounts(registro, today=None):
-    """Cuentas que los scans NO deben proponer: unfollow permanente o bloqueo, lista negra (>= MAX_ATTEMPTS intentos sin devolucion) y las que estan en periodo de espera tras un unfollow por
-    reciprocidad (RETRY_COOLDOWN_DAYS)."""
-    today = today or datetime.date.today()
-    permanent, attempts, last = set(), {}, {}
-    for row in _rows(registro):
-        kind = (row.get("tipo") or "").strip().casefold()
-        if kind not in ("unfollow", "block") or (row.get("resultado") or "").strip().casefold() not in OK_RESULTS + ("saltado_ya_no_seguido",):
-            continue
-        handle = norm(row.get("cuenta"))
-        if not handle:
-            continue
-        if kind == "block" or not reason_is_reciprocity(row.get("notas")):
-            permanent.add(handle)
-            continue
-        attempts[handle] = attempts.get(handle, 0) + 1
-        try:
-            when = datetime.date.fromisoformat((row.get("fecha") or "")[:10])
-        except ValueError:
-            continue
-        last[handle] = max(last.get(handle, when), when)
-    blocked = set(permanent)
-    for handle, n in attempts.items():
-        if n >= MAX_ATTEMPTS or (today - last.get(handle, today)).days < RETRY_COOLDOWN_DAYS:
-            blocked.add(handle)
-    return blocked
+    """Cuentas excluidas de nuevos follows; se consulta en todos los scans."""
+    return {account for account, state
+            in _nonreciprocity_decisions(registro, today).items()
+            if not state["allowed"]}
 
 
 def blacklist(registro):
-    """Solo la lista negra por reciprocidad (para informes): {cuenta: intentos}."""
-    attempts = {}
-    for row in _rows(registro):
-        if (row.get("tipo") or "").strip().casefold() == "unfollow" and reason_is_reciprocity(row.get("notas")) and (row.get("resultado") or "").strip().casefold() in OK_RESULTS:
-            handle = norm(row.get("cuenta"))
-            attempts[handle] = attempts.get(handle, 0) + 1
-    return {h: n for h, n in attempts.items() if n >= MAX_ATTEMPTS}
+    """Cuentas con ciclos fallidos hasta agotar oportunidades configuradas."""
+    return {account: state["failures"]
+            for account, state in _nonreciprocity_decisions(registro).items()
+            if state["status"] == "exhausted"}
+
+
+def follow_memory_ranking(registro, today=None):
+    """Deltas de prioridad para nuevos follows, incluso cuando ya vence el cooldown."""
+    return {account: state["rank_delta"]
+            for account, state in _nonreciprocity_decisions(registro, today).items()
+            if state["allowed"] and state["rank_delta"] != 0}
 
 
 SETTINGS = os.path.join(ROOT, "00_OPERATIVO", "reciprocidad_politica.json")
