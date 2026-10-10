@@ -317,6 +317,29 @@ class TestContracts(unittest.TestCase):
         self.assertIsNone(out["followers"])
         self.assertEqual(out["posts"][0]["stats"]["replies"], 10)
 
+
+    def test_facebook_posts_groups_videos_and_story_urls(self):
+        urls = [
+            "https://www.facebook.com/lectores/posts/12345/",
+            "https://www.facebook.com/lectores/videos/12345/",
+            "https://www.facebook.com/lectores/posts/pfbidABCDE123/",
+            "https://www.facebook.com/groups/lectura_fantasia/permalink/12345/",
+            "https://m.facebook.com/story.php?story_fbid=12345&id=9876",
+            "https://www.facebook.com/permalink.php?story_fbid=12345&id=9876",
+        ]
+        for url in urls:
+            with self.subTest(url=url):
+                row = dict(SAMPLES["facebook"], account_id="9876",
+                           permalink=url, created_at=FRESH, language="es")
+                res = run("facebook", row)
+                self.assertEqual(len(res["shortlist"][0]["posts"]), 1, res)
+        for url in ("https://www.facebook.com/lectores",
+                    "https://www.facebook.com/groups/lectura_fantasia",
+                    "https://evil.facebook.com/lectores/posts/12345/"):
+            row = dict(SAMPLES["facebook"], account_id="9876",
+                       permalink=url, created_at=FRESH, language="es")
+            self.assertEqual(run("facebook", row)["shortlist"][0]["posts"], [])
+
     def test_invalid_nested_shape_and_network(self):
         with self.assertRaises(ValueError):
             n.normalize_candidates("pinterest", {"authors": [], "pins": None}, as_of=NOW)
