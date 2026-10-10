@@ -77,8 +77,8 @@ desconocidas hasta disponer de datos.
 Campos por red: confirmaciones, fallos, omisiones y verificaciones pendientes
 **del registro** (sin atribuir cada confirmación a una ronda);
 rondas por estado \`ok/parcial/error/saltada/ocupada\`, latencia media y p95;
-recuentos agregados de cola compartida de respuestas; estado del breaker (sin razón
-literal); fases temporizadas \`pre/scan/plan/execute/post/bulk\`; cobertura y tendencia
+recuentos de pendientes *vigentes* en cola compartida de respuestas (TTL de 36 horas); estado del breaker (sin razón
+literal); fases temporizadas \`pre/scan/plan/execute/post/bulk\`; cobertura, avisos pasivos (breaker abierto, rondas con error/parciales y verificaciones inciertas) y tendencia
 de confirmaciones por día. No se infieren confirmaciones del \`codigo=0\` ni de la
 columna \`confirmadas\` del CSV de rondas: esta última guarda un **diccionario textual
 de desglose**, no el total numérico y no tiene identidad de evento. Se cuentan
@@ -96,9 +96,9 @@ ventana inclusiva de 1–31 días y muestras p95 por nearest-rank.
 
 \`python -m pytest tests/test_observability_dashboard.py -q -p no:cacheprovider\`
 crea fixtures sintéticos en directorios temporales, sin red. Cubre nueve redes,
-separación de tres colas, CSV con BOM, día fuera de ventana, ronda parcial/ocupada,
+separación de tres colas, CSV con BOM, cabeceras requeridas, día fuera de ventana, ronda parcial/ocupada,
 desglose histórico que no se suma como confirmación, ausencia ≠ cero, breakers
-abiertos/expirados/ilegibles, pendientes, logs y falta de exfiltración de cadenas
+abiertos/expirados/ilegibles, pendientes con TTL y lectura inmutable, avisos no bloqueantes, logs y falta de exfiltración de cadenas
 privadas. El workflow de CI existente ejecuta Python 3.11 en Windows y Linux;
 **no** demuestra Edge real, móvil Android, estado productivo ni frescura de datos.
 
@@ -134,7 +134,7 @@ nunca sobre datos de producción.
    ignorados y test de cadenas centinela.
 4. **Breaker ausente confundido con cerrado**: estado \`sin_datos\`.
 5. **Ventana de fechas sesgada**: fechas inclusivas y \`--as-of\` reproducible.
-6. **Fuente CSV incompleta, BOM y números NaN/inf**: tolerancia/validación
+6. **Fuente CSV incompleta, BOM y números NaN/inf**: cabeceras obligatorias y validación
    sin atribuir conteos faltantes.
 7. **Snapshots no sincronizados**: JSON y HTML se reemplazan individualmente
    (no como transacción doble); publicar ambos juntos solo tras comprobar
