@@ -187,6 +187,15 @@ class ConfigCapabilityAuditTests(unittest.TestCase):
         self.assertNotIn("private-test-value", json.dumps(names))
         self.assertNotIn("unrelated", json.dumps(names))
 
+    def test_bad_shortlist_shape_does_not_crash_key_reference_scan(self):
+        cfg = config()
+        cfg["shortlist"] = [{"not": "mapping"}]
+        self.write_config("bluesky", cfg)
+        result = self.report()
+        self.assertGreater(result["errors"], 0)
+        self.assertEqual(result["configurations"]["bluesky"]["status"], "invalid")
+        self.assertEqual(result["configurations"]["bluesky"]["unverified_literal_references"], [])
+
     def test_json_duplicate_across_root_never_overwrites(self):
         path = self.write_config("mastodon", config())
         path.write_text('{"version":1,"version":2,"budgets":{"max_candidates":8}}', encoding="utf-8")
