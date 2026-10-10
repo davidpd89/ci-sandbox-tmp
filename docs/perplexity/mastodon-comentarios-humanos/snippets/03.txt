@@ -1,0 +1,50 @@
+python
+# Nuevo archivo: SISTEMA_DIARIO_MASTODON/context_builder.py
+# Basado en la API oficial: https://docs.joinmastodon.org/methods/statuses/#get-parent-and-child-statuses-in-context
+from dataclasses import dataclass, field
+
+
+@dataclass
+class ThreadContext:
+    target_status_id: str
+    op_text: str
+    op_account: str
+    language: str
+    ancestors: list[str] = field(default_factory=list)
+    descendants: list[str] = field(default_factory=list)
+
+    def conversation_digest(self) -> str:
+        parts = [f"OP ({self.op_account}): {self.op_text}"]
+        if self.ancestors:
+            parts.append("Contexto previo:\n- " + "\n- ".join(self.ancestors[-3:]))
+        if self.descendants:
+            parts.append("Respuestas posteriores:\n- " + "\n- ".join(self.descendants[:3]))
+        return "\n\n".join(parts)
+
+
+class MastodonContextBuilder:
+    def __init__(self, mastodon_client):
+        self.client = mastodon_client
+
+    def build(self, status_id: str) -> ThreadContext:
+        status = self.client.status(status_id)
+        context = self.client.status_context(status_id)
+
+        return ThreadContext(
+            target_status_id=status_id,
+            op_text=self._plain_text(status["content"]),
+            op_account=status["account"]["acct"],
+            language=status.get("language") or "es",
+            ancestors=[self._plain_text(s) for s in context["ancestors"]],
+            descendants=[self._plain_text(s) for s in context["descendants"]],
+        )
+
+    @staticmethod
+    def _plain_text(html: str) -> str:
+        # Mastodon devuelve HTML; para el prompt basta con una versión plana.
+        return (
+            html.replace("<br />", "\n")
+            .replace("<br>", "\n")
+            .replace("</p>", "\n")
+            .replace("<p>", "")
+        )
