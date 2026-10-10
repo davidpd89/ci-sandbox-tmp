@@ -1,0 +1,48 @@
+python
+# Origen/documentación: https://github.com/vladkens/twscrape
+# Archivo destino: tools/x_discovery_scrape.py
+from __future__ import annotations
+
+import asyncio
+from dataclasses import asdict, dataclass
+
+from twscrape import AccountsPool, API
+
+
+@dataclass
+class XCandidate:
+    tweet_id: str
+    author_username: str
+    text: str
+    created_at: str
+    source: str
+    network: str = "x"
+
+
+async def discover_candidates(
+    query: str,
+    limit: int = 50,
+    accounts_csv: str = "accounts.csv",
+) -> list[XCandidate]:
+    pool = AccountsPool()
+    await pool.login(accounts_csv)
+
+    api = API(pool)
+    candidates: list[XCandidate] = []
+
+    async for tweet in api.search(query, limit=limit):
+        candidates.append(
+            XCandidate(
+                tweet_id=str(tweet.id),
+                author_username=tweet.user.username,
+                text=tweet.rawContent,
+                created_at=tweet.date.isoformat(),
+                source="twscrape",
+            )
+        )
+
+    return candidates
+
+
+if __name__ == "__main__":
+    print(asyncio.run(discover_candidates("fantasía juvenil lang:es -is:retweet", 50)))
