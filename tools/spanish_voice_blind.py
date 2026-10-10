@@ -77,7 +77,8 @@ def score(review, key):
             ident not in digests or not isinstance(net, str) or net not in NETWORKS or
             any(not isinstance(item[k], str) or not item[k].strip()
                 for k in CONTENT_FIELDS[2:]) or
-            choice not in CHOICES or mapping[ident] not in ("left", "right")):
+            not isinstance(choice, str) or choice not in CHOICES or
+            not isinstance(mapping[ident], str) or mapping[ident] not in ("left", "right")):
             raise ValueError("revisión incompleta o inválida")
         if not isinstance(digests[ident], str) or _digest(item) != digests[ident]:
             raise ValueError("un texto, contexto o red se modificó tras generar la clave")
