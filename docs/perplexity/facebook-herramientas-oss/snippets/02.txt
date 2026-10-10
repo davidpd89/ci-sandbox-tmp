@@ -1,0 +1,11 @@
+python
+# tests/facebook/test_meta_client.py
+from tools.facebook.meta_client import MetaClient
+
+def test_client_requires_token(monkeypatch):
+    monkeypatch.delenv("FACEBOOK_ACCESS_TOKEN", raising=False)
+    try:
+        MetaClient()
+        assert False
+    except KeyError:
+        assert True
