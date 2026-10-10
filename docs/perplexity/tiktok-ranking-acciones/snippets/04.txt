@@ -1,0 +1,36 @@
+python
+# Adaptación para davidpd89/ci-sandbox-tmp/tools/tiktok_signal_enricher.py
+# Integración con el score existente de:
+# https://github.com/davidpd89/ci-sandbox-tmp/blob/main/tools/tiktok_growth_scan.py
+# Clasificación y bonus reutilizados de:
+# https://github.com/davidpd89/ci-sandbox-tmp/blob/main/tools/reciprocity.py
+from __future__ import annotations
+from typing import Optional
+
+import tiktok_post_freshness as fresh
+
+
+def score_candidate(
+    base_score: float,
+    *,
+    reciprocity_class: Optional[str],
+    followback_bonus: float,
+    spanish_bonus: float,
+    profile_activity_bonus: float,
+    post_age_hours: Optional[float],
+    conversation_bonus: float,
+) -> tuple[float, dict]:
+    reciprocity_bonus = {"reciprocal": 2.0, "super": 1.0}.get(reciprocity_class or "", 0.0)
+    age_bonus = fresh.freshness_bonus(post_age_hours)
+
+    breakdown = {
+        "base": base_score,
+        "reciprocity": reciprocity_bonus,
+        "followback": followback_bonus,
+        "spanish": spanish_bonus,
+        "activity": profile_activity_bonus,
+        "freshness": age_bonus,
+        "conversation": conversation_bonus,
+    }
+    final = sum(breakdown.values())
+    return round(final, 2), breakdown
