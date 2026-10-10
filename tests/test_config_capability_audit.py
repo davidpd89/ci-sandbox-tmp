@@ -201,6 +201,27 @@ class ConfigCapabilityAuditTests(unittest.TestCase):
         self.assertEqual(result["configurations"]["bluesky"]["status"], "invalid")
         self.assertEqual(result["configurations"]["bluesky"]["unverified_literal_references"], [])
 
+    def test_malformed_scoring_never_crashes_reference_scan(self):
+        # El scanner debe existir para ejercitar _candidate_keys: antes,
+        # scoring=7 pasaba validación y causaba TypeError al iterarlo.
+        scanner = self.root / audit.SCANNERS["bluesky"]
+        scanner.write_text("SCORING = {}\\n", encoding="utf-8")
+        for invalid in (7, True, "un mapa", ["texto"]):
+            with self.subTest(scoring=invalid):
+                cfg = config()
+                cfg["scoring"] = invalid
+                self.write_config("bluesky", cfg)
+                report = self.report()
+                self.assertEqual(report["errors"], 1)
+                self.assertEqual(report["configurations"]["bluesky"]["status"], "invalid")
+                self.assertNotIn("effective_common_policy", report["configurations"]["bluesky"])
+        cfg = config()
+        cfg["scoring"] = {"unknown_weight": 0.8}
+        self.write_config("bluesky", cfg)
+        report = self.report()
+        self.assertEqual(report["errors"], 0)
+        self.assertIn("scoring.unknown_weight", report["configurations"]["bluesky"]["unverified_literal_references"])
+
     def test_json_duplicate_across_root_never_overwrites(self):
         path = self.write_config("mastodon", config())
         path.write_text('{"version":1,"version":2,"budgets":{"max_candidates":8}}', encoding="utf-8")
