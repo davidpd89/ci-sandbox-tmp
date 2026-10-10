@@ -89,7 +89,7 @@ Se añade `tools/comment_benchmark.py` y dos fixtures de control:
    nombre de evaluador vacío) y un `key.csv` **privado en otro directorio**,
    que vincula token aleatorio impredecible ↔ estrategia/caso y huella SHA-256
    del contenido evaluado. Se usan tokens nuevos en cada ejecución;
-   `evaluate --ratings` exige `--key`, valida la huella y nunca reconstruye
+   `evaluate --ratings` exige `--key`, valida la huella, rechaza columnas extra o filas truncadas y nunca reconstruye
    los tokens a partir de un valor público. No entregar la clave al evaluador.
    Los tokens impiden reconstrucción trivial, **no cifran el texto** ni ocultan
    similitudes estilísticas. No guardar datos identificables en este mirror.
@@ -126,7 +126,7 @@ de salida explícitos. Los tests usan directorios temporales.
 
 **Antes (HEAD original):** 0 pares comparables con anotación ciega en
 las nueve redes. **Después (fixtures):** 72 casos y 144 candidatos en dos conjuntos: control común de 36 casos/72 respuestas (solo **4 publicaciones e hilos únicos** replicados en nueve redes) y 36 casos/72 respuestas sintéticos específicos de red, con 36 publicaciones distintas; es una prueba de paridad del harness, no representatividad de contenido propio de cada plataforma;
-18 pruebas unitarias específicas tras la revisión adicional; las pruebas de revisión ficticia
+19 pruebas unitarias específicas tras la revisión adicional; las pruebas de revisión ficticia
 demuestran el funcionamiento del cálculo, **no una preferencia real**.
 Evidencia del HEAD de código `9830eddd79bca6336d5357f7c876cff1077d9cb3`:
 [Actions de pruebas 38016943031](https://github.com/davidpd89/ci-sandbox-tmp/actions/runs/38016943031),
