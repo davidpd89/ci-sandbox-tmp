@@ -19,6 +19,23 @@ class LedgerContract(unittest.TestCase):
             self.assertEqual(ledger.conversion("x",
                 as_of="2026-10-14T09:00:00Z")["unknown"], 1)
 
+    def test_reused_ack_is_not_a_confirmed_follow_in_sqlite(self):
+        with tempfile.TemporaryDirectory() as folder:
+            ledger = RelationshipLedger(Path(folder) / "demo.sqlite")
+            batch = Batch("x", "WEB", "x_execute.run_plan", "export-duplicate-ack")
+            rows = [
+                {"record_id": rid, "kind": "follow", "handle": handle,
+                 "resultado": "confirmado", "occurred_at": "2026-10-10T09:00:00Z",
+                 "ack": {"id": "reused", "kind": "follow", "target": handle,
+                         "basis": "ui_state"}}
+                for rid, handle in (("a", "@autora"), ("b", "@lectora"))
+            ]
+            result = bridge_results(ledger, batch, rows)
+            self.assertEqual((result["inserted"], result["downgraded_reused_ack"]), (2, 2))
+            self.assertEqual(bridge_results(ledger, batch, rows)["replayed"], 2)
+            self.assertEqual(ledger.count(), 2)
+            self.assertEqual(ledger.conversion("x", as_of="2026-10-14T09:00:00Z")["eligible"], 0)
+
     def test_snapshot_conversion_partial_then_complete(self):
         with tempfile.TemporaryDirectory() as folder:
             ledger = RelationshipLedger(Path(folder) / "demo.sqlite")
