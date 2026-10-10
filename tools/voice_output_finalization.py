@@ -21,7 +21,7 @@ class VoicePreflightUnavailable(RuntimeError):
     """No se pudo obtener un diagnóstico válido; la salida no debe enviarse."""
 
 
-def inspect(text: str, *, network: str, queue: str, log=print) -> list[dict]:
+def inspect(text: str, *, network: str, queue: str | None, log=print) -> list[dict]:
     """Una auditoría por campo. No devuelve ni registra texto original.
 
     Los findings no vetan publicaciones. Los errores del motor o un esquema
@@ -29,7 +29,7 @@ def inspect(text: str, *, network: str, queue: str, log=print) -> list[dict]:
     """
     if not isinstance(text, str):
         raise TypeError("texto de salida no es str")
-    if network not in NETWORKS or queue not in QUEUES:
+    if network not in NETWORKS or (queue is not None and queue not in QUEUES):
         raise ValueError("red/cola de salida desconocida")
     try:
         audit = import_module("spanish_voice_quality").audit
@@ -52,14 +52,14 @@ def inspect(text: str, *, network: str, queue: str, log=print) -> list[dict]:
     if findings:
         codes = ",".join(sorted({f["code"] for f in findings}))
         try:
-            log("[voz] revision_es " + network + "/" + queue + ": " + codes)
+            log("[voz] revision_es " + network + "/" + (queue or "MANUAL") + ": " + codes)
         except Exception:
             pass  # un fallo del logger no es un fallo del auditor
     return findings
 
 
 def inspect_fields(fields: Mapping[str, str], *, network: str,
-                   queue: str, log=print) -> dict[str, list[dict]]:
+                   queue: str | None, log=print) -> dict[str, list[dict]]:
     """Campos independientes; no convertir ni recortar texto ni copiar findings."""
     if not isinstance(fields, Mapping):
         raise TypeError("campos de salida inválidos")
