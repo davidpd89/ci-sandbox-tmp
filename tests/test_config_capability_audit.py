@@ -282,6 +282,35 @@ class ConfigCapabilityAuditTests(unittest.TestCase):
         self.assertEqual(result["configurations"]["mastodon"]["status"], "invalid")
         self.assertEqual(result["errors"], 1)
 
+    def test_two_checkouts_require_explicit_registry_provenance(self):
+        """Dos roots no pueden disfrazar como propios registros de otro checkout."""
+        self.write_config("bluesky", config(shortlist={"like_max_age_days": 30}))
+        with tempfile.TemporaryDirectory() as other_dir:
+            other = Path(other_dir)
+            (other / "tools").mkdir()
+            other_cfg = other / audit.CONFIG_PATHS["bluesky"]
+            other_cfg.parent.mkdir(parents=True, exist_ok=True)
+            other_cfg.write_text(
+                json.dumps(config(shortlist={"like_max_age_days": 40})),
+                encoding="utf-8",
+            )
+            one = audit.audit(self.root, pipelines={"bluesky": {"pre": []}},
+                              cleanup_adapters={}, harvesters={})
+            two = audit.audit(other, pipelines={"tiktok": {"phone": True}},
+                              cleanup_adapters={}, harvesters={})
+            self.assertNotEqual(one["pipelines"], two["pipelines"])
+            self.assertEqual(
+                one["configurations"]["bluesky"]["effective_common_policy"]["community_age"]["value"], 30)
+            self.assertEqual(
+                two["configurations"]["bluesky"]["effective_common_policy"]["community_age"]["value"], 40)
+            self.assertFalse(any(f["kind"] == "registry_from_local_checkout"
+                                 for f in one["findings"] + two["findings"]))
+            # Sin registros inyectados los dos checkouts son parciales:
+            # exponer la procedencia, no simular paridad efectiva.
+            implicit = audit.audit(other)
+            self.assertTrue(any(f["kind"] == "registry_from_local_checkout"
+                                for f in implicit["findings"]))
+
     def test_foreign_checkout_registry_provenance_is_explicit(self):
         report = audit.audit(self.root)
         self.assertTrue(any(f["kind"] == "registry_from_local_checkout"
