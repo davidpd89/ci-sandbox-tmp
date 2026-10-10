@@ -89,6 +89,16 @@ class CalendarTests(unittest.TestCase):
                          {"estado_ausente", "texto_ausente", "fecha_ausente",
                           "medio_ausente", "alt_ausente"})
 
+    def test_multiple_media_auto_is_invalid_manual_is_allowed(self):
+        media = [{"exists": True, "alt": "Portada"},
+                 {"exists": True, "alt": "Segunda imagen"}]
+        auto = plan({"bluesky": [item(media=media)]})["items"][0]
+        self.assertEqual(auto["status"], "invalid")
+        self.assertIn("medio_multiple_auto_no_soportado", auto["issues"])
+        manual = plan({"bluesky": [item(media=media, auto=False)]})["items"][0]
+        self.assertEqual(manual["status"], "future")
+        self.assertNotIn("medio_multiple_auto_no_soportado", manual["issues"])
+
     def test_repeated_text_same_network_only_warning(self):
         a = item(folder="a")
         b = item(folder="b", when=datetime(2026, 10, 11, 10),

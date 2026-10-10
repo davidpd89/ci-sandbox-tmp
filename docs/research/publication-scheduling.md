@@ -1,6 +1,6 @@
 # PR #20 — Investigación e implementación: calendario de publicaciones (09/10/2026)
 
-## Hueco real
+## Problema
 
 Se han leído el encargo, el protocolo y los módulos content_queue.py,
 content_queue_alert.py, content_publisher.py, run_content_queue.py y round_queue.py.
@@ -14,7 +14,9 @@ temporal uniforme en UTC que detectara cambios de hora ambiguos o
 inexistentes, solapamientos de la misma red y textos potencialmente
 repetidos. No sería útil crear otro publicador.
 
-## Comparación de software público comprobado el 09/10/2026
+## Alternativas
+
+Comparación de software público comprobado el 09/10/2026
 
 | Proyecto | Referencia fija y mantenimiento comprobado | Licencia y compatibilidad | Decisión |
 | --- | --- | --- | --- |
@@ -24,11 +26,18 @@ repetidos. No sería útil crear otro publicador.
 | Mixpost Lite | https://github.com/inovector/mixpost/tree/df57648b866310446703f5294350552b62735df5 ; 16/03/2026 | MIT; Laravel/PHP | Coste de reemplazo superior a beneficio |
 | Lector existente | https://github.com/davidpd89/ci-sandbox-tmp/blob/research/10-publication-scheduling/tools/content_queue.py | Python 3.11 stdlib; zoneinfo y tzdata en CI | Reutilizar scan_items() y _ya_resuelto() |
 
-No se ha copiado código de terceros, no hay licencia derivada nueva ni
-dependencia runtime. Las referencias quedan fijadas a commits, no a HEAD
-variable. Falta prueba de mantenimiento sostenido futuro, que no se promete.
+## Licencias y procedencia
 
-## Solución
+Fuente primaria: https://github.com/agronholm/apscheduler/tree/a660860d841c5426ec3b7ed2d4ada8fe168710f1
+Fecha de consulta: 2026-10-09
+Licencia SPDX: MIT
+Referencia inmutable: https://github.com/agronholm/apscheduler/tree/a660860d841c5426ec3b7ed2d4ada8fe168710f1
+
+Los campos anteriores corresponden al candidato APScheduler, **no** a una licencia colectiva del resto de proyectos. Cada otro candidato tiene su licencia indicada en la tabla.
+
+No se ha copiado código de terceros ni hay licencia derivada nueva. La lógica de calendario solo requiere librería estándar en sistemas con base IANA disponible; **en Windows, `zoneinfo` necesita instalar `tzdata` o proporcionar una base IANA compatible**. Para un entorno Windows reproducible: `python -m pip install "tzdata>=2026.1,<2027"` (mismo intervalo que CI). Las referencias quedan fijadas a commits, no a HEAD variable. No se promete mantenimiento futuro.
+
+## Decisión
 
 Se añade tools/publication_calendar.py y una entrada optativa en el runner de solo informe tools/run_content_queue.py. Genera JSON read-only por stdout:
 
@@ -44,7 +53,7 @@ fingerprint y diagnósticos. Estados: due, future, stale, review, invalid,
 resolved. Vigencia por defecto 14 días, sin cambiar parámetros del ejecutor.
 
 Resolver hora local usando roundtrip UTC/zoneinfo rechaza los dos casos
-DST problemáticos, en vez de elegir un offset al azar. Los avisos
+DST problemáticos, en vez de elegir un offset al azar. Si una ficha marca `Auto: sí` pero contiene varios medios, el informe devuelve `invalid` con `medio_multiple_auto_no_soportado`, coherente con `content_queue.pending_parse_issues`; en cambio, los múltiples medios manuales continúan permitidos. Los avisos
 possible_duplicate y slot_collision no borran contenidos ni reservan
 posts: son señales para revisión editorial dentro de la misma red. También se incluyen fichas históricas ya publicadas para detectar posibles reposts futuros.
 
@@ -54,7 +63,7 @@ al reparto WEB/API/MOBILE de las rondas de interacción: Facebook e Instagram,
 por ejemplo, disponen de adaptadores API de publicación. No afirma que esos
 adaptadores estén activos. auto_opt_in es información, nunca permiso.
 
-## Validación y segunda revisión adversarial
+## Pruebas y segunda revisión adversarial
 
 Las pruebas offline sintéticas cubren nueve redes, hora Madrid en verano
 e invierno, dos transiciones DST de 2026, duplicados intra/interred,
@@ -76,6 +85,8 @@ debe resolverse editorialmente antes de ejecutar una publicación en esa hora.
 Pendiente de Claude: Windows 3.11 en CI si el último workflow no concluye,
 comprobación de los adaptadores operativos y un canario supervisado
 separado de estas pruebas. No hubo acción real en redes.
+
+## Retirada
 
 Rollback: revertir los nuevos módulo, tests, workflow e informe.
 No se crea estado persistente, no hay migración ni escritura de ficheros.

@@ -63,6 +63,8 @@ def _entry(red: str, item: dict, now: datetime, zone: ZoneInfo, max_days: int) -
         issues.append("alt_ausente")
     if not media and item.get("imagen_declarada"):
         issues.append("medio_inconsistente")
+    if item.get("auto_ok") is True and len(media) > 1:
+        issues.append("medio_multiple_auto_no_soportado")
 
     if cq._ya_resuelto(state):
         status = "resolved"
