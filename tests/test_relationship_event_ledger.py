@@ -99,7 +99,9 @@ class LedgerTest(unittest.TestCase):
         for index, changes in enumerate(invalid):
             with self.subTest(changes=changes):
                 with self.assertRaises(ValueError):
-                    self.ledger.append(event(source_id=f"invalid-{index}", **changes))
+                    sample = event(source_id=f"invalid-{index}")
+                    sample.update(changes)
+                    self.ledger.append(sample)
         self.assertEqual(self.ledger.count(), 0)
 
     def test_existing_schema_version_refusal(self):
