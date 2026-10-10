@@ -139,7 +139,7 @@ class RedditOpportunityTests(unittest.TestCase):
         self.assertIn("romantasy", result["topic_hints"])
         self.assertIn("fantasia", result["topic_hints"])
         self.assertTrue(result["question_hint"])
-        self.assertEqual(r.text_signals("Mi libro no es sobre fantasías")["topic_hints"], [])
+        self.assertEqual(r.text_signals("Mi texto no es sobre fantasías")["topic_hints"], [])
         self.assertEqual(r.text_signals("El libro", "sin pregunta")["question_hint"], False)
 
     def test_missing_numeric_engagement_remains_unknown(self):
