@@ -27,7 +27,9 @@ def adapt_inbound_rows(rows):
             account = _normal_account(network, handle)
             if not isinstance(day, str) or not day.strip() or not isinstance(kind, str) or not kind.strip():
                 raise IdentityError("missing_inbound_fields")
-            raw_id = "\x1f".join((day, network, account, kind))
+            # Equivalent CSV observations from different adapters must hash alike.
+            day, kind = day.strip(), kind.strip().casefold()
+            raw_id = "\x1f".join((day, account, kind))
             records.append({"account": account, "event_id": "in:" + sha256(raw_id.encode()).hexdigest(),
                             "direction": "inbound", "kind": kind})
         except (KeyError, TypeError, ValueError) as exc:
