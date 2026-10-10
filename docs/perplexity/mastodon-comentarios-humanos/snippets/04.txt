@@ -1,0 +1,59 @@
+python
+# Nuevo archivo: SISTEMA_DIARIO_MASTODON/reply_strategy.py
+# Estilo basado en conversación comunitaria de Mastodon; no copia frases de usuarios.
+import hashlib
+import json
+import random
+from dataclasses import dataclass
+
+
+@dataclass
+class ReplyCandidate:
+    archetype: str
+    text: str
+    includes_question: bool
+
+
+class ReplyStrategist:
+    ARCHETYPES = ["emocion", "personaje", "escena", "tema", "recomendacion"]
+
+    def __init__(self, config: dict, seed: int | None = None):
+        self.config = config
+        self.random = random.Random(seed)
+
+    def candidates(self, thread_digest: str, extracted_entities: list[str]) -> list[ReplyCandidate]:
+        entity = extracted_entities[0] if extracted_entities else "esa escena"
+        base = [
+            ReplyCandidate(
+                "emocion",
+                f"Me quedé con {entity}: tiene una carga emocional muy bien construida.",
+                False,
+            ),
+            ReplyCandidate(
+                "personaje",
+                f"{entity} funciona especialmente bien porque se nota que tiene contradicciones propias.",
+                False,
+            ),
+            ReplyCandidate(
+                "escena",
+                f"Esa parte con {entity} deja una imagen muy clara; se siente tensa sin explicar demasiado.",
+                False,
+            ),
+            ReplyCandidate(
+                "tema",
+                f"Me interesa cómo encaja {entity} con el tipo de fantasía que buscas contar.",
+                True,
+            ),
+        ]
+
+        allowed = self.config.get("reply_style", {}).get("allowed_archetypes", self.ARCHETYPES)
+        return [c for c in base if c.archetype in allowed]
+
+    def select(self, candidates: list[ReplyCandidate], scores: dict[str, float]) -> ReplyCandidate:
+        if not candidates:
+            raise ValueError("No hay candidatas válidas")
+        return max(candidates, key=lambda c: scores.get(c.archetype, 0.0))
+
+    def idempotency_key(self, status_id: str, account_id: str) -> str:
+        raw = f"{status_id}:{account_id}"
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
