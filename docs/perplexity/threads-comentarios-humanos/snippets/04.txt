@@ -1,0 +1,11 @@
+python
+from tools.comment_naturalness_evaluator import evaluate_comment
+
+report = evaluate_comment(
+    comment="Los conflictos políticos y los dragones ya me han llamado la atención.",
+    context_anchors=["conflictos políticos", "dragones"],
+    allow_question=False,
+)
+
+print(report)
+# NaturalnessReport(score=10.0, passes=True, reasons=[])
