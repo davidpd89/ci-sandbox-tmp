@@ -1,0 +1,22 @@
+json
+{
+  "hashtags_expansion": [
+    "dragones",
+    "magia",
+    "fae",
+    "vampiros",
+    "darkacademia",
+    "darkromance",
+    "enemiestolovers",
+    "enemiestolovers",
+    "foundfamily",
+    "highfantasy",
+    "epicfantasy",
+    "yabooks",
+    "youngadult",
+    "booklover",
+    "bookworm",
+    "reading",
+    "books"
+  ]
+}
