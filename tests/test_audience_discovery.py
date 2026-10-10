@@ -314,6 +314,12 @@ class AudienceTests(unittest.TestCase):
         self.assertEqual(people[0]["surfaces"], 2)
         self.assertEqual(self.store.db.execute(
             "SELECT count(*) FROM audience_accounts").fetchone()[0], 1)
+        # Una captura vieja sin ID no puede despromocionar el actor ni
+        # reintroducir el alias como segunda persona.
+        stats = self.ingest([first], network="instagram")
+        self.assertEqual(stats["replays"], 1)
+        self.assertEqual(len(self.store.ranked("instagram")), 1)
+        self.assertEqual(self.store.ranked("instagram")[0]["account_key"], "id:123")
 
     def test_conflicting_actor_for_same_event_is_atomic(self):
         first = event()
