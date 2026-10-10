@@ -2,6 +2,31 @@
 
 Fecha de contraste: **2026-10-10**. Rama: `research/17-browser-mobile-automation`; base: `research/public-reuse-parent`.
 
+## Problema
+El bloqueo Android previo permitía retirar un marcador por TTL aun con propietario vivo y dejaba una carrera entre reclamadores. El resultado era exclusión no garantizada para un mismo teléfono.
+
+## Alternativas
+Comparados Playwright/CDP, Appium, UIAutomator2, portalocker y continuidad del bloqueo compartido existente: se conserva Playwright y mobilecli, y se reutiliza el guard OS propio ya probado en Edge.
+
+## Licencias y procedencia
+Fuente primaria: https://github.com/davidpd89/ci-sandbox-tmp/blob/4da0584f270bdbec6cf37286cc86396a08e11bab/tools/action_ledger.py
+Fecha de consulta: 2026-10-10
+Licencia SPDX: NOASSERTION
+Referencia inmutable: https://github.com/davidpd89/ci-sandbox-tmp/blob/4da0584f270bdbec6cf37286cc86396a08e11bab/tools/action_ledger.py
+
+La referencia primaria es código del **mismo repositorio**, no material externo relicenciado. GitHub no proporciona una licencia SPDX para ese código propio. Los repositorios externos estudiados se clasifican más abajo, con sus licencias verificadas. No se copia código externo.
+
+## Decisión
+Añadir un parámetro de ruta opcional a `action_ledger.exclusive` y usarlo para mobile sin alterar el bloqueo de Edge ni introducir bibliotecas.
+
+## Pruebas
+`tests/test_browser_mobile_owner.py` y las suites existentes. Simulación offline de procesos concurrentes, TTL, caída, compatibilidad de marcadores y liberación; CI Ubuntu/Windows Python 3.11.
+
+## Retirada
+Revertir las modificaciones de `tools/action_ledger.py` y `tools/mobile_runtime.py`. Detener todos los runners de versiones mixtas antes del cambio; no eliminar `.oslock` durante ejecución.
+
+---
+
 ## Diagnóstico basado en código
 
 En el mirror público (`tools/mobile_runtime.py`, antes de este cambio), `mobile_session_lock` escribía `PID:time_ns` con `O_EXCL` y borraba un fichero cuando `age > stale_after` **aunque el PID siguiese vivo**. Una ronda larga o una suspensión del portátil podía liberar Android en falso y autorizar dos workers simultáneos. Dos reclamadores también podían competir entre lectura, `remove` y `O_EXCL`.
