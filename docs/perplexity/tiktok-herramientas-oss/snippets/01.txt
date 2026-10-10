@@ -1,0 +1,7 @@
+python
+# https://github.com/MEOMcGill/pytok
+async for video in api.hashtag(name="funny").videos(count=100):
+    ...
+
+async for video in api.search("news").videos(count=100):
+    ...
