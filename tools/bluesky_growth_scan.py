@@ -702,7 +702,12 @@ def _query_selection(collector):
         )
         for query in ranked[:per_family]:
             chosen.append((name, query))
-    return chosen
+    import hashtag_query_consumers as hqc
+    return hqc.reserve_fresh(
+        chosen,
+        [("lexical_expansion", q) for q in collector.config.get("lexical_queries", [])],
+        budget=len(chosen), tick=collector.today.toordinal(),
+    )
 
 
 def _actor_query_selection(collector):
@@ -1898,11 +1903,12 @@ def _initial_discovery(c):
     # que participa en conversaciones literarias aunque su post raíz no nos aparezca.
     _search_replies_v2(c)
 
-    # Hashtags: rotación amplia, no dos etiquetas fijas.
+    # Hashtags: conservar la cuota nativa y reservar una novedad verificable.
     tags = c.config.get("tag_queries") or []
+    lexical_tags = c.config.get("lexical_tags") or []
     ordinal = c.today.toordinal()
     tag_count = min(
-        len(tags),
+        len(tags) + len(lexical_tags),
         int(c.config["coverage"].get("tag_queries_per_round", 5)),
     )
     selected = []
@@ -1915,6 +1921,10 @@ def _initial_discovery(c):
             seen.add(key)
             selected.append(item)
         offset += 1
+    import hashtag_query_consumers as hqc
+    selected = hqc.reserve_fresh(
+        selected, lexical_tags, budget=tag_count, tick=ordinal,
+    )
     for item in selected:
         tag, query = item["tag"], item["query"]
         _run_source(
