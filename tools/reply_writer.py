@@ -333,18 +333,18 @@ def write_replies(items, network, *, wait_min=10, consult=None, recent=None, log
         net = source.get("network") or network
         ok, why = valid_reply(reply, net, recent)
         if ok:
-            # Migración compatible con el escritor oficial de procedencia:
-            # invocar este hook DESPUÉS de verificar la prueba de autoría.
-            try:
-                from spanish_voice_quality import advisory
-                qa_net = "reddit" if net == "reddit_micro" else net
-                advisory(reply, network=qa_net, queue=source.get("queue"),
-                         log=log, label="[reply_writer] revision_es_" + qa_net)
-            except Exception as exc:
-                log("[reply_writer] auditor_es_no_disponible: " + type(exc).__name__)
             out[item_id] = " ".join(reply.split())
             recent.append(out[item_id])
             mark_gpt(out[item_id])
+            # En el escritor oficial, colocar tras comprobar el proof de autoría.
+            # Diagnóstico editoral, no altera ni autoriza textos.
+            try:
+                from spanish_voice_quality import advisory
+                qa_net = "reddit" if net == "reddit_micro" else net
+                advisory(out[item_id], network=qa_net, queue=source.get("queue"),
+                         log=log, label="[reply_writer] revision_es_" + qa_net)
+            except Exception as exc:
+                log("[reply_writer] auditor_es_no_disponible: " + type(exc).__name__)
         else:
             log(f"[reply_writer] {item_id} descartada ({why}): {reply[:70]!r}")
     return out
