@@ -2,6 +2,33 @@
 
 **Alcance:** adaptador **opt-in, solo lectura**, sin cuentas, sin secretos, sin escrituras ni cambios al runner. El informe de Perplexity `docs/perplexity/crecimiento-reddit.md` es el punto de partida, **no** evidencia suficiente.
 
+## Problema
+
+El escáner Reddit actual carece de un puente **API de consulta read-only** y no debe recibir recomendaciones ajenas a su scope editorial.
+
+## Alternativas
+
+Se contrasta PRAW con menshun, social-listening-tool, Reddit-Monitor, prawtools y el notebook de análisis; véase la tabla de comparación y descartes más abajo.
+
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/praw-dev/praw
+Fecha de consulta: 2026-10-10
+Licencia SPDX: BSD-2-Clause
+Referencia inmutable: https://github.com/praw-dev/praw/tree/4a9eb7ee3ac5743ce8b848e9f7b187eae4826da1
+
+## Decisión
+
+Se incorpora como **dependencia opcional real** la API PRAW y un extractor limitado a comunidades aprobadas. El contrato multirred de #100 y el ranking de #116 siguen separados para evitar duplicación.
+
+## Pruebas
+
+Suite sintética con PRAW mock + instalación de PRAW en Windows/Ubuntu Python 3.11, sin red ni datos de cuentas. Reproducibilidad detallada más abajo.
+
+## Retirada
+
+Eliminar lector, pruebas, requisitos opcionales, workflow e informe. Ninguna migración ni efecto sobre el programa operativo.
+
 ## Revisión contra el sistema operativo
 
 Repositorio privado `davidpd89/rrss-davidporto-CODE`, rama
@@ -27,7 +54,7 @@ Repositorio privado `davidpd89/rrss-davidporto-CODE`, rama
 
 ## Implementación concreta
 
-- `tools/reddit_opportunity_reader.py`: inyección del cliente PRAW para búsqueda por subreddits y consultas, con `sort=new`, `time_filter=week`, `limit` acotado; solo `r/libros` y `r/filosofia_en_espanol` admitidos. **La segunda sigue pendiente de validar normas en vivo antes de comentar**: este lector no autoriza hacerlo.
+- `tools/reddit_opportunity_reader.py`: inyección del cliente PRAW para búsqueda por subreddits y consultas, con `sort=new`, `time_filter=week`, `limit` acotado (el servidor puede ignorar el filtro temporal con `new`; se verifica localmente la antigüedad); solo `r/libros` y `r/filosofia_en_espanol` admitidos. **La segunda sigue pendiente de validar normas en vivo antes de comentar**: este lector no autoriza hacerlo.
 - Rechaza posts sin ID/fecha/título verificables, fechas futuras, posts antiguos, comunidad fuera de scope, iteradores anómalamente extensos y conflicto de identidad para un mismo ID. Fusiona búsquedas duplicadas, pero **no** fusiona observaciones contradictorias; el 429/5xx se propaga sin simular éxito.
 - Añade señales léxicas de temas/posible pregunta, con distinción explícita entre pistas y hechos. No inventa idioma, valoración, intención, resultados ni autor para cuentas eliminadas. `verified_actions=[]`, `status=manual_review_required`: **no existe función reply/submit/follow ni cola ejecutable**.
 - `to_jsonl()` permite al coordinador obtener un texto JSONL en memoria. No crea/modifica archivos, no lee tokens y no publica.
