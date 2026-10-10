@@ -126,21 +126,17 @@ def decision(events, network, account, *, today=None, policy=None):
         elif event.kind == "reciprocated":
             failures = 0
             last_failure = None
-            active = False
-            seen_follow = False
-            orphan_dates.clear()
+            last_evidence = None
+            failure_dates.clear()
         elif event.kind == "follow":
-            active = True
-            seen_follow = True
+            # Confirmar un follow no acredita un fallo de reciprocidad.
+            continue
         elif event.kind == "nonreciprocal":
-            # Los CSV anteriores registraban un unfollow sin el follow de origen.
-            # Distintos dias son ciclos historicos; filas duplicadas del mismo
-            # dia no deben crear nuevos fracasos.
-            if active or (not seen_follow and event.date not in orphan_dates):
+            # Un unfollow confirmado por fecha. Registros mixtos y huérfanos
+            # no requieren inventar el follow ausente; se deduplican las filas.
+            if event.date not in failure_dates:
                 failures += 1
-                if not active:
-                    orphan_dates.add(event.date)
-                active = False
+                failure_dates.add(event.date)
                 last_failure = event.date
                 last_evidence = event.evidence
     status = "eligible"
