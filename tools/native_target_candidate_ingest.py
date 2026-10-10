@@ -295,7 +295,8 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
         account = grouped.setdefault(key, {
             "account_id": stable, "handle": handle, "bio": None,
             "followers": None, "sources": set(), "posts": {},
-            "conflicting_posts": set(),
+            "conflicting_posts": set(), "foreign_posts": set(),
+            "conflicting_post_text": set(), "conflicting_post_stats": set(),
             "language": None, "following": None, "followed_by": None,
             "actions": set(), "lane": lane, "conflicts": set(),
         })
@@ -405,11 +406,24 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
             if not 0 <= age <= max_age:
                 diagnostics.append({"index": i, "reason": "post_outside_age_window"})
                 continue
+            post_key = _post_identity(network, url)
             post_lang = _language(post)
             if post_lang is None:
                 diagnostics.append({"index": i, "reason": "unknown_post_language"})
             if post_lang is not None and not _is_spanish(post_lang):
+                # A foreign-language observation of an otherwise eligible
+                # post invalidates earlier Spanish/unknown evidence. Keep a
+                # tombstone so input order cannot resurrect its opportunities.
+                if post_key in account["posts"]:
+                    account["posts"].pop(post_key, None)
+                    account["conflicting_posts"].add(post_key)
+                    diagnostics.append({"index": i, "reason": "conflicting_post_languages"})
+                account["foreign_posts"].add(post_key)
                 diagnostics.append({"index": i, "reason": "non_spanish_post"})
+                continue
+            if post_key in account["foreign_posts"]:
+                account["conflicting_posts"].add(post_key)
+                diagnostics.append({"index": i, "reason": "conflicting_post_languages"})
                 continue
             text = post.get("text") or post.get("title")
             if not isinstance(text, str):
@@ -426,7 +440,6 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
                 replies = post.get("comment_count")
             if type(replies) is int and 0 <= replies <= 1_000_000:
                 known["stats"] = {"replies": replies}
-            post_key = _post_identity(network, url)
             existing = account["posts"].get(post_key)
             if post_key in account["conflicting_posts"]:
                 continue
@@ -435,8 +448,34 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
                 account["conflicting_posts"].add(post_key)
                 diagnostics.append({"index": i, "reason": "conflicting_post_timestamps"})
                 continue
-            if existing is None or (existing["language"] is None and known["language"] is not None):
+            if existing is None:
                 account["posts"][post_key] = known
+                continue
+            # Duplicate observations are not independent grants. A missing
+            # permission in either observation prevents post interaction;
+            # this intersection is commutative, including across 3+ rows.
+            existing["actions"] = sorted(set(existing["actions"]) & set(known["actions"]))
+            if existing["language"] is None and known["language"] is not None:
+                existing["language"] = known["language"]
+            if (post_key not in account["conflicting_post_text"]
+                and existing["text"] and known["text"]
+                and existing["text"] != known["text"]):
+                existing["text"] = ""
+                account["conflicting_post_text"].add(post_key)
+                diagnostics.append({"index": i, "reason": "conflicting_post_text"})
+            elif not existing["text"] and post_key not in account["conflicting_post_text"]:
+                existing["text"] = known["text"]
+            if (post_key not in account["conflicting_post_stats"]
+                and existing.get("stats") and known.get("stats")
+                and existing["stats"] != known["stats"]):
+                existing.pop("stats", None)
+                account["conflicting_post_stats"].add(post_key)
+                diagnostics.append({"index": i, "reason": "conflicting_post_stats"})
+            elif "stats" not in existing and post_key not in account["conflicting_post_stats"]:
+                if "stats" in known:
+                    existing["stats"] = known["stats"]
+            # For handle-changing X/Threads links, retain a predictable URL.
+            existing["url"] = min(existing["url"], known["url"])
     # The same remote post cannot be attributed to different accounts.
     # Remove the collision from every account rather than create duplicate
     # ranked opportunities when author provenance is incomplete.
