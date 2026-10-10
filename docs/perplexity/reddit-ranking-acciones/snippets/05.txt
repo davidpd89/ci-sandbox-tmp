@@ -1,0 +1,27 @@
+python
+# tools/reddit_candidate_score.py
+def score_profile(
+    *,
+    recent_activity_7d,
+    reciprocity_events,
+    topic_affinity,
+    spanish_probability,
+    account_age_days,
+    karma_total,
+):
+    activity = min(recent_activity_7d / 5.0, 1.0)
+    reciprocity = min(reciprocity_events / 3.0, 1.0)
+    affinity = max(0.0, min(topic_affinity, 1.0))
+    language = max(0.0, min(spanish_probability, 1.0))
+    maturity = min(account_age_days / 365.0, 1.0)
+    karma = min(karma_total / 1000.0, 1.0)
+
+    return round(
+        0.30 * activity
+        + 0.25 * reciprocity
+        + 0.20 * affinity
+        + 0.15 * language
+        + 0.07 * maturity
+        + 0.03 * karma,
+        4,
+    )
