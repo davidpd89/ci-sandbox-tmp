@@ -2,12 +2,12 @@
   "network": "mastodon",
   "today": "2026-10-10",
   "following": [
-    "ana@uno.example",
-    "lectora@taller.example",
-    "pendiente@taller.example"
+    "ana@example.com",
+    "lectora@example.net",
+    "pendiente@example.net"
   ],
   "followers": [
-    "lectora@taller.example"
+    "lectora@example.net"
   ],
   "followers_complete": true,
   "following_complete": true,
@@ -15,21 +15,21 @@
     {
       "red": "mastodon",
       "fecha": "2026-09-20",
-      "cuenta": "ana@uno.example",
+      "cuenta": "ana@example.com",
       "tipo": "follow",
       "resultado": "confirmado"
     },
     {
       "red": "mastodon",
       "fecha": "2026-09-22",
-      "cuenta": "lectora@taller.example",
+      "cuenta": "lectora@example.net",
       "tipo": "follow",
       "resultado": "confirmado"
     },
     {
       "red": "mastodon",
       "fecha": "2026-10-02",
-      "cuenta": "pendiente@taller.example",
+      "cuenta": "pendiente@example.net",
       "tipo": "follow",
       "resultado": "pendiente_aprobacion"
     }
