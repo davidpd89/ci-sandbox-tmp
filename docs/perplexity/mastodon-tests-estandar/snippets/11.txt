@@ -1,0 +1,23 @@
+python
+# tests/test_mastodon_datetime.py
+import pytest
+from datetime import datetime, timezone
+
+from growth.adapters.mastodon import parse_mastodon_datetime
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("2026-10-10T12:00:00Z", datetime(2026, 10, 10, 12, 0, tzinfo=timezone.utc)),
+        ("2026-10-10T12:00:00.000Z", datetime(2026, 10, 10, 12, 0, tzinfo=timezone.utc)),
+        ("2026-10-10T12:00:00+00:00", datetime(2026, 10, 10, 12, 0, tzinfo=timezone.utc)),
+    ],
+)
+def test_parse_mastodon_datetime(value, expected):
+    assert parse_mastodon_datetime(value) == expected
+
+
+def test_rejects_naive_datetime():
+    with pytest.raises(ValueError):
+        parse_mastodon_datetime("2026-10-10T12:00:00")
