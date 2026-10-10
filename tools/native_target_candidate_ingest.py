@@ -202,6 +202,13 @@ def _handle(network, row):
     return _valid_handle(row.get("handle") or (row.get("author") if network == "pinterest" else None))
 
 
+def _conflicting_account_ids(row):
+    """Two explicit remote account aliases must not contradict each other."""
+    account_id = _id(row.get("account_id"))
+    user_id = _id(row.get("user_id"))
+    return bool(account_id and user_id and account_id != user_id)
+
+
 def _account_identity(network, row):
     stable = _id(row.get("account_id")) or _id(row.get("user_id"))
     handle = _handle(network, row)
@@ -258,7 +265,8 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
     stable_handles = set()
     for original in _native_rows(network, rows):
         if (isinstance(original, Mapping) and
-            original.get("queue", queue) == queue):
+            original.get("queue", queue) == queue and
+            not _conflicting_account_ids(original)):
             _, observed_handle, observed_id = _account_identity(network, original)
             if observed_id and observed_handle:
                 stable_handles.add(observed_handle)
@@ -269,6 +277,9 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
         row = original
         if row.get("queue", queue) != queue:
             diagnostics.append({"index": i, "reason": "queue_mismatch"})
+            continue
+        if _conflicting_account_ids(row):
+            diagnostics.append({"index": i, "reason": "conflicting_account_ids"})
             continue
         key, handle, stable = _account_identity(network, row)
         if row.get("_pin") and _valid_handle(row.get("author")) and _valid_handle(row.get("handle")) != _valid_handle(row.get("author")):
