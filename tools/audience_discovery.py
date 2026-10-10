@@ -110,6 +110,9 @@ def normalize(network: str, kind: str, raw: Mapping, *,
     if not isinstance(raw, Mapping) or not surface or not post_key:
         raise ObservationError("origen_incompleto")
     account_key, handle, stable, profile = actor_fields(network, raw)
+    if network == "mastodon" and raw.get("instance"):
+        # Status y comentarios Mastodon usan IDs locales a la instancia.
+        post_key = str(raw["instance"]).strip().casefold() + "|" + post_key
     event_id = str(raw.get("event_id") or raw.get("comment_id") or raw.get("uri") or "").strip()
     # Los endpoints de likers/reposters a veces solo devuelven cuentas.
     # La combinación estable de post, tipo y actor identifica ese edge.
