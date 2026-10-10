@@ -151,6 +151,28 @@ class HistoricalMemoryTests(unittest.TestCase):
         self.assertEqual((len(old), sum(old)), (9, 3))
         self.assertEqual((len(new), sum(new)), (7, 3))
 
+    def test_network_override_and_invalid_config_fallback(self):
+        import json
+        with tempfile.TemporaryDirectory() as folder:
+            src = pathlib.Path(folder) / "SISTEMA_DIARIO_BLUESKY" / "registro.csv"
+            src.parent.mkdir()
+            with src.open("w", newline="", encoding="utf-8") as stream:
+                writer = csv.DictWriter(stream, fieldnames=["fecha", "cuenta", "tipo", "notas", "resultado"])
+                writer.writeheader()
+                writer.writerows(cycle("a", "2026-09-01", "2026-09-02"))
+            config = pathlib.Path(folder) / "config.json"
+            today = dt.date(2026, 9, 8)
+            with mock.patch.object(rp, "SETTINGS", str(config)):
+                config.write_text(json.dumps({"memoria_reciprocidad": {"initial_days": 5}}), encoding="utf-8")
+                self.assertEqual(rp.blocked_accounts(str(src), today), set())
+                config.write_text(json.dumps({"memoria_reciprocidad": {"initial_days": 5},
+                    "redes": {"bluesky": {"memoria_reciprocidad": {"initial_days": 15}}}}),
+                    encoding="utf-8")
+                self.assertEqual(rp.blocked_accounts(str(src), today), {"a"})
+                config.write_text(json.dumps({"memoria_reciprocidad": {"initial_days": "invalido"}}),
+                                  encoding="utf-8")
+                self.assertEqual(rp.blocked_accounts(str(src), today), {"a"})
+
     def test_configurable_retention_and_cooldown(self):
         events = mem.events_from_rows(cycle("a", "2026-09-01", "2026-09-02"), "x")
         state = mem.decision(events, "x", "a", today=TODAY, policy=mem.Policy(lookback_days=2))
