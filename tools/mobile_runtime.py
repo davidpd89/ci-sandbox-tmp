@@ -44,11 +44,14 @@ def mobile_session_lock(path: str | None = None, *, stale_after: float = 6 * 360
     El archivo .oslock es persistente y nunca debe borrarse manualmente.
     """
     path = path or os.getenv("MOBILE_SESSION_LOCK") or DEFAULT_LOCK_PATH
-    try:
-        with exclusive("mobile", stale_after=stale_after, lock_path=path):
-            yield path
-    except RoundBusy as exc:
-        raise MobileSessionBusy(f"móvil ocupado por otra sesión del repo: {path}") from exc
+    # Traducir solo el conflicto al *adquirir*. Un RoundBusy generado por
+    # el cuerpo (p. ej. por Edge) debe propagarse sin atribuirlo al móvil.
+    with contextlib.ExitStack() as stack:
+        try:
+            stack.enter_context(exclusive("mobile", stale_after=stale_after, lock_path=path))
+        except RoundBusy as exc:
+            raise MobileSessionBusy(f"móvil ocupado por otra sesión del repo: {path}") from exc
+        yield path
 
 
 def _argv(binary: str, *args: str) -> list[str]:
