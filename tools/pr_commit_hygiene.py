@@ -8,6 +8,8 @@ import sys
 
 from repo_hygiene import ROOT, forbidden_path
 
+MAX_COMMITS = 20000
+
 
 def git(root: pathlib.Path, *argv: str) -> bytes:
     env = os.environ.copy()
@@ -47,13 +49,18 @@ def changes(root: pathlib.Path, parent: str | None, commit: str, *, statuses: st
     return {s.decode("utf-8") for s in data.split(bytes([0])) if s}
 
 
-def scan_pr(base: str, head: str, *, root: pathlib.Path = ROOT) -> list[tuple[str, int]]:
+def scan_pr(base: str, head: str, *, root: pathlib.Path = ROOT,
+            limit: int = MAX_COMMITS) -> list[tuple[str, int]]:
+    if not isinstance(limit, int) or limit < 1:
+        raise ValueError("Invalid commit limit")
     if git(root, "rev-parse", "--is-shallow-repository").strip() != b"false":
         raise ValueError("Shallow history: full checkout required")
     base, head = oid(root, base), oid(root, head)
     if not git(root, "merge-base", base, head).strip():
         raise ValueError("Unrelated PR history")
-    rows = git(root, "rev-list", "--missing=error", "--parents", "--topo-order", "--reverse", f"{base}..{head}").splitlines()
+    rows = git(root, "rev-list", "--missing=error", "--parents", "--topo-order", "--reverse", f"--max-count={limit + 1}", f"{base}..{head}").splitlines()
+    if len(rows) > limit:
+        raise ValueError("PR commit range exceeds bounded audit limit")
     if not rows:
         raise ValueError("No PR commits; check checkout/history")
     findings = []
@@ -81,9 +88,15 @@ def scan_pr(base: str, head: str, *, root: pathlib.Path = ROOT) -> list[tuple[st
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--pr-merge", default="HEAD")
+    parser.add_argument("--expected-head", help="Expected PR head SHA from event")
+    parser.add_argument("--expected-base", help="Expected PR base SHA from event")
     args = parser.parse_args(argv)
     try:
         base, head = pr_parents(merge=args.pr_merge)
+        if args.expected_head is not None and oid(ROOT, args.expected_head) != head:
+            raise ValueError("Checkout head differs from PR event SHA")
+        if args.expected_base is not None and oid(ROOT, args.expected_base) != base:
+            raise ValueError("Checkout base differs from PR event SHA")
         findings = scan_pr(base, head)
     except (RuntimeError, ValueError, UnicodeError) as exc:
         print(f"HISTORY ERROR: {exc}", file=sys.stderr)
