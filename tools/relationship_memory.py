@@ -119,11 +119,12 @@ def decision(events, network, account, *, today=None, policy=None):
     orphan_dates = set()
     last_failure = None
     last_evidence = None
+    permanent_evidence = None
     permanent = False
     for event in relevant:
         if event.kind == "permanent":
             permanent = True
-            last_evidence = event.evidence
+            permanent_evidence = event.evidence
         elif event.kind == "reciprocated":
             failures = 0
             last_failure = None
@@ -148,6 +149,7 @@ def decision(events, network, account, *, today=None, policy=None):
     retry_on = None
     if permanent:
         status = "permanent"
+        last_evidence = permanent_evidence
     elif failures >= policy.max_failures:
         if policy.ban_days is None:
             status = "exhausted"

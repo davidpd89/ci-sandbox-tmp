@@ -78,6 +78,13 @@ class HistoricalMemoryTests(unittest.TestCase):
                 rows[-1]["resultado"] = "confirmado"
                 self.assertEqual(mem.decisions_from_rows(rows, "x", today=TODAY)["a"]["failures"], 0)
 
+    def test_permanent_decision_preserves_block_evidence(self):
+        rows = [row("a", "block", "2026-08-01")] + cycle(
+            "a", "2026-09-01", "2026-09-02")
+        decision = mem.decisions_from_rows(rows, "x", today=TODAY)["a"]
+        self.assertEqual(decision["status"], "permanent")
+        self.assertEqual(decision["evidence"], "registro.csv:2")
+
     def test_invalid_skipped_or_undated_legacy(self):
         rows = [row("bot", "unfollow", "", result="saltado_ya_no_seguido"),
                 row("dudosa", "unfollow", "2026-09-01", notes="no devuelve",
