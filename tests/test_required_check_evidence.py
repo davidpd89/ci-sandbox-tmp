@@ -98,7 +98,7 @@ class LiveEvidenceTests(unittest.TestCase):
     def test_collisions_missing_and_status_context(self):
         r = SyntheticReader()
         r.checks += [copy.deepcopy(r.checks[0])]
-        with self.assertRaisesRegex(p.AuditError, "duplicated"):
+        with self.assertRaisesRegex(p.AuditError, "duplicate"):
             self.verify(r)
         r = SyntheticReader()
         r.checks.pop()
@@ -145,7 +145,7 @@ class LiveEvidenceTests(unittest.TestCase):
                 if path == "/repos/" + REPO + "/pulls/96" and self.calls.count(path) == 2:
                     result["merge_commit_sha"] = "e" * 40
                 return result
-        with self.assertRaisesRegex(p.AuditError, "moved"):
+        with self.assertRaisesRegex(p.AuditError, "SHA is not|moved"):
             self.verify(Changed())
 
     def test_pagination_201_items_and_duplicate_page_swap(self):
