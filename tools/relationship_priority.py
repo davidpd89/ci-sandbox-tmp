@@ -139,8 +139,12 @@ def _score(record, action, today):
                       + min(inc["like"], 6) * 1.0)
     inbound_points = min(inbound_points, 32.0)
     days = (today - record["last_in"]).days if record["last_in"] else None
-    recency = round(15 * 2 ** (-days / 14), 3) if days is not None else 0.0
-    depth = min(8.0, sum(v > 0 for v in inc.values()) * 2.0)
+    # Los agregados son del periodo observado: sin una ventana fiable, el
+    # volumen historico y la variedad deben decaer con la misma recencia.
+    decay = 2 ** (-days / 14) if days is not None else 0.0
+    inbound_points *= decay
+    recency = round(15 * decay, 3)
+    depth = min(8.0, sum(v > 0 for v in inc.values()) * 2.0) * decay
     reciprocal = 0 if record["reciprocity"] is None else 8 * record["reciprocity"]
     inactivity = (today - record["last_out"]).days if record["last_out"] else None
     fresh = min(6, max(0, inactivity) / 5) if inactivity is not None else 0.0
@@ -186,41 +190,119 @@ def rank_daily(snapshot, *, today, limits=None, max_target_age=7, diversity_weig
     if set(limits) != set(LANES):
         raise ValueError("limits: declarar WEB, API y MOBILE por separado")
     limits = {lane: _count(limits[lane], f"limits.{lane}") for lane in LANES}
-    winners, excluded = {}, []
+    # Primero normalizar TODAS las observaciones, tambien las vetadas. De
+    # otro modo la segunda fuente podria volver elegible a una cuenta bloqueada.
+    normalized, excluded = [], []
+    ids_by_handle = {}
     for index, row in enumerate(snapshot["candidates"]):
         try:
-            candidate, error = _candidate(row, today, max_target_age)
+            record = _normalize(row, today)
         except ValueError as exc:
             excluded.append(dict(index=index, reason=str(exc)))
             continue
+        normalized.append((index, record))
+        if record["actor_id"]:
+            alias = (record["network"], record["handle"].lstrip("@").casefold())
+            ids_by_handle.setdefault(alias, set()).add(record["identity"])
+
+    vetoes = set()
+    records = []
+    for index, record in normalized:
+        alias = (record["network"], record["handle"].lstrip("@").casefold())
+        ids = ids_by_handle.get(alias, set())
+        if not record["actor_id"] and len(ids) == 1:
+            record["identity"] = next(iter(ids))
+        elif not record["actor_id"] and len(ids) > 1:
+            # Un handle con varios IDs no autoriza asignarlo a ninguno.
+            # Un veto ambiguo impide recomendar cualquiera de los alias.
+            if record["blocked"] or record["self_account"]:
+                vetoes.update(ids)
+            excluded.append(dict(index=index, network=record["network"],
+                                 handle=record["handle"], reason="identidad ambigua"))
+            continue
+        if record["blocked"] or record["self_account"]:
+            vetoes.add(record["identity"])
+        records.append((index, record))
+
+    # Conservar la mejor observacion de cada actor EN CADA COLA. La deduplicacion
+    # global prematura pierde plazas libres cuando la primera cola se satura.
+    winners = {}
+    def tie(item):
+        return (-item["score"], ACTIONS.index(item["action"]), LANES.index(item["lane"]),
+                item["handle"].casefold(), item["handle"], item["actor_id"] or "",
+                tuple(item["eligible_actions"]), tuple(item["notes"]),
+                json.dumps(item["features"], sort_keys=True))
+
+    for index, record in records:
+        if record["identity"] in vetoes:
+            excluded.append(dict(index=index, network=record["network"],
+                                 handle=record["handle"], reason="veto de identidad: bloqueado o cuenta propia"))
+            continue
+        candidate, error = _candidate(snapshot["candidates"][index], today, max_target_age)
         if error:
             excluded.append(dict(index=index, **error))
             continue
-        key = candidate["identity"]
-        old = winners.get(key)
-        # Desempatar hasta el final para que invertir el orden de entrada no
-        # cambie la representación visible de un mismo actor.
-        tie = lambda x: (-x["score"], ACTIONS.index(x["action"]), LANES.index(x["lane"]),
-                         x["handle"].casefold(), x["handle"], x["actor_id"] or "",
-                         tuple(x["eligible_actions"]), tuple(x["notes"]),
-                         json.dumps(x["features"], sort_keys=True))
-        if old is None or tie(candidate) < tie(old):
-            if old is not None:
-                excluded.append(dict(index=index, reason="duplicado reemplazado", network=old["network"],
-                                     handle=old["handle"]))
-            winners[key] = candidate
+        candidate["identity"] = record["identity"]
+        if "inbound" not in snapshot["candidates"][index]:
+            candidate["notes"].append("inbound: observacion desconocida")
+        actor = winners.setdefault(candidate["identity"], {})
+        lane = candidate["lane"]
+        previous = actor.get(lane)
+        if previous is None or tie(candidate) < tie(previous):
+            if previous is not None:
+                excluded.append(dict(index=index, network=candidate["network"],
+                                     handle=candidate["handle"], reason="duplicado reemplazado en cola"))
+            actor[lane] = candidate
         else:
-            excluded.append(dict(index=index, reason="duplicado descartado",
-                                 network=candidate["network"], handle=candidate["handle"]))
-    grouped = {lane: [] for lane in LANES}
-    for candidate in winners.values():
-        grouped[candidate["lane"]].append(candidate)
+            excluded.append(dict(index=index, network=candidate["network"],
+                                 handle=candidate["handle"], reason="duplicado descartado en cola"))
+
+    # Matching con caminos aumentantes: maximiza cobertura con cupos por cola
+    # sin recomendar dos veces a un mismo actor. Procesa mayor puntuacion antes
+    # y reubica candidatos si asi se libera una plaza para otro actor.
+    assignments = {}
+    occupants = {lane: [] for lane in LANES}
+
+    def option_order(actor):
+        return sorted(winners[actor], key=lambda lane: (
+            -winners[actor][lane]["score"], LANES.index(lane)))
+
+    def place(actor, lane):
+        previous_lane = assignments.get(actor)
+        if previous_lane is not None:
+            occupants[previous_lane].remove(actor)
+        assignments[actor] = lane
+        occupants[lane].append(actor)
+
+    def augment(actor, visited):
+        for lane in option_order(actor):
+            if lane in visited:
+                continue
+            visited.add(lane)
+            if len(occupants[lane]) < limits[lane]:
+                place(actor, lane)
+                return True
+            # Desplazar antes al ocupante con menor coste de reubicacion.
+            for incumbent in sorted(occupants[lane], key=lambda other: (
+                    winners[other][lane]["score"], other)):
+                if augment(incumbent, visited):
+                    place(actor, lane)
+                    return True
+        return False
+
+    priority = sorted(winners, key=lambda actor: (
+        -max(v["score"] for v in winners[actor].values()), actor))
+    for actor in priority:
+        augment(actor, set())
+
+    grouped = {lane: [winners[actor][lane] for actor in occupants[lane]]
+               for lane in LANES}
     output = {}
     for lane in LANES:
         remaining = grouped[lane]
         counts = Counter()
         chosen = []
-        for _ in range(min(limits[lane], len(remaining))):
+        while remaining:
             pick = min(remaining, key=lambda r: (
                 -(r["score"] - diversity_weight * counts[r["network"]]),
                 -r["score"], r["network"], r["identity"][1], r["action"]))
