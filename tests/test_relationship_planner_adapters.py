@@ -145,7 +145,7 @@ class PlannerBridge(unittest.TestCase):
         events = [base, {**base, "handle": "other"}]
         result, diag = bridge.build_snapshot([source("x")], {}, events, today=TODAY)
         self.assertEqual(diag["inbound_id_conflicts"], 1)
-        self.assertEqual(result["candidates"][0]["inbound"], {})
+        self.assertNotIn("inbound", result["candidates"][0])
 
     def test_pinterest_and_tiktok_nested_adapters(self):
         pi = {"network": "pinterest", "lane": "WEB",
@@ -289,6 +289,25 @@ class PlannerBridge(unittest.TestCase):
         snapshot, _ = bridge.build_snapshot([source("x")], {}, old_only, today=TODAY)
         self.assertNotIn("inbound", snapshot["candidates"][0])
         self.assertIsNone(snapshot["candidates"][0]["last_inbound_at"])
+
+    def test_cross_lane_block_and_follow_veto_cannot_be_erased(self):
+        blocked = source("x", "WEB", preflight=pre(blocked=True))
+        optimistic = source("x", "API", preflight=pre(blocked=False))
+        snapshot, diag = bridge.build_snapshot([blocked, optimistic], {}, [],
+                                               today=TODAY)
+        self.assertEqual(snapshot["candidates"], [])
+        self.assertEqual(sum("veto de identidad" in x.get("reason", "")
+                             for x in diag["excluded"]), 2)
+        following = source("threads", "WEB", preflight=pre(already_following=True))
+        unfollowed = source("threads", "API", preflight=pre(already_following=False))
+        snapshot, _ = bridge.build_snapshot([following, unfollowed], {}, [],
+                                            today=TODAY)
+        self.assertEqual(snapshot["candidates"], [])
+        # Dos alias visibles del mismo ID deben compartir el veto.
+        renamed = source("x", "API", handle="reader_renamed", actor_id="id-x")
+        snapshot, _ = bridge.build_snapshot([blocked, renamed], {}, [],
+                                            today=TODAY)
+        self.assertEqual(snapshot["candidates"], [])
 
     def test_lane_limits_use_current_common_scorer(self):
         from relationship_priority import rank_daily
