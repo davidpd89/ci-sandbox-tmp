@@ -81,7 +81,10 @@ def events_from_rows(rows, network, *, source="registro.csv"):
         try:
             date = dt.date.fromisoformat(str(row.get("fecha") or "")[:10])
         except ValueError:
-            continue
+            if kind in {"block", "unfollow"} and "no devuelve" not in str(row.get("notas") or "").casefold():
+                date = dt.date.min  # exclusión permanente heredada sin fecha
+            else:
+                continue
         notes = str(row.get("notas") or "").casefold()
         if "follow" in kind.split("+"):
             event_kind, reason = "follow", "outbound_confirmed"
