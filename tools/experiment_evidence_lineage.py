@@ -37,18 +37,24 @@ def _is_hash(value):
     return isinstance(value, str) and HASH.fullmatch(value) is not None
 
 
+def has_valid_experiment(row):
+    """Identidad mínima exigible a toda observación del contrato v2."""
+    if not isinstance(row, dict):
+        return False
+    experiment = row.get("experiment")
+    return (isinstance(experiment, dict)
+            and set(experiment) == {"id", "design_sha256", "assignment_sha256"}
+            and isinstance(experiment["id"], str)
+            and OPAQUE.fullmatch(experiment["id"]) is not None
+            and _is_hash(experiment["design_sha256"])
+            and _is_hash(experiment["assignment_sha256"]))
+
+
 def audit_projection(row, target):
     """Campos que un auditor debe contrastar con un manifest de asignaciones."""
-    if not isinstance(row, dict) or not isinstance(target, str):
+    if not isinstance(target, str) or not has_valid_experiment(row):
         return None
-    experiment = row.get("experiment")
-    if (not isinstance(experiment, dict)
-            or set(experiment) != {"id", "design_sha256", "assignment_sha256"}
-            or not isinstance(experiment["id"], str)
-            or OPAQUE.fullmatch(experiment["id"]) is None
-            or not _is_hash(experiment["design_sha256"])
-            or not _is_hash(experiment["assignment_sha256"])):
-        return None
+    experiment = row["experiment"]
     targets = row.get("targets")
     if not isinstance(targets, dict):
         return None
