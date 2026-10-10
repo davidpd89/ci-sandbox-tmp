@@ -23,7 +23,7 @@ NETWORK_QUEUES = {
 }
 KINDS = {"follow": "follow", "unfollow": "unfollow", "like": "like",
          "like_latest": "like", "like_external": "like", "vote": "like", "favourite": "like",
-         "favorite": "like", "comment": "comment", "comment_external": "comment",
+         "favorite": "like", "react": "like", "comment": "comment", "comment_external": "comment",
          "reply": "reply", "boost": "repost", "quote": "repost",
          "repost": "repost", "visit": "visit"}
 BASIS = {"WEB": {"ui_state"}, "API": {"api_response"},
@@ -81,7 +81,7 @@ def _outcome(value: object) -> str | None:
     raw = value.strip().casefold()
     if raw in SUCCESSES:
         return "confirmed"
-    if raw.startswith("saltado_ya_"):
+    if raw == "ya_hecho" or raw.startswith("saltado_ya_"):
         return "observed"
     if raw.startswith(("saltado_", "omitido", "no_intentado", "listo_para_")):
         return "skipped"
