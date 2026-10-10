@@ -20,6 +20,15 @@ OWNERS = {
     "trusted-pr-paths": ".github/workflows/trusted-pr-hygiene.yml",
     "trusted-check-provenance": ".github/workflows/required-check-provenance.yml",
 }
+# Immutable-from-PR trusted sources, including transitively imported policy.
+PROTECTED_TRUST = frozenset({
+    ".github/workflows/trusted-pr-hygiene.yml",
+    ".github/workflows/required-check-provenance.yml",
+    "tools/trusted_pr_hygiene.py",
+    "tools/repo_hygiene.py",
+    "tools/required_check_provenance.py",
+    "tools/required_check_evidence.py",
+})
 REPO = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 SHA = re.compile(r"^[0-9a-fA-F]{40}$")
 EXPR = re.compile(r"\$\{\{.*?\}\}", re.DOTALL)
@@ -231,6 +240,30 @@ def inventory(reader, head_repo, sha):
     return result
 
 
+def audit_trusted_sources(reader, repo, head_repo, head, base, paths=PROTECTED_TRUST):
+    """Require exact SHA equality with default/base for all trusted dependencies.
+
+    Admin must bootstrap new gates separately before enabling this check.
+    Approved gate upgrades need a supervised out-of-band promotion.
+    """
+    for path in sorted(paths):
+        quoted = urllib.parse.quote(path, safe="/")
+        def get_sha(source, ref):
+            record = reader.get(repo_endpoint(source) + "/contents/" + quoted +
+                                "?ref=" + urllib.parse.quote(ref, safe=""))
+            if (not isinstance(record, dict) or record.get("path") != path
+                or record.get("type") != "file"
+                or not isinstance(record.get("sha"), str)
+                or not SHA.fullmatch(record["sha"])):
+                raise AuditError("missing trusted source: " + repr(path))
+            return record["sha"]
+        trusted = get_sha(repo, base)
+        proposed = get_sha(head_repo, head)
+        if trusted != proposed:
+            raise AuditError("trusted source modified; independent promotion required: " +
+                             repr(path))
+
+
 def check_pr(reader, repo, number, head, base, owners=OWNERS):
     repo_endpoint(repo)
     if (type(number) is not int or number < 1 or not isinstance(head, str)
@@ -238,6 +271,7 @@ def check_pr(reader, repo, number, head, base, owners=OWNERS):
         raise AuditError("invalid PR arguments")
     head_repo = snapshot(reader, repo, number, head, base)
     results = audit_workflows(inventory(reader, head_repo, head), owners)
+    audit_trusted_sources(reader, repo, head_repo, head, base)
     if snapshot(reader, repo, number, head, base) != head_repo:
         raise AuditError("head repository changed mid-scan")
     return results
