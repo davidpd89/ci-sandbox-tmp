@@ -1,5 +1,28 @@
 # Descubrimiento, escucha y ranking — informe aplicado (10-10-2026)
 
+## Problema
+El ranking heurístico de consultas no acredita seguidores incrementales ni permite evaluar fiablemente rankings con holdout.
+
+## Alternativas
+Evaluadas River (BSD-3-Clause), contextualbandits (BSD-2-Clause), feedparser (BSD-2-Clause), Mastodon.py (MIT), atproto (MIT) y LightFM (Apache-2.0) frente a la pieza canónica del repositorio oficial. La comparación detallada consta debajo.
+
+## Licencias y procedencia
+Fuente primaria: https://github.com/davidpd89/rrss-davidporto-CODE/blob/5449513d9b545d0a6a72abf066ab6a779bfdad71/tools/discovery_ranking.py
+Fecha de consulta: 2026-10-10
+Licencia SPDX: NOASSERTION
+Referencia inmutable: https://github.com/davidpd89/rrss-davidporto-CODE/blob/5449513d9b545d0a6a72abf066ab6a779bfdad71/tools/discovery_ranking.py
+El código incorporado procede del repositorio privado del mismo titular, con autorización expresa del encargo; NO se declara que esté licenciado MIT ni se atribuye una licencia abierta inexistente. No se ha copiado código de los proyectos públicos comparados.
+
+## Decisión
+Portar el evaluador oficial y añadir un comparador temporal offline; sin ML pesado ni acciones operativas.
+
+## Pruebas
+Dos módulos de unittest, suite pytest y CI Ubuntu/Windows Python 3.11. No se asumen verdes hasta comprobar el último SHA.
+
+## Retirada
+Revertir los módulos, suites y el informe; no hay migración ni escrituras de estado.
+
+
 ## Resultado y procedencia
 
 Esta PR incorpora código Python 3.11 de solo lectura, sin paquetes adicionales, estado real ni acciones sociales.
