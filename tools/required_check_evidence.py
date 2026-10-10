@@ -10,14 +10,18 @@ import re
 import sys
 from required_check_provenance import Reader, AuditError, OWNERS, SHA, repo_endpoint
 
+class EvidenceUnavailable(AuditError):
+    """An otherwise valid run lacks proof tying it to this specific PR."""
+
+
 DETAILS = re.compile(
     r"^https://github\.com/([^/]+/[^/]+)/actions/runs/([0-9]+)/job/([0-9]+)(?:\?.*)?$"
 )
 
 
 def pages(reader, url, collection, limit=10):
-    """Read all pages, with bounded pagination; never accept partial evidence."""
-    all_items = []
+    """Bounded, complete, deduplicated GitHub API paging."""
+    all_items, seen = [], set()
     total = None
     for page in range(1, limit + 1):
         suffix = ("&" if "?" in url else "?") + "per_page=100&page=" + str(page)
@@ -37,7 +41,17 @@ def pages(reader, url, collection, limit=10):
                 total = reported
             elif total != reported:
                 raise AuditError("check count changed during pagination")
+        for item in batch:
+            if not isinstance(item, dict) or type(item.get("id")) is not int:
+                raise AuditError("check/status missing stable identity")
+            if item["id"] in seen:
+                raise AuditError("duplicate check/status across API pages")
+            seen.add(item["id"])
         all_items.extend(batch)
+        if total is not None and len(all_items) > total:
+            raise AuditError("check inventory exceeds reported count")
+        if total is not None and len(all_items) == total:
+            return all_items
         if len(batch) < 100:
             if total is not None and len(all_items) != total:
                 raise AuditError("truncated check-run list")
@@ -60,8 +74,8 @@ def verify_live(reader, repo, number, head, base, ref, owners=OWNERS):
                 or pr["base"]["sha"] != base
                 or pr["base"]["repo"]["full_name"] != repo):
                 raise AuditError("stale or wrong PR")
-            if ref not in (head, pr.get("merge_commit_sha")):
-                raise AuditError("SHA is not the current PR head/merge")
+            if ref not in (head, base, pr.get("merge_commit_sha")):
+                raise AuditError("SHA is not the current PR head/base/merge")
             return (pr["head"]["sha"], pr.get("merge_commit_sha"))
         except (KeyError, TypeError) as exc:
             raise AuditError("incomplete live PR metadata") from exc
@@ -98,6 +112,7 @@ def verify_live(reader, repo, number, head, base, ref, owners=OWNERS):
             or job.get("run_id") != run_id
             or job.get("name") != check_name
             or job.get("conclusion") != "success"
+            or job.get("status", "completed") != "completed"
             or run.get("event") != "pull_request_target"
             or run.get("path") != trusted_path
             or run.get("conclusion") != "success"
@@ -108,6 +123,14 @@ def verify_live(reader, repo, number, head, base, ref, owners=OWNERS):
         # An Actions run must point to the same PR head when GitHub provides
         # PR associations; absent associations cannot prove PR identity.
         associated = run.get("pull_requests")
+        if associated == [] or associated is None:
+            # Documented live pull_request_target payloads frequently have
+            # pull_requests=[] even for a legitimate PR-triggered run.
+            # Do not misclassify that absence as malicious or as proof of PR.
+            raise EvidenceUnavailable(
+                "run.pull_requests empty: origin verified but PR linkage "
+                "unverified; inspect trusted run event/log and active ruleset manually"
+            )
         if (not isinstance(associated, list) or not any(
             isinstance(p, dict) and p.get("number") == number
             and isinstance(p.get("head"), dict)
@@ -127,12 +150,15 @@ def main(argv=None):
     parser.add_argument("--number", type=int, required=True)
     parser.add_argument("--head", required=True)
     parser.add_argument("--base", required=True)
-    parser.add_argument("--ref", required=True, help="PR head SHA or current synthetic merge SHA")
+    parser.add_argument("--ref", required=True, help="observed check SHA (PR head, current merge or base); may need manual verification")
     args = parser.parse_args(argv)
     import os
     try:
         names = verify_live(Reader(os.getenv("GITHUB_TOKEN", "")), args.repo,
                             args.number, args.head, args.base, args.ref)
+    except EvidenceUnavailable as exc:
+        print("MANUAL PR LINK VERIFICATION REQUIRED: " + repr(str(exc)), file=sys.stderr)
+        return 3
     except AuditError as exc:
         print("LIVE CHECK EVIDENCE UNVERIFIED: " + repr(str(exc)), file=sys.stderr)
         return 1
