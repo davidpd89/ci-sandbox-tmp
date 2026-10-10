@@ -1,0 +1,42 @@
+python
+# Referencia upstream: https://github.com/LlmKira/fast-langdetect/blob/main/README.md
+# Archivo nuevo propuesto: tools/language_signal.py
+from __future__ import annotations
+
+import re
+from functools import lru_cache
+
+try:
+    from fast_langdetect import detect
+except ImportError:  # Permite CI sin modelo descargado
+    detect = None
+
+_HASHTAG_URL_MENTION = re.compile(
+    r"(?:https?://\S+|www\.\S+|[@#]\w+)", re.IGNORECASE
+)
+
+
+def _clean_text(text: str) -> str:
+    return _HASHTAG_URL_MENTION.sub(" ", text or "").strip()
+
+
+@lru_cache(maxsize=4096)
+def detect_language(text: str) -> tuple[str | None, float]:
+    cleaned = _clean_text(text)
+    if not cleaned or detect is None:
+        return None, 0.0
+
+    result = detect(cleaned, low_memory=True)
+    if isinstance(result, dict):
+        lang = result.get("lang")
+        confidence = float(result.get("score", 0.0))
+    else:
+        lang = getattr(result, "lang", None)
+        confidence = float(getattr(result, "score", 0.0))
+
+    return lang, confidence
+
+
+def is_spanish(text: str, min_confidence: float = 0.70) -> bool:
+    lang, confidence = detect_language(text)
+    return lang == "es" and confidence >= min_confidence
