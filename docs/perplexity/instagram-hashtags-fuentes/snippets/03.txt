@@ -1,0 +1,25 @@
+text
+# Archivo nuevo: data/instagram/hashtags_expansion.yaml
+version: 1
+network: instagram
+enabled: false  # Activar tras validar precisión del núcleo
+
+hashtags:
+  - tag: bookstagramargentina
+    region: latam
+    priority: 5
+  - tag: librosymáslibros
+    region: latam
+    priority: 5
+  - tag: booktok
+    region: global
+    priority: 4
+  - tag: bookish
+    region: global
+    priority: 4
+  - tag: booklover
+    region: global
+    priority: 3
+  - tag: bookworm
+    region: global
+    priority: 3
