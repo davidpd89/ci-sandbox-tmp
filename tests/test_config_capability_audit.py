@@ -41,6 +41,23 @@ class ConfigCapabilityAuditTests(unittest.TestCase):
                            cleanup_adapters=cleanup_adapters if cleanup_adapters is not None else {},
                            harvesters=harvesters if harvesters is not None else {})
 
+    def test_actual_mirror_configs_and_pipeline_inventory_offline(self):
+        root = Path(__file__).resolve().parents[1]
+        report = audit.audit(root)
+        self.assertEqual(set(report["capabilities"]), set(audit.cap.NETWORKS))
+        self.assertEqual(report["errors"], 0, report["findings"])
+        self.assertEqual(report["pipelines"]["instagram"]["primary_lane"], "WEB")
+        self.assertEqual(report["pipelines"]["tiktok"]["primary_lane"], "MOBILE")
+        self.assertEqual(report["configurations"]["bluesky"]["status"], "valid")
+        self.assertEqual(report["configurations"]["mastodon"]["status"], "valid")
+        self.assertEqual(report["configurations"]["tiktok"]["status"], "missing_in_checkout")
+        self.assertEqual(
+            report["configurations"]["bluesky"]["effective_common_policy"]["acquisition_age"]["value"], 21
+        )
+        self.assertEqual(
+            report["configurations"]["mastodon"]["effective_common_policy"]["community_age"]["value"], 45
+        )
+
     def test_nine_networks_and_no_live_actions(self):
         result = self.report()
         self.assertEqual(len(result["capabilities"]), 9)
