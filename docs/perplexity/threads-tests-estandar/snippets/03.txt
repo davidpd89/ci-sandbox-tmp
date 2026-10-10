@@ -1,0 +1,34 @@
+python
+# Propuesto: tests/test_threads_publish_contract.py
+import pytest
+
+from tools.threads_api import ReplyNotCreated, check_reply_text, publish_reply
+
+
+def test_text_vacio_se_rechaza():
+    with pytest.raises(ValueError):
+        check_reply_text("   ")
+
+
+def test_texto_de_501_caracteres_se_rechaza():
+    with pytest.raises(ValueError, match="max 500"):
+        check_reply_text("a" * 501)
+
+
+def test_texto_de_500_caracteres_se_acepta():
+    assert check_reply_text("a" * 500) == "a" * 500
+
+
+def test_fallo_al_crear_contenedor_no_reintenta_publicacion(fake_threads):
+    fake_threads.fail_create_container()
+    with pytest.raises(ReplyNotCreated):
+        publish_reply("token", "user", "post", "Hola")
+    assert fake_threads.publish_calls == []
+
+
+def test_fallo_en_publish_no_reintenta_automaticamente(fake_threads):
+    fake_threads.success_create_container()
+    fake_threads.fail_publish()
+    with pytest.raises(RuntimeError):
+        publish_reply("token", "user", "post", "Hola")
+    assert fake_threads.publish_calls == 1
