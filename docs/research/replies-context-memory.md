@@ -4,7 +4,7 @@ Fecha de verificación: **10/10/2026**. Rama: `research/12-replies-context-memor
 Base: `research/public-reuse-parent`. Trabajo **offline**, sin cuentas, sin publicaciones,
 sin cambios de estado real y sin merge.
 
-## Necesidad real y punto de integración
+## Problema — necesidad real y punto de integración
 
 En el mirror se ha comprobado el flujo `tools/reply_writer.py`:
 `build_prompt()` inyectaba **los últimos diez ejemplos buenos y ocho malos**
@@ -30,7 +30,7 @@ y provenance de los destinos. Esos componentes no se duplican. Las PR públicas
 (conversación) y [#104](https://github.com/davidpd89/ci-sandbox-tmp/pull/104)
 (adaptadores de evidencia) tienen alcance vecino: no copiar esos motores aquí.
 
-## Comparativa de reutilización de repositorios públicos
+## Alternativas — comparativa de reutilización pública
 
 Revisiones inmutables inspeccionadas mediante GitHub, no simplemente URLs de portada:
 
@@ -47,7 +47,18 @@ No se ha copiado su implementación: el código nuevo se diseñó a partir del
 contrato local. La idea arquitectónica de aislar extracción de recuerdos y
 consumo se contrastó con LangMem; no constituye reutilización literal de código.
 
-## Implementación
+## Licencias y procedencia
+
+Fuente primaria: https://github.com/rapidfuzz/RapidFuzz
+Fecha de consulta: 2026-10-10
+Licencia SPDX: MIT
+Referencia inmutable: https://github.com/rapidfuzz/RapidFuzz/commit/db6e504539a9c895180b266a06b36a32cb6029ee
+
+La referencia primaria es una alternativa contrastada, **no código incorporado**.
+Las otras fuentes con su revisión y licencia figuran en la tabla anterior
+(LangMem: MIT; Mem0: Apache-2.0). No hay código de terceros copiado.
+
+## Decisión — implementación
 
 - `tools/reply_context_memory.py`: selector de ejemplos **aprobados** y de
   **errores** sobre coincidencia léxica relevante. Normaliza acentos y ñ
@@ -121,7 +132,7 @@ Se cubren memoria inexistente/malformada, ausencia pertinente, mezcla de lotes,
 español con tildes, preferencias por red, no mutación del JSON, fallback legada,
 recuperación determinista y límite de longitud.
 
-## Limitaciones y retirada
+## Retirada — limitaciones y reversión
 
 La similitud por tokens ignora sinónimos, morfología compleja, ironía, intención
 y calidad estilística: puede no recuperar ejemplos útiles o recuperar otros
