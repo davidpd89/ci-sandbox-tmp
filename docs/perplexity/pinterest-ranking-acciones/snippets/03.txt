@@ -1,0 +1,78 @@
+python
+# Nuevo archivo propuesto: tools/pinterest_ranking.py
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime, timezone
+
+
+@dataclass(frozen=True)
+class PinterestProfileSignal:
+    username: str
+    followers: int
+    following: int
+    recent_pins: int
+    days_since_last_pin: int
+    spanish_score: float
+    affinity_score: float
+    own_pins_ratio: float
+
+
+@dataclass(frozen=True)
+class PinterestPinSignal:
+    pin_id: str
+    author: str
+    created_at: datetime
+    saves: int
+    repins: int
+    spanish_score: float
+    affinity_score: float
+    has_question_or_cta: bool
+
+
+def _clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
+    return max(low, min(high, value))
+
+
+def score_profile(signal: PinterestProfileSignal) -> float:
+    if signal.following <= 0:
+        follow_balance = 0.0
+    else:
+        ratio = signal.followers / signal.following
+        follow_balance = _clamp(ratio / 3.0)
+
+    activity = _clamp(1.0 - signal.days_since_last_pin / 45.0)
+    recent_volume = _clamp(signal.recent_pins / 15.0)
+    language = _clamp(signal.spanish_score)
+    affinity = _clamp(signal.affinity_score)
+    quality = _clamp(signal.own_pins_ratio)
+
+    score = (
+        30 * follow_balance
+        + 20 * activity
+        + 10 * recent_volume
+        + 20 * affinity
+        + 15 * language
+        + 5 * quality
+    )
+    return round(score, 2)
+
+
+def score_pin(signal: PinterestPinSignal) -> float:
+    now = datetime.now(timezone.utc)
+    age_days = max(0.0, (now - signal.created_at).total_seconds() / 86400)
+
+    freshness = _clamp(1.0 - age_days / 30.0)
+    engagement = _clamp((signal.saves + signal.repins) / 200.0)
+    language = _clamp(signal.spanish_score)
+    affinity = _clamp(signal.affinity_score)
+    conversable = 1.0 if signal.has_question_or_cta else 0.4
+
+    score = (
+        30 * freshness
+        + 20 * engagement
+        + 20 * affinity
+        + 15 * language
+        + 15 * conversable
+    )
+    return round(score, 2)
