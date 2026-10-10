@@ -1,0 +1,39 @@
+python
+# Adaptación para davidpd89/ci-sandbox-tmp
+# Campos de perfil basados en: https://github.com/ChocoData-com/tiktok-profile-scraper
+# Campos de comentario basados en: https://github.com/robbytables/TikTok-Comment-Scraper
+from __future__ import annotations
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Optional
+
+
+@dataclass
+class ProfileSignals:
+    handle: str
+    followers: Optional[int] = None
+    following: Optional[int] = None
+    video_count: Optional[int] = None
+    bio: str = ""
+    last_post_at: Optional[datetime] = None
+    is_spanish: bool = False
+    declares_followback: bool = False
+    reciprocity_class: Optional[str] = None
+    affinity_bonus: float = 0.0
+
+
+@dataclass
+class PostSignals:
+    url: str
+    create_time: Optional[datetime] = None
+    comment_count: int = 0
+    latest_comment_at: Optional[datetime] = None
+    has_question: bool = False
+    author_replies_recently: bool = False
+    is_spanish: bool = False
+
+    @property
+    def post_age_hours(self) -> Optional[float]:
+        if not self.create_time:
+            return None
+        return max(0.0, (datetime.now().timestamp() - self.create_time.timestamp()) / 3600)
