@@ -341,6 +341,64 @@ class VersionedEvidenceTests(unittest.TestCase):
             self.assertIn("      - 'tools/growth_attribution.py'", event_paths)
         self.assertIn("tools/discovery_attribution.py tools/growth_attribution.py", workflow)
 
+    def test_collision_diagnostics_distinguish_replay_and_unreviewed_trials(self):
+        winner = trial()
+        trusted = TrustedRegistry([audited(winner)])
+        replay = run(winner, copy.deepcopy(winner), registry=trusted)
+        self.assertEqual(replay["proposals"], [])
+        self.assertEqual(replay["duplicate_evidence"], 2)
+        self.assertEqual(replay["collision_diagnostics"], {
+            "same_trial_replay": 2, "distinct_trials": 0,
+            "includes_non_positive": 0, "includes_unreviewed": 0,
+            "includes_unknown_queue": 0,
+        })
+        independent = trial("trial-B002")
+        collision = run(winner, independent, registry=trusted)
+        self.assertEqual(collision["proposals"], [])
+        self.assertEqual(collision["collision_diagnostics"]["distinct_trials"], 2)
+        self.assertEqual(collision["collision_diagnostics"]["includes_unreviewed"], 2)
+        self.assertEqual(collision["collision_diagnostics"]["includes_non_positive"], 0)
+
+        independent["treatment"]["successes"] = 15
+        independent["control"]["successes"] = 25
+        negative = run(winner, independent, registry=trusted)
+        self.assertEqual(negative["proposals"], [])
+        self.assertEqual(negative["duplicate_evidence"], 1)
+        self.assertEqual(negative["collision_diagnostics"]["distinct_trials"], 1)
+        self.assertEqual(negative["collision_diagnostics"]["includes_non_positive"], 1)
+        self.assertEqual(negative["collision_diagnostics"]["includes_unreviewed"], 1)
+        self.assertNotIn("collision_diagnostics", run(winner, schema=1))
+
+    def test_collision_diagnostics_unknown_queue_and_global_matrix(self):
+        approved = trial()
+        ambiguous = trial("trial-B002", queue="UNKNOWN")
+        r = run(approved, ambiguous, registry=TrustedRegistry([audited(approved)]))
+        self.assertEqual(r["duplicate_evidence"], 1)
+        self.assertEqual(r["collision_diagnostics"]["includes_unknown_queue"], 1)
+        self.assertEqual(r["collision_diagnostics"]["includes_unreviewed"], 1)
+        self.assertFalse(r["writes"])
+
+        # Una única norma compartida para todas las parejas y colas válidas.
+        for origin in sorted(gate.NETWORKS):
+            for target in sorted(gate.NETWORKS - {origin}):
+                for queue in ("WEB", "API", "MOBILE"):
+                    with self.subTest(origin=origin, target=target, queue=queue):
+                        row = trial(queue=queue)
+                        row["origin"] = origin
+                        row["targets"] = {target: next(iter(row["targets"].values()))}
+                        other = copy.deepcopy(row)
+                        other["experiment"]["id"] = "trial-B002"
+                        other["experiment"]["assignment_sha256"] = hashlib.sha256(
+                            b"trial-B002").hexdigest()
+                        audit = audit_projection(row, target)
+                        record = {**audit, "evidence_sha256": evidence_digest(row, target)}
+                        result = run(row, other, registry=TrustedRegistry([record]))
+                        self.assertEqual(result["proposals"], [])
+                        self.assertEqual(result["duplicate_evidence"], 2)
+                        self.assertEqual(result["collision_diagnostics"]["distinct_trials"], 2)
+                        self.assertEqual(result["collision_diagnostics"]["includes_unreviewed"], 2)
+                        self.assertFalse(result["writes"])
+
     def test_no_network_calls_or_user_identity_in_output(self):
         row = trial()
         row["internal_handle"] = "secret-pseudonym"
