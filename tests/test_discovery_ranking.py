@@ -126,6 +126,18 @@ class RankingTests(unittest.TestCase):
         self.assertEqual(result["exploration_candidates"], [f"{1:024x}", f"{2:024x}"])
         self.assertEqual(len(result["ranked"]), 1)
 
+    def test_zero_exploration_never_requires_cursor(self):
+        cases = (
+            {"scan_slots": {"bluesky": 0}},
+            {"scan_slots": {"bluesky": 10}, "exploration_fraction": 0},
+        )
+        for opts in cases:
+            with self.subTest(opts=opts):
+                net = ranking([row()], **opts)["networks"]["bluesky"]
+                self.assertEqual(net["exploration_slots_reserved"], 0)
+                self.assertFalse(net["exploration_cursor_required"])
+                self.assertEqual(net["exploration_candidates"], [])
+
     def test_unreasonably_large_read_budget_rejected(self):
         with self.assertRaises(ValueError):
             ranking([], scan_slots={"bluesky": 10_001})

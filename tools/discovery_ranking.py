@@ -166,7 +166,7 @@ def rank_cohorts(cohorts, *, min_sample=40, min_age_days=3,
         eligible_small = [r["source_key"] for r in unranked[net]
                           if r["reason"] == "insufficient_sample"]
         cursor = exploration_cursor.get(net) if exploration_cursor is not None else None
-        exploration_candidates = None
+        exploration_candidates = [] if explore == 0 else None
         if cursor is not None and explore is not None:
             # Deterministic cyclic preview; rotation state MUST live upstream.
             if eligible_small:
@@ -179,7 +179,7 @@ def rank_cohorts(cohorts, *, min_sample=40, min_age_days=3,
                                    else "not_instrumented"),
                     "ranked": ranked[net], "unranked": unranked[net],
                     "exploration_slots_reserved": explore,
-                    "exploration_cursor_required": explore is not None and cursor is None,
+                    "exploration_cursor_required": bool(explore) and cursor is None,
                     "exploration_candidates": exploration_candidates,
                     "ranking_slots_available": slots - explore if slots is not None else None}
     return {"metric": "observed_followers_at_snapshot_not_incremental_conversion",
