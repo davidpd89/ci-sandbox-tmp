@@ -1,0 +1,6 @@
+text
+profile_score =
+  0.30 * actividad
++ 0.25 * reciprocidad_potencial
++ 0.25 * afinidad_tematica
++ 0.20 * idioma_es
