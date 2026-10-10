@@ -158,6 +158,91 @@ class XBankBoundaryTests(unittest.TestCase):
         record.assert_called_once()
 
 
+
+class IsolatedActionBoundaryTests(unittest.TestCase):
+    """Ejecuta funciones originales en un sandbox de dependencias falsas.
+
+    No importa los SDK ni abre Edge/CDP/móvil: es una prueba funcional del
+    orden de preflight, no una publicación simulada con cuenta.
+    """
+
+    @staticmethod
+    def extract(path, name, env):
+        code = (ROOT / "tools" / path).read_text(encoding="utf-8")
+        tree = ast.parse(code, filename=path)
+        nodes = [node for node in ast.walk(tree)
+                 if isinstance(node, ast.FunctionDef) and node.name == name]
+        if len(nodes) != 1:
+            raise AssertionError((path, name, len(nodes)))
+        isolated = ast.Module(body=[nodes[0]], type_ignores=[])
+        ast.fix_missing_locations(isolated)
+        ns = dict(env)
+        exec(compile(isolated, path, "exec"), ns)
+        return ns[name]
+
+    def test_reddit_root_comment_failure_cannot_connect(self):
+        calls = []
+        fn = self.extract("reddit_interact.py", "comment", {
+            "_check_length": lambda _: None,
+            "_check_micro_comment": lambda _: None,
+            "_check_spanish_orthography": lambda _: None,
+            "_validated_thread_url": lambda url: url,
+            "_comment_history_state": lambda _: None,
+            "_connect": lambda: calls.append("connect"),
+        })
+        with mock.patch.object(voice, "inspect",
+                               side_effect=voice.VoicePreflightUnavailable("fake")):
+            with self.assertRaises(voice.VoicePreflightUnavailable):
+                fn("https://www.reddit.com/r/lectura/comments/123", SAMPLE)
+        self.assertEqual(calls, [])
+
+    def test_reddit_embedded_reply_failure_cannot_click(self):
+        clicked = []
+        fake_reddit = types.ModuleType("reddit_interact")
+        fake_reddit._check_spanish_orthography = lambda _: None
+        pg = types.SimpleNamespace(locator=lambda *_: clicked.append("locator"))
+        fn = self.extract("reddit_comments.py", "reply_in_thread", {
+            "check_reply": lambda _: None,
+        })
+        with mock.patch.dict(sys.modules, {"reddit_interact": fake_reddit}), \
+             mock.patch.object(voice, "inspect",
+                               side_effect=voice.VoicePreflightUnavailable("fake")):
+            with self.assertRaises(voice.VoicePreflightUnavailable):
+                fn(pg, "https://www.reddit.com/r/lectura/comments/123",
+                   {"text": SAMPLE, "id": "synthetic"})
+        self.assertEqual(clicked, [])
+
+    def test_tiktok_mobile_failure_cannot_open_target(self):
+        opened = []
+        instance = types.SimpleNamespace(
+            _require_writes=lambda _: None,
+            _open_target=lambda _: opened.append("open"),
+        )
+        fn = self.extract("tiktok_mobile_interact.py", "comment", {"Any": object})
+        with mock.patch.object(voice, "inspect",
+                               side_effect=voice.VoicePreflightUnavailable("fake")):
+            with self.assertRaises(voice.VoicePreflightUnavailable):
+                fn(instance, "https://www.tiktok.com/@fiction/video/123", SAMPLE)
+        self.assertEqual(opened, [])
+
+    def test_pinterest_pin_failure_cannot_open_browser(self):
+        opened = []
+        fn = self.extract("pinterest_publish.py", "publish_pin", {
+            "resolve_board": lambda x: x,
+            "TITLE_MAX": 100,
+            "DESC_MAX": 1000,
+            "os": types.SimpleNamespace(path=types.SimpleNamespace(
+                exists=lambda _: True)),
+            "sync_playwright": lambda: opened.append("open_browser"),
+        })
+        with mock.patch.object(voice, "inspect_fields",
+                               side_effect=voice.VoicePreflightUnavailable("fake")):
+            with self.assertRaises(voice.VoicePreflightUnavailable):
+                fn("synthetic.png", "Fantasía", SAMPLE, "https://example.org",
+                   "Portada ficticia", "Narrativa", apply=True)
+        self.assertEqual(opened, [])
+
+
 class StaticLastBoundaryTests(unittest.TestCase):
     """Comprobación AST de orden/cola por ruta; no sustituye un canario real."""
 
