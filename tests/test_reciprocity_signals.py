@@ -110,6 +110,12 @@ class SignalTests(unittest.TestCase):
         candidate["created_on"] = "2026-10-12"
         self.assertEqual(rs.assess_candidate(candidate, as_of=TODAY)["reason"], "post_age_unknown")
 
+    def test_legacy_phrases_are_not_lost_when_integrating(self):
+        for bio in ("Sigo de regreso, lectores", "Síguenos y te seguimos, libros",
+                    "Sigo a quienes me siguen, autoras"):
+            with self.subTest(bio=bio):
+                self.assertEqual(reciprocity.declared_bonus(bio), 2.5)
+
     def test_existing_reciprocity_bonus_uses_real_intent(self):
         self.assertEqual(reciprocity.declared_bonus("Leo libros. Sigo de vuelta"), 2.5)
         self.assertEqual(reciprocity.declared_bonus("No hago followback. Leo libros"), 0.0)
