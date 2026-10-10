@@ -172,4 +172,4 @@ def adapt_page(network: str, kind: str, payload: Mapping, *, post_key: str,
     # Evitar persistir URLs de paging.next con query strings o tokens.
     return {"items": items, "kind": kind, "post_key": str(post_key),
             "post_created_at": post_created_at, "next_cursor": cursor,
-            "unavailable": unavailable}
+            "unavailable": unavailable, "coverage_complete": unavailable == 0}
