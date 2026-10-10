@@ -59,3 +59,12 @@ La primera suite completa de Windows detectó un fixture no portable: NTFS no ad
 - #92 revisa confianza del verificador. #90 aporta análisis estático del workflow.
 - Los cambios de workflows realizados en distintas ramas hijas requieren resolución explícita de conflictos en la integración; no sustituir job de #2 por el de #89.
 - No se ha abierto nueva PR: las separaciones identificadas ya tienen propietario. **No hacer merge hasta confirmación del workflow verde y revisión de Claude.**
+
+## Actualización del controlador (10/10/2026; base actual)
+
+- Se incorporó la rama `ci/test-campaign-parent` desde `c48480c979fdfc06fb4169a53da0b92c36601766` mediante merge con dos padres; se conservan los tests recientes y la política de rutas reforzada, no la versión antigua de la PR.
+- El workflow resultante **mantiene** `offline` con `fetch-depth: 2`, matriz adaptada al mirror, `repo_hygiene.py --base "HEAD^1"`, exclusiones vigentes y condiciones de concurrencia. Añade `pr-history` por separado, con historial completo y checkout disperso. Evita eliminar protecciones existentes al actualizar la base.
+- Ya no es cierto para esta rama el dato histórico de igualdad de blob `repo_hygiene.py` con el repo oficial: la base del mirror incorporó el blob reforzado `2b44042e11da0860b0eba5fb0490c5cdf1dc0318`, mientras la rama oficial inspeccionada conservaba `9987782b1a94a4fd152f0f0cb5e2b42a044d9ae4`. Trasladar la mejora al repo oficial cuando corresponda, sin revertirla aquí.
+- Se corrige un caso de omisión de ruta transitoria con nombre malformado: `changes()` ya no usa `surrogateescape` para aceptar bytes fuera de UTF-8; provoca fallo operativo (2). Test sintético con flujo NUL y bytes ficticios, portable en Windows.
+- La unificación de `git_history_paths.py` de #93 y el verificador confiable desde #92 requieren integración coordinada. #97 está cerrada sin merge; no se considera protección instalada. El motor de PR difiere del de push en la clasificación de merges frente a bases avanzadas.
+- Ejecutar en el HEAD posterior a estos commits: `python -m unittest discover -s tests -p test_pr_commit_hygiene.py -v`, `python -m pytest tests -q -p no:cacheprovider` con las exclusiones vigentes del workflow, y comprobar `pr-history` y `offline` tanto en Windows como Ubuntu. No basarse en las ejecuciones verdes de `a219997`.
