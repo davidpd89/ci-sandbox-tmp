@@ -45,11 +45,13 @@ REGISTRO_CSV = os.path.join(ROOT, "registro_interacciones.csv")
 SUBREDDITS = ["libros", "filosofia_en_espanol"]
 
 
-def _discovery_sources(today=None, reader=None):
+def _discovery_sources(today=None, reader=None, round_index=None):
     """Dos lecturas por ronda; búsqueda léxica en la mitad de los turnos."""
     import hashtag_query_consumers as hqc
     today = today or datetime.date.today()
-    tick = today.toordinal()
+    # Alternar por ronda (no por día): cuatro franjas de seis horas.
+    round_index = datetime.datetime.now().hour // 6 if round_index is None else int(round_index)
+    tick = today.toordinal() * 4 + round_index
     _, terms = hqc.combine("reddit", "busquedas", [], reader=reader)
     if not terms or tick % 2 == 0:
         return [("subreddit", name) for name in SUBREDDITS]
