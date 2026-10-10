@@ -148,10 +148,10 @@ class RankingTests(unittest.TestCase):
         self.assertEqual(got["posts"][0]["explanation"]["spanish"]["value"], 1.)
 
     def test_native_mastodon_profile(self):
-        value = account("mastodon", "reader@social.test", last_status_at="2026-10-09T00:00:00Z",
+        value = account("mastodon", "reader@example.org", last_status_at="2026-10-09T00:00:00Z",
                         followers=900, posts=[post()], followed_by=True, instance="social.test")
         got = rank("mastodon", [value])["ranked"][0]
-        self.assertEqual(got["id"], "mastodon:social.test/reader@social.test")
+        self.assertEqual(got["id"], "mastodon:social.test/reader@example.org")
         self.assertGreater(got["explanation"]["reciprocity"]["points"], 0)
 
     def test_native_tiktok_missing_age_is_transparent(self):
