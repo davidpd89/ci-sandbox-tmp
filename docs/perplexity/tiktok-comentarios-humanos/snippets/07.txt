@@ -1,0 +1,44 @@
+python
+# Nuevo archivo: tools/tiktok_comment_specificity.py
+import re
+
+GENERIC_PATTERNS = (
+    r"^qué buen vídeo",
+    r"^me encanta tu contenido",
+    r"^sigue así",
+    r"^gran vídeo",
+    r"^muy bueno",
+)
+
+def specificity_score(text: str, context: dict) -> float:
+    score = 0.0
+    lowered = text.lower()
+
+    if any(re.search(pattern, lowered) for pattern in GENERIC_PATTERNS):
+        return 0.0
+
+    context_terms = [
+        term.lower()
+        for term in (
+            context.get("topic", ""),
+            context.get("character", ""),
+            context.get("trope", ""),
+            context.get("quote", ""),
+        )
+        if term
+    ]
+
+    if any(term in lowered for term in context_terms):
+        score += 0.45
+
+    if re.search(r"\b(escena|frase|personaje|final|portada|capítulo|tropo)\b", lowered):
+        score += 0.25
+
+    if "?" in text:
+        score += 0.15
+
+    words = len(text.split())
+    if 4 <= words <= 18:
+        score += 0.15
+
+    return min(score, 1.0)
