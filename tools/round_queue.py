@@ -16,6 +16,7 @@ from __future__ import annotations
 import csv
 import contextlib
 import datetime
+import io
 import os
 import random
 import re
@@ -339,8 +340,10 @@ def relaunch(script_args, log_name):
         log = open(path, "a", encoding="utf-8")
     except OSError:                          # 08/10: la tarea programada (cmd >>) o PowerShell pueden tener el log abierto en exclusiva: la recarga NUNCA debe morir por eso
         log = open(path[:-4] + f"_{os.getpid()}.log", "a", encoding="utf-8")
-    subprocess.Popen([PY, "-u"] + list(script_args), cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, creationflags=flags,
-                     env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+    with log:
+        subprocess.Popen([PY, "-u"] + list(script_args), cwd=ROOT, stdout=log,
+                         stderr=subprocess.STDOUT, creationflags=flags,
+                         env={**os.environ, "PYTHONIOENCODING": "utf-8"})
 
 
 WEB = ("x", "threads", "facebook", "pinterest")
@@ -348,6 +351,178 @@ API = ("bluesky", "mastodon")
 PHONE = ("tiktok",)
 SUMMARY = re.compile(r"\[(\w+)\] (\d+) confirmadas (\{.*?\}), (\d+) saltadas, (\d+) fallos")
 _write_lock = threading.Lock()
+
+ROUND_CSV_COLUMNS = (
+    "fecha", "red", "inicio", "fin", "minutos", "estado",
+    "confirmadas", "saltadas", "fallos", "codigo",
+)
+ROUND_CSV_LOCK_TIMEOUT_SECONDS = 15.0
+ROUND_CSV_LEGACY_COLUMNS = ("fecha", "red", "estado")
+
+
+def _recover_incomplete_csv_tail(stream):
+    """Repair an unterminated tail; preserve a valid legacy row without newline.
+
+    The lock is held by the caller. A malformed tail must not be glued to
+    the next record. A *complete* legacy final row must not be discarded.
+    """
+    stream.seek(0, os.SEEK_END)
+    size = stream.tell()
+    if not size:
+        return False
+    stream.seek(size - 1)
+    if stream.read(1) == b"\n":
+        stream.seek(0, os.SEEK_END)
+        return False
+
+    position = size
+    previous_newline = -1
+    while position:
+        start = max(0, position - 4096)
+        stream.seek(start)
+        block = stream.read(position - start)
+        newline = block.rfind(b"\n")
+        if newline >= 0:
+            previous_newline = start + newline
+            break
+        position = start
+
+    offset = previous_newline + 1
+    tail_size = size - offset
+    if tail_size <= 65536:
+        stream.seek(offset)
+        raw = stream.read(tail_size)
+        try:
+            parsed = list(csv.reader(
+                io.StringIO(raw.decode("utf-8-sig"), newline=""), strict=True))
+        except (csv.Error, UnicodeError):
+            parsed = []
+        if len(parsed) == 1:
+            fields = parsed[0]
+            if (fields in (list(ROUND_CSV_COLUMNS), list(ROUND_CSV_LEGACY_COLUMNS))
+                    or (len(fields) == len(ROUND_CSV_LEGACY_COLUMNS)
+                        and re.fullmatch(r"\d{4}-\d{2}-\d{2}", fields[0])
+                        and fields[2] in ("ok", "parcial", "ocupada", "saltada", "error"))
+                    or (
+                    len(fields) == len(ROUND_CSV_COLUMNS)
+                    and fields[5] in ("ok", "parcial", "ocupada", "saltada", "error")
+                    and re.fullmatch(r"\d{4}-\d{2}-\d{2}", fields[0])
+                    and re.fullmatch(r"\d{2}:\d{2}:\d{2}", fields[2])
+                    and re.fullmatch(r"\d{2}:\d{2}:\d{2}", fields[3])
+                    and fields[7].isdigit() and fields[8].isdigit()
+                    and re.fullmatch(r"-?\d+", fields[9]))):
+                stream.seek(0, os.SEEK_END)
+                stream.write(b"\r\n" if not raw.endswith(b"\r") else b"\n")
+                return True
+
+    stream.truncate(offset)
+    stream.seek(0, os.SEEK_END)
+    return True
+
+
+def _read_round_csv_rows():
+    """Read a consistent CSV snapshot under the same process-wide writer guard.
+
+    Never substitute an empty ledger for lock failure or corruption: that
+    could cause a previously confirmed round to be replayed after restart.
+    """
+    directory = os.path.dirname(LOG)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    deadline = time.monotonic() + ROUND_CSV_LOCK_TIMEOUT_SECONDS
+    with _write_lock:
+        return _read_round_csv_rows_locked(deadline)
+
+
+def _read_round_csv_rows_locked(deadline):
+    """Read with the in-process mutex already held."""
+    while True:
+        with _recovery_guard(LOG + ".writer") as locked:
+            if locked:
+                try:
+                    with open(LOG, "r+b") as stream:
+                        repaired = _recover_incomplete_csv_tail(stream)
+                        if repaired:
+                            stream.flush()
+                            os.fsync(stream.fileno())
+                        stream.seek(0)
+                        data = stream.read()
+                except FileNotFoundError:
+                    return []
+                if not data:
+                    return []
+                last = data.rfind(b"\n")
+                if last < 0:
+                    raise OSError("Cabecera CSV incompleta; revisar antes de reanudar")
+                try:
+                    reader = csv.DictReader(
+                        io.StringIO(data[:last + 1].decode("utf-8-sig"), newline=""),
+                        strict=True)
+                    if reader.fieldnames not in (
+                            list(ROUND_CSV_COLUMNS), list(ROUND_CSV_LEGACY_COLUMNS)):
+                        raise ValueError("Cabecera CSV distinta del contrato esperado")
+                    rows = list(reader)
+                    if any(None in row or any(value is None for value in row.values())
+                           for row in rows):
+                        raise ValueError("CSV contiene filas con ancho incorrecto")
+                except (csv.Error, ValueError, UnicodeError) as exc:
+                    raise OSError("CSV inconsistente; no reanudar rondas a ciegas") from exc
+                return rows
+        if time.monotonic() >= deadline:
+            raise OSError("No se pudo leer el CSV con exclusion interproceso")
+        time.sleep(0.02 + random.random() * 0.05)
+
+
+def _append_round_csv(row):
+    """Append one durable row, recovering a crashed writer's partial tail."""
+    if len(row) != len(ROUND_CSV_COLUMNS):
+        raise ValueError("Fila de tiempos_rondas.csv con columnas incorrectas")
+    if any("\r" in str(value) or "\n" in str(value) for value in row):
+        raise ValueError("Fila CSV con saltos de linea internos incompatibles con recuperacion")
+    directory = os.path.dirname(LOG)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    deadline = time.monotonic() + ROUND_CSV_LOCK_TIMEOUT_SECONDS
+    with _write_lock:
+        while True:
+            with _recovery_guard(LOG + ".writer") as locked:
+                if locked:
+                    with open(LOG, "a+b") as stream:
+                        stream.seek(0)
+                        first_line = stream.readline()
+                        if first_line and b"\n" not in first_line:
+                            # A first writer may crash mid-header before any CSV
+                            # record existed. Repair only an exact prefix of our
+                            # canonical header; preserve other unknown schemas.
+                            expected_header = (",".join(ROUND_CSV_COLUMNS) + "\r\n").encode("utf-8")
+                            if expected_header.startswith(first_line):
+                                _recover_incomplete_csv_tail(stream)
+                                stream.seek(0)
+                                first_line = stream.readline()
+                        if first_line:
+                            try:
+                                header = next(csv.reader(
+                                    io.StringIO(first_line.decode("utf-8-sig"), newline="")))
+                            except (csv.Error, UnicodeError) as exc:
+                                raise ValueError("Cabecera CSV ilegible") from exc
+                            if header != list(ROUND_CSV_COLUMNS):
+                                raise ValueError(
+                                    "CSV antiguo o incompatible: conservar y migrar antes de escribir")
+                        _recover_incomplete_csv_tail(stream)
+                        stream.seek(0, os.SEEK_END)
+                        empty = stream.tell() == 0
+                        buffer = io.StringIO(newline="")
+                        writer = csv.writer(buffer)
+                        if empty:
+                            writer.writerow(ROUND_CSV_COLUMNS)
+                        writer.writerow(row)
+                        stream.write(buffer.getvalue().encode("utf-8"))
+                        stream.flush()
+                        os.fsync(stream.fileno())
+                    return
+            if time.monotonic() >= deadline:
+                raise OSError("No se pudo adquirir la exclusion de tiempos_rondas.csv")
+            time.sleep(0.02 + random.random() * 0.05)
 
 
 def rounds_target(network):
@@ -372,13 +547,9 @@ def done_today(today=None):
     """Rondas ya lanzadas hoy segun el CSV de tiempos (para reanudar la cola sin repetir)."""
     today = (today or datetime.date.today()).isoformat()
     done = {}
-    try:
-        with open(LOG, encoding="utf-8", newline="") as stream:
-            for row in csv.DictReader(stream):
-                if row.get("fecha") == today and row.get("estado") in ("ok", "parcial"):
-                    done[row["red"]] = done.get(row["red"], 0) + 1
-    except OSError:
-        pass
+    for row in _read_round_csv_rows():
+        if row.get("fecha") == today and row.get("estado") in ("ok", "parcial"):
+            done[row["red"]] = done.get(row["red"], 0) + 1
     return done
 
 
@@ -418,13 +589,7 @@ def run_round(network):
     else:
         state = "saltada"             # solo saltos, sin una accion confirmada
     row = [start.date().isoformat(), network, start.strftime("%H:%M:%S"), end.strftime("%H:%M:%S"), round((end - start).total_seconds() / 60, 1), state, confirmed, skipped, failed, proc.returncode]
-    with _write_lock:
-        new = not os.path.exists(LOG)
-        with open(LOG, "a", newline="", encoding="utf-8") as stream:
-            w = csv.writer(stream)
-            if new:
-                w.writerow(["fecha", "red", "inicio", "fin", "minutos", "estado", "confirmadas", "saltadas", "fallos", "codigo"])
-            w.writerow(row)
+    _append_round_csv(row)
     print(f"[cola] {network}: {state} en {row[4]} min {confirmed} saltadas={skipped} fallos={failed}", flush=True)
     return state
 
@@ -483,47 +648,43 @@ def retry_snapshot_today(now=None):
     """
     now = now or datetime.datetime.now()
     states = {}
-    try:
-        with open(LOG, encoding="utf-8-sig", newline="") as stream:
-            for row in csv.DictReader(stream):
-                network = row.get("red")
-                state = row.get("estado")
-                if (row.get("fecha") != now.date().isoformat()
-                        or network not in WEB + API + PHONE + ("tiktok_bulk",)
-                        or state not in ("ok", "parcial", "ocupada", "saltada", "error")):
-                    continue
-                try:
-                    clock = datetime.time.fromisoformat(row["fin"])
-                    when = now.replace(hour=clock.hour, minute=clock.minute,
-                                       second=clock.second, microsecond=clock.microsecond)
-                except (TypeError, ValueError, KeyError):
-                    continue
-                # Ignorar registros con horario futuro (reloj reajustado,
-                # registros manipulados o CSV parcialmente escrito).
-                if when > now:
-                    continue
-                failures = states.get(network, (0, None))[0]
-                if state in ("ok", "parcial"):
-                    states[network] = (0, None)
-                    continue
-                if state == "error":
-                    failures += 1
-                if state == "ocupada":
-                    delay = 300.0
-                elif state == "saltada":
-                    _, breaker_delay, _ = classify_round_state(
-                        state, failures,
-                        network="tiktok" if network == "tiktok_bulk" else network,
-                        now=when)
-                    delay = max(12 * 60 * 1.2, breaker_delay)
-                else:
-                    base = 2 * 60 * 60 if failures >= 6 else (
-                        900, 1800, 3600)[min(failures - 1, 2)]
-                    delay = base * 1.2
-                states[network] = (failures, when + datetime.timedelta(seconds=delay))
-    except (OSError, csv.Error, UnicodeError):
-        return {}
+    for row in _read_round_csv_rows():
+        network = row.get("red")
+        state = row.get("estado")
+        if (row.get("fecha") != now.date().isoformat()
+                or network not in WEB + API + PHONE + ("tiktok_bulk",)
+                or state not in ("ok", "parcial", "ocupada", "saltada", "error")):
+            continue
+        try:
+            clock = datetime.time.fromisoformat(row["fin"])
+            when = now.replace(hour=clock.hour, minute=clock.minute,
+                               second=clock.second, microsecond=clock.microsecond)
+        except (TypeError, ValueError, KeyError):
+            continue
+        # Ignorar registros con horario futuro (reloj reajustado).
+        if when > now:
+            continue
+        failures = states.get(network, (0, None))[0]
+        if state in ("ok", "parcial"):
+            states[network] = (0, None)
+            continue
+        if state == "error":
+            failures += 1
+        if state == "ocupada":
+            delay = 300.0
+        elif state == "saltada":
+            _, breaker_delay, _ = classify_round_state(
+                state, failures,
+                network="tiktok" if network == "tiktok_bulk" else network,
+                now=when)
+            delay = max(12 * 60 * 1.2, breaker_delay)
+        else:
+            base = 2 * 60 * 60 if failures >= 6 else (
+                900, 1800, 3600)[min(failures - 1, 2)]
+            delay = base * 1.2
+        states[network] = (failures, when + datetime.timedelta(seconds=delay))
     return states
+
 
 
 def web_chain(until, targets, done):
@@ -626,13 +787,7 @@ def run_bulk():
     else:
         state = "saltada"
     row = [start.date().isoformat(), "tiktok_bulk", start.strftime("%H:%M:%S"), end.strftime("%H:%M:%S"), round((end - start).total_seconds() / 60, 1), state, "{'follow': %d}" % follows, 0, len(re.findall(r"^(FALLO|PARADA)", out, re.MULTILINE)), proc.returncode]
-    with _write_lock:
-        new = not os.path.exists(LOG)
-        with open(LOG, "a", newline="", encoding="utf-8") as stream:
-            w = csv.writer(stream)
-            if new:
-                w.writerow(["fecha", "red", "inicio", "fin", "minutos", "estado", "confirmadas", "saltadas", "fallos", "codigo"])
-            w.writerow(row)
+    _append_round_csv(row)
     print(f"[cola] tiktok_bulk: {state} en {row[4]} min follows={follows}", flush=True)
     return state, out
 
@@ -788,9 +943,9 @@ def main(argv=None):
         return launch_independent(argv)
     until = deadline_from(argv[argv.index("--until") + 1] if "--until" in argv else "23:20")
     targets = {n: rounds_target(n) for n in WEB + API + PHONE}
-    done = done_today()
-    print(f"[cola] objetivos {targets}; ya hechas hoy {done}; hasta {until:%H:%M}", flush=True)
     if "--dry" in argv:
+        done = done_today()
+        print(f"[cola] objetivos {targets}; ya hechas hoy {done}; hasta {until:%H:%M}", flush=True)
         return 0
     wanted = set(argv[argv.index("--only") + 1].split(",")) if "--only" in argv else {"web", "api", "tiktok"}
     mine = {chain for chain in sorted(wanted) if take_chain_lock(chain)}
@@ -800,18 +955,28 @@ def main(argv=None):
         print("[cola] no queda ninguna cadena libre: no se lanza otra cola", flush=True)
         return 0
     heartbeat_stop = threading.Event()
-    heartbeat = threading.Thread(target=_heartbeat_owned_locks, args=(tuple(mine), heartbeat_stop), daemon=True)
-    heartbeat.start()
+    heartbeat = None
+    heartbeat_started = False
+    reload_allowed = False
     try:
+        # Snapshot DESPUÉS de adquirir la propiedad, no antes: un propietario
+        # anterior podría haber confirmado una ronda durante la espera.
+        done = done_today()
+        print(f"[cola] objetivos {targets}; ya hechas hoy {done}; hasta {until:%H:%M}", flush=True)
+        heartbeat = threading.Thread(target=_heartbeat_owned_locks, args=(tuple(mine), heartbeat_stop), daemon=True)
+        heartbeat.start()
+        heartbeat_started = True
+        reload_allowed = True
         return _run_chains(argv, until, targets, done, only=mine)
     finally:
         heartbeat_stop.set()
-        heartbeat.join(timeout=2)
+        if heartbeat_started:
+            # No liberar candados hasta que el heartbeat haya terminado.
+            heartbeat.join()
         released = {chain: release_chain_lock(chain) for chain in mine}
-        if control_signal() == "recargar" and all(released.values()):
+        if reload_allowed and control_signal() == "recargar" and all(released.values()):
             # No relanzar hasta confirmar que liberamos todos los locks.
             # Si falla, una nueva cola moriría por la posesión del padre.
-
             print("[cola] recarga pedida: se relanza con el codigo nuevo y sigue donde iba", flush=True)
             relaunch([os.path.join("tools", "round_queue.py")] + argv, f"cola_rondas_{next(iter(mine))}.log" if len(mine) == 1 else "cola_rondas_recarga.log")
         elif control_signal() == "recargar":
