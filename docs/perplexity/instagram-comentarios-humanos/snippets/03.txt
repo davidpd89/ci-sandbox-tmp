@@ -1,0 +1,28 @@
+python
+# https://github.com/davidpd89/ci-sandbox-tmp/blob/main/tools/reply_writer.py
+def require_gpt(plan, network="", log=print, path=None):
+    """Guardia común para textos externos: inválidos o sin procedencia se omiten.
+
+    Un texto ausente/blank antes escapaba al `if item.get("text")` y hacía que
+    el preflight del ejecutor rechazase el lote entero. Las acciones sanas siguen.
+    La excepción `authored=manual` no permite publicar un texto vacío.
+    """
+    if os.environ.get("RRSS_ALLOW_UNMARKED_TEXT") == "1":
+        return list(plan)  # Exclusivamente tests offline existentes.
+    kept, dropped_empty, dropped_provenance = [], 0, 0
+    for index, item in enumerate(plan, start=1):
+        if item.get("kind") in TEXT_KINDS:
+            text = item.get("text")
+            if not isinstance(text, str) or not text.strip():
+                dropped_empty += 1
+                log(f"[{network or 'ejecutor'}] GUARDIA_TEXTO elemento {index}: texto_vacio; se omite solo este elemento")
+                continue
+            if item.get("authored") != "manual" and not is_gpt(text, path):
+                dropped_provenance += 1
+                continue
+        kept.append(item)
+    if dropped_provenance:
+        log(f"[{network or 'ejecutor'}] {dropped_provenance} comentarios/respuestas SIN texto de ChatGPT quitados del plan (nunca se publica texto de banco)")
+    if dropped_empty:
+        log(f"[{network or 'ejecutor'}] {dropped_empty} comentarios/respuestas sin texto omitidos, resto del lote conservado")
+    return kept
