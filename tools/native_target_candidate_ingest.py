@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from urllib.parse import parse_qs, urlsplit
 
 NETWORKS = ("x", "threads", "facebook", "reddit", "pinterest", "instagram")
+NATIVE_NETWORKS = ("bluesky", "mastodon", "tiktok")
 QUEUES = ("WEB", "API", "MOBILE")
 # Verified in the official scanner at the commit documented in the research report.
 NATIVE_CAPTURE = {
@@ -143,12 +144,27 @@ def _observations(network, snapshot):
         authors, pins = snapshot.get("authors"), snapshot.get("pins")
         if not isinstance(authors, list) or not isinstance(pins, list):
             raise ValueError("pinterest snapshot requires authors and pins lists")
-        # Never mistake a Pin title/description for its author's profile bio.
-        return list(authors) + [{"handle": p.get("author"), "url": p.get("url"),
-                                 "text": " ".join(str(p.get(k) or "") for k in ("title", "desc")),
-                                 "source": p.get("query"), "created_at": p.get("created_at"),
-                                 "language": p.get("language"), "_pin": True}
-                                for p in pins if isinstance(p, Mapping)]
+        # Whitelist verifiable fields rather than losing author IDs, queue,
+        # provenance or granted capabilities during Pin flattening.
+        safe_fields = ("handle", "author", "account_id", "user_id",
+                       "author_id", "queue", "url", "permalink",
+                       "created_at", "timestamp", "timestamp_provenance",
+                       "language", "lang", "profile_language",
+                       "verified_actions", "source", "sources",
+                       "title", "desc", "text", "replies", "comment_count")
+        result = list(authors)
+        for pin in pins:
+            if not isinstance(pin, Mapping):
+                result.append(pin)  # Report invalid_observation downstream.
+                continue
+            row = {key: pin[key] for key in safe_fields if key in pin}
+            row.setdefault("handle", pin.get("author"))
+            row.setdefault("source", pin.get("query"))
+            row.setdefault("text", " ".join(str(pin.get(k) or "")
+                                              for k in ("title", "desc")))
+            row["_pin"] = True
+            result.append(row)
+        return result
     if not isinstance(snapshot, (list, tuple)):
         raise ValueError("snapshot must be a sequence of native observations")
     if network == "instagram":
@@ -224,6 +240,15 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
     if len(rows) > MAX_OBSERVATIONS:
         raise ValueError("snapshot exceeds configured bounded size")
     diagnostics, grouped = [], {}
+    # The same handle with and without a stable account ID is ambiguous:
+    # discard handle-only rows, never join accounts by mutable handle.
+    stable_handles = set()
+    for original in _native_rows(network, rows):
+        if (isinstance(original, Mapping) and
+            original.get("queue", queue) == queue):
+            _, observed_handle, observed_id = _account_identity(network, original)
+            if observed_id and observed_handle:
+                stable_handles.add(observed_handle)
     for i, original in enumerate(_native_rows(network, rows)):
         if not isinstance(original, Mapping):
             diagnostics.append({"index": i, "reason": "invalid_observation"})
@@ -233,6 +258,12 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
             diagnostics.append({"index": i, "reason": "queue_mismatch"})
             continue
         key, handle, stable = _account_identity(network, row)
+        if row.get("_pin") and _valid_handle(row.get("author")) and _valid_handle(row.get("handle")) != _valid_handle(row.get("author")):
+            diagnostics.append({"index": i, "reason": "conflicting_pin_author_handles"})
+            continue
+        if not stable and handle in stable_handles:
+            diagnostics.append({"index": i, "reason": "ambiguous_handle_with_stable_id"})
+            continue
         if key is None:
             diagnostics.append({"index": i, "reason": "missing_stable_account_identity"})
             continue
@@ -354,6 +385,18 @@ def normalize_candidates(network, snapshot, *, as_of, queue="WEB",
                 continue
             if existing is None or (existing["language"] is None and known["language"] is not None):
                 account["posts"][url] = known
+    # The same remote post cannot be attributed to different accounts.
+    # Remove the collision from every account rather than create duplicate
+    # ranked opportunities when author provenance is incomplete.
+    owners = {}
+    for key, account in grouped.items():
+        for url in account["posts"]:
+            owners.setdefault(url, set()).add(key)
+    for url, keys in owners.items():
+        if len(keys) > 1:
+            for key in keys:
+                grouped[key]["posts"].pop(url, None)
+            diagnostics.append({"reason": "cross_account_post_collision"})
     shortlist = []
     for key, account in sorted(grouped.items()):
         # If stable id exists, avoid the ranker's handle-first fallback.
@@ -391,7 +434,7 @@ def normalize_all(snapshots, *, as_of, queues=None, **kwargs):
         for network in NETWORKS}
 
 
-def rank_with_66(normalized, ranker, *, as_of, **kwargs):
+def rank_with_66(normalized, ranker, *, as_of, native_snapshots=None, **kwargs):
     """Explicit dependency injection: module #66 is not on this PR's branch.
 
     Post #66 integration, pass target_quality_ranking.rank_all. No monkeypatch,
@@ -405,4 +448,12 @@ def rank_with_66(normalized, ranker, *, as_of, **kwargs):
             raise ValueError("invalid normalized record")
         if record.get("status") == "normalized_offline":
             snapshots[network] = {"shortlist": record["shortlist"]}
+    if native_snapshots is not None:
+        if (not isinstance(native_snapshots, Mapping) or
+            set(native_snapshots) - set(NATIVE_NETWORKS)):
+            raise ValueError("invalid native network snapshots")
+        # Leave missing native networks absent: the real ranker then reports
+        # missing_input instead of claiming a connected reader.
+        snapshots.update({name: value for name, value in native_snapshots.items()
+                          if value is not None})
     return ranker(snapshots, as_of=as_of, **kwargs)

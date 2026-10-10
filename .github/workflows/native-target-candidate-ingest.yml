@@ -25,5 +25,7 @@ jobs:
           python-version: "3.11"
       - name: Synthetic tests without accounts or network access
         run: python -m unittest discover -s tests -p test_native_target_candidate_ingest.py -v
-      - name: Compile adapters
-        run: python -m py_compile tools/native_target_candidate_ingest.py
+      - name: Official ranking contract regression
+        run: python -m unittest discover -s tests -p test_target_quality_ranking.py -v
+      - name: Compile adapters and real ranker
+        run: python -m py_compile tools/native_target_candidate_ingest.py tools/target_quality_ranking.py

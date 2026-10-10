@@ -216,3 +216,38 @@ sigue con fallo online Ubuntu por no figurar #100 en el manifiesto del
 padre; la validación offline es correcta. Es bloqueo de coordinación,
 no un fallo de tests funcionales de los adaptadores. No se alteró
 research/public-reuse-parent ni se hizo merge.
+
+
+## Revisión adicional sobre base oficial sincronizada (10/10/2026)
+
+Se incorporó la base `737fc011` mediante commit de merge propio de la rama.
+La base ya contiene `tools/target_quality_ranking.py`, `tools/candidate_identity.py`
+y la suite oficial; no se ha copiado ni reimplementado su scoring. La función
+`rank_with_66` ahora permite pasar los tres snapshots nativos y se ejercita
+contra `target_quality_ranking.rank_all` real con las nueve redes; si faltan,
+permanecen en estado `missing_input`. La clasificación española de la base
+usa BCP-47 estricto y ya rechaza `est`.
+
+Se descarta la fusión por handle de la PR #132: un handle mutable no acredita
+que una observación sin ID pertenezca a una cuenta con ID. Se omite la fila
+ambigua con diagnóstico explícito, independientemente del orden de entrada.
+Pinterest conserva una lista explícita de campos de Pin (IDs, procedencia,
+fecha, idioma, cola y permisos), y rechaza contradicciones entre handle/autor.
+Los enlaces a un mismo post presentes en dos IDs distintos se excluyen en
+ambas candidaturas para evitar oportunidades duplicadas.
+
+Las colas API/MOBILE del adaptador son contrato de **lectura de datos aportados**;
+no se acreditan recolectores de producción ni campañas de nueve redes. El
+gate de campaña requiere que la PR #100 aparezca en el manifiesto de la rama
+padre: no se ha alterado desde la hija. La PR #132 contiene cientos de ficheros
+incidentales (incluidos pycache) y no debe incorporarse sin filtrar.
+
+Comprobación combinada en Ubuntu y Windows con Python 3.11:
+
+    python -m unittest discover -s tests -p test_native_target_candidate_ingest.py -v
+    python -m unittest discover -s tests -p test_target_quality_ranking.py -v
+    python -m py_compile tools/native_target_candidate_ingest.py tools/target_quality_ranking.py
+
+Pendientes externos: contrato real y procedencia de lectores Edge/Windows,
+API/MOBILE y Android, canario supervisado sin automatización y suite completa
+del repo privado; no convertir fechas de escaneo en fechas de publicación.

@@ -399,5 +399,98 @@ class TestContracts(unittest.TestCase):
             n.normalize_all({"unknown": []}, as_of=NOW)
 
 
+    def test_mixed_handle_and_id_fail_closed_independent_of_row_order(self):
+        for network in ("x", "threads", "reddit", "pinterest", "instagram"):
+            sample = dict(SAMPLES[network], url=None, permalink=None)
+            if network == "pinterest":
+                sample = {"handle": "lectora_1", "source": "search"}
+            with self.subTest(network=network):
+                with_id = dict(sample, account_id="remote_123")
+                for order in ((sample, with_id), (with_id, sample)):
+                    if network == "pinterest":
+                        snap = {"authors": list(order), "pins": []}
+                    else:
+                        snap = list(order)
+                    out = n.normalize_candidates(network, snap, as_of=NOW)
+                    self.assertEqual(len(out["shortlist"]), 1)
+                    self.assertEqual(out["shortlist"][0]["account_id"], "remote_123")
+                    self.assertIn("ambiguous_handle_with_stable_id",
+                                  [d["reason"] for d in out["diagnostics"]])
+
+    def test_pinterest_metadata_survives_with_queue_and_author_provenance(self):
+        pin = {"author": "lectora_1", "account_id": "p123", "author_id": "p123",
+               "url": "https://www.pinterest.com/pin/44444/",
+               "title": "Fantasía española", "query": "romantasy",
+               "created_at": FRESH, "language": "es",
+               "verified_actions": ["comment"], "queue": "API"}
+        snap = {"authors": [], "pins": [pin]}
+        web = n.normalize_candidates("pinterest", snap, as_of=NOW)
+        self.assertEqual(web["shortlist"], [])
+        self.assertIn("queue_mismatch", [d["reason"] for d in web["diagnostics"]])
+        api = n.normalize_candidates("pinterest", snap, as_of=NOW, queue="API")
+        self.assertEqual(api["shortlist"][0]["account_id"], "p123")
+        self.assertEqual(api["shortlist"][0]["posts"][0]["actions"], ["comment"])
+        mismatch = dict(pin, author_id="p999")
+        fail = n.normalize_candidates("pinterest", {"authors": [], "pins": [mismatch]},
+                                      as_of=NOW, queue="API")
+        self.assertEqual(fail["shortlist"][0]["posts"], [])
+        self.assertIn("post_author_mismatch",
+                      [d["reason"] for d in fail["diagnostics"]])
+
+    def test_pinterest_conflicting_handle_and_author_rejected(self):
+        pin = {"author": "lector_1", "handle": "lector_2", "account_id": "p123",
+               "url": "https://www.pinterest.com/pin/12345/",
+               "created_at": FRESH, "language": "es"}
+        out = n.normalize_candidates("pinterest",
+                                     {"authors": [], "pins": [pin]}, as_of=NOW)
+        self.assertEqual(out["shortlist"], [])
+        self.assertIn("conflicting_pin_author_handles",
+                      [d["reason"] for d in out["diagnostics"]])
+
+    def test_one_post_cannot_generate_opportunities_for_two_account_ids(self):
+        rows = [dict(SAMPLES["x"], account_id=uid, created_at=FRESH,
+                     language="es", verified_actions=["reply"])
+                for uid in ("111", "222")]
+        out = n.normalize_candidates("x", rows, as_of=NOW)
+        self.assertEqual(len(out["shortlist"]), 2)
+        self.assertTrue(all(not row["posts"] for row in out["shortlist"]))
+        self.assertIn("cross_account_post_collision",
+                      [d["reason"] for d in out["diagnostics"]])
+
+    def test_real_ranker_nine_network_contract_and_missing_inputs(self):
+        import target_quality_ranking as quality
+        observations = {}
+        for network in n.NETWORKS:
+            if network == "pinterest":
+                observations[network] = {
+                    "authors": [dict(SAMPLES["pinterest"])],
+                    "pins": [{"author": "lectora_1",
+                              "url": "https://www.pinterest.com/pin/44444/",
+                              "created_at": FRESH, "language": "es",
+                              "title": "Fantasía juvenil"}]}
+            else:
+                row = dict(SAMPLES[network], created_at=FRESH, language="es")
+                if network == "facebook":
+                    row["account_id"] = "fb123"
+                observations[network] = [row]
+        normalized = n.normalize_all(observations, as_of=NOW)
+        partial = n.rank_with_66(normalized, quality.rank_all, as_of=NOW)
+        for name in n.NATIVE_NETWORKS:
+            self.assertEqual(partial["networks"][name]["status"], "missing_input")
+        native = {
+            "bluesky": [{"handle": "lectora.example", "bio": "Leo fantasía"}],
+            "mastodon": [{"acct": "lectora@libros.social", "bio": "Leo libros"}],
+            "tiktok": [{"handle": "lectora_tiktok", "bio": "Leo romantasy"}]}
+        ranked = n.rank_with_66(normalized, quality.rank_all, as_of=NOW,
+                                native_snapshots=native)
+        self.assertEqual(set(ranked["networks"]), set(quality.NETWORKS))
+        for network in quality.NETWORKS:
+            with self.subTest(network=network):
+                self.assertEqual(ranked["networks"][network]["status"], "ranked")
+                self.assertEqual(len(ranked["networks"][network]["ranked"]), 1)
+        with self.assertRaises(ValueError):
+            n.rank_with_66(normalized, quality.rank_all, as_of=NOW,
+                           native_snapshots={"x": []})
+
 if __name__ == "__main__":
     unittest.main()
