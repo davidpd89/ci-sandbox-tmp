@@ -69,9 +69,12 @@ def stable_key(network: str, value: str, verification: str) -> str:
                     or len(value) > 2048):
                 raise ValueError("bad actor URI")
             host = host.encode("idna").decode("ascii").lower()
+            path = u.path.rstrip("/")
+            if not path:
+                raise ValueError("actor URI must identify an actor, not the host root")
         except (ValueError, UnicodeError) as exc:
             raise AliasError("actor_uri_invalid") from exc
-        return network + "|https://" + host + u.path.rstrip("/")
+        return network + "|https://" + host + path
     if verification != "provider_account_id" or not _ID_PATTERN.fullmatch(value):
         raise AliasError("provider_id_unverified")
     return network + "|" + value
