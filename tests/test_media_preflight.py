@@ -157,6 +157,34 @@ class MediaPreflightTests(unittest.TestCase):
         self.assertEqual(item, before)
         self.assertEqual(bad.read_bytes(), b"imagen ilegible")
 
+    def test_carousel_each_image_requires_its_own_alt(self):
+        first = self.image("una.jpg")
+        second = self.image("dos.jpg", color="blue")
+        item = {
+            "red": "instagram", "carpeta": str(self.root),
+            "alt": "ALT global que no sirve para todas",
+            "media": [
+                {"filename": first.name, "path": str(first), "exists": True, "alt": "Lectora con novela"},
+                {"filename": second.name, "path": str(second), "exists": True, "alt": ""},
+            ],
+        }
+        self.assertIn("dos.jpg: alt_missing", " ".join(mp.inspect_item(item)))
+
+    def test_wrong_image_suffix_rejected_even_if_valid_jpeg(self):
+        jpeg = self.image("original.jpg")
+        renamed = self.root / "renombrado.png"
+        renamed.write_bytes(jpeg.read_bytes())
+        r = mp.inspect_asset(renamed, "facebook", alt="Libro en mano")
+        self.assertIn("image_extension", [e["code"] for e in r["errors"]])
+
+    def test_missing_pillow_only_stops_media_not_text(self):
+        item = {
+            "red": "x", "carpeta": str(self.root), "md_path": "ficha.md",
+            "fecha_hora": __import__("datetime").datetime(2026, 10, 10),
+            "estado": "lista.", "texto": "Texto", "meta": {}, "blockers": [], "media": [],
+        }
+        self.assertEqual(publisher.blockers_of(item, {}, item["fecha_hora"]), [])
+
     def test_publisher_blocks_path_escape(self):
         item = {"red": "facebook", "carpeta": str(self.root / "sub"),
                 "md_path": "ficha.md", "fecha_hora": __import__("datetime").datetime(2026, 10, 10),
