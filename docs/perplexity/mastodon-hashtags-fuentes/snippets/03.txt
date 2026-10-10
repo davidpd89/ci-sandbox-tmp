@@ -1,0 +1,8 @@
+python
+# https://github.com/mastodon/documentation/blob/main/content/en/client/public.md
+import requests
+
+response = requests.get("https://mastodon.example/api/v1/timelines/tag/cats?limit=2")
+statuses = response.json()
+assert statuses[0]["visibility"] == "public"
+print(statuses[0]["content"])
