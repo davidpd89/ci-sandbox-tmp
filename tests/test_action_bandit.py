@@ -171,3 +171,11 @@ def test_multiple_windows_per_event_and_only_day7_trains():
     day7 = observed(key='shared')
     result = rank_candidates([candidate()], [day1, day3, day7], as_of=TODAY)
     assert result[0].mature_events == 1
+
+
+def test_multi_window_event_identity_conflict():
+    day1 = observed(key='shared', window_days=1,
+                    observed_on=TODAY-timedelta(days=6))
+    day7 = observed(key='shared', action='follow')
+    with pytest.raises(ValueError, match='incompatible'):
+        rank_candidates([candidate()], [day1, day7], as_of=TODAY)
