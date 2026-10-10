@@ -1,0 +1,130 @@
+python
+# Archivo nuevo: tools/tiktok_niche_sources.py
+# Integra el catálogo tools/hashtag_research/tiktok_nicho_es.yaml
+# con tiktok_discovery.py, discovery_terms.py y action_ledger.py.
+
+from __future__ import annotations
+
+import json
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Iterable
+
+import yaml
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+CATALOG_PATH = (
+    REPO_ROOT
+    / "tools"
+    / "hashtag_research"
+    / "tiktok_nicho_es.yaml"
+)
+
+
+@dataclass(frozen=True)
+class DiscoverySource:
+    source_type: str
+    term: str
+    bucket: str
+    priority: str
+    language: str = "es"
+    enabled: bool = True
+
+
+def load_catalog(path: Path = CATALOG_PATH) -> dict:
+    if not path.exists():
+        raise FileNotFoundError(f"Catálogo TikTok no encontrado: {path}")
+    with path.open("r", encoding="utf-8") as handle:
+        catalog = yaml.safe_load(handle)
+    if not isinstance(catalog, dict):
+        raise ValueError("El catálogo TikTok debe ser un objeto YAML")
+    if catalog.get("network") != "tiktok":
+        raise ValueError("El catálogo no corresponde a TikTok")
+    return catalog
+
+
+def iter_sources(catalog: dict) -> Iterable[DiscoverySource]:
+    for bucket in ("hashtags_core", "hashtags_genre", "hashtags_trope"):
+        for item in catalog.get(bucket, []):
+            yield DiscoverySource(
+                source_type="hashtag",
+                term=item["term"].lower(),
+                bucket=bucket.removeprefix("hashtags_"),
+                priority=item.get("priority", "medium"),
+                language=catalog.get("language", "es"),
+                enabled=bool(item.get("enabled", True)),
+            )
+    for item in catalog.get("search_queries", []):
+        yield DiscoverySource(
+            source_type="search",
+            term=item["query"].lower(),
+            bucket="search",
+            priority=item.get("priority", "medium"),
+            language=catalog.get("language", "es"),
+            enabled=bool(item.get("enabled", True)),
+        )
+
+
+def build_round_plan(limit_per_priority: int = 5) -> list[dict]:
+    catalog = load_catalog()
+    limits = {"high": limit_per_priority, "medium": max(1, limit_per_priority // 2)}
+    selected: list[DiscoverySource] = []
+
+    for priority in ("high", "medium"):
+        sources = [
+            source
+            for source in iter_sources(catalog)
+            if source.enabled and source.priority == priority
+        ]
+        selected.extend(sources[: limits[priority]])
+
+    return [
+        {
+            **asdict(source),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        for source in selected
+    ]
+
+
+def normalize_candidate(
+    raw: dict,
+    source: DiscoverySource,
+) -> dict | None:
+    video_id = raw.get("video_id") or raw.get("id")
+    author = raw.get("author") or raw.get("author_unique_id")
+    if not video_id or not author:
+        return None
+
+    caption = raw.get("caption") or raw.get("desc") or ""
+    hashtags = raw.get("hashtags") or []
+
+    return {
+        "network": "tiktok",
+        "video_id": str(video_id),
+        "author": str(author),
+        "caption": caption,
+        "hashtags": [str(tag).lower() for tag in hashtags],
+        "source_type": source.source_type,
+        "source_term": source.term,
+        "bucket": source.bucket,
+        "priority": source.priority,
+        "language_guess": "es",
+        "discovered_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def export_round_plan(path: Path | None = None) -> Path:
+    path = path or REPO_ROOT / "00_OPERATIVO" / "tiktok_discovery_round.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    plan = build_round_plan()
+    path.write_text(
+        json.dumps(plan, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return path
+
+
+if __name__ == "__main__":
+    print(export_round_plan())
