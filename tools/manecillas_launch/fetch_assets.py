@@ -3,11 +3,7 @@ from __future__ import annotations
 import argparse, json, urllib.parse, urllib.request
 from pathlib import Path
 
-<<<<<<< HEAD
 UA='AutoraDemo-RRSS/IG06 (+https://autorademodiaz.com)'
-=======
-UA='DavidPorto-RRSS/IG06 (+https://davidportodiaz.com)'
->>>>>>> origin/research/public-reuse-parent
 COMMONS_API='https://commons.wikimedia.org/w/api.php'
 MET_API='https://collectionapi.metmuseum.org/public/collection/v1/objects/{id}'
 

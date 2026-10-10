@@ -1,9 +1,5 @@
 """
-<<<<<<< HEAD
 Herramienta unica para el dia a dia de TikTok (@autorademoescritor) - mismo
-=======
-Herramienta unica para el dia a dia de TikTok (@davidportoescritor) - mismo
->>>>>>> origin/research/public-reuse-parent
 patron que instagram_interact.py (Edge real via CDP puerto 9223, ya
 logueado - David dejo la sesion lista el 22/09/2026). TikTok es, de las
 seis redes de este proyecto, la MAS sensible a deteccion de bots -
@@ -88,15 +84,9 @@ from x_interact import _check_spanish_orthography  # reutilizado, no duplicado
 CDP_URL = "http://127.0.0.1:9223"
 EDGE_EXE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 # Mismo perfil dedicado que las otras cinco herramientas - David logueo
-<<<<<<< HEAD
 # @autorademoescritor ahi el 22/09/2026.
 EDGE_USER_DATA = r"C:\Temp\rrss-autorademo-edge"
 MY_HANDLE = "autorademoescritor"
-=======
-# @davidportoescritor ahi el 22/09/2026.
-EDGE_USER_DATA = r"C:\Temp\rrss-davidporto-edge"
-MY_HANDLE = "davidportoescritor"
->>>>>>> origin/research/public-reuse-parent
 
 # Ampliado con las senales especificas vistas en vivo el 22/09 (captcha de
 # TikTok) ademas del set ya usado en las otras redes.
@@ -237,22 +227,11 @@ def ensure_browser():
 def _connect():
     _refuse_if_paused()
     p = sync_playwright().start()
-<<<<<<< HEAD
     browser = p.chromium.connect_over_cdp(CDP_URL)
     ctx = browser.contexts[0]
     pages = [pg for pg in ctx.pages if urlsplit(pg.url).hostname in {"tiktok.com", "www.tiktok.com"}]
     pg = pages[-1] if pages else ctx.new_page()
     return p, pg
-=======
-    try:
-        import browser_common as bc
-        browser = bc.connect_cdp(p.chromium, CDP_URL)
-        pg = bc.new_owned_page(browser, lean=False)
-        return bc.OwnedPlaywright(p, pg), pg
-    except Exception:
-        p.stop()
-        raise
->>>>>>> origin/research/public-reuse-parent
 
 
 def _active_handle(pg):

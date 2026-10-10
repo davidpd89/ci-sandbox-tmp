@@ -29,11 +29,7 @@ def valid_item():
         "media_alt_text": ["Libro sobre una mesa de madera"],
         "board_name": "Fantasía juvenil",
         "pin_title": "Una lectura entre mundos",
-<<<<<<< HEAD
         "pin_link": "https://autorademodiaz.com/cuaderno/una-lectura/",
-=======
-        "pin_link": "https://davidportodiaz.com/cuaderno/una-lectura/",
->>>>>>> origin/research/public-reuse-parent
     }
 
 
@@ -94,17 +90,10 @@ class PinterestManualPreflightTests(unittest.TestCase):
 
     def test_destination_requires_exact_https_url(self):
         bad = (
-<<<<<<< HEAD
             "http://autorademodiaz.com/cuaderno/",
             "https://user:pass@autorademodiaz.com/cuaderno/",
             "https://autorademodiaz.com:444/cuaderno/",
             "https://autorademodiaz.com:puerto/cuaderno/",
-=======
-            "http://davidportodiaz.com/cuaderno/",
-            "https://user:pass@davidportodiaz.com/cuaderno/",
-            "https://davidportodiaz.com:444/cuaderno/",
-            "https://davidportodiaz.com:puerto/cuaderno/",
->>>>>>> origin/research/public-reuse-parent
             "https://[host-malformado/cuaderno/",
         )
         for value in bad:
@@ -118,11 +107,7 @@ class PinterestManualPreflightTests(unittest.TestCase):
     def test_home_with_query_is_not_specific_destination(self):
         item = valid_item()
         item["pin_link"] = (
-<<<<<<< HEAD
             "https://autorademodiaz.com/?utm_source=pinterest"
-=======
-            "https://davidportodiaz.com/?utm_source=pinterest"
->>>>>>> origin/research/public-reuse-parent
         )
         self.assertTrue(any("home" in e for e in pe._validate(item)))
 

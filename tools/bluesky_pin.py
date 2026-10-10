@@ -14,7 +14,6 @@ import bluesky_interact as b
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 PHOTO = os.path.join(ROOT, "00_OPERATIVO", "RECURSOS", "assets", "perfil", "david-porto-retrato-bn.jpg")
-<<<<<<< HEAD
 ALT = "Retrato en blanco y negro de Autora Demo Díaz, escritor, sentado con la cabeza apoyada en una mano y un jersey de punto."
 
 INTRO = ("Hola, soy Autora Demo, escritor gallego en Madrid. Escribo fantasía y novelas que dejan poso: «Samuel entre mundos» y «Las manecillas del recuerdo».\n\n"
@@ -22,15 +21,6 @@ INTRO = ("Hola, soy Autora Demo, escritor gallego en Madrid. Escribo fantasía y
          "https://autorademodiaz.com")
 LINKS = ("Los libros, por si queréis echarles un ojo:\n"
          "📖 Samuel entre mundos (fantasía juvenil): https://www.amazon.es/dp/B0GB6LGQFH?tag=autorademo-21\n"
-=======
-ALT = "Retrato en blanco y negro de David Porto Díaz, escritor, sentado con la cabeza apoyada en una mano y un jersey de punto."
-
-INTRO = ("Hola, soy David Porto, escritor gallego en Madrid. Escribo fantasía y novelas que dejan poso: «Samuel entre mundos» y «Las manecillas del recuerdo».\n\n"
-         "¿Hablamos de libros, webs, escritura o de lo que os apetezca? Contadme qué estáis leyendo 👇\n\n"
-         "https://davidportodiaz.com")
-LINKS = ("Los libros, por si queréis echarles un ojo:\n"
-         "📖 Samuel entre mundos (fantasía juvenil): https://www.amazon.es/dp/B0GB6LGQFH?tag=davidporto-21\n"
->>>>>>> origin/research/public-reuse-parent
          "📖 Las manecillas del recuerdo (novela coral): https://amzn.to/4zW6Yeu")
 
 
@@ -75,26 +65,10 @@ def main(argv=None):
     b._require_credentials()
     did = b._session()["did"]
     existing = _current_pinned_text(did)
-<<<<<<< HEAD
     if existing and existing.startswith("Hola, soy Autora Demo"):
         print("el fijado ya es la presentacion; sin cambios")
         return 0
     did, root = publish()
-=======
-    if existing and existing.startswith("Hola, soy David Porto"):
-        print("el fijado ya es la presentacion; sin cambios")
-        return 0
-    import circuit_breaker as cb
-    allowed, reason = cb.write_preflight("bluesky")
-    if not allowed:
-        print(f"[bluesky] cortacircuitos ABIERTO: {reason}; no publicar")
-        return 0
-    did, root = publish()
-    allowed, reason = cb.write_preflight("bluesky")
-    if not allowed:
-        print(f"[bluesky] post creado, fijado pendiente por cuarentena: {reason}")
-        return 2
->>>>>>> origin/research/public-reuse-parent
     pin(did, root["uri"], root["cid"])
     print(f"publicado y fijado: {root['uri']}")
     return 0

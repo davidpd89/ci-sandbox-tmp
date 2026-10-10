@@ -21,11 +21,7 @@ from browser_pool import (add_seeds, due_seeds, estimated_age_hours, first_touch
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "SISTEMA_DIARIO_FACEBOOK")
 DB_PATH = os.path.join(ROOT, "cache", "pool.sqlite3")
-<<<<<<< HEAD
 MY_NAME = "Autora Demo Escritor"
-=======
-MY_NAME = "David Porto Escritor"
->>>>>>> origin/research/public-reuse-parent
 
 
 def connect(path=None):

@@ -107,7 +107,6 @@ class PoliticalFilterTests(unittest.TestCase):
 
     def test_candidate_handles_are_case_insensitive_and_malformed_fail_closed(self):
         self.assertFalse(is_valid_candidate(
-<<<<<<< HEAD
             "AUTORADEMODIAZ", "fantasía juvenil", "autorademodiaz", set()
         ))
         self.assertFalse(is_valid_candidate(
@@ -115,31 +114,17 @@ class PoliticalFilterTests(unittest.TestCase):
         ))
         self.assertFalse(is_valid_candidate(
             {"handle": "lector"}, "fantasía juvenil", "autorademodiaz", set()
-=======
-            "DAVIDPORTODIAZ", "fantasía juvenil", "davidportodiaz", set()
-        ))
-        self.assertFalse(is_valid_candidate(
-            "@Lectora", "fantasía juvenil", "davidportodiaz", {"lectora"}
-        ))
-        self.assertFalse(is_valid_candidate(
-            {"handle": "lector"}, "fantasía juvenil", "davidportodiaz", set()
->>>>>>> origin/research/public-reuse-parent
         ))
         self.assertFalse(is_valid_candidate(
             "Lectora", "fantasía juvenil", None, {"otra"}
         ))
         self.assertTrue(is_valid_candidate(
-<<<<<<< HEAD
             "Lectora", "fantasía juvenil", "autorademodiaz", {"otra"}
-=======
-            "Lectora", "fantasía juvenil", "davidportodiaz", {"otra"}
->>>>>>> origin/research/public-reuse-parent
         ))
 
 
     def test_candidate_without_evaluable_text_is_not_suggested(self):
         self.assertFalse(is_valid_candidate(
-<<<<<<< HEAD
             "@lectora", None, "@autorademodiaz"
         ))
         self.assertFalse(is_valid_candidate(
@@ -147,15 +132,6 @@ class PoliticalFilterTests(unittest.TestCase):
         ))
         self.assertFalse(is_valid_candidate(
             "@lectora", "   ", "@autorademodiaz"
-=======
-            "@lectora", None, "@davidportodiaz"
-        ))
-        self.assertFalse(is_valid_candidate(
-            "@lectora", "", "@davidportodiaz"
-        ))
-        self.assertFalse(is_valid_candidate(
-            "@lectora", "   ", "@davidportodiaz"
->>>>>>> origin/research/public-reuse-parent
         ))
 
 

@@ -74,15 +74,9 @@ EDGE_EXE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 # el perfil por defecto; probablemente una restriccion de seguridad de una
 # version reciente de Chromium/Edge sobre el perfil "default"). Se usa un
 # perfil dedicado solo para esta automatizacion - David tiene que loguear
-<<<<<<< HEAD
 # @autorademodiaz en X y Threads ahi UNA vez; despues la sesion se queda
 # guardada igual que en el perfil real. Ver SISTEMA_DIARIO_X/README.md.
 EDGE_USER_DATA = r"C:\Temp\rrss-autorademo-edge"
-=======
-# @davidportodiaz en X y Threads ahi UNA vez; despues la sesion se queda
-# guardada igual que en el perfil real. Ver SISTEMA_DIARIO_X/README.md.
-EDGE_USER_DATA = r"C:\Temp\rrss-davidporto-edge"
->>>>>>> origin/research/public-reuse-parent
 
 # Seguro anadido 17/09 a peticion explicita de David: si X muestra cualquier
 # aviso de que nos ha detectado como bot / actividad inusual / cuenta
@@ -121,38 +115,7 @@ class BotWarningDetected(RuntimeError):
 
 class WrongAccountActive(RuntimeError):
     """Se lanza cuando la cuenta ACTIVA de la sesion (la que ejecutaria la
-<<<<<<< HEAD
     accion) no es autorademodiaz - ver _assert_active_account."""
-=======
-    accion) no es davidportodiaz - ver _assert_active_account."""
-
-
-class XWriteUnverified(RuntimeError):
-    """Hubo posible escritura en X pero no un ACK comprobable: nunca replay."""
-
-
-def _write_tap_with_uncertain_transport(callback, kind):
-    """Después de llamar al control de escritura, un timeout NO prueba ausencia de tap.
-
-    Es conservador: puede bloquear alguna escritura que realmente no ocurrió.
-    Las paradas por seguridad conservan su propia excepción.
-    """
-    try:
-        return callback()
-    except (BotWarningDetected, WrongAccountActive, XWriteUnverified):
-        raise
-    except Exception as exc:
-        raise XWriteUnverified(f"X: {kind} sin ACK tras intentar tap") from exc
-
-
-def _check_warning_after_tap(pg):
-    """No perder evidencia de escritura incierta ante CAPTCHA tras un tap."""
-    try:
-        _check_bot_warning(pg)
-    except BotWarningDetected as exc:
-        exc.possible_write = True
-        raise
->>>>>>> origin/research/public-reuse-parent
 
 
 def _active_account_handle(pg):
@@ -163,11 +126,7 @@ def _active_account_handle(pg):
     BUG REAL encontrado el 21/09 (aviso de David sobre el equivalente en
     Threads, comprobado que X tenia el mismo fallo de fondo): tanto
     health() como cualquier otra funcion comprobaban la sesion navegando a
-<<<<<<< HEAD
     x.com/autorademodiaz y mirando si "@autorademodiaz" aparecia en el
-=======
-    x.com/davidportodiaz y mirando si "@davidportodiaz" aparecia en el
->>>>>>> origin/research/public-reuse-parent
     texto - eso es SIEMPRE cierto independientemente de la cuenta activa,
     porque es una pagina de perfil publica, se ve igual la mires con la
     identidad que la mires. X permite tener varias cuentas logueadas a la
@@ -206,11 +165,7 @@ def _active_account_handle(pg):
     return None
 
 
-<<<<<<< HEAD
 def _assert_active_account(pg, expected="autorademodiaz"):
-=======
-def _assert_active_account(pg, expected="davidportodiaz"):
->>>>>>> origin/research/public-reuse-parent
     """Seguro real anadido el 21/09: comprobar la cuenta activa antes de
     CUALQUIER accion de escritura (reply/like/repost/follow/unfollow/post).
     Reutiliza la pagina ya cargada - no anade una navegacion extra.
@@ -600,11 +555,7 @@ def dump_followers(handle=None):
     Following, no para uso diario."""
     p, pg = _connect()
     try:
-<<<<<<< HEAD
         h = handle or "autorademodiaz"
-=======
-        h = handle or "davidportodiaz"
->>>>>>> origin/research/public-reuse-parent
         pg.goto(f"https://x.com/{h}/followers", wait_until="domcontentloaded", timeout=50000)
         pg.wait_for_timeout(2500)
         _check_bot_warning(pg)
@@ -632,11 +583,7 @@ def dump_profile(handle=None):
     (bio, contadores) y luego cada post con su URL via _extract_articles."""
     p, pg = _connect()
     try:
-<<<<<<< HEAD
         url = f"https://x.com/{handle}" if handle else "https://x.com/autorademodiaz"
-=======
-        url = f"https://x.com/{handle}" if handle else "https://x.com/davidportodiaz"
->>>>>>> origin/research/public-reuse-parent
         pg.goto(url, wait_until="domcontentloaded", timeout=50000)
         pg.wait_for_timeout(2200)
         _check_bot_warning(pg)
@@ -885,13 +832,8 @@ def _already_commented(pg, from_index=0):
     buscando uno cuyo AUTOR seamos nosotros, via el mismo
     `UserAvatar-Container-<handle>` que ya identifica de forma fiable al
     autor de un tuit en notifications. No basta con buscar el texto
-<<<<<<< HEAD
     "autorademodiaz" en la pagina entera: un post que nos responde a
     NOSOTROS incluye "Replying to @autorademodiaz" en su propio texto, lo
-=======
-    "davidportodiaz" en la pagina entera: un post que nos responde a
-    NOSOTROS incluye "Replying to @davidportodiaz" en su propio texto, lo
->>>>>>> origin/research/public-reuse-parent
     que daria un falso positivo si se buscara la cadena suelta en vez del
     autor real de cada respuesta.
 
@@ -906,11 +848,7 @@ def _already_commented(pg, from_index=0):
     arts = pg.locator("article")
     n = arts.count()
     for i in range(from_index + 1, n):
-<<<<<<< HEAD
         if arts.nth(i).locator('[data-testid="UserAvatar-Container-autorademodiaz"]').count() > 0:
-=======
-        if arts.nth(i).locator('[data-testid="UserAvatar-Container-davidportodiaz"]').count() > 0:
->>>>>>> origin/research/public-reuse-parent
             return True
     return False
 
@@ -960,14 +898,8 @@ def reply_to(status_url, text, media_path=None):
         pg.wait_for_timeout(800)
         if media_path:
             _attach_media(pg, media_path)
-<<<<<<< HEAD
         _click_send(pg, scope_dialog=True)
         _check_bot_warning(pg)
-=======
-        _write_tap_with_uncertain_transport(
-            lambda: _click_send(pg, scope_dialog=True), "reply")
-        _check_warning_after_tap(pg)
->>>>>>> origin/research/public-reuse-parent
         # Sondeo hasta 4s en vez de una sola comprobacion tras volver a
         # navegar - bug real visto en vivo el 29/09 (misma clase que el de
         # like()): recargar la pagina del status y releer todas las
@@ -978,7 +910,6 @@ def reply_to(status_url, text, media_path=None):
         # URLs: AlreadyCommented salto de inmediato en vez de duplicar).
         confirmed = False
         for attempt in range(5):
-<<<<<<< HEAD
             _, refreshed_index = _goto_status(pg, status_url)
             if _already_commented(pg, refreshed_index):
                 confirmed = True
@@ -987,19 +918,6 @@ def reply_to(status_url, text, media_path=None):
                 pg.wait_for_timeout(800)
         if not confirmed:
             raise RuntimeError(
-=======
-            _, refreshed_index = _write_tap_with_uncertain_transport(
-                lambda: _goto_status(pg, status_url), "reply-verificacion")
-            if _write_tap_with_uncertain_transport(
-                    lambda: _already_commented(pg, refreshed_index), "reply-verificacion"):
-                confirmed = True
-                break
-            if attempt < 4:
-                _write_tap_with_uncertain_transport(
-                    lambda: pg.wait_for_timeout(800), "reply-verificacion")
-        if not confirmed:
-            raise XWriteUnverified(
->>>>>>> origin/research/public-reuse-parent
                 "X: reply no confirmada tras volver al status; revisar antes de reintentar"
             )
         print("reply enviada y confirmada")
@@ -1035,13 +953,8 @@ def like(status_url):
             raise ActionTargetNotFound(
                 "X: botón like ausente o ambiguo; no asumir que ya estaba dado"
             )
-<<<<<<< HEAD
         like_btn.first.click()
         _check_bot_warning(pg)
-=======
-        _write_tap_with_uncertain_transport(lambda: like_btn.first.click(), "like")
-        _check_warning_after_tap(pg)
->>>>>>> origin/research/public-reuse-parent
         # Espera fija de 1200ms sustituida por sondeo hasta 3s - bug real
         # visto en vivo el 29/09: en tandas largas, el re-render del boton
         # unlike a veces tarda mas de 1200ms y el check original daba un
@@ -1050,23 +963,12 @@ def like(status_url):
         # status tras el hecho).
         confirmed = False
         for _ in range(5):
-<<<<<<< HEAD
             if art.locator('[data-testid="unlike"]').count() == 1:
                 confirmed = True
                 break
             pg.wait_for_timeout(600)
         if not confirmed:
             raise RuntimeError("X: like no confirmado; revisar status antes de reintentar")
-=======
-            if _write_tap_with_uncertain_transport(
-                    lambda: art.locator('[data-testid="unlike"]').count(), "like-verificacion") == 1:
-                confirmed = True
-                break
-            _write_tap_with_uncertain_transport(
-                lambda: pg.wait_for_timeout(600), "like-verificacion")
-        if not confirmed:
-            raise XWriteUnverified("X: like no confirmado; revisar status antes de reintentar")
->>>>>>> origin/research/public-reuse-parent
         print("like dado (confirmado)")
         return "created"
     finally:
@@ -1142,11 +1044,7 @@ def _own_latest_post_url(pg, text_hint=None, limit=5):
     Mastodon via API), asi que se confirma por contenido, nunca por indice a
     ciegas: si no hay coincidencia de texto, no se asume que el primer post
     del perfil es el nuestro."""
-<<<<<<< HEAD
     pg.goto("https://x.com/autorademodiaz", wait_until="domcontentloaded", timeout=50000)
-=======
-    pg.goto("https://x.com/davidportodiaz", wait_until="domcontentloaded", timeout=50000)
->>>>>>> origin/research/public-reuse-parent
     _check_bot_warning(pg)
     needle = " ".join((text_hint or "").split())[:40].casefold()
     for _ in range(6):          # 06/10: el perfil tarda en hidratar (con 1,8 s fijos no aparecia el post recien publicado)
@@ -1163,11 +1061,7 @@ def own_recent_texts(scrolls=6):
     """Textos de los ultimos posts propios del perfil (con scroll), para saber si una ficha ya esta publicada (06/10: content_queue_alert / content_publisher)."""
     p, pg = _connect()
     try:
-<<<<<<< HEAD
         pg.goto("https://x.com/autorademodiaz", wait_until="domcontentloaded", timeout=50000)
-=======
-        pg.goto("https://x.com/davidportodiaz", wait_until="domcontentloaded", timeout=50000)
->>>>>>> origin/research/public-reuse-parent
         pg.wait_for_timeout(2200)
         _assert_active_account(pg)
         _check_bot_warning(pg)
@@ -1220,39 +1114,20 @@ def repost(status_url, quote_text=None):
             box.click(force=True)
             box.type(quote_text, delay=15)
             pg.wait_for_timeout(800)
-<<<<<<< HEAD
             _click_send(pg, scope_dialog=True)
             _check_bot_warning(pg)
             own_uri = _own_latest_post_url(pg, text_hint=quote_text)
-=======
-            _write_tap_with_uncertain_transport(
-                lambda: _click_send(pg, scope_dialog=True), "quote")
-            _check_warning_after_tap(pg)
-            own_uri = _write_tap_with_uncertain_transport(
-                lambda: _own_latest_post_url(pg, text_hint=quote_text), "quote-verificacion")
->>>>>>> origin/research/public-reuse-parent
             if own_uri:
                 print(f"cita enviada (confirmada, own_uri={own_uri})")
                 return "created", own_uri
             print("cita enviada; confirmación remota pendiente (no se localizó el post propio)")
             return "unverified", None
         else:
-<<<<<<< HEAD
             _click_menuitem(pg, "Repost")
             pg.wait_for_timeout(1500)
             _check_bot_warning(pg)
             if art.locator('[data-testid="unretweet"]').count() != 1:
                 raise RuntimeError("X: repost no confirmado; revisar antes de reintentar")
-=======
-            _write_tap_with_uncertain_transport(
-                lambda: _click_menuitem(pg, "Repost"), "repost")
-            _write_tap_with_uncertain_transport(
-                lambda: pg.wait_for_timeout(1500), "repost-verificacion")
-            _check_warning_after_tap(pg)
-            if _write_tap_with_uncertain_transport(
-                    lambda: art.locator('[data-testid="unretweet"]').count(), "repost-verificacion") != 1:
-                raise XWriteUnverified("X: repost no confirmado; revisar antes de reintentar")
->>>>>>> origin/research/public-reuse-parent
             print("repost hecho (confirmado)")
             return "created", None
     finally:
@@ -1346,10 +1221,6 @@ def follow(handle, vet=None):
     """Sigue la cuenta del perfil abierto y verifica el MISMO control superior. `vet(info)` (06/10): motivo de rechazo del perfil ANTES de seguir (None si vale)."""
     p, pg = _connect()
     try:
-<<<<<<< HEAD
-=======
-        tapped = False
->>>>>>> origin/research/public-reuse-parent
         for _ in range(3):
             pg.goto(
                 f"https://x.com/{handle}",
@@ -1377,43 +1248,19 @@ def follow(handle, vet=None):
                 continue
 
             control.scroll_into_view_if_needed()
-<<<<<<< HEAD
             control.click(force=True)
             pg.wait_for_timeout(2000)
             _check_bot_warning(pg)
 
             final = _profile_follow_state(_top_profile_follow_control(pg))
-=======
-            # Un timeout de Playwright puede llegar DESPUÉS del click.
-            tapped = True
-            _write_tap_with_uncertain_transport(
-                lambda: control.click(force=True), "follow")
-            _write_tap_with_uncertain_transport(
-                lambda: pg.wait_for_timeout(2000), "follow-verificacion")
-            _check_warning_after_tap(pg)
-
-            final = _write_tap_with_uncertain_transport(
-                lambda: _profile_follow_state(_top_profile_follow_control(pg)),
-                "follow-verificacion")
->>>>>>> origin/research/public-reuse-parent
             if final == "following":
                 print(f"{handle}: FOLLOWED (confirmado en control del perfil)")
                 return "followed"
             if final == "pending":
                 print(f"{handle}: solicitud enviada (pendiente de aprobación)")
                 return "pending"
-<<<<<<< HEAD
 
         raise RuntimeError(
-=======
-            # Tras UN posible tap, no repetirlo en la siguiente navegación.
-            raise XWriteUnverified(
-                f"{handle}: follow sin ACK tras el click; conciliación manual"
-            )
-
-        error = XWriteUnverified if tapped else RuntimeError
-        raise error(
->>>>>>> origin/research/public-reuse-parent
             f"{handle}: follow no confirmado en el control del perfil; "
             "revisar antes de reintentar"
         )
@@ -1477,11 +1324,7 @@ def post_and_pin(text):
         # localizar el articulo por un trozo literal del texto nuevo, nunca
         # por posicion, y esperar a que aparezca de verdad antes de tocarlo.
         snippet = text[:40]
-<<<<<<< HEAD
         pg.goto("https://x.com/autorademodiaz", wait_until="domcontentloaded", timeout=50000)
-=======
-        pg.goto("https://x.com/davidportodiaz", wait_until="domcontentloaded", timeout=50000)
->>>>>>> origin/research/public-reuse-parent
         target = None
         for _ in range(10):
             cand = pg.locator("article").filter(has_text=snippet)
@@ -1561,11 +1404,7 @@ def health():
 
     BUG REAL gemelo visto en vivo el 21/09, y CORREGIDO DE RAIZ el mismo
     dia tras un aviso de David sobre el equivalente en Threads: la segunda
-<<<<<<< HEAD
     comprobacion navegaba a x.com/autorademodiaz y miraba si el texto
-=======
-    comprobacion navegaba a x.com/davidportodiaz y miraba si el texto
->>>>>>> origin/research/public-reuse-parent
     aparecia - eso es SIEMPRE cierto da igual la cuenta activa, porque es
     una pagina de perfil publica. Nunca demostraba de verdad cual era la
     cuenta activa. Sustituido por `_active_account_handle()`, que lee el
@@ -1602,7 +1441,6 @@ def _health_check(pg):
             break
     if active is None:
         return False, "PROBLEMA: logueado, pero no se pudo determinar la cuenta activa (selector de cuenta no encontrado)."
-<<<<<<< HEAD
     if active != "autorademodiaz":
         return False, (
             f"PROBLEMA REAL: la cuenta ACTIVA en esta sesion es @{active}, "
@@ -1611,16 +1449,6 @@ def _health_check(pg):
             "continuar - no ejecutar ninguna accion con este resultado."
         )
     return True, "OK: sesion logueada y cuenta ACTIVA confirmada como @autorademodiaz."
-=======
-    if active != "davidportodiaz":
-        return False, (
-            f"PROBLEMA REAL: la cuenta ACTIVA en esta sesion es @{active}, "
-            "NO @davidportodiaz. Cualquier reply/like/repost/follow/post se "
-            f"ejecutaria como @{active}. Cambiar de cuenta en X antes de "
-            "continuar - no ejecutar ninguna accion con este resultado."
-        )
-    return True, "OK: sesion logueada y cuenta ACTIVA confirmada como @davidportodiaz."
->>>>>>> origin/research/public-reuse-parent
 
 
 def daily_briefing():
@@ -1697,11 +1525,7 @@ def unfollow(handle):
 # 06/10/2026 (David: «hagamos crecer X como Bluesky, Mastodon y Threads»): lectura con scroll de posts y de cuentas, busqueda por pestana (Recientes / Personas), listas de
 # seguidores, perfil, like al ultimo post y sesion compartida con vigilante. Mismo contrato que `threads_interact.py`; el vigilante y la sesion viven en `browser_common.py`.
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------
-<<<<<<< HEAD
 MY_HANDLE = "autorademodiaz"
-=======
-MY_HANDLE = "davidportodiaz"
->>>>>>> origin/research/public-reuse-parent
 SEARCH_MODES = {"top": "", "live": "&f=live", "user": "&f=user"}
 
 
@@ -1908,7 +1732,6 @@ def like_latest(handle, vet=None, max_age_days=45):
             btn = art.locator('[data-testid="like"]')
             if btn.count() != 1:
                 continue
-<<<<<<< HEAD
             btn.first.click()
             pg.wait_for_timeout(1000)
             _check_bot_warning(pg)
@@ -1918,21 +1741,6 @@ def like_latest(handle, vet=None, max_age_days=45):
                     return "created", body[:120]
                 pg.wait_for_timeout(600)
             raise RuntimeError("X: like no confirmado; revisar el post antes de reintentar")
-=======
-            _write_tap_with_uncertain_transport(lambda: btn.first.click(), "like_latest")
-            _write_tap_with_uncertain_transport(
-                lambda: pg.wait_for_timeout(1000), "like_latest-verificacion")
-            _check_warning_after_tap(pg)
-            for _ in range(5):
-                if _write_tap_with_uncertain_transport(
-                        lambda: art.locator('[data-testid="unlike"]').count(),
-                        "like_latest-verificacion") == 1:
-                    print(f"{handle}: like al ultimo post (confirmado): {body[:70]}")
-                    return "created", body[:120]
-                _write_tap_with_uncertain_transport(
-                    lambda: pg.wait_for_timeout(600), "like_latest-verificacion")
-            raise XWriteUnverified("X: like no confirmado; revisar el post antes de reintentar")
->>>>>>> origin/research/public-reuse-parent
         raise ProfileRejected("sin post reciente apto")
     finally:
         p.stop()

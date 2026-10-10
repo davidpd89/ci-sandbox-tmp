@@ -13,10 +13,6 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 import scan_common as sc
-<<<<<<< HEAD
-=======
-import threads_discovery_quality as dq
->>>>>>> origin/research/public-reuse-parent
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "SISTEMA_DIARIO_THREADS")
 CANDIDATES_JSON = os.path.join(ROOT, "threads_candidates.json")
@@ -43,38 +39,19 @@ def fragment(text, size=40):
 
 def build(candidates, max_follows=4):
     plan, handles, follows = [], set(), 0
-<<<<<<< HEAD
     for item in candidates:
         handle = (item.get("handle") or "").lstrip("@")
         text = item.get("text") or ""
         if not handle or handle.casefold() in handles or not fragment(text):
-=======
-    blocked = dq.blocked_handles(candidates)
-    for item in candidates:
-        handle = (item.get("handle") or "").lstrip("@")
-        text = item.get("text") or ""
-        if (not handle or handle.casefold() in handles or not fragment(text)
-                or handle.casefold() in blocked):
->>>>>>> origin/research/public-reuse-parent
             continue
         # 04/10 (David: likes a cuentas de ligue/sexo): solo se toca lo que habla de libros/escritura y nada
         # que el filtro comun (politica + ligue/sexo/chat de citas) rechace.
         if not NICHE.search(text) or sc.is_political(text) or SPAM.search(text):
             continue
         handles.add(handle.casefold())
-<<<<<<< HEAD
         plan.append({"handle": handle, "kind": "like", "text_fragment": fragment(text)})
         if follows < max_follows and not item.get("known_date") and NICHE.search(text):
             plan.append({"handle": handle, "kind": "follow", "motivo": "autor/lector del nicho"})
-=======
-        origin = dq.source_family(item.get("source"))
-        plan.append({"handle": handle, "kind": "like", "text_fragment": fragment(text),
-                     "post_created_at": item.get("created_at") or item.get("created_time") or "",
-                     "motivo": f"growth:candidate:src={origin}"})
-        if follows < max_follows and not item.get("known_date") and NICHE.search(text):
-            plan.append({"handle": handle, "kind": "follow",
-                         "motivo": f"growth:candidate:autor/lector del nicho:src={origin}"})
->>>>>>> origin/research/public-reuse-parent
             follows += 1
     return plan
 
@@ -112,38 +89,15 @@ def build_from_pool(db, *, likes, follows, known=None, exclude_days=5, today=Non
     # 06/10: ademas de posts concretos, la reserva tiene CUENTAS (pestana Perfiles y seguidores de las cuentas del nicho): like al ultimo post (`like_latest`) y follow.
     # Al menos un cuarto de los likes va a cuentas (diversidad y primer contacto de otra fuente); si faltan posts, cubren el hueco.
     account_quota = max(likes // 4, 0)
-<<<<<<< HEAD
     accounts = pool.pick_accounts(db, account_quota, exclude_handles=frozenset(recent))
     taken = frozenset(recent) | {row["handle"].casefold() for row in accounts}
     now = datetime.datetime.combine(today, datetime.time(22, 0)) if today != datetime.date.today() else None       # con un `today` explicito (tests, reproducciones) la antiguedad de los posts se mide contra ese dia, no contra el reloj
     picked = pool.pick(db, max(0, likes - len(accounts)), exclude_handles=taken, exclude_fragments=frozenset(done_fragments or ()), now=now)
-=======
-    blocked_historical = dq.quarantined_pool_handles(db)
-    accounts = pool.pick_accounts(db, account_quota,
-                                  exclude_handles=frozenset(recent | blocked_historical))
-    accounts = [row for row in accounts
-                if (row["handle"].casefold() not in blocked_historical
-                    and not dq.job_bait(f"{row.get('display') or ''} {row.get('bio') or ''}"))]
-    taken = frozenset(recent | blocked_historical) | {row["handle"].casefold() for row in accounts}
-    now = datetime.datetime.combine(today, datetime.time(22, 0)) if today != datetime.date.today() else None       # con un `today` explicito (tests, reproducciones) la antiguedad de los posts se mide contra ese dia, no contra el reloj
-    picked = pool.pick(db, max(0, likes - len(accounts)), exclude_handles=taken, exclude_fragments=frozenset(done_fragments or ()), now=now)
-    blocked = dq.blocked_handles(picked)
-    # Defensa posterior: no dar por hecho que todos los selectores de reserva
-    # (o sus versiones legacy) respetan exclude_handles. El test de Claude
-    # reproduce precisamente una seleccion que devuelve una cuenta vetada.
-    picked = [r for r in picked if (r["handle"].lstrip("@").casefold()
-                                   not in blocked | blocked_historical)]
-    accounts = [r for r in accounts if r["handle"].casefold() not in blocked]
->>>>>>> origin/research/public-reuse-parent
     plan, nfollows = [], 0
     post_follow_budget = follows - min(follows // 2, len(accounts))       # la mitad de los follows para cuentas de la reserva si las hay; si no, todos a autores de posts
     for row in picked:
         fragment_text = fragment(row["text"])
         item = {"handle": row["handle"], "kind": "like", "permalink": row["permalink"], "text_fragment": fragment_text,
-<<<<<<< HEAD
-=======
-                "post_created_at": row.get("created_at") or "",
->>>>>>> origin/research/public-reuse-parent
                 "motivo": f"growth:pool:score={row['score']}:src={row['source']}"}
         plan.append(item)
         if nfollows < post_follow_budget and row["handle"].casefold() not in {str(h).lstrip("@").casefold() for h in known}:
@@ -157,13 +111,7 @@ def build_from_pool(db, *, likes, follows, known=None, exclude_days=5, today=Non
     picked = list(picked) + list(accounts)
     if len(picked) < likes and candidates:       # reserva vacia o pobre: lo que vio este scan
         have = {a["handle"].casefold() for a in plan}
-<<<<<<< HEAD
         extra = [a for a in build(candidates, max(0, follows - nfollows)) if a["handle"].casefold() not in have]
-=======
-        extra = [a for a in build(candidates, max(0, follows - nfollows))
-                 if a["handle"].casefold() not in have
-                 and a["handle"].casefold() not in blocked_historical]
->>>>>>> origin/research/public-reuse-parent
         plan.extend(extra[:max(0, likes - len(picked)) * 2])
     return plan
 
@@ -173,16 +121,7 @@ def build_replies(db, stage_number, registro, rng=None):
     Mismo motor que X: la reply gana a un like sobre el mismo post y se ejecuta con `bank: True` (el banco repite frases a proposito)."""
     import x_replies
     import threads_pool as pool
-<<<<<<< HEAD
     rows = pool.pick(db, 300, exclude_handles=frozenset(), exclude_fragments=frozenset(_done_fragments(registro)))
-=======
-    blocked_historical = dq.quarantined_pool_handles(db)
-    rows = pool.pick(db, 300, exclude_handles=frozenset(blocked_historical),
-                     exclude_fragments=frozenset(_done_fragments(registro)))
-    blocked = dq.blocked_handles(rows)
-    rows = [r for r in rows if (r["handle"].casefold() not in blocked
-                               and r["handle"].casefold() not in blocked_historical)]
->>>>>>> origin/research/public-reuse-parent
     built = x_replies.build_replies(rows, max_replies=min(8, x_replies.replies_per_round(stage_number)), used=x_replies.recent_phrases(registro), rng=rng, allow=__import__("relationship_policy").comment_filter("threads", registro))
     by_handle = {row["handle"].casefold(): row for row in rows}
     out = []
@@ -190,12 +129,7 @@ def build_replies(db, stage_number, registro, rng=None):
         row = by_handle.get(str(item["handle"]).casefold())
         if not row:
             continue
-<<<<<<< HEAD
         out.append({"handle": row["handle"], "kind": "reply", "permalink": row["permalink"], "text_fragment": fragment(row["text"]), "text": item["text"], "bank": True, "post_text": (row.get("text") or "")[:500], "motivo": item["motivo"]})
-=======
-        out.append({"handle": row["handle"], "kind": "reply", "permalink": row["permalink"],
-                    "post_created_at": row.get("created_at") or "", "text_fragment": fragment(row["text"]), "text": item["text"], "bank": True, "post_text": (row.get("text") or "")[:500], "motivo": item["motivo"]})
->>>>>>> origin/research/public-reuse-parent
     return out
 
 
@@ -216,20 +150,10 @@ def main(argv=None):
             candidates = json.load(stream)
     except (OSError, ValueError):
         candidates = []
-<<<<<<< HEAD
-=======
-    first_origins = {}
-    pool_status = "ok"
->>>>>>> origin/research/public-reuse-parent
     try:
         import threads_pool as pool
         db = pool.connect()
         try:
-<<<<<<< HEAD
-=======
-            first_origins = pool.first_touch(db, [
-                row.get("handle") for row in candidates if isinstance(row, dict)])
->>>>>>> origin/research/public-reuse-parent
             plan = build_from_pool(db, likes=max_likes, follows=max_follows, known=sc.known_accounts(os.path.join(ROOT, "registro_interacciones.csv")), candidates=candidates,
                                    done_fragments=_done_fragments(os.path.join(ROOT, "registro_interacciones.csv")))
             replies = build_replies(db, stage_number, os.path.join(ROOT, "registro_interacciones.csv"))
@@ -240,27 +164,11 @@ def main(argv=None):
         finally:
             db.close()
     except Exception as exc:
-<<<<<<< HEAD
         print(f"(reserva no disponible: {type(exc).__name__}: {exc}; se usa el volcado del scan)")
         plan = build(candidates, max_follows)
     with open(PLAN_OUT, "w", encoding="utf-8") as stream:
         json.dump(plan, stream, ensure_ascii=False, indent=1)
     print(json.dumps({"plan": os.path.relpath(PLAN_OUT, os.path.join(ROOT, "..")).replace(os.sep, "/"), "actions": len(plan)}))
-=======
-        # Si falta la reserva no podemos excluir campañas históricas. Evitar
-        # volver a actuar sobre un objetivo que podría estar en cuarentena.
-        pool_status = "reserva_no_disponible"
-        print(f"(reserva no disponible: {type(exc).__name__}; plan omitido, sin saltarse cuarentena)")
-        plan = []
-    with open(PLAN_OUT, "w", encoding="utf-8") as stream:
-        json.dump(plan, stream, ensure_ascii=False, indent=1)
-    # Sólo cohortes de descubrimiento; la API actual no verifica visitas ni
-    # seguidores causalmente atribuibles a cada fuente.
-    report = dq.cohort_counts(candidates, first_touch=first_origins)
-    print(json.dumps({"plan": os.path.relpath(PLAN_OUT, os.path.join(ROOT, "..")).replace(os.sep, "/"),
-                      "actions": len(plan), "pool_status": pool_status,
-                      "discovery_cohorts": report}, ensure_ascii=False))
->>>>>>> origin/research/public-reuse-parent
     return 0
 
 

@@ -46,11 +46,7 @@ class FinalLikeSafetyTests(unittest.TestCase):
                 "handle": "lectora", "media_present": True,
             }], prevalidated=True)
         publish.assert_not_called()
-<<<<<<< HEAD
         self.assertTrue(result[0]["resultado"].startswith("saltado_like_contexto:"))
-=======
-        self.assertEqual(result[0]["resultado"], "saltado_politica_auto_like")
->>>>>>> origin/research/public-reuse-parent
 
     def test_x_like_latest_cannot_bypass_image_only_guard(self):
         import x_execute as xe
@@ -58,11 +54,7 @@ class FinalLikeSafetyTests(unittest.TestCase):
             result = xe.run_plan([{"kind": "like_latest",
                 "handle": "lectora", "media_present": True}], prevalidated=True)
         like.assert_not_called()
-<<<<<<< HEAD
         self.assertTrue(result[0]["resultado"].startswith("saltado_like_contexto:"))
-=======
-        self.assertEqual(result[0]["resultado"], "saltado_politica_auto_like")
->>>>>>> origin/research/public-reuse-parent
 
     def test_threads_both_like_paths_are_guarded(self):
         import threads_execute as te

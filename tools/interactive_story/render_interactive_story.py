@@ -81,11 +81,7 @@ def page_html(image_uri:str, kicker:str, body:str="", choice_a:str="", choice_b:
     {f'<div class="label">{html.escape(small_label)}</div>' if small_label else ''}
     <div class="body">{body_markup(body, emphasis)}</div>{choice}{composite_html}{row_html}{empty_html}
     {f'<div class="footer">{html.escape(footer)}</div>' if footer else ''}
-<<<<<<< HEAD
     <div class="brand">AUTORA DEMO DÍAZ</div></body></html>'''
-=======
-    <div class="brand">DAVID PORTO DÍAZ</div></body></html>'''
->>>>>>> origin/research/public-reuse-parent
 
 
 def ensure_audited_fonts(page)->None:

@@ -52,11 +52,7 @@ class BrowserBatchPreflightTests(unittest.TestCase):
                 source = (TOOLS / filename).read_text(encoding="utf-8")
                 entrypoint = source.index('if __name__ == "__main__":')
                 self.assertLess(
-<<<<<<< HEAD
                     source.index("plan = _preflight_plan(plan)", entrypoint),
-=======
-                    source.index("plan = _preflight_plan(plan, skipped=preflight_skipped)" if filename == "reddit_execute.py" else "plan = _preflight_plan(plan)", entrypoint),
->>>>>>> origin/research/public-reuse-parent
                     source.index(browser_call, entrypoint),
                 )
 

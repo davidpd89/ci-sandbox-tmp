@@ -25,11 +25,7 @@ Uso:
     python bluesky_interact.py search "consulta de busqueda" [es|all]
     python bluesky_interact.py tag <hashtag> [es|all]
     python bluesky_interact.py actors "autores fantasia"
-<<<<<<< HEAD
     python bluesky_interact.py domain autorademodiaz.com
-=======
-    python bluesky_interact.py domain davidportodiaz.com
->>>>>>> origin/research/public-reuse-parent
     python bluesky_interact.py quotes <url_o_uri>
     python bluesky_interact.py likers <url_o_uri>
     python bluesky_interact.py reposters <url_o_uri>
@@ -272,46 +268,11 @@ def _get(base, path, params=None, auth=True, extra_headers=None):
 
 
 def _post_xrpc(path, body):
-<<<<<<< HEAD
     r = requests.post(f"{AUTH_BASE}/{path}", json=body, headers=_headers(auth=True), timeout=15)
     _raise_if_rate_limited(r, f"POST {path}")
     if r.status_code != 200:
         raise RuntimeError(f"POST {path} fallo ({r.status_code}): {r.text[:300]}")
     return r.json()
-=======
-    # Solo las respuestas escritas sin ACK pueden generar un segundo post.
-    # Preparar la sesión y cabeceras ANTES del try evita confundir un fallo
-    # de refreshSession con un createRecord que haya llegado al servidor.
-    headers = _headers(auth=True)
-    reply = (path == "com.atproto.repo.createRecord"
-             and isinstance(body, dict)
-             and body.get("collection") == "app.bsky.feed.post"
-             and isinstance(body.get("record"), dict)
-             and isinstance(body["record"].get("reply"), dict))
-    try:
-        r = requests.post(f"{AUTH_BASE}/{path}", json=body, headers=headers, timeout=15)
-    except Exception as exc:
-        if reply:
-            import exec_common as ec
-            if ec.uncertain_transport_error(exc):
-                raise ec.WriteOutcomeUnknown("bluesky:createRecord_sin_respuesta") from exc
-        raise
-    _raise_if_rate_limited(r, f"POST {path}")
-    if r.status_code != 200:
-        if reply and 500 <= r.status_code < 600:
-            import exec_common as ec
-            raise ec.WriteOutcomeUnknown(
-                "bluesky:createRecord_5xx_sin_confirmacion", status_code=r.status_code
-            )
-        raise RuntimeError(f"POST {path} fallo ({r.status_code}): {r.text[:300]}")
-    try:
-        return r.json()
-    except ValueError as exc:
-        if reply:
-            import exec_common as ec
-            raise ec.WriteOutcomeUnknown("bluesky:createRecord_respuesta_no_json") from exc
-        raise
->>>>>>> origin/research/public-reuse-parent
 
 
 def _require_created_record(response, collection):
@@ -989,12 +950,7 @@ def reply_to(url_or_uri, text):
     parent = _get_post_record(uri)
     root = parent["root"] if parent["root"] else {"uri": parent["uri"], "cid": parent["cid"]}
     sess = _session()
-<<<<<<< HEAD
     created = _post_xrpc("com.atproto.repo.createRecord", {
-=======
-    import exec_common as ec
-    payload = {
->>>>>>> origin/research/public-reuse-parent
         "repo": sess["did"],
         "collection": "app.bsky.feed.post",
         "record": _add_richtext({
@@ -1007,17 +963,8 @@ def reply_to(url_or_uri, text):
                 "parent": {"uri": parent["uri"], "cid": parent["cid"]},
             },
         }),
-<<<<<<< HEAD
     })
     _require_created_record(created, "app.bsky.feed.post")
-=======
-    }
-    created = _post_xrpc("com.atproto.repo.createRecord", payload)
-    try:
-        _require_created_record(created, "app.bsky.feed.post")
-    except RuntimeError as exc:
-        raise ec.WriteOutcomeUnknown("bluesky:reply_sin_URI/CID_confirmado") from exc
->>>>>>> origin/research/public-reuse-parent
     print("reply enviada (URI/CID confirmado)")
 
 

@@ -80,13 +80,7 @@ def discover(today=None, getter=None, hosts=HOSTS, tags=TAGS):
                     continue
                 if tc.niche_hits(text) < 1:
                     continue
-<<<<<<< HEAD
                 found.setdefault(acct, {"url": url, "text": text, "created": age, "followers": int(account.get("followers_count") or 0), "host": host})
-=======
-                found.setdefault(acct, {"url": url, "text": text, "created": age,
-                                        "post_created_at": status.get("created_at") or "",
-                                        "followers": int(account.get("followers_count") or 0), "host": host})
->>>>>>> origin/research/public-reuse-parent
     return found
 
 
@@ -102,13 +96,7 @@ def build(found, known, rng=None, limit=4, dup_check=None):
             continue
         text = PENDING_TEXT
         used.add(acct)
-<<<<<<< HEAD
         plan.append({"handle": acct, "kind": "reply", "url": info["url"], "text": text, "post_text": info["text"], "motivo": f"welcome:presentacion:cuenta_nueva={info['created']}d:src={info['host']}"})
-=======
-        plan.append({"handle": acct, "kind": "reply", "url": info["url"], "text": text,
-                     "post_created_at": info.get("post_created_at") or "",
-                     "post_text": info["text"], "motivo": f"welcome:presentacion:cuenta_nueva={info['created']}d:src={info['host']}"})
->>>>>>> origin/research/public-reuse-parent
         plan.append({"handle": acct, "kind": "follow", "motivo": "welcome:presentacion"})
     return plan
 
@@ -124,38 +112,17 @@ def write_texts(plan, log=print):
         if reply_hold.held():
             got = {}
         else:
-<<<<<<< HEAD
             items = [{"id": a["handle"], "network": "mastodon", "author": a["handle"], "text": a.get("post_text") or "", "context": "se acaba de presentar en Mastodon (cuenta nueva): bienvenida breve y cálida, sin enlaces"} for a in replies]
-=======
-            items = [{"id": a["handle"], "network": "mastodon", "author": a["handle"],
-                      "text": a.get("post_text") or "", "url": a.get("url"),
-                      "context": "se acaba de presentar en Mastodon (cuenta nueva): bienvenida breve y cálida, sin enlaces"} for a in replies]
->>>>>>> origin/research/public-reuse-parent
             got = reply_queue.get_or_enqueue(items, "mastodon", log, wait_min=3)
     except Exception as exc:
         log(f"[mastodon_welcome] sin textos de ChatGPT ({type(exc).__name__}: {str(exc)[:60]}): solo follows")
         got = {}
-<<<<<<< HEAD
     out = []
     for action in plan:
         if action["kind"] == "reply":
             if not got.get(action["handle"]):
                 continue
             action = {**action, "text": got[action["handle"]]}
-=======
-    import reply_provenance as proof
-    sources = {item["id"]: item for item in items} if "items" in locals() else {}
-    out = []
-    for action in plan:
-        if action["kind"] == "reply":
-            written = got.get(action["handle"])
-            origin = sources.get(action["handle"])
-            if not written or not origin:
-                continue
-            action = proof.attach({**action, "text": written}, origin, "mastodon")
-            if action is None:
-                continue
->>>>>>> origin/research/public-reuse-parent
         out.append(action)
     return out
 

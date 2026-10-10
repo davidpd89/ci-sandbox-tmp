@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """Libera memoria del Edge 9223 entre rondas (07/10/2026): con la RAM casi llena (577 MB libres de 16 GB: Chrome 3 GB, VS Code 2 GB, Edge 3,4 GB) las cargas pasaban de 20-30 s y
 rondas enteras de X, Threads y Pinterest caian por timeout. Cada herramienta abre su pestana; aqui las pestanas de paginas ya usadas vuelven a `about:blank` (el login vive en las
 cookies del perfil, no en la pestana) y se cierran las sobrantes, dejando una sola.
@@ -30,20 +29,6 @@ def trim(log=print):
             log(f"[edge] {len(pages)} pestanas -> 1 en blanco")
         finally:
             p.stop()
-=======
-"""Mantenimiento CDP conservador (PR #58).
-
-Antes cerraba todas las pestañas del navegador salvo la primera, que navegaba
-a about:blank. La URL o posición no acredita propiedad. No se cierra ninguna
-pestaña sin un token de propiedad verificable entre procesos.
-"""
-
-
-def trim(log=print):
-    """No destructivo: sin CDP, sin Edge, sin modificación de URLs."""
-    log("[edge] trim conservador: 0 pestañas modificadas; propiedad desconocida")
-    return 0
->>>>>>> origin/research/public-reuse-parent
 
 
 if __name__ == "__main__":

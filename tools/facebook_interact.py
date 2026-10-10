@@ -1,9 +1,5 @@
 """
-<<<<<<< HEAD
 Herramienta unica para el dia a dia de Facebook (pagina "Autora Demo
-=======
-Herramienta unica para el dia a dia de Facebook (pagina "David Porto
->>>>>>> origin/research/public-reuse-parent
 Escritor") - mismo patron que reddit_interact.py/bluesky_interact.py (Edge
 real via CDP puerto 9223, ya logueado - David dejo la sesion lista el
 22/09/2026). Se opera como PAGINA (Page), no como perfil personal - no hay
@@ -70,15 +66,9 @@ from x_interact import _check_spanish_orthography  # reutilizado, no duplicado
 
 CDP_URL = "http://127.0.0.1:9223"
 EDGE_EXE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
-<<<<<<< HEAD
 EDGE_USER_DATA = r"C:\Temp\rrss-autorademo-edge"
 MY_PAGE_ID = "61590793667301"
 MY_PAGE_NAME = "Autora Demo Escritor"
-=======
-EDGE_USER_DATA = r"C:\Temp\rrss-davidporto-edge"
-MY_PAGE_ID = "61590793667301"
-MY_PAGE_NAME = "David Porto Escritor"
->>>>>>> origin/research/public-reuse-parent
 
 BOT_WARNING_SIGNALS = [
     "unusual activity", "actividad inusual", "actividad sospechosa",
@@ -149,7 +139,6 @@ def ensure_browser():
 
 def _connect():
     p = sync_playwright().start()
-<<<<<<< HEAD
     browser = p.chromium.connect_over_cdp(CDP_URL)
     ctx = browser.contexts[0]
     try:
@@ -160,16 +149,6 @@ def _connect():
     pages = [pg for pg in ctx.pages if urlsplit(pg.url).hostname in {"facebook.com", "www.facebook.com"}]
     pg = pages[-1] if pages else ctx.new_page()
     return p, pg
-=======
-    try:
-        import browser_common as bc
-        browser = bc.connect_cdp(p.chromium, CDP_URL)
-        pg = bc.new_owned_page(browser)
-        return bc.OwnedPlaywright(p, pg), pg
-    except Exception:
-        p.stop()
-        raise
->>>>>>> origin/research/public-reuse-parent
 
 
 def _own_page_url():
@@ -461,7 +440,6 @@ def _validated_facebook_permalink(permalink):
         or parsed.port
     ):
         raise ValueError("El permalink debe pertenecer a facebook.com por HTTPS")
-<<<<<<< HEAD
     path = parsed.path.rstrip("/") or "/"
     query = dict(part.split("=", 1) for part in parsed.query.split("&") if "=" in part)
     is_photo = path == "/photo" and query.get("fbid", "").isdigit()
@@ -471,12 +449,6 @@ def _validated_facebook_permalink(permalink):
     is_group_post = bool(re.fullmatch(rf"/groups/[^/]+/posts/{post_id}", path))
     if not (is_photo or is_story or is_post_path or is_group_post):
         raise ValueError("Se requiere un permalink de publicación de Facebook, no un perfil o página")
-=======
-    # Una URL photo/story puede representar contenido de grupo; tampoco
-    # autorizar /groups/: incluso si se puede ver desde una Página.
-    import facebook_source_quality as source_quality
-    source_quality.require_page_post_url_shape(parsed.geturl())
->>>>>>> origin/research/public-reuse-parent
     return parsed.geturl()
 
 
@@ -490,12 +462,6 @@ def _dump_permalink(pg, permalink):
     asi que like()/comment() por indice funcionan igual aqui sin cambios."""
     permalink = _validated_facebook_permalink(permalink)
     pg.goto(permalink, wait_until="domcontentloaded", timeout=20000)
-<<<<<<< HEAD
-=======
-    # Redirects can change an apparently safe Page URL into a group/photo.
-    import facebook_source_quality as source_quality
-    source_quality.require_page_post_url_shape(pg.url)
->>>>>>> origin/research/public-reuse-parent
     pg.wait_for_timeout(3000)
     _check_bot_warning(pg)
     try:

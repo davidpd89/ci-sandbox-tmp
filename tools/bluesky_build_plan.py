@@ -18,12 +18,7 @@ import json
 import sys
 
 import scan_common as _sc
-<<<<<<< HEAD
 from candidate_identity import resolve_post_ref
-=======
-from candidate_identity import resolve_author, resolve_post_ref
-from reply_provenance import carry_decision_proof
->>>>>>> origin/research/public-reuse-parent
 
 VALID = {"follow", "like", "repost", "reply", "quote"}
 TEXT_KINDS = {"reply", "quote"}
@@ -51,18 +46,7 @@ def build(scan, decisions):
     if not isinstance(decisions, dict) or not isinstance(decisions.get("actions"), list):
         raise ValueError("decisions debe contener actions[]")
     candidates, posts = _indexes(scan)
-<<<<<<< HEAD
     plan = list(scan.get("auto_plan") or [])
-=======
-    # El plan automático del scanner también cruza esta frontera. No basta
-    # validar únicamente las decisiones compactas: sus handles pueden estar
-    # ausentes o corruptos tras un cambio de formato del scanner.
-    plan = []
-    for index, auto in enumerate(scan.get("auto_plan") or [], 1):
-        if not isinstance(auto, dict):
-            raise ValueError(f"auto_plan elemento {index}: debe ser objeto")
-        plan.append({**auto, "handle": resolve_author("bluesky", auto)})
->>>>>>> origin/research/public-reuse-parent
 
     for index, decision in enumerate(decisions["actions"], start=1):
         if not isinstance(decision, dict):
@@ -80,11 +64,7 @@ def build(scan, decisions):
                 raise ValueError(f"decisión {index}: follow no propuesto para {cid}")
             lane = candidate.get("lane") or "unknown"
             row = {
-<<<<<<< HEAD
                 "handle": candidate["handle"],
-=======
-                "handle": resolve_author("bluesky", candidate),
->>>>>>> origin/research/public-reuse-parent
                 "kind": "follow",
                 "lane": lane,
                 "motivo": (
@@ -108,18 +88,10 @@ def build(scan, decisions):
                 )
             lane = candidate.get("lane") or "unknown"
             row = {
-<<<<<<< HEAD
                 "handle": candidate["handle"],
                 "kind": kind,
                 "lane": lane,
                 "url": post["url"],
-=======
-                "handle": resolve_author("bluesky", candidate),
-                "kind": kind,
-                "lane": lane,
-                "url": post["url"],
-                "post_created_at": post.get("created_at") or post.get("createdAt") or (post.get("record") or {}).get("createdAt") or "",
->>>>>>> origin/research/public-reuse-parent
                 "motivo": (
                     f"growth:{pid}:lane={lane}:"
                     + ",".join(post.get("sources") or [])
@@ -132,14 +104,6 @@ def build(scan, decisions):
                 row["text"] = text.strip()
                 _sc.opinion_guard(post.get("text", ""), row["text"])
                 row["post_text"] = post.get("text", "")  # contexto para el filtro de opinion del ejecutor
-<<<<<<< HEAD
-=======
-                if any(field in decision for field in ("gpt_proof", "gpt_context_hash", "gpt_prompt_hash")):
-                    row["post_uri"] = resolve_post_ref("bluesky", post)
-                row = carry_decision_proof(row, decision, "bluesky", post.get("text", ""))
-                if row is None:
-                    continue
->>>>>>> origin/research/public-reuse-parent
         plan.append(row)
 
     # Dedupe exacto. El preflight del executor conserva la última barrera por AT-URI.

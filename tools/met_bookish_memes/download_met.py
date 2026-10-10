@@ -15,20 +15,12 @@ METADATA = ROOT / "metadata"
 API = "https://collectionapi.metmuseum.org/public/collection/v1/objects/{object_id}"
 
 def fetch_json(url: str) -> dict:
-<<<<<<< HEAD
     req = urllib.request.Request(url, headers={"User-Agent": "AutoraDemo-RRSS/IG12"})
-=======
-    req = urllib.request.Request(url, headers={"User-Agent": "DavidPorto-RRSS/IG12"})
->>>>>>> origin/research/public-reuse-parent
     with urllib.request.urlopen(req, timeout=30) as response:
         return json.load(response)
 
 def download(url: str, dest: pathlib.Path) -> None:
-<<<<<<< HEAD
     req = urllib.request.Request(url, headers={"User-Agent": "AutoraDemo-RRSS/IG12"})
-=======
-    req = urllib.request.Request(url, headers={"User-Agent": "DavidPorto-RRSS/IG12"})
->>>>>>> origin/research/public-reuse-parent
     with urllib.request.urlopen(req, timeout=60) as response, dest.open("wb") as fh:
         fh.write(response.read())
 

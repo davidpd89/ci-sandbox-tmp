@@ -15,13 +15,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 BLUESKY_BIO = (
     "Escritor gallego en Madrid. Fantasía, identidad y memoria. "      # texto que David dejo a mano en Bluesky; no se pisa
-<<<<<<< HEAD
     "Autor de Las manecillas del recuerdo y Samuel entre mundos. autorademodiaz.com · "
     "Mastodon: @autorademodiaz@mastodon.social"
-=======
-    "Autor de Las manecillas del recuerdo y Samuel entre mundos. davidportodiaz.com · "
-    "Mastodon: @davidportodiaz@mastodon.social"
->>>>>>> origin/research/public-reuse-parent
 )
 BLUESKY_BIO_MAX = 256
 # Post de presentacion (26/06): dice a quien llega que se busca gente real que
@@ -36,15 +31,9 @@ MASTODON_BIO = (
 )
 MASTODON_BIO_MAX = 500
 MASTODON_FIELDS = [
-<<<<<<< HEAD
     ("Web", "https://autorademodiaz.com"),
     ("Libros", "Las manecillas del recuerdo · Samuel entre mundos"),
     ("Bluesky", "https://bsky.app/profile/autorademoescritor.bsky.social"),   # 06/10: un usuario dudo de si ambas cuentas eran nuestras; las dos se enlazan entre si
-=======
-    ("Web", "https://davidportodiaz.com"),
-    ("Libros", "Las manecillas del recuerdo · Samuel entre mundos"),
-    ("Bluesky", "https://bsky.app/profile/davidportoescritor.bsky.social"),   # 06/10: un usuario dudo de si ambas cuentas eran nuestras; las dos se enlazan entre si
->>>>>>> origin/research/public-reuse-parent
 ]
 MASTODON_FEATURED_TAGS = ["Fantasía", "Libros", "Escritura", "Bookstodon"]
 MASTODON_PINNED_ID = "117316683770550793"  # presentacion del 22/09

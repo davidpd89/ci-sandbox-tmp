@@ -1,9 +1,5 @@
 """Bluesky: ningún error determinista del plan puede aparecer después de escribir."""
 import ast
-<<<<<<< HEAD
-=======
-import datetime as dt
->>>>>>> origin/research/public-reuse-parent
 import pathlib
 import types
 import unittest
@@ -135,20 +131,12 @@ class BlueskyPreflightTests(unittest.TestCase):
                 "kind": "reply", "handle": "lectora.bsky.social",
                 "url": "https://bsky.app/profile/lectora.bsky.social/post/abc",
                 "text": "Respuesta distinta y útil.",
-<<<<<<< HEAD
-=======
-                "post_created_at": (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=1)).isoformat(),
->>>>>>> origin/research/public-reuse-parent
             },
         ])
         self.assertEqual(writes, [
             (
                 "reply",
-<<<<<<< HEAD
                 "https://bsky.app/profile/lectora.bsky.social/post/abc",
-=======
-                "at://did:plc:target/app.bsky.feed.post/abc",
->>>>>>> origin/research/public-reuse-parent
                 "Respuesta distinta y útil.",
             )
         ])
@@ -161,12 +149,7 @@ class LedgerIntegrationTests(unittest.TestCase):
         import action_ledger as al
         plan = [
             {"kind": "reply", "handle": "lectora.bsky.social",
-<<<<<<< HEAD
              "url": "https://bsky.app/profile/lectora.bsky.social/post/abc", "text": "Respuesta única."},
-=======
-             "url": "https://bsky.app/profile/lectora.bsky.social/post/abc", "text": "Respuesta única.",
-             "post_created_at": (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=1)).isoformat()},
->>>>>>> origin/research/public-reuse-parent
             {"kind": "like", "handle": "otra.bsky.social",
              "url": "https://bsky.app/profile/otra.bsky.social/post/xyz"},
         ]

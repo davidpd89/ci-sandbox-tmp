@@ -1,9 +1,5 @@
 """Mastodon API: discovery e interacción segura; sin red real."""
 import pathlib
-<<<<<<< HEAD
-=======
-import datetime as dt
->>>>>>> origin/research/public-reuse-parent
 import sys
 import types
 import unittest
@@ -11,7 +7,6 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools"))
 
-<<<<<<< HEAD
 requests_stub = types.ModuleType("requests")
 requests_stub.get = lambda *a, **k: None
 requests_stub.post = lambda *a, **k: None
@@ -23,17 +18,6 @@ sys.modules.setdefault("x_interact", x_stub)
 
 import mastodon_interact as m
 import mastodon_execute as execute
-=======
-# Usar el paquete HTTP real; los tests mockean sus puntos de entrada.
-# Inyectar x_interact solo durante la importación, sin contaminar otras suites.
-import requests  # noqa: F401
-
-x_stub = types.ModuleType("x_interact")
-x_stub._check_spanish_orthography = lambda text: None
-with patch.dict(sys.modules, {"x_interact": x_stub}):
-    import mastodon_interact as m
-    import mastodon_execute as execute
->>>>>>> origin/research/public-reuse-parent
 
 
 class MastodonSearchTests(unittest.TestCase):
@@ -205,15 +189,9 @@ class MastodonIdentityTests(unittest.TestCase):
 
     def test_expected_account_sets_cache(self):
         expected = {
-<<<<<<< HEAD
             "username": "autorademodiaz",
             "acct": "autorademodiaz",
             "url": "https://mastodon.social/@autorademodiaz",
-=======
-            "username": "davidportodiaz",
-            "acct": "davidportodiaz",
-            "url": "https://mastodon.social/@davidportodiaz",
->>>>>>> origin/research/public-reuse-parent
         }
         with patch.object(m, "_get", return_value=expected):
             m._assert_expected_account()
@@ -232,11 +210,7 @@ class MastodonInteractionTests(unittest.TestCase):
                 {
                     "id": "grandchild",
                     "in_reply_to_id": "child",
-<<<<<<< HEAD
                     "account": {"username": "autorademodiaz"},
-=======
-                    "account": {"username": "davidportodiaz"},
->>>>>>> origin/research/public-reuse-parent
                 },
             ]
         }
@@ -247,11 +221,7 @@ class MastodonInteractionTests(unittest.TestCase):
             {
                 "id": "mine",
                 "in_reply_to_id": "target",
-<<<<<<< HEAD
                 "account": {"username": "AUTORADEMODIAZ"},
-=======
-                "account": {"username": "DAVIDPORTODIAZ"},
->>>>>>> origin/research/public-reuse-parent
             }
         )
         with patch.object(m, "_get", return_value=context):
@@ -263,11 +233,7 @@ class MastodonInteractionTests(unittest.TestCase):
                 return {"descendants": []}
             return {
                 "visibility": "unlisted",
-<<<<<<< HEAD
                 "account": {"acct": "lectora@example.social"},
-=======
-                "account": {"acct": "lectora@example.com"},
->>>>>>> origin/research/public-reuse-parent
             }
 
         with patch.object(m, "_status_id", return_value="7"), \
@@ -347,12 +313,7 @@ class MastodonPublicationPolicyTests(unittest.TestCase):
 
     def test_executor_rejects_own_publication_kinds(self):
         for kind in ("post", "quote", "poll"):
-<<<<<<< HEAD
             item = {"kind": kind, "curated": True, "text": "Texto", "url": "7"}
-=======
-            item = {"kind": kind, "curated": True, "text": "Texto", "url": "7",
-                    "post_created_at": (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=2)).isoformat()}
->>>>>>> origin/research/public-reuse-parent
             with self.subTest(kind=kind), \
                  patch("repost_policy.done_today", return_value=0), \
                  patch.object(execute.dup, "check", return_value=[]):
@@ -379,12 +340,7 @@ class MastodonPublicationPolicyTests(unittest.TestCase):
     def test_invalid_later_reply_blocks_earlier_follow(self):
         plan = [
             {"kind": "follow", "handle": "lectora"},
-<<<<<<< HEAD
             {"kind": "reply", "url": "7", "text": "  "},
-=======
-            {"kind": "reply", "url": "7", "text": "  ",
-             "post_created_at": (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=2)).isoformat()},
->>>>>>> origin/research/public-reuse-parent
         ]
         with patch.object(execute.m, "follow") as follow, \
              patch.object(execute.dup, "check", return_value=[]):

@@ -44,11 +44,7 @@ def main() -> None:
         fail("slide 1 debe conservar EDICIÓN IMAGINARIA")
     if data.get("disclosure_back") != "NO EXISTE. DE MOMENTO.":
         fail("slide 2 debe conservar NO EXISTE. DE MOMENTO.")
-<<<<<<< HEAD
     if data.get("brand_line") != "ARCHIVO DE PROBLEMAS DE LECTORES · AUTORA DEMO DÍAZ":
-=======
-    if data.get("brand_line") != "ARCHIVO DE PROBLEMAS DE LECTORES · DAVID PORTO DÍAZ":
->>>>>>> origin/research/public-reuse-parent
         fail("brand_line desincronizada")
 
     episodes = data.get("episodes") or []
